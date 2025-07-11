@@ -37,25 +37,25 @@ Qed.
 
 End PartBij.
 
-Definition enc_relR := authUR (gsetUR (term * term)).
+Definition term_part_bijR := authUR (gsetUR (term * term)).
 
 Class publicGpreS Σ := PublicGPreS {
-  publicGpreS_enc_rel : inG Σ enc_relR;
+  publicGpreS_term_part_bij : inG Σ term_part_bijR;
   publicGpreS_meta : metaGS Σ;
 }.
 
-Local Existing Instance publicGpreS_enc_rel.
+Local Existing Instance publicGpreS_term_part_bij.
 Local Existing Instance publicGpreS_meta.
 
 Class publicGS Σ := PublicGS {
   public_inG : publicGpreS Σ;
-  public_enc_rel_name : gname;
+  public_term_part_bij_name : gname;
 }.
 
 Global Existing Instance public_inG.
 
 Definition publicΣ : gFunctors :=
-  #[GFunctor enc_relR; metaΣ].
+  #[GFunctor term_part_bijR; metaΣ].
 
 Global Instance subG_publicGpreS Σ : subG publicΣ Σ → publicGpreS Σ.
 Proof. solve_inG. Qed.
@@ -70,11 +70,11 @@ Notation iPropI := (iPropI Σ).
 Implicit Types (k : senc_key) (t : term) (R : gset (term * term)).
 
 Definition enc_rel_auth t R : iProp :=
-  nown public_enc_rel_name (nroot.@t) (● R) ∗
+  nown public_term_part_bij_name (nroot.@"enc".@t) (● R) ∗
   ⌜part_bij R⌝.
 
 Definition enc_rel_frag t t1 t2 : iProp :=
-  nown public_enc_rel_name (nroot.@t) (◯ {[(t1, t2)]}).
+  nown public_term_part_bij_name (nroot.@"enc".@t) (◯ {[(t1, t2)]}).
 
 Lemma enc_rel_alloc t1 t2 t R :
   (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
@@ -92,11 +92,56 @@ iDestruct "frag" as "[frag _]".
 iModIntro. iFrame. iPureIntro. exact: part_bij_insert.
 Qed.
 
+Definition nonce_rel_auth R : iProp :=
+  nown public_term_part_bij_name (nroot.@"nonce") (● R) ∗
+  ⌜part_bij R⌝.
+
+Definition nonce_rel_frag t1 t2 : iProp :=
+  nown public_term_part_bij_name (nroot.@"nonce") (◯ {[(t1, t2)]}).
+
+Lemma nonce_rel_alloc t1 t2 R :
+  (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
+  nonce_rel_auth R ==∗
+  nonce_rel_auth ({[(t1, t2)]} ∪ R) ∗
+  nonce_rel_frag t1 t2.
+Proof.
+iIntros "%fresh [own %bij_R]".
+iMod (nown_update with "own") as "[auth frag]".
+{ apply: auth_update_alloc.
+  apply: (gset_local_update _ _ ({[(t1, t2)]} ∪ R)).
+  set_solver. }
+rewrite -gset_op auth_frag_op nown_op.
+iDestruct "frag" as "[frag _]".
+iModIntro. iFrame. iPureIntro. exact: part_bij_insert.
+Qed.
+
 Fixpoint public t1 t2 : iProp :=
   match t1, t2 with
+  | TInt n1, TInt n2 => ⌜n1 = n2⌝
+  | TPair t11 t12, TPair t21 t22 =>
+      public t11 t21 ∧ public t12 t22
+  | TNonce _, TNonce _ => nonce_rel_frag t1 t2
+  | TKey kt1 t1, TKey kt2 t2 =>
+      False (* FIXME *)
   | TSeal k1 t1, TSeal k2 t2 =>
       ⌜k1 = k2⌝ ∧ enc_rel_frag k1 t1 t2
-  | _, _ => True (* WIP *)
+  | THash _, THash _ =>
+      False (* FIXME *)
+  | TExpN' _ _ _, TExpN' _ _ _ =>
+      False (* FIXME *)
+  | _, _ =>
+      False (* WIP *)
   end.
+
+Lemma public_TSeal k R t1 t2 :
+  (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
+  enc_rel_auth k R ==∗
+  enc_rel_auth k ({[(t1, t2)]} ∪ R) ∗
+  public (TSeal k t1) (TSeal k t2).
+Proof.
+iIntros "%fresh H●".
+iMod (enc_rel_alloc _ fresh with "H●") as "[H● H◯]".
+by iFrame.
+Qed.
 
 End Rel.
