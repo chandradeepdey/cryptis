@@ -2,6 +2,7 @@
 -arg "-w -redundant-canonical-projection"
 -arg "-w -notation-overridden"
 
+-R examples cryptis.examples
 -R cryptis cryptis
 
 cryptis/mathcomp_compat.v
@@ -39,73 +40,83 @@ cryptis/replica.v
 
 # Case studies
 
-cryptis/iso_dh/shared.v
-cryptis/iso_dh/initiator.v
-cryptis/iso_dh/responder.v
-cryptis/iso_dh/game.v
-cryptis/iso_dh.v
+examples/nsl/impl.v
+examples/nsl/proofs.v
+examples/nsl/game.v
 
-cryptis/conn/props.v
-cryptis/conn/impl.v
-cryptis/conn/proofs.v
-cryptis/conn.v
+examples/iso_dh/impl.v
+examples/iso_dh/proofs/base.v
+examples/iso_dh/proofs/initiator.v
+examples/iso_dh/proofs/responder.v
+examples/iso_dh/proofs.v
+examples/iso_dh/game.v
+examples/iso_dh.v
 
-cryptis/rpc/props.v
-cryptis/rpc/impl.v
-cryptis/rpc/proofs.v
-cryptis/rpc.v
+examples/conn/impl.v
+examples/conn/proofs/base.v
+examples/conn/proofs.v
+examples/conn.v
+
+examples/rpc/impl.v
+examples/rpc/proofs/base.v
+examples/rpc/proofs.v
+examples/rpc.v
+
+examples/alist/impl.v
+examples/alist/proofs.v
+examples/alist.v
+
+examples/store.v
+examples/store/impl.v
+examples/store/proofs/base.v
+examples/store/proofs/client.v
+examples/store/proofs/client/store.v
+examples/store/proofs/client/load.v
+examples/store/proofs/client/connect.v
+examples/store/proofs/client/create.v
+examples/store/proofs/client/close.v
+examples/store/proofs/server.v
+examples/store/proofs/server/load.v
+examples/store/proofs/server/store.v
+examples/store/proofs/server/create.v
+examples/store/proofs/db.v
+examples/store/proofs.v
+examples/store/game.v
 
 ## Simple examples
 
-cryptis/examples/permanent.v
-cryptis/examples/counter.v
-cryptis/examples/nsl_secr.v
-cryptis/examples/nsl_auth.v
-cryptis/examples/nsl.v
+examples/permanent.v
+examples/counter.v
+examples/nsl_secr.v
+examples/nsl_auth.v
+
+## NSL
 
 ## CR
 
-cryptis/challenge_response.v
+examples/challenge_response.v
 
-## Public-key authentication
+## Public-key authentication (generalized NSL)
 
-cryptis/pk_auth.v
-cryptis/pk_auth/impl.v
-cryptis/pk_auth/shared.v
-cryptis/pk_auth/client_proofs.v
-cryptis/pk_auth/server_proofs.v
-cryptis/nsl.v
-cryptis/pk_dh_game.v
-cryptis/pk_dh.v
-
-## NSL+DH
+examples/pk_auth/pk_auth.v
+examples/pk_auth/impl.v
+examples/pk_auth/shared.v
+examples/pk_auth/client_proofs.v
+examples/pk_auth/server_proofs.v
+examples/pk_auth/nsl.v
+examples/pk_auth/dh_game.v
+examples/pk_auth/dh.v
 
 ## TLS 1.3
 
-cryptis/tls13.v
+examples/tls13.v
 
 ## Composite
 
-cryptis/composite_game.v
+examples/composite_game.v
 
 ## Storage
 
-cryptis/store.v
-cryptis/store/impl.v
-cryptis/store/shared.v
-cryptis/store/client_proofs.v
-cryptis/store/client_proofs/store.v
-cryptis/store/client_proofs/load.v
-cryptis/store/client_proofs/connect.v
-cryptis/store/client_proofs/create.v
-cryptis/store/client_proofs/close.v
-cryptis/store/server_proofs.v
-cryptis/store/server_proofs/load.v
-cryptis/store/server_proofs/store.v
-cryptis/store/server_proofs/create.v
-cryptis/store/alist.v
-cryptis/store/db.v
-cryptis/store/game.v
 
 # Relational Cryptis
 
