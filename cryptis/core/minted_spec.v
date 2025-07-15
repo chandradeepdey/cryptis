@@ -12,6 +12,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Notation minted_specN := (nroot.@"cryptis".@"minted_spec").
+
 Class minted_specGpreS Σ := MintedSpecGPreS {
   minted_specGpreS_set : inG Σ (authUR (gsetUR locO));
 }.
@@ -41,8 +43,7 @@ Notation iProp := (iProp Σ).
 Fact minted_spec_key : unit. Proof. exact: tt. Qed.
 
 Definition minted_spec_ctx : iProp :=
-  inv (nroot.@"cryptis".@"minted_spec")
-      (∃ L : gset loc, own minted_spec_name (● L)).
+  inv minted_specN (∃ L : gset loc, own minted_spec_name (● L)).
 
 Definition minted_spec_loc (a : loc) : iProp :=
   own minted_spec_name (◯ {[a]}).
