@@ -4,26 +4,35 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+    reloc.url = "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git?ref=nonpersistent";
+    reloc.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, reloc }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = nixpkgs.legacyPackages.${system};
-          lib = pkgs.lib; in rec {
-            packages = rec {
-              coq = pkgs.coq_9_0;
-              coqPackages = pkgs.coqPackages_9_0;
-            };
-
-            devShell = pkgs.mkShell {
-              packages = with packages; [
-                coq
-                coqPackages.mathcomp.ssreflect
-                coqPackages.deriving
-                coqPackages.iris
-                # coqPackages.vscoq-language-server
-              ];
-            };
-          }
-    );
+      let
+        pkgs =
+          import nixpkgs {
+            inherit system;
+            overlays = [ reloc.overlays.default ];
+          };
+        lib = pkgs.lib;
+      in
+        {
+          devShell = pkgs.mkShell {
+            packages = [
+              pkgs.coq
+              pkgs.coqPackages.mathcomp.ssreflect
+              pkgs.coqPackages.deriving
+              pkgs.coqPackages.iris
+              pkgs.coqPackages.reloc
+            ];
+          };
+        }
+    ) //
+    {
+      overlays.default = final: prev: {
+        coqPackages = prev.coqPackages.overrideScope (final: prev: {});
+      };
+    };
 }
