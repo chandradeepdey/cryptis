@@ -38,6 +38,10 @@ cryptis/session.v
 cryptis/dh.v
 cryptis/replica.v
 
+# Relational-specific
+
+cryptis/core/minted_spec.v
+
 # Case studies
 
 examples/nsl/impl.v
