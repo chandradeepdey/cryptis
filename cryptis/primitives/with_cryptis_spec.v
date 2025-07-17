@@ -21,7 +21,7 @@ Local Existing Instance ticket_lock.
 
 Section Proofs.
 
-Context `{!relocG Σ, !minted_specGS Σ}.
+Context `{!relocG Σ}.
 
 Notation nonce := loc.
 Implicit Types E : coPset.
@@ -32,29 +32,18 @@ Implicit Types Φ : prodO locO termO -n> iPropO Σ.
 Implicit Types Ψ : val → iProp Σ.
 
 Lemma twp_mk_nonce_gen E j :
-  ↑minted_specN ⊆ E →
   nclose specN ⊆ E →
-  minted_spec_ctx -∗
   refines_right j (mk_nonce #()) -∗
   |={E}=> ∃ t, refines_right j t ∗ ⌜is_nonce t⌝ ∗
-               ((minted_spec t -∗ False) ∧ (|==> minted_spec t)).
+               (¬ minted_spec t ∧ |==> minted_spec t).
 Proof.
-iIntros "% % #minted j"; rewrite /mk_nonce.
+iIntros "% j"; rewrite /mk_nonce.
 tp_pures j.
 tp_alloc j as a "Ha".
+iPoseProof (minted_spec_pre_alloc with "Ha") as "Ha".
 tp_pures j.
 iExists (TNonce a).
-rewrite val_of_term_unseal. iFrame. iModIntro.  iSplit => //.
-
-
-rewrite /mk_nonce; iIntros "mint post".
-wp_pures; wp_bind (ref _)%E; iApply twp_alloc=> //.
-iIntros (a) "[_ token]".
-iPoseProof (nonce_alloc P Q with "token") as "fresh".
-iPoseProof ("mint" with "fresh") as ">(#? & #? & #? & ?)".
-iSpecialize ("post" $! (TNonce a)).
-wp_pures. rewrite val_of_term_unseal /=.
-iApply ("post" with "[] [] [] [$]"); eauto.
+rewrite val_of_term_unseal. by iFrame.
 Qed.
 
 Lemma wp_mk_nonce_gen (P Q : term → iProp Σ) E Ψ (Φ : term → iProp Σ) :
