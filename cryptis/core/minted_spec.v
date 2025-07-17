@@ -12,41 +12,14 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Notation minted_specN := (nroot.@"cryptis".@"minted_spec").
-
-Class minted_specGpreS Σ := MintedSpecGPreS {
-  minted_specGpreS_set : inG Σ (authUR (gsetUR locO));
-}.
-
-Local Existing Instance minted_specGpreS_set.
-
-Class minted_specGS Σ := MintedSpecGS {
-  minted_spec_inG : minted_specGpreS Σ;
-  minted_spec_name  : gname;
-}.
-
-Global Existing Instance minted_spec_inG.
-
-Definition minted_specΣ : gFunctors :=
-  #[GFunctor (authUR (gsetUR locO))].
-
-Global Instance subG_minted_specGpreS Σ :
-  subG minted_specΣ Σ → minted_specGpreS Σ.
-Proof. solve_inG. Qed.
-
 Section Minted.
 
-Context `{!heapGS Σ, !cfgSG Σ, !minted_specGS Σ}.
+Context `{!heapGS Σ, !cfgGS Σ, !minted_specGS Σ}.
 
 Notation iProp := (iProp Σ).
 
-Fact minted_spec_key : unit. Proof. exact: tt. Qed.
-
-Definition minted_spec_ctx : iProp :=
-  inv minted_specN (∃ L : gset loc, own minted_spec_name (● L)).
-
 Definition minted_spec_loc (a : loc) : iProp :=
-  own minted_spec_name (◯ {[a]}).
+  a ↦ₛ□ #().
 
 Global Instance Persistent_minted_spec_loc a :
   Persistent (minted_spec_loc a).
@@ -55,6 +28,8 @@ Proof. apply _. Qed.
 Global Instance Timeless_minted_spec_loc a :
   Timeless (minted_spec_loc a).
 Proof. apply _. Qed.
+
+Fact minted_spec_key : unit. Proof. exact: tt. Qed.
 
 Definition minted_spec : term → iProp :=
   locked_with minted_spec_key (
@@ -168,5 +143,15 @@ Proof. by rewrite [term_of_senc_key]unlock minted_spec_TKey. Qed.
 
 Lemma minted_spec_sign k : minted_spec (SignKey k) ⊣⊢ minted_spec k.
 Proof. by rewrite [term_of_sign_key]unlock minted_spec_TKey. Qed.
+
+Lemma minted_spec_pre_alloc a :
+  a ↦ₛ #() -∗
+  ¬ minted_spec (TNonce a) ∧ |==> minted_spec (TNonce a).
+Proof.
+rewrite minted_spec_TNonce. iIntros "Ha"; iSplit.
+- iIntros "contra". iCombine "Ha contra" gives %[contra _].
+  by move/dfrac_valid_own_l: contra; auto.
+- by iMod (pointstoS_persist with "Ha").
+Qed.
 
 End Minted.
