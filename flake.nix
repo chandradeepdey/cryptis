@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
-    reloc.url = "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git?ref=nonpersistent";
+    reloc.url = "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git?ref=local-changes";
     reloc.inputs.nixpkgs.follows = "nixpkgs";
   };
 

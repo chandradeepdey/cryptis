@@ -77,16 +77,16 @@
         "stdpp": "stdpp"
       },
       "locked": {
-        "lastModified": 1752592931,
-        "narHash": "sha256-en9zQcEqMNLcVWQ3k1d4/otxYV+JLPoB1Me0c7/KxWo=",
-        "ref": "nonpersistent",
-        "rev": "7db8224aeca06c488b1545e310f9f36371fc5650",
-        "revCount": 359,
+        "lastModified": 1752762834,
+        "narHash": "sha256-m3Sy4yvnJbw5sR74klqCqQicLqqIAPvjisGjJre6rRc=",
+        "ref": "local-changes",
+        "rev": "1a1d54912db87ff2c77253e2ad72d7818f40cff4",
+        "revCount": 361,
         "type": "git",
         "url": "https://gitlab.mpi-sws.org/arthuraa/reloc.git"
       },
       "original": {
-        "ref": "nonpersistent",
+        "ref": "local-changes",
         "type": "git",
         "url": "https://gitlab.mpi-sws.org/arthuraa/reloc.git"
       }
