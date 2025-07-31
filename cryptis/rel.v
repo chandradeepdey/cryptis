@@ -5,7 +5,8 @@ From iris.algebra Require Import functions.
 From iris.base_logic.lib Require Import saved_prop invariants.
 From iris.heap_lang Require Import notation proofmode.
 From cryptis Require Import lib gmeta nown.
-From cryptis.core Require Import term.
+From cryptis.core Require Import term minted minted_spec.
+From reloc Require Import reloc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -62,7 +63,7 @@ Proof. solve_inG. Qed.
 
 Section Rel.
 
-Context `{!heapGS Σ, !publicGS Σ}.
+Context `{!heapGS Σ, !cfgGS Σ, !publicGS Σ}.
 Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
 Notation iPropI := (iPropI Σ).
@@ -97,15 +98,17 @@ Definition nonce_rel_auth R : iProp :=
   ⌜part_bij R⌝.
 
 Definition nonce_rel_frag t1 t2 : iProp :=
-  nown public_term_part_bij_name (nroot.@"nonce") (◯ {[(t1, t2)]}).
+  nown public_term_part_bij_name (nroot.@"nonce") (◯ {[(t1, t2)]}) ∗
+    minted_spec t1 ∗ minted t2.
 
 Lemma nonce_rel_alloc t1 t2 R :
   (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
+  minted_spec t1 ∗ minted t2 ∗
   nonce_rel_auth R ==∗
   nonce_rel_auth ({[(t1, t2)]} ∪ R) ∗
   nonce_rel_frag t1 t2.
 Proof.
-iIntros "%fresh [own %bij_R]".
+iIntros "%fresh (mt1 & mt2 & [own %bij_R])".
 iMod (nown_update with "own") as "[auth frag]".
 { apply: auth_update_alloc.
   apply: (gset_local_update _ _ ({[(t1, t2)]} ∪ R)).
@@ -142,6 +145,19 @@ Proof.
 iIntros "%fresh H●".
 iMod (enc_rel_alloc _ fresh with "H●") as "[H● H◯]".
 by iFrame.
+Qed.
+
+Lemma public_TNonce R (t1 t2: loc) :
+  (∀ t1' t2', (t1', t2') ∈ R → (TNonce t1) ≠ t1' ∧ (TNonce t2) ≠ t2') →
+  minted_spec (TNonce t1) ∗ minted (TNonce t2) ∗
+  nonce_rel_auth R ==∗
+  nonce_rel_auth ({[((TNonce t1), (TNonce t2))]} ∪ R) ∗
+  public (TNonce t1) (TNonce t2).
+Proof.
+  iIntros "%fresh (#Ht1 & #Ht2 & H●)".
+  iMod (nonce_rel_alloc fresh with "[H●]") as "[H● H◯]".
+  - by iFrame "#".
+  by iFrame.
 Qed.
 
 End Rel.
