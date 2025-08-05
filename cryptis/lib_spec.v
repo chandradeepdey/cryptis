@@ -75,16 +75,13 @@ rewrite decide_True //= subst_free_vars //.
 wp_pures; iApply wp_bind; wp_pures; by iApply wp_bind_inv.
 Qed.
 
-Lemma tp_close_vars E j vars vs k Ψ :
+Lemma tp_close_vars E j vars vs k :
   nclose specN ⊆ E →
   length vars = length vs →
-  (forall j, nclose specN ⊆ E → refines_right j (nsubst vars vs k) -∗
-    |={E}=> ∃ v, refines_right j v ∗ Ψ v) →
-  refines_right j (fill (napp vars vs) (close_vars vars k)) -∗
-  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
+  refines_right j (fill (napp vars vs) (close_vars vars k)) ={E}=∗
+  refines_right j (nsubst vars vs k).
 Proof.
-move=> HE Hlen Hyp.
-iIntros "Hj".
+move=> HE Hlen. iIntros "Hj".
 Admitted.
 (* elim: vars vs => [|var vars IH] [|v vs] //= in k Ψ *.
   by iIntros (?) "p"; wp_pures.
@@ -103,16 +100,17 @@ rewrite subst_close_vars //.
 by iApply IH.
 Qed. *)
 
-(* Lemma tp_list_match E j vars (vs : list A) k Ψ :
+Lemma tp_list_match E j vars (vs : list A) k (Ψ : val → iProp Σ) :
   nclose specN ⊆ E →
-  (forall j, nclose specN ⊆ E →
+  (∀ j,
   if decide (length vars = length vs) then
-     (refines_right j (nsubst vars (map repr vs) k) -∗
-     |={E}=> ∃ v, refines_right j v ∗ Ψ v)
-   else Ψ NONEV) -∗
+     ((refines_right j (nsubst vars (map repr vs) k) -∗
+     |={E}=> ∃ v : val, refines_right j v ∗ Ψ v))
+   else Ψ NONEV)%I -∗
   refines_right j (list_match vars (repr vs) k) -∗
-  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
-Proof.
+  |={E}=> ∃ v : val, refines_right j v ∗ Ψ v.
+Proof. Admitted.
+(*
 rewrite unlock; iIntros "post".
 assert (disj : elements (free_vars (close_vars vars k)) ## vars).
   elim: vars => [|var vars IH] /= in k *; try case: decide => ?; set_solver.
