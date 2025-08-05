@@ -18,6 +18,40 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "iris": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1744821680,
+        "narHash": "sha256-t3psfmX+YI/aVtQcdpPMsUYSpZGonnBXNgrV14RGH9M=",
+        "ref": "refs/heads/master",
+        "rev": "df5c2465ab1987632034a6546d6c99a5cbf11ee4",
+        "revCount": 8310,
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/iris/iris.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/iris/iris.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1753805735,
@@ -48,10 +82,66 @@
         "type": "github"
       }
     },
+    "reloc": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "iris": "iris",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "stdpp": "stdpp"
+      },
+      "locked": {
+        "lastModified": 1752762834,
+        "narHash": "sha256-m3Sy4yvnJbw5sR74klqCqQicLqqIAPvjisGjJre6rRc=",
+        "ref": "local-changes",
+        "rev": "1a1d54912db87ff2c77253e2ad72d7818f40cff4",
+        "revCount": 361,
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/arthuraa/reloc.git"
+      },
+      "original": {
+        "ref": "local-changes",
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/arthuraa/reloc.git"
+      }
+    },
     "root": {
       "inputs": {
         "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "reloc": "reloc"
+      }
+    },
+    "stdpp": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1744123896,
+        "narHash": "sha256-agFjnPGnFD9dmRFmI0/7Ors6i8VXz1WY2NjCABeALXE=",
+        "ref": "refs/heads/master",
+        "rev": "39860d00cf24ffe6abcf5d2cc307f6750eded95f",
+        "revCount": 2802,
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/iris/stdpp.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/iris/stdpp.git"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     }
   },

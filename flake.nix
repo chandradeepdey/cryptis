@@ -4,9 +4,11 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    reloc.url = "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git?ref=local-changes";
+    reloc.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, flake-parts, nixpkgs, ... }:
+  outputs = inputs@{ self, flake-parts, nixpkgs, reloc, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         # To import a flake module
@@ -19,7 +21,7 @@
       perSystem = { config, self', inputs', pkgs, system, ... }: {
         _module.args.pkgs = import nixpkgs {
           inherit system;
-          overlays = [ self.overlays.default ];
+          overlays = [ reloc.overlays.default self.overlays.default ];
         };
 
         # Per-system attributes can be defined here. The self' and inputs'
@@ -48,6 +50,7 @@
                 final.deriving
                 final.iris
                 final.stdlib
+                final.reloc
               ];
             };
           });
