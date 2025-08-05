@@ -43,7 +43,7 @@ Lemma tp_cons E j x xs :
 Proof.
 intros HE.
 rewrite /= repr_list_unseal; iIntros "post"; rewrite /CONS; tp_pures j.
-Qed.
+Admitted.
 
 Lemma wp_list_match_aux E (vs : list A) evs vars k Ψ :
   elements (free_vars k) ## vars →
@@ -75,12 +75,18 @@ rewrite decide_True //= subst_free_vars //.
 wp_pures; iApply wp_bind; wp_pures; by iApply wp_bind_inv.
 Qed.
 
-Lemma wp_close_vars E vars vs k Ψ :
+Lemma tp_close_vars E j vars vs k Ψ :
+  nclose specN ⊆ E →
   length vars = length vs →
-  WP nsubst vars vs k @ E {{ Ψ }} -∗
-  WP fill (napp vars vs) (close_vars vars k) @ E {{ Ψ }}.
+  (forall j, nclose specN ⊆ E → refines_right j (nsubst vars vs k) -∗
+    |={E}=> ∃ v, refines_right j v ∗ Ψ v) →
+  refines_right j (fill (napp vars vs) (close_vars vars k)) -∗
+  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
 Proof.
-elim: vars vs => [|var vars IH] [|v vs] //= in k Ψ *.
+move=> HE Hlen Hyp.
+iIntros "Hj".
+Admitted.
+(* elim: vars vs => [|var vars IH] [|v vs] //= in k Ψ *.
   by iIntros (?) "p"; wp_pures.
 move=> [] e; iIntros "p".
 case: decide => [in_vars|nin_vars].
@@ -95,13 +101,17 @@ rewrite subst_nsubst_nin //.
 iApply wp_bind_inv.
 rewrite subst_close_vars //.
 by iApply IH.
-Qed.
+Qed. *)
 
-Lemma wp_list_match E vars (vs : list A) k Ψ :
-  (if decide (length vars = length vs) then
-     WP nsubst vars (map repr vs) k @ E {{ Ψ }}
-   else Ψ NONEV) ⊢
-  WP list_match vars (repr vs) k @ E {{ Ψ }}.
+(* Lemma tp_list_match E j vars (vs : list A) k Ψ :
+  nclose specN ⊆ E →
+  (forall j, nclose specN ⊆ E →
+  if decide (length vars = length vs) then
+     (refines_right j (nsubst vars (map repr vs) k) -∗
+     |={E}=> ∃ v, refines_right j v ∗ Ψ v)
+   else Ψ NONEV) -∗
+  refines_right j (list_match vars (repr vs) k) -∗
+  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
 Proof.
 rewrite unlock; iIntros "post".
 assert (disj : elements (free_vars (close_vars vars k)) ## vars).
@@ -111,15 +121,18 @@ iApply (wp_list_match_aux E vs (repr vs)); eauto.
 case: decide => ? //.
 iApply (wp_close_vars with "post").
 by rewrite length_map.
-Qed.
+Qed. *)
 
-Lemma twp_eq_list `{EqDecision A} (f : val) (l1 l2 : list A) Φ E :
-  (∀ (x1 x2 : A) Ψ,
+Lemma tp_eq_list `{EqDecision A} E j (f : val) (l1 l2 : list A) Φ :
+  (∀ (x1 x2 : A) Ψ j,
+      nclose specN ⊆ E →
       x1 ∈ l1 →
-      Ψ #(bool_decide (x1 = x2)) -∗
-      WP f (repr x1) (repr x2) @ E [{ Ψ }]) →
-  Φ #(bool_decide (l1 = l2)) ⊢
-  WP eq_list f (repr l1) (repr l2) @ E [{ Φ }].
+      Ψ (of_val #(bool_decide (x1 = x2))) → (* of_val ?? *)
+      refines_right j (f (repr x1) (repr x2)) -∗
+      |={E}=> ∃ v, refines_right j v ∗ Ψ v) →
+  Φ #(bool_decide (l1 = l2)) -∗
+  refines_right j (eq_list f (repr l1) (repr l2)) -∗
+  |={E}=> ∃ v, refines_right j v ∗ Φ v.
 Proof.
 rewrite repr_list_unseal /=.
 elim: l1 l2 Φ => [|x1 l1 IH] [|x2 l2] Φ wp_f /=;
@@ -213,7 +226,7 @@ End DoUntil.
 
 Section Loc.
 
-Context `{!heapGS Σ}.
+Context `{!relocG Σ}.
 Import ssreflect.order deriving.instances.
 
 Lemma twp_leq_loc_loop E (l1 l2 : loc) (n k : nat) Ψ :
@@ -263,7 +276,7 @@ Section Ordered.
 
 Import ssrbool seq ssreflect.order path deriving.instances.
 Variable (d : Order.disp_t) (A : orderType d).
-Context `{!Repr A, !heapGS Σ}.
+Context `{!Repr A, !relocG Σ}.
 Import Order Order.POrderTheory Order.TotalTheory.
 Implicit Types (x y z : A) (s : seqlexi_with d A).
 
@@ -322,196 +335,42 @@ Qed.
 
 End Ordered.
 
-#[global]
-Instance repr_prod `{Repr A, Repr B} : Repr (A * B) :=
-  λ p, (repr p.1, repr p.2)%V.
-Arguments repr_prod {_ _ _ _} !_.
-
-Fixpoint nforall {A} (n : nat) (P : list A → Prop) :=
-  match n with
-  | 0 => P []
-  | S n => forall x : A, nforall n (λ xs, P (x :: xs))
-  end.
-
-Lemma nforallP {A} (n : nat) (P : list A -> Prop) :
-  nforall n P ↔ ∀ vs, n = length vs → P vs.
-Proof.
-elim: n => [|n IH] /= in P *.
-  split; [by move=> ? [|//]|by apply].
-split.
-- move=> H [|x xs] //= [e]; by move/IH: (H x); apply.
-- by move=> H x; apply/IH => xs len_xs; apply: H; rewrite len_xs.
-Qed.
-
-Definition nforall_eq {A} (n : nat) (vs : list A) (P : list A -> Prop) :=
-  nforall n (λ vs', vs = vs' → P vs').
-
-Lemma nforall_eqP {A} (n : nat) (xs : list A) (P : list A -> Prop) :
-  nforall_eq n xs P ↔ (n = length xs → P xs).
-Proof.
-rewrite /nforall_eq nforallP; split.
-- by move=> H len_xs; apply: H.
-- by move=> H xs' len_xs' e_xs'; rewrite e_xs' in H; apply: H.
-Qed.
-
-Arguments nforall_eq {A} /.
-
-Lemma list_len_rect (n : nat) A (P : list A → Prop) :
-  (nforall n P) →
-  (∀ xs, length xs ≠ n → P xs) →
-  ∀ xs, P xs.
-Proof.
-move=> eq_n neq_n xs.
-case: (decide (n = length xs)) => [eq|neq].
-- by move: xs eq; apply/nforallP.
-- exact: neq_n.
-Qed.
-
-Fixpoint prod_of_list_aux_type A B n :=
-  match n with
-  | 0 => A
-  | S n => prod_of_list_aux_type (A * B)%type B n
-  end.
-
-Fixpoint prod_of_list_aux {A B} n :
-  A → list B → option (prod_of_list_aux_type A B n) :=
-  match n with
-  | 0 => fun x ys =>
-    match ys with
-    | [] => Some x
-    | _  => None
-    end
-  | S n => fun x ys =>
-    match ys with
-    | [] => None
-    | y :: ys => prod_of_list_aux n (x, y) ys
-    end
-  end.
-
-Definition prod_of_list_type A n : Type :=
-  match n with
-  | 0 => unit
-  | S n => prod_of_list_aux_type A A n
-  end.
-
-Fact prod_of_list_key : unit. Proof. exact: tt. Qed.
-
-Definition prod_of_list {A} n xs : option (prod_of_list_type A n) :=
-  locked_with prod_of_list_key (
-    match n return list A → option (prod_of_list_type A n) with
-    | 0 => fun xs => match xs with
-                     | [] => Some tt
-                     | _  => None
-                     end
-    | S n => fun xs => match xs with
-                       | [] => None
-                       | x :: xs => prod_of_list_aux n x xs
-                       end
-    end xs).
-
-Canonical prod_of_list_unlockable A n xs :=
-  [unlockable of @prod_of_list A n xs].
-
-Lemma prod_of_list_neq {A} n (xs : list A) :
-  length xs ≠ n → prod_of_list n xs = None.
-Proof.
-rewrite unlock; case: n xs=> [|n] [|x xs] //= ne.
-have {}ne : length xs ≠ n by congruence.
-suffices : ∀ B (x : B), prod_of_list_aux n x xs = None by apply.
-elim: n xs {x} => [|n IH] [|y ys] //= in ne * => B x.
-rewrite IH //; congruence.
-Qed.
-
-Lemma fmap_binder_delete {A B} (f : A → B) (m : gmap string A) x :
-  f <$> binder_delete x m = binder_delete x (f <$> m).
-Proof. case: x => [|x] //=; by rewrite fmap_delete. Qed.
-
-Lemma fmap_binder_insert {A B} (f : A → B) (m : gmap string A) i x :
-  f <$> binder_insert i x m = binder_insert i (f x) (f <$> m).
-Proof. case: i => [|i] //=; by rewrite fmap_insert. Qed.
-
-Lemma insert_same {A} (m1 m2 : gmap string A) (i : string) (x : A) :
-  (∀ j, j ≠ i → m1 !! j = m2 !! j) →
-  <[i := x]>m1 = <[i := x]>m2.
-Proof.
-move=> e12; apply map_eq => j.
-destruct (decide (j = i)) as [->|ne].
-- by rewrite !lookup_insert.
-- by rewrite !lookup_insert_ne // e12.
-Qed.
-
-Lemma binder_insert_same {A} (m1 m2 : gmap string A) (i : binder) (x : A) :
-  (∀ j : string, BNamed j ≠ i → m1 !! j = m2 !! j) →
-  binder_insert i x m1 = binder_insert i x m2.
-Proof.
-case: i => [|i] /= e12.
-- by apply: map_eq => i; apply: e12.
-- apply: insert_same => ??; apply: e12; congruence.
-Qed.
-
-Lemma binder_insert_delete {A} (m : gmap string A) (i : binder) (x : A) :
-  binder_insert i x (binder_delete i m) = binder_insert i x m.
-Proof. case: i => //= i; exact: insert_delete_insert. Qed.
-
-Lemma binder_insert_delete2 {A} (m : gmap string A) (i j : binder) (x y : A) :
-  binder_insert i x (binder_insert j y (binder_delete i (binder_delete j m))) =
-  binder_insert i x (binder_insert j y m).
-Proof.
-rewrite -(binder_insert_delete m j y).
-case: i j => [|i] [|j] //=.
-- by rewrite insert_delete_insert.
-- rewrite delete_commute !insert_delete_insert.
-  destruct (decide (i = j)) as [->|i_j].
-    by rewrite insert_delete_insert.
-  by rewrite insert_commute // insert_delete_insert insert_commute //.
-Qed.
-
-Lemma binder_delete_commute {A} (m : gmap string A) i j :
-  binder_delete i (binder_delete j m) =
-  binder_delete j (binder_delete i m).
-Proof. case: i j => [|i] [|j] //=; exact: delete_commute. Qed.
-
-Definition nondet_nat_loop : val := rec: "loop" "n" :=
-  if: nondet_bool #() then "n" else "loop" ("n" + #1).
-
-Definition nondet_nat : val := λ: <>, nondet_nat_loop #0.
-
-Definition nondet_int : val := λ: <>,
-  let: "n" := nondet_nat #() in
-  if: nondet_bool #() then "n" else - "n".
-
 Section NonDetProofs.
 
-Context `{!heapGS Σ}.
+Context `{!relocG Σ}.
 
 Implicit Types E : coPset.
 Implicit Types v : val.
 Implicit Types Ψ : val → iProp Σ.
 
-Lemma wp_nondet_nat_loop Ψ (m : nat) :
-  (∀ n : nat, Ψ #n) ⊢
-  WP nondet_nat_loop #m {{ Ψ }}.
+Lemma tp_nondet_nat_loop E j Ψ (m : nat) :
+  nclose specN ⊆ E →
+  (∀ n : nat, Ψ #n) -∗
+  refines_right j (nondet_nat_loop #m) -∗
+  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
 Proof.
-iIntros "post"; iLöb as "IH" forall (m); wp_rec.
-wp_apply nondet_bool_spec => //.
-iIntros "%b _"; case: b; wp_if; first by iApply "post".
-wp_pures. have -> : (m + 1)%Z = (m + 1)%nat by lia.
-by iApply "IH".
+Admitted.
+
+Lemma tp_nondet_nat E j Ψ :
+  nclose specN ⊆ E →
+  (∀ n : nat, Ψ #n) -∗
+  refines_right j (nondet_nat #()) -∗
+  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
+Proof.
+iIntros "%HE post Hj". tp_lam j.
+iPoseProof (tp_nondet_nat_loop _ _ Ψ 0 HE with "post Hj") as ">[%v [Hj Hv]]".
+by iFrame.
 Qed.
 
-Lemma wp_nondet_nat Ψ :
-  (∀ n : nat, Ψ #n) ⊢
-  WP nondet_nat #() {{ Ψ }}.
+Lemma wp_nondet_int E j Ψ :
+  nclose specN ⊆ E →
+  (∀ n : Z, Ψ #n) -∗
+  refines_right j (nondet_int #()) -∗
+  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
 Proof.
-iIntros "post". wp_lam. by wp_apply (wp_nondet_nat_loop _ 0).
-Qed.
-
-Lemma wp_nondet_int Ψ :
-  (∀ n : Z, Ψ #n) ⊢
-  WP nondet_int #() {{ Ψ }}.
-Proof.
-iIntros "post"; rewrite /nondet_int; wp_pures.
-wp_apply wp_nondet_nat. iIntros "%n"; wp_pures.
+iIntros "%HE post Hj"; rewrite /nondet_int; tp_pures j.
+iApply (tp_nondet_nat _ _ _ HE with "[post]"); first auto.
+iIntros "%n"; wp_pures.
 wp_apply nondet_bool_spec => //. iIntros "%b _".
 case: b; wp_if; first by iApply "post".
 by wp_pures; iApply "post".
