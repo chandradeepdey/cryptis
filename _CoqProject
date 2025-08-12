@@ -12,6 +12,10 @@ cryptis/gmeta.v
 cryptis/nown.v
 cryptis/role.v
 
+# Relational-specific
+
+cryptis/core/lib_spec.v
+
 cryptis/core/pre_term/base.v
 cryptis/core/pre_term/with_stdpp.v
 cryptis/core/pre_term.v

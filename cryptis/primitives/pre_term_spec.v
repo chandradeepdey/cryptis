@@ -2,7 +2,7 @@
 development. Since they don't have many dependencies, they are left in their own
 file to avoid slowing down the compilation process. *)
 
-From cryptis Require Import lib.
+From cryptis Require Import lib lib_spec.
 From mathcomp Require Import ssreflect.
 From mathcomp Require order.
 From stdpp Require Import gmap.
@@ -121,6 +121,7 @@ tp_rec j; tp_pures j=> //; simpl; auto.
   case: bool_decide_reflect=> e1;
   rewrite -refines_right_bind /=.
   + tp_pures j.
+    rewrite tp_eq_list
     admit.
   + tp_pures j; iFrame.
     rewrite bool_decide_false //; congruence.
