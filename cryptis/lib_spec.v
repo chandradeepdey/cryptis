@@ -38,48 +38,55 @@ Qed.
 
 Lemma tp_cons E j x xs :
   nclose specN ⊆ E →
-  refines_right j (repr (x :: xs)) -∗
-  |={E}=> refines_right j (repr x :: repr xs).
+  refines_right j (repr x :: repr xs) -∗
+  |={E}=> refines_right j (repr (x :: xs)).
 Proof.
 intros HE.
-rewrite /= repr_list_unseal; iIntros "post"; rewrite /CONS; tp_pures j.
-Admitted.
+by rewrite /= repr_list_unseal; iIntros "post"; rewrite /CONS; tp_pures j.
+Qed.
 
-Lemma tp_list_match_aux E j (vs : list A) evs vars k Ψ :
+Lemma tp_list_match_aux E j (vs : list A) evs vars k :
   nclose specN ⊆ E →
   elements (free_vars k) ## vars →
-  (∀ j Ψ, Ψ (repr_list vs) -∗
-    refines_right j evs ==∗ ∃ (v : val), refines_right j v ∗ Ψ v) -∗
-  (if decide (length vars = length vs) then
-     refines_right j (fill (napp vars (map repr vs)) k) -∗
-     |={E}=> ∃ (v : val), refines_right j v ∗ Ψ v
-   else Ψ NONEV) -∗
   refines_right j (list_match_aux vars evs k) -∗
-  |={E}=> ∃ (v : val), refines_right j v ∗ Ψ v.
+  (∀ j', refines_right j' evs ={E}=∗ refines_right j' (repr_list vs)) -∗
+  |={E}=>
+    let v := if decide (length vars = length vs) then
+               fill (napp vars (map repr vs)) k
+             else NONEV in
+    refines_right j v.
 Proof.
 move => HE.
 rewrite repr_list_unseal.
-elim: vars vs => [|var vars IH] [|v vs] /= in evs k *; iIntros (dis) "evs pS".
-Admitted.
-(* - by wp_pures; wp_bind evs; iApply "evs"; wp_pures.
-- by wp_pures; wp_bind evs; iApply "evs"; wp_pures.
-- by wp_pures; wp_bind evs; iApply "evs"; wp_pures.
-rewrite /=; wp_pures; wp_bind evs; iApply "evs"; wp_pures.
-rewrite subst_list_match_aux /=.
-rewrite [if decide (var = var) then _ else _]decide_True //=.
+elim: vars vs => [|var vars IH] [|v vs] /= in evs k *; iIntros (dis) "pS evs".
+- tp_bind j evs; rewrite refines_right_bind.
+  iPoseProof ("evs" with "pS") as ">evs".
+  rewrite -refines_right_bind /=. by tp_pures j.
+- tp_bind j evs; rewrite refines_right_bind.
+  iPoseProof ("evs" with "pS") as ">evs".
+  rewrite -refines_right_bind /=. by tp_pures j.
+- tp_bind j evs; rewrite refines_right_bind.
+  iPoseProof ("evs" with "pS") as ">evs".
+  rewrite -refines_right_bind /=. by tp_pures j.
+tp_bind j evs; rewrite refines_right_bind.
+iPoseProof ("evs" with "pS") as ">evs".
+rewrite -refines_right_bind /=. tp_pures j.
+rewrite subst_list_match_aux /= decide_True //.
 assert (fresh_var : var ∉ free_vars k) by set_solver.
 assert (dis' : elements (free_vars k) ## vars) by set_solver.
-iApply (IH with "[]"); try by iIntros (Ψ') "p'"; wp_pures; eauto.
-  case: decide => _ //=.
+have {}IH := IH vs. iPoseProof (IH with "evs []") as ">IH".
+- case: decide => _ //=.
   rewrite free_vars_subst decide_True //=.
   set_solver.
+- iIntros "%j' pS". by tp_pures j'.
 case: (decide (length vars = length vs)) => [eq_l|neq_l]; last first.
-  rewrite decide_False //; congruence.
-rewrite eq_l decide_True //.
+  rewrite decide_False //=; congruence.
+rewrite eq_l (decide_True (P := S _ = _)) //.
 case: decide => [//|nin_vars] /=.
 rewrite decide_True //= subst_free_vars //.
-wp_pures; iApply wp_bind; wp_pures; by iApply wp_bind_inv.
-Qed. *)
+tp_bind j (Fst _). rewrite refines_right_bind.
+set j' := RefId _ _. tp_pures j'. by rewrite /j' -refines_right_bind /=.
+Qed.
 
 Lemma tp_close_vars E j vars vs k :
   nclose specN ⊆ E →
