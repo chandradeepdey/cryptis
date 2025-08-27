@@ -657,6 +657,38 @@ case=> e_len; rewrite free_vars_subst IH //.
 set_solver.
 Qed.
 
+Section Total.
+
+(* XXX: See if we can adapt the proof of total adequacy to get something like this. *)
+Lemma aux `{!heapGS Σ} (e : expr) (v : val) :
+  WP e @ ⊤ [{ v', ⌜v' = v⌝ }] ={⊤}=∗
+  ⌜∀ tp1 tp2 σ, rtc erased_step (tp1 ++ [e] ++ tp2, σ) (tp1 ++ [v : expr] ++ tp2, σ)⌝.
+Proof.
+iIntros "He".
+remember (⊤ : coPset) as E eqn:HE. iRevert (HE).
+remember (λ v', ⌜v' = v⌝)%I as Φ eqn:HΦ.
+iAssert (∀ v', Φ v' -∗ ⌜v' = v⌝)%I as "HΦ".
+{ rewrite HΦ. by iIntros "% ->". }
+clear HΦ. iRevert (e E Φ) "He HΦ". iApply twp_ind.
+{ admit. (* Should work *) }
+iIntros "!> %e %E %Φ IH #HΦ ->".
+rewrite /twp_pre.
+case ev: language.to_val => [v'|].
+{ iMod "IH" as "IH". iIntros "!> %tp1 %tp2 %σ".
+  have /= <- := language.of_to_val _ _ ev.
+  iPoseProof ("HΦ" with "IH") as "->". iPureIntro.
+  reflexivity. }
+Admitted.
+
+(*
+Lemma foo (e : expr) (v : val) :
+  (∀ (Σ : gFunctors) (H : heapGS Σ), ⊢ WP e @ ⊤ [{ v', ⌜v' = v⌝ }]) →
+  ∀ tp1 tp2 σ, rtc erased_step (tp1 ++ [e] ++ tp2, σ) (tp1 ++ [v : expr] ++ tp2, σ).
+Proof.
+*)
+
+End Total.
+
 Section ListLemmas.
 
 Context `{!Repr A, !heapGS Σ}.
