@@ -1,5 +1,5 @@
 From stdpp Require Import base countable gmap.
-From iris.heap_lang Require Import lang notation proofmode.
+From iris.heap_lang Require Import lang notation proofmode adequacy total_adequacy.
 From iris.heap_lang.lib Require Import nondet_bool.
 From iris.algebra Require Import gmap gset auth reservation_map.
 From iris.base_logic Require Import gen_heap invariants.
@@ -659,33 +659,37 @@ Qed.
 
 Section Total.
 
-(* XXX: See if we can adapt the proof of total adequacy to get something like this. *)
-Lemma aux `{!heapGS Σ} (e : expr) (v : val) :
-  WP e @ ⊤ [{ v', ⌜v' = v⌝ }] ={⊤}=∗
-  ⌜∀ tp1 tp2 σ, rtc erased_step (tp1 ++ [e] ++ tp2, σ) (tp1 ++ [v : expr] ++ tp2, σ)⌝.
-Proof.
-iIntros "He".
-remember (⊤ : coPset) as E eqn:HE. iRevert (HE).
-remember (λ v', ⌜v' = v⌝)%I as Φ eqn:HΦ.
-iAssert (∀ v', Φ v' -∗ ⌜v' = v⌝)%I as "HΦ".
-{ rewrite HΦ. by iIntros "% ->". }
-clear HΦ. iRevert (e E Φ) "He HΦ". iApply twp_ind.
-{ admit. (* Should work *) }
-iIntros "!> %e %E %Φ IH #HΦ ->".
-rewrite /twp_pre.
-case ev: language.to_val => [v'|].
-{ iMod "IH" as "IH". iIntros "!> %tp1 %tp2 %σ".
-  have /= <- := language.of_to_val _ _ ev.
-  iPoseProof ("HΦ" with "IH") as "->". iPureIntro.
-  reflexivity. }
-Admitted.
+(* XXX: See if we can adapt the proof of total adequacy to get something like
+this.  Possible plan: Modify the proof of total adequacy so that:
 
-(*
-Lemma foo (e : expr) (v : val) :
-  (∀ (Σ : gFunctors) (H : heapGS Σ), ⊢ WP e @ ⊤ [{ v', ⌜v' = v⌝ }]) →
-  ∀ tp1 tp2 σ, rtc erased_step (tp1 ++ [e] ++ tp2, σ) (tp1 ++ [v : expr] ++ tp2, σ).
-Proof.
+1. It uses prim_step rather than step (so that you can talk about the execution
+of a single thread)
+
+2. It allows you to conclude some post condition about the final value (use the
+proof of plain adequacy for that)
+
+
 *)
+Lemma heap_combined Σ (H1 : heapGpreS Σ) s (e : expr) (v : val) σ :
+  (∀ hlc (H : heapGS_gen hlc Σ), ⊢ inv_heap_inv -∗ WP e @ s; ⊤ [{ v', ⌜v' = v⌝ }]) →
+  ∃ tp σ', rtc erased_step ([e], σ) ([v : expr] ++ tp, σ').
+Proof.
+move=> H.
+assert (sn erased_step ([e], σ)) as Hsn.
+{ apply (heap_total _ _ _ _ _ (H HasNoLc)). }
+assert (∀ y : cfg heap_lang, Decision (red erased_step y)).
+{ admit. }
+assert (wn erased_step ([e], σ)) as (ρ & Hρ & Hnf).
+{ by apply sn_wn. }
+assert (∃ (v' : val) tp σ', ρ = ((v' : expr) :: tp, σ')) as (v' & tp & σ' & ->).
+{ admit. }
+assert (adequate s e σ (λ v' _, v' = v)) as Had.
+{ apply (heap_adequacy Σ).
+  iIntros (?) "inv". iApply twp_wp.
+  by iApply H. }
+have <- := adequate_result _ _ _ _ Had _ _ _ Hρ.
+simpl. now eauto.
+Admitted.
 
 End Total.
 
