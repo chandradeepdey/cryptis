@@ -42,6 +42,8 @@ cryptis/session.v
 cryptis/dh.v
 cryptis/replica.v
 
+cryptis/adequacy.v
+
 # Relational-specific
 
 cryptis/core/minted_spec.v
