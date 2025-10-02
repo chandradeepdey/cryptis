@@ -327,7 +327,7 @@ Proof.
 rewrite /comp_map_auth /comp_map_frag /=.
 case/view_both_valid/(_ 0)=> [_ [] _].
 rewrite !pair_included; case=> [[] _ /lookup_included/(_ m) incl_H _].
-rewrite lookup_singleton /= in incl_H.
+rewrite lookup_singleton_eq /= in incl_H.
 case/option_included_total: incl_H=> //= - [_ [] T' [] [<-] [] H_m T_T'].
 by exists T'; split => //; apply/gset_included.
 Qed.
@@ -350,7 +350,7 @@ do ![split => //].
 - move=> p /bound_aC p_aC; lia.
 - move=> m1 T1 m2 t2.
   case: (decide (m1 = S an)) => [-> {m1}|neq].
-  + rewrite lookup_insert; case => <- {T1}.
+  + rewrite lookup_insert_eq; case => <- {T1}.
     by move=> /dis_a_b.
   + rewrite lookup_insert_ne //; exact: aH_aC.
 - rewrite /= in val_dq *.
@@ -368,7 +368,7 @@ do ![split => //].
   rewrite lookup_included => n.
   rewrite lookup_op.
   case: (decide (n = S an)) => [-> {n}|neq].
-  + rewrite lookup_singleton lookup_insert.
+  + rewrite lookup_singleton_eq lookup_insert_eq.
     move/(_ (S an)): incl_H; case bf_H__an: (bf_H !! S an) => [p|//].
     case/option_included => // - [? [] q [] [->] [] contra ?].
     suff: S an ≤ an by lia.
@@ -399,7 +399,7 @@ do ![split => //].
   by apply: bound_aH; rewrite elem_of_dom aH_m1.
 - move: incl_a1_b1; rewrite !pair_included /=.
   case => [[] incl_n incl_H incl_C].
-  split=> //. 
+  split=> //.
   rewrite gset_included gset_op.
   rewrite ucmra_unit_left_id gset_included in incl_C.
   set_solver.

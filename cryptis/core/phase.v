@@ -295,7 +295,7 @@ rewrite honest_unseal public_at_unseal.
 iIntros "%m_n (#frag1 & _) (_ & #frag2 & _)".
 iPoseProof (own_valid_2 with "frag1 frag2") as "%val".
 move/comp_map_frag_valid_dis/(_ n X m t): val.
-rewrite lookup_singleton elem_of_singleton => dis.
+rewrite lookup_singleton_eq elem_of_singleton => dis.
 iPureIntro; exact: dis.
 Qed.
 
@@ -437,7 +437,7 @@ have e: (H, C) = (H, C) ⋅ ({[m := ∅]}, ∅).
   rewrite -leibniz_equiv_iff => k.
   rewrite lookup_op.
   case: (decide (k = m)) => [->|k_m].
-  - by rewrite lookup_singleton H_m -Some_op ucmra_unit_right_id_L.
+  - by rewrite lookup_singleton_eq H_m -Some_op ucmra_unit_right_id_L.
   - by rewrite lookup_singleton_ne // ucmra_unit_right_id_L.
 rewrite [in ◯CM (H, C)]e comp_map_frag_op.
 iDestruct "phaseI'" as "[_ #?]".
@@ -492,7 +492,7 @@ have e: (H, C) = (H, C) ⋅ ({[m := ∅]}, ∅).
   rewrite -leibniz_equiv_iff => k.
   rewrite lookup_op.
   case: (decide (k = m)) => [->|k_m].
-  - by rewrite lookup_singleton H_m -Some_op ucmra_unit_right_id_L.
+  - by rewrite lookup_singleton_eq H_m -Some_op ucmra_unit_right_id_L.
   - by rewrite lookup_singleton_ne // ucmra_unit_right_id_L.
 rewrite [in ◯CM (H, C)]e comp_map_frag_op.
 iDestruct "phaseI'" as "[_ #?]".
@@ -566,7 +566,7 @@ iExists (⋃ ((λ m, M m) <$> seq 0 n)). iSplit.
   case/auth_both_dfrac_valid_discrete => _.
   rewrite gset_included singleton_subseteq_l; case=> ??.
   rewrite elem_of_union_list. exists (M m).
-  rewrite elem_of_list_fmap. split => //. exists m.
+  rewrite list_elem_of_fmap. split => //. exists m.
   split => //.
   apply/elem_of_seq. lia.
 Qed.
@@ -622,7 +622,7 @@ iMod (own_update with "own_M") as "own_M".
 { exact: to_mint_map_bump. }
 iMod ("close" with "[sec_X phaseI own_M]") as "_".
 { iModIntro. iExists _, _, _, _, _. iFrame.
-  rewrite lookup_insert.
+  rewrite lookup_insert_eq.
   do !iSplit => //. iDestruct "mint_M" as "#mint_M".
   iIntros "!> %m". iSpecialize ("mint_M" $! m).
   iDestruct "mint_M" as "[%finsupp mint_M]".
@@ -725,7 +725,7 @@ iMod (own_update with "own_M") as "own_M".
 iDestruct "phaseI" as "[phaseI phase]".
 iMod ("close" with "[sec_X sec phaseI own_M]") as "_".
 { iModIntro. iExists _, _, (X ∪ Y), _, _.
-  rewrite big_sepS_union //. iFrame. rewrite lookup_insert.
+  rewrite big_sepS_union //. iFrame. rewrite lookup_insert_eq.
   do !iSplit=> //.
   - by iApply (big_sepS_subseteq with "sec_X").
   - iIntros "!> %m".
