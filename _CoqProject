@@ -32,6 +32,10 @@ cryptis/core/phase.v
 cryptis/core/saved_prop.v
 cryptis/cryptis.v
 
+# Relational-specific
+
+cryptis/core/minted_spec.v
+
 cryptis/primitives/notations.v
 cryptis/primitives/pre_term.v
 cryptis/primitives/comp.v
@@ -48,7 +52,7 @@ cryptis/adequacy.v
 
 # Relational-specific
 
-cryptis/core/minted_spec.v
+cryptis/primitives/pre_term_spec.v
 
 # Case studies
 

@@ -6,7 +6,27 @@ From iris.base_logic Require Import gen_heap invariants.
 From mathcomp Require ssrbool order path.
 From deriving Require deriving.
 From cryptis Require Export mathcomp_compat lib.
+From cryptis Require Import lib.adequacy.
 From reloc Require Import reloc.
+
+Lemma pure_twp_tp Σ `{!heapGpreS Σ} E j e (v: val) :
+  pure_expr e →
+  (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
+  ∀ `{!relocG Σ},
+  nclose specN ⊆ E →
+  refines_right j e ={E}=∗
+  refines_right j v.
+Proof.
+  move=> Hpure Hinv HE.
+  have H := heap_twp_pure_exec _ _ _ Hpure Hinv.
+  apply H in heapGpreS0 as (v' & Hev' & ->).
+  clear Hinv H.
+  move=> ?.
+  rewrite /refines_right.
+  apply rtc_nsteps in Hev' as (n & Hev').
+  have H2: PureExec True n e v by rewrite /PureExec //.
+  iApply step_pure=> //.
+Qed.
 
 Section ListLemmas.
 
@@ -95,9 +115,9 @@ Lemma tp_close_vars E j vars vs k :
   refines_right j (nsubst vars vs k).
 Proof.
 move=> HE Hlen. iIntros "Hj".
-elim: vars vs Hlen => [|var vars IH] [|v vs] //=.
-- by move=> ?; tp_pures j.
-- case=> Hlen;
+elim: vars vs => [|var vars IH] [|v vs] //= in k Hlen *.
+- by tp_pures j.
+- case: Hlen => Hlen;
   case: decide => [in_vars|nin_vars].
   rewrite subst_free_vars; first by apply IH.
   rewrite free_vars_nsubst // elem_of_difference.
@@ -105,64 +125,57 @@ elim: vars vs Hlen => [|var vars IH] [|v vs] //=.
   by apply; exists {[var]}; split; try set_solver.
 rewrite /=.
 rewrite refines_right_bind.
+set j' := RefId _ _.
+tp_pures j'.
 rewrite subst_nsubst_nin //.
-Admitted.
-(* iApply wp_bind.
-wp_pures.
-rewrite subst_nsubst_nin //.
-iApply wp_bind_inv.
+rewrite -refines_right_bind.
 rewrite subst_close_vars //.
-by iApply IH.
-Qed. *)
+by apply IH.
+Qed.
 
-Lemma tp_list_match E j vars (vs : list A) k (Ψ : val → iProp Σ) :
+Lemma tp_list_match E j vars (vs : list A) k :
   nclose specN ⊆ E →
-  (∀ j,
-  if decide (length vars = length vs) then
-     ((refines_right j (nsubst vars (map repr vs) k) -∗
-     |={E}=> ∃ v : val, refines_right j v ∗ Ψ v))
-   else Ψ NONEV)%I -∗
-  refines_right j (list_match vars (repr vs) k) -∗
-  |={E}=> ∃ v : val, refines_right j v ∗ Ψ v.
-Proof.
-move => HE.
-rewrite unlock; iIntros "post".
-assert (disj : elements (free_vars (close_vars vars k)) ## vars).
-  elim: vars => [|var vars IH] /= in k *; try case: decide => ?; set_solver.
-iApply (tp_list_match_aux E j vs (repr vs)); eauto.
-  iIntros (? ?) "?".
-Admitted.
-(* iApply wp_value.
-case: decide => ? //.
-iApply (wp_close_vars with "post").
-by rewrite length_map.
-Qed. *)
-
-Lemma tp_eq_list `{EqDecision A} E j (f : val) (l1 l2 : list A) Φ :
-  nclose specN ⊆ E →
-  (∀ (x1 x2 : A) Ψ j,
-      ⌜x1 ∈ l1⌝ →
-      Ψ #(bool_decide (x1 = x2)) →
-      refines_right j (f (repr x1) (repr x2)) -∗
-      |={E}=> ∃ (v : val), refines_right j v ∗ Ψ v)%I -∗
-  Φ #(bool_decide (l1 = l2)) -∗
-  refines_right j (eq_list f (repr l1) (repr l2)) -∗
-  |={E}=> ∃ (v : val), refines_right j v ∗ Φ v.
+  refines_right j (list_match vars (repr vs) k) ={E}=∗
+  let v := if decide (length vars = length vs) then
+              nsubst vars (map repr vs) k
+           else NONEV in
+  refines_right j v.
 Proof.
 move=> HE.
+rewrite unlock; iIntros "Hj".
+assert (disj : elements (free_vars (close_vars vars k)) ## vars).
+  elim: vars => [|var vars IH] /= in k *; try case: decide => ?; set_solver.
+iPoseProof (tp_list_match_aux _ _ _ _ _ _ HE disj with "Hj []") as ">Hj".
+  by iIntros (?) "?".
+case: decide => ? //.
+iApply (tp_close_vars with "Hj") => //.
+by rewrite length_map.
+Qed.
+
+Lemma tp_eq_list `{EqDecision A} E j (f : val) (l1 l2 : list A) :
+  nclose specN ⊆ E →
+  (∀ (x1 x2 : A) j',
+      x1 ∈ l1 →
+      refines_right j' (f (repr x1) (repr x2)) -∗
+      |={E}=> refines_right j' #(bool_decide (x1 = x2))) →
+  refines_right j (eq_list f (repr l1) (repr l2)) -∗
+  |={E}=> refines_right j #(bool_decide (l1 = l2)).
+Proof.
+move=> HE Hf.
 rewrite repr_list_unseal /=.
-iIntros "H".
-elim: l1 l2 Φ => [|x1 l1 IH] [|x2 l2] Φ /=.
-Admitted.
-(* iIntros "post" ; tp_rec j; tp_pures j; do 1?by iApply "post".
-wp_bind (f _ _); iApply (wp_f x1 x2); first by set_solver.
-case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2]; wp_pures; last first.
-  rewrite bool_decide_decide decide_False; by [iApply "post"|congruence].
-iApply IH; first by move=> *; iApply wp_f; set_solver.
+elim: l1 l2 => [|x1 l1 IH] [|x2 l2] /= in Hf *; iIntros "Hj";
+  tp_rec j; tp_pures j; do 1?by iApply "Hj".
+tp_bind j (f _ _).
+rewrite refines_right_bind.
+iPoseProof (Hf with "Hj") as ">Hj"; try set_solver.
+rewrite -refines_right_bind /=.
+case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2]; tp_pures j; last first.
+  rewrite bool_decide_decide decide_False //; congruence.
+iPoseProof (IH with "Hj") as ">Hj"; first by move=> *; iApply Hf; set_solver.
 case: (bool_decide_reflect (l1 = l2)) => [->|n_l1l2].
 - by rewrite bool_decide_decide decide_True.
 - by rewrite bool_decide_decide decide_False //; congruence.
-Qed. *)
+Qed.
 
 Lemma wp_scan_list `{Repr A} φ ψ (f : val) (l : list A) :
   □ (∀ x : A,
@@ -241,65 +254,6 @@ iIntros "%v [->|post]"; eauto.
 Qed.
 
 End DoUntil.
-
-Section Loc.
-
-Context `{!relocG Σ}.
-Import ssreflect.order deriving.instances.
-
-Lemma tp_leq_loc_loop E j (l1 l2 : loc) (n k : nat) Ψ :
-  nclose specN ⊆ E →
-  loc_car l2 = (loc_car l1 + (n + k)%nat)%Z ∨
-  loc_car l1 = (loc_car l2 + (n + k)%nat)%Z ∧ n + k ≠ 0%nat →
-  Ψ #(l1 <= l2)%O ⊢
-  refines_right j (leq_loc_loop #l1 #l2 #n) -∗
-  |={E}=> ∃ (v : val), refines_right j v ∗ Ψ v.
-Proof.
-have leq_locE l1' l2' :
-    (l1' <= l2')%O = bool_decide (loc_car l1' ≤ loc_car l2')%Z.
-  exact/(ssrbool.sameP (Z.leb_spec0 _ _))/bool_decide_reflect.
-have eq_locE (l1' l2' : loc) :
-    bool_decide (#l1' = #l2') = bool_decide (loc_car l1' = loc_car l2').
-  apply: bool_decide_ext; split => [[->] //|].
-  by case: l1' l2' => [?] [?] /= ->.
-move=> HE.
-elim: k n => [|k IH] n e_l1l2; iIntros "post Hj"; tp_pures j; tp_rec j; tp_pures j; simpl; auto.
-- rewrite eq_locE.
-  case: bool_decide_reflect => /= [eq|neq]; tp_pures j; simpl; auto.
-    rewrite leq_locE bool_decide_decide decide_True //=.
-    by iFrame.
-    lia.
-  rewrite eq_locE bool_decide_decide decide_True /=; try lia.
-  tp_pures j; rewrite leq_locE bool_decide_decide decide_False //.
-  by iFrame.
-  move=> H; apply: neq; rewrite /Loc.add /= in H; lia.
-- rewrite eq_locE bool_decide_decide decide_False; last by move=> /= ?; lia.
-  tp_pures j; simpl; auto.
-  rewrite eq_locE bool_decide_decide decide_False; last by move=> /= ?; lia.
-  tp_pures j.
-  rewrite (_ : (n + 1)%Z = S n :> Z); try lia.
-  iApply IH => //.
-  by rewrite ?Nat.add_succ_comm.
-  admit.
-Admitted.
-
-Lemma tp_leq_loc E j (l1 l2 : loc) Ψ :
-  nclose specN ⊆ E →
-  Ψ #(l1 <= l2)%O -∗
-  refines_right j (leq_loc #l1 #l2) -∗
-  |={E}=> ∃ (v : val), refines_right j v ∗ Ψ v.
-Proof.
-have [off offP] :
-    ∃ off : nat, (loc_car l2 = loc_car l1 + off ∨
-                  loc_car l1 = loc_car l2 + off ∧ off ≠ 0%nat)%Z.
-  exists (Z.to_nat (Z.abs (loc_car l1 - loc_car l2))); lia.
-move=> HE.
-iIntros "post"; rewrite /leq_loc -[0%Z]/(Z.of_nat 0); tp_pures j.
-iIntros "Hj".
-iPoseProof (tp_leq_loc_loop E j _ _ _ _ _ HE with "post [Hj]") as "Hj".
-Admitted.
-
-End Loc.
 
 Section Ordered.
 
@@ -399,10 +353,11 @@ Lemma wp_nondet_int E j Ψ :
 Proof.
 iIntros "%HE post Hj"; rewrite /nondet_int; tp_pures j.
 iApply (tp_nondet_nat _ _ _ HE with "[post]"); first auto.
-iIntros "%n"; wp_pures.
+Admitted.
+(* iIntros "%n"; wp_pures.
 wp_apply nondet_bool_spec => //. iIntros "%b _".
 case: b; wp_if; first by iApply "post".
 by wp_pures; iApply "post".
-Qed.
+Qed. *)
 
 End NonDetProofs.
