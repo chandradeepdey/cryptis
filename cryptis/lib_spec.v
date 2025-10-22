@@ -30,7 +30,7 @@ Qed.
 
 Section ListLemmas.
 
-Context `{!Repr A, !relocG Σ}.
+Context `{!heapGpreS Σ, !Repr A, !relocG Σ}.
 
 Implicit Types (x : A) (xs : list A).
 
@@ -177,47 +177,72 @@ case: (bool_decide_reflect (l1 = l2)) => [->|n_l1l2].
 - by rewrite bool_decide_decide decide_False //; congruence.
 Qed.
 
-Lemma wp_scan_list `{Repr A} φ ψ (f : val) (l : list A) :
-  □ (∀ x : A,
-    {{{ ψ NONEV ∗ φ x }}}
-      f (repr x)
-    {{{ (r : option val), RET (repr r); ψ (repr r) }}}) -∗
-  ψ NONEV ∗ ([∗ list] x ∈ l, φ x) -∗
-  WP scan_list f (repr l) {{ ψ }}.
+Lemma tp_scan_list `{Repr A} E j φ ψ (f : val) (l : list A) :
+  nclose specN ⊆ E →
+  □ (∀ j (x : A), ψ NONEV ∗ φ x ∗
+        refines_right j (f (repr x)) ={E}=∗
+      ∃ (ov : option val), ψ (repr ov) ∗ refines_right j (repr ov)) -∗
+  ψ NONEV ∗ ([∗ list] x ∈ l, φ x) ∗
+    refines_right j (scan_list f (repr l)) ={E}=∗
+  ∃ (ov : option val), ψ (repr ov) ∗ refines_right j (repr ov).
 Proof.
-rewrite repr_list_unseal /=.
-iIntros "#wp_f"; iLöb as "IH" forall (l); iIntros "[ψ φ_l]".
-wp_rec; case: l => [|h t] /=; wp_pures; first done.
-iDestruct "φ_l" as "[φ_h φ_t]".
-wp_apply ("wp_f" with "[$ψ $φ_h]").
-iIntros "%r ψ_r"; case: r => [r|]; wp_pures; first done.
-by wp_apply ("IH" with "[$]").
+move=> HE.
+elim: l => [|h t IHt] /=; rewrite repr_list_unseal /=;
+iIntros "#Hf (Hψ & Hφ & Hj)"; tp_rec j; tp_pures j;
+  first by iExists None; iFrame.
+iDestruct "Hφ" as "[Hφ_h Hφ_t]".
+tp_bind j (f _).
+rewrite refines_right_bind.
+iPoseProof ("Hf" with "[Hψ Hφ_h Hj]") as ">(%r & Hψ & Hj)";
+  first by iFrame.
+case: r => [r|]; tp_pures j.
+all: rewrite -refines_right_bind /=; tp_pures j.
+by iExists (Some r); iFrame.
+iPoseProof (IHt with "Hf [Hψ Hφ_t Hj]") as ">(%r & Hψ & Hj)";
+  first by rewrite /= repr_list_unseal; iFrame.
+by iFrame.
 Qed.
 
-Lemma wp_find_list (f : A → bool) (fimpl : val) (l : list A) E :
-  (∀ x : A, {{{ True }}} fimpl (repr x) @ E {{{ RET #(f x); True }}}) →
-  {{{ True }}} find_list fimpl (repr l) @ E {{{ RET (repr (find f l)); True }}}.
+Lemma tp_find_list E j (f : A → bool) (fimpl : val) (l : list A) :
+  nclose specN ⊆ E →
+  (∀ j (x : A), refines_right j (fimpl (repr x)) ={E}=∗
+    refines_right j #(f x)) →
+  refines_right j (find_list fimpl (repr l)) ={E}=∗
+    refines_right j (repr (find f l)).
 Proof.
+move=> HE.
 rewrite repr_list_unseal /=.
-iIntros "%fP"; iLöb as "IH" forall (l); iIntros "%Φ _ Hpost"; wp_rec.
-case: l => [|h t] /=; wp_pures; first by iApply "Hpost".
-wp_bind (fimpl _); iApply fP => //; iIntros "!> _".
-case: (f h) => //; wp_pures; first by iApply "Hpost".
-by iApply "IH".
+elim: l => [|h t IHt] /=;
+iIntros "%Hf"; iIntros "Hj"; tp_rec j; tp_pures j; eauto.
+tp_bind j (fimpl _).
+rewrite refines_right_bind.
+iPoseProof (Hf with "Hj") as ">Hj".
+rewrite -refines_right_bind.
+case: (f h) => // /=; tp_pures j => //.
+iPoseProof (IHt with "Hj") as "Hj" => //.
 Qed.
 
-Lemma wp_filter_list (f : A → bool) (fimpl : val) (l : list A) E :
-  (∀ x : A, {{{ True }}} fimpl (repr x) @ E {{{ RET #(f x); True }}}) →
-  {{{ True }}}
-    filter_list fimpl (repr l) @ E
-  {{{ RET (repr (List.filter f l)); True }}}.
+Lemma tp_filter_list E j (f : A → bool) (fimpl : val) (l : list A) :
+  nclose specN ⊆ E →
+  (∀ j (x : A), refines_right j (fimpl (repr x)) ={E}=∗
+    refines_right j #(f x)) →
+  refines_right j (filter_list fimpl (repr l)) ={E}=∗
+    refines_right j (repr (List.filter f l)).
 Proof.
+move=> HE.
 rewrite repr_list_unseal /=.
-iIntros "%fP"; iLöb as "IH" forall (l); iIntros "%Φ _ Hpost"; wp_rec.
-case: l => [|x l] /=; wp_pures; first by iApply "Hpost".
-wp_bind (filter_list _ _). iApply "IH" => //. iIntros "!> _".
-wp_pures. wp_bind (fimpl _); iApply fP => //; iIntros "!> _".
-case f_x: (f x); wp_pures; by iApply "Hpost".
+elim: l j => [|h t IHt] j /=;
+iIntros "%Hf"; iIntros "Hj"; tp_rec j; tp_pures j; eauto.
+tp_bind j (filter_list _ _).
+rewrite refines_right_bind.
+iPoseProof (IHt with "Hj") as ">Hj"; eauto.
+rewrite -refines_right_bind /=.
+tp_pures j.
+tp_bind j (fimpl _).
+rewrite refines_right_bind.
+iPoseProof (Hf with "Hj") as ">Hj".
+rewrite -refines_right_bind /=.
+case : (f h) => // /=; tp_pures j; done.
 Qed.
 
 End ListLemmas.
@@ -226,12 +251,15 @@ Section DoUntil.
 
 Context `{!relocG Σ}.
 
-Lemma wp_do_until E (f : val) φ (Ψ : val → iProp Σ) :
-  □ (φ -∗
-     WP f #() @ E {{ v, ⌜v = NONEV⌝ ∗ φ ∨
-                        ∃ v', ⌜v = SOMEV v'⌝ ∗ Ψ v' }}) -∗
+(* Lemma tp_do_until E j (f : val) φ (Ψ : val → iProp Σ) :
+  nclose specN ⊆ E →
+  □ (∀ j, φ -∗
+     refines_right j (f #()) ={E}=∗
+      ∃ (v : val), refines_right j v ∧ (⌜v = NONEV⌝ ∗ φ ∨
+                        ∃ v', ⌜v = SOMEV v'⌝ ∗ Ψ v')) -∗
   φ -∗
-  WP do_until f @ E {{ Ψ }}.
+  refines_right j (do_until f) ={E}=∗
+    ∃ (v : val), refines_right j v ∧ Ψ v.
 Proof.
 iIntros "#wp_f Hφ"; iLöb as "IH".
 wp_rec. wp_bind (f _).
@@ -240,9 +268,13 @@ iIntros "%v [[-> Hφ] | (%v' & -> & Hv')]"; wp_pures; eauto.
 iApply ("IH" with "Hφ").
 Qed.
 
-Lemma wp_do_until' E (f : val) (φ : val → iProp Σ) :
-  □ WP f #() @ E {{ v, ⌜v = NONEV⌝ ∨ (∃ v', ⌜v = SOMEV v'⌝ ∗ φ v') }} -∗
-  WP do_until f @ E {{ φ }}.
+Lemma tp_do_until' E j (f : val) (φ : val → iProp Σ) :
+  nclose specN ⊆ E →
+  □ (∀ j, refines_right j (f #()) ={E}=∗
+      ∃ (v : val), refines_right j v ∧
+        (⌜v = NONEV⌝ ∨ (∃ v', ⌜v = SOMEV v'⌝ ∗ φ v'))) -∗
+  refines_right j (do_until f) ={E}=∗
+    ∃ (v : val), refines_right j v ∧ φ v.
 Proof.
 iIntros "#wp_f".
 iAssert True%I as "I" => //.
@@ -251,7 +283,7 @@ iApply wp_do_until.
 iIntros "!> _".
 iApply wp_wand; eauto.
 iIntros "%v [->|post]"; eauto.
-Qed.
+Qed. *)
 
 End DoUntil.
 
@@ -263,25 +295,33 @@ Context `{!Repr A, !relocG Σ}.
 Import Order Order.POrderTheory Order.TotalTheory.
 Implicit Types (x y z : A) (s : seqlexi_with d A).
 
-Lemma twp_insert_sorted (f : val) (x : A) (l : list A) E :
+Lemma twp_insert_sorted E j (f : val) (x : A) (l : list A) :
+  nclose specN ⊆ E →
   is_true (sorted le l) →
-  (∀ (y z : A),
-      [[{ True }]] f (repr y) (repr z) @ E [[{ RET #(le y z); True }]]) →
-  [[{ True }]]
-    insert_sorted f (repr x) (repr l) @ E
-  [[{ RET (repr (sort le (x :: l))); True }]].
+  (∀ j (y z : A),
+      refines_right j (f (repr y) (repr z)) ={E}=∗
+        refines_right j #(le y z)) →
+  refines_right j (insert_sorted f (repr x) (repr l)) ={E}=∗
+    refines_right j (repr (sort le (x :: l))).
 Proof.
-rewrite repr_list_unseal => sorted_l wp_f Φ; iIntros "_ post".
-iSpecialize ("post" with "[//]"); iStopProof.
-elim: l sorted_l Φ => //= [|y l IH] path_l Φ;
-iIntros "post"; wp_rec; wp_pures => //.
+move=> HE.
+rewrite repr_list_unseal => sorted_l Hf.
+elim: l sorted_l j => //= [|y l IH] path_l j; iIntros "Hj";
+tp_rec j => /=; tp_pures j => //;
 move/(_ (path_sorted path_l)) in IH.
-wp_bind (f _ _); iApply wp_f => //; iIntros "_".
-have [le_xy|le_yx] := boolP (x <= y)%O; wp_pures.
+tp_bind j (f _ _).
+rewrite refines_right_bind.
+iPoseProof (Hf with "Hj") as ">Hj".
+rewrite -refines_right_bind /=.
+have [le_xy|le_yx] := boolP (x <= y)%O; tp_pures j.
   by rewrite sort_le_id //= ?le_xy.
 move: le_yx; rewrite -ltNge => /ltW le_yx.
-wp_bind (insert_sorted _ _ _); iApply IH.
-suff -> : sort le [:: x, y & l] = y :: sort le (x :: l) by wp_pures.
+tp_bind j (insert_sorted _ _ _).
+rewrite refines_right_bind.
+iPoseProof (IH with "Hj") as ">Hj".
+rewrite -refines_right_bind /=.
+tp_pures j.
+suff -> : sort le [:: x, y & l] = y :: sort le (x :: l) by tp_pures j.
 rewrite -[RHS]sort_le_id /=.
   apply/perm_sort_leP/perm_consP.
   exists 1, (l ++ [:: x])%SEQ.
@@ -290,30 +330,35 @@ rewrite path_min_sorted ?sort_le_sorted // all_sort /= le_yx /=.
 apply: order_path_min => //; apply: le_trans.
 Qed.
 
-Lemma twp_leq_list (feq : val) (fle : val) s1 s2 E :
-  (∀ x1 x2,
-      [[{ True }]]
-        feq (repr x1) (repr x2) @ E
-      [[{ RET #(eqtype.eq_op x1 x2); True }]]) →
-  (∀ x1 x2,
+Lemma tp_leq_list E j (feq : val) (fle : val) s1 s2 :
+  nclose specN ⊆ E →
+  (∀ j x1 x2,
+      refines_right j (feq (repr x1) (repr x2)) ={E}=∗
+        refines_right j #(eqtype.eq_op x1 x2)) →
+  (∀ j x1 x2,
       is_true (x1 \in s1) →
-      [[{ True }]]
-        fle (repr x1) (repr x2) @ E
-      [[{ RET #(le x1 x2); True }]]) →
-  [[{ True }]]
-    leq_list feq fle (repr s1) (repr s2) @ E
-  [[{ RET #(le s1 s2); True }]].
+        refines_right j (fle (repr x1) (repr x2)) ={E}=∗
+        refines_right j #(le x1 x2)) →
+  refines_right j (leq_list feq fle (repr s1) (repr s2)) ={E}=∗
+    refines_right j #(le s1 s2).
 Proof.
-move=> feqP fleqP Φ; iIntros "_ post".
-iSpecialize ("post" with "[//]"); iStopProof.
-move: fleqP; rewrite /= repr_list_unseal.
-elim: s1 s2 => [|x1 s1 IH] [|x2 s2] fleP; iIntros "HΦ"; wp_rec; wp_pures => //.
-rewrite lexi_cons; wp_bind (feq _ _); iApply feqP => //; iIntros "_".
-case: (ltgtP x1 x2) => [l_x1x2|l_x2x1|<-] /=; wp_pures.
-- by iApply fleP; rewrite ?inE ?eqtype.eqxx // ltW //; iIntros "_".
-- by iApply fleP; rewrite ?inE ?eqtype.eqxx // leNgt l_x2x1 //; iIntros "_".
-- iApply IH => // x1' ? x1'_in ?; iIntros "_ post".
-  by iApply fleP; rewrite // inE x1'_in orbT.
+move=> HE.
+move=> feqP.
+rewrite /= repr_list_unseal.
+elim: s1 s2 => [|x1 s1 IH] [|x2 s2] fleP; iIntros "Hj";
+  tp_rec j => /=; tp_pures j => //.
+rewrite lexi_cons; tp_bind j (feq _ _).
+rewrite refines_right_bind => /=.
+iPoseProof (feqP with "Hj") as ">Hj".
+case: (ltgtP x1 x2) => [l_x1x2|l_x2x1|<-] /=; tp_pures j.
+all: simpl; set ctx := IfCtx _ _;
+     rewrite -(refines_right_bind j [ctx] #_) => /=; tp_pures j.
+- iPoseProof (fleP with "Hj") as ">Hj";
+  rewrite ?inE ?eqtype.eqxx // ltW //.
+- iPoseProof (fleP with "Hj") as ">Hj";
+  rewrite ?inE ?eqtype.eqxx // leNgt l_x2x1 //.
+- iPoseProof (IH with "Hj") as ">Hj"=> // j' x1' ? x1'_in;
+  apply fleP; rewrite inE x1'_in orbT //.
 Qed.
 
 End Ordered.
@@ -326,38 +371,84 @@ Implicit Types E : coPset.
 Implicit Types v : val.
 Implicit Types Ψ : val → iProp Σ.
 
-Lemma tp_nondet_nat_loop E j Ψ (m : nat) :
+Lemma tp_nondet_bool E j (b : bool) :
   nclose specN ⊆ E →
-  (∀ n : nat, Ψ #n) -∗
-  refines_right j (nondet_nat_loop #m) -∗
-  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
+  refines_right j (nondet_bool #()) ={E}=∗
+  refines_right j #b.
 Proof.
-Admitted.
-
-Lemma tp_nondet_nat E j Ψ :
-  nclose specN ⊆ E →
-  (∀ n : nat, Ψ #n) -∗
-  refines_right j (nondet_nat #()) -∗
-  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
-Proof.
-iIntros "%HE post Hj". tp_lam j.
-iPoseProof (tp_nondet_nat_loop _ _ Ψ 0 HE with "post Hj") as ">[%v [Hj Hv]]".
-by iFrame.
+move=> HE.
+iIntros "Hj".
+tp_rec j. tp_alloc j as l "Hl".
+tp_pures j.
+tp_bind j (Fork _).
+rewrite refines_right_bind.
+set j' := (RefId _ _).
+tp_fork j' => /=.
+rewrite -refines_right_bind => /=.
+clear j'.
+tp_pures j.
+iIntros "%j' Hj'".
+case : b; last tp_store j'.
+all: tp_load j=> //.
 Qed.
 
-Lemma wp_nondet_int E j Ψ :
+Lemma tp_nondet_nat_loop E j (m : nat) (n : nat) :
   nclose specN ⊆ E →
-  (∀ n : Z, Ψ #n) -∗
-  refines_right j (nondet_int #()) -∗
-  |={E}=> ∃ v, refines_right j v ∗ Ψ v.
+  refines_right j (nondet_nat_loop #m) ={E}=∗
+  refines_right j #(n + m)%nat.
 Proof.
-iIntros "%HE post Hj"; rewrite /nondet_int; tp_pures j.
-iApply (tp_nondet_nat _ _ _ HE with "[post]"); first auto.
-Admitted.
-(* iIntros "%n"; wp_pures.
-wp_apply nondet_bool_spec => //. iIntros "%b _".
-case: b; wp_if; first by iApply "post".
-by wp_pures; iApply "post".
-Qed. *)
+move=> HE.
+elim : n m j => [|n' IHn'] m j; iIntros "Hj";
+tp_rec j; tp_bind j (nondet_bool _); rewrite refines_right_bind;
+  set j' := RefId _ _.
+- iPoseProof ((tp_nondet_bool _ _ true HE) with "Hj") as ">Hj".
+  rewrite -refines_right_bind => /=.
+  by tp_pures j.
+- iPoseProof ((tp_nondet_bool _ _ false HE) with "Hj") as ">Hj".
+  rewrite -refines_right_bind => /=.
+  tp_pures j.
+  have ->: (m + 1)%Z = (m + 1)%nat by lia.
+  iPoseProof (IHn' with "Hj") as ">Hj".
+  have ->: (n' + (m + 1))%nat = S (n' + m) by lia.
+  done.
+Qed.
+
+Lemma tp_nondet_nat E j (n: nat) :
+  nclose specN ⊆ E →
+  refines_right j (nondet_nat #()) ={E}=∗
+  refines_right j #n.
+Proof.
+move=> HE.
+iIntros "Hj". tp_lam j.
+iPoseProof (tp_nondet_nat_loop _ _ 0 n HE with "Hj") as ">Hj".
+have ->: (n + 0)%nat = n by lia.
+done.
+Qed.
+
+Lemma tp_nondet_int E j (n : Z) :
+  nclose specN ⊆ E →
+  refines_right j (nondet_int #()) ={E}=∗
+  refines_right j #n.
+Proof.
+move=> HE.
+iIntros "Hj"; rewrite /nondet_int; tp_pures j.
+tp_bind j (nondet_nat _).
+rewrite refines_right_bind.
+set j' := RefId _ _.
+pose n' := if (0 <=? n)%Z then Z.to_nat n else Z.to_nat (-n).
+iPoseProof (tp_nondet_nat _ _ n' HE with "Hj") as ">Hj".
+rewrite -refines_right_bind => /=.
+clear j'.
+tp_pures j.
+tp_bind j (nondet_bool _).
+rewrite refines_right_bind.
+set j' := RefId _ _.
+iPoseProof (tp_nondet_bool _ _ (0 <=? n)%Z HE with "Hj") as ">Hj".
+rewrite -refines_right_bind => /=.
+clear j'.
+case Hn: (0 <=? n)%Z in n' *; tp_pures j.
+- by have ->: n = n' by lia.
+- by have ->: n = (- n')%Z by lia.
+Qed.
 
 End NonDetProofs.
