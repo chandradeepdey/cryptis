@@ -251,39 +251,38 @@ Section DoUntil.
 
 Context `{!relocG Σ}.
 
-(* Lemma tp_do_until E j (f : val) φ (Ψ : val → iProp Σ) :
-  nclose specN ⊆ E →
-  □ (∀ j, φ -∗
-     refines_right j (f #()) ={E}=∗
-      ∃ (v : val), refines_right j v ∧ (⌜v = NONEV⌝ ∗ φ ∨
-                        ∃ v', ⌜v = SOMEV v'⌝ ∗ Ψ v')) -∗
+Lemma rel_do_until (f f' : val) φ Ψ :
+  □ (φ -∗ REL f' #() << f #() : (fun o1 o2 =>
+    ⌜o1 = NONEV⌝ ∗ ⌜o2 = NONEV⌝ ∗ φ ∨
+    ∃ (v v' : val), ⌜o1 = SOMEV v⌝ ∗ ⌜o2 = SOMEV v'⌝ ∗
+    Ψ v v')) -∗
   φ -∗
-  refines_right j (do_until f) ={E}=∗
-    ∃ (v : val), refines_right j v ∧ Ψ v.
+  REL do_until f' << do_until f : Ψ.
 Proof.
-iIntros "#wp_f Hφ"; iLöb as "IH".
-wp_rec. wp_bind (f _).
-iApply (wp_wand with "[Hφ]"); first iApply "wp_f" => //.
-iIntros "%v [[-> Hφ] | (%v' & -> & Hv')]"; wp_pures; eauto.
-iApply ("IH" with "Hφ").
+iIntros "#Hf Hφ". iLöb as "IH".
+rel_rec_l; rel_rec_r.
+rel_bind_l (f' _); rel_bind_r (f _).
+iApply (refines_bind with "[Hφ] []").
+by iApply "Hf".
+iIntros (v v') "Hv" => /=.
+iDestruct "Hv" as "[(-> & -> & Hφ)| (%v1 & %v2 & -> & -> & HΨ)]";
+rel_pures_l; rel_pures_r; first by iApply "IH".
+rel_values.
 Qed.
 
-Lemma tp_do_until' E j (f : val) (φ : val → iProp Σ) :
-  nclose specN ⊆ E →
-  □ (∀ j, refines_right j (f #()) ={E}=∗
-      ∃ (v : val), refines_right j v ∧
-        (⌜v = NONEV⌝ ∨ (∃ v', ⌜v = SOMEV v'⌝ ∗ φ v'))) -∗
-  refines_right j (do_until f) ={E}=∗
-    ∃ (v : val), refines_right j v ∧ φ v.
+Lemma rel_do_until' (f f' : val) Ψ :
+  □ (REL f' #() << f #() : (fun o1 o2 =>
+    ⌜o1 = NONEV⌝ ∗ ⌜o2 = NONEV⌝ ∨
+    ∃ (v v' : val), ⌜o1 = SOMEV v⌝ ∗ ⌜o2 = SOMEV v'⌝ ∗
+    Ψ v v')) -∗
+  REL do_until f' << do_until f : Ψ.
 Proof.
-iIntros "#wp_f".
-iAssert True%I as "I" => //.
-iRevert "I".
-iApply wp_do_until.
+iIntros "#Hf".
+iApply (rel_do_until _ _ True%I) => //.
 iIntros "!> _".
-iApply wp_wand; eauto.
-iIntros "%v [->|post]"; eauto.
-Qed. *)
+iApply refines_wand => //.
+iIntros (v v') "[(-> & ->)|(%v1 & %v2 & HΨ)]"; eauto.
+Qed.
 
 End DoUntil.
 
@@ -295,7 +294,7 @@ Context `{!Repr A, !relocG Σ}.
 Import Order Order.POrderTheory Order.TotalTheory.
 Implicit Types (x y z : A) (s : seqlexi_with d A).
 
-Lemma twp_insert_sorted E j (f : val) (x : A) (l : list A) :
+Lemma tp_insert_sorted E j (f : val) (x : A) (l : list A) :
   nclose specN ⊆ E →
   is_true (sorted le l) →
   (∀ j (y z : A),
