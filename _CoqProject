@@ -51,6 +51,8 @@ cryptis/adequacy.v
 # Relational-specific
 
 cryptis/primitives/pre_term_spec.v
+cryptis/primitives/comp_spec.v
+# cryptis/primitives/with_cryptis_spec.v
 
 # Case studies
 

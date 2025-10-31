@@ -746,3 +746,10 @@ Proof.
 rewrite (ssrbool.negbTE (is_exp_base t)) /=. by auto.
 Qed.
 Hint Resolve is_exp_base : core.
+
+Lemma term_pure (t : term) :
+  pure_val t.
+Proof.
+  rewrite -val_of_pre_term_unfold.
+  apply val_of_pre_term_pure.
+Qed.
