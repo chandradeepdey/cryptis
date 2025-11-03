@@ -35,12 +35,10 @@ Lemma tp_eq_pre_term E j (pt1 pt2 : PreTerm.pre_term) :
   refines_right j (eq_term (repr pt1) (repr pt2)) -∗
   |={E}=> refines_right j #(bool_decide (pt1 = pt2)).
 Proof.
-intros HE.
-iApply pure_twp_tp; eauto.
-- simpl. apply andb_prop_intro; split; by apply val_of_pre_term_pure.
-- iIntros (?) "#?".
-  iApply twp_eq_pre_term.
-  by iPureIntro.
+move=> HE.
+iApply pure_twp_tp => //=;
+last by move=> ?; iIntros "_"; iApply twp_eq_pre_term => //.
+rewrite andb_True; split; apply val_of_pre_term_pure.
 Qed.
 
 Import ssrbool seq path.
@@ -52,12 +50,10 @@ Lemma tp_leq_pre_term E j (pt1 pt2 : PreTerm.pre_term) :
   refines_right j (leq_term (repr pt1) (repr pt2)) -∗
   |={E}=> refines_right j #(pt1 <= pt2)%O.
 Proof.
-intros HE.
-iApply pure_twp_tp; eauto.
-- simpl. apply andb_prop_intro; split; by apply val_of_pre_term_pure.
-- iIntros (?) "#?".
-  iApply twp_leq_pre_term.
-  by iPureIntro.
+move=> HE.
+iApply pure_twp_tp => //=;
+last by move=> ?; iIntros "_"; iApply twp_leq_pre_term => //.
+rewrite andb_True; split; apply val_of_pre_term_pure.
 Qed.
 
 End Proofs.
