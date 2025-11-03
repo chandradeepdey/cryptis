@@ -5,8 +5,10 @@ From iris.algebra Require Import functions.
 From iris.base_logic.lib Require Import saved_prop invariants.
 From iris.heap_lang Require Import notation proofmode.
 From cryptis Require Import lib gmeta nown.
-From cryptis.core Require Import term minted minted_spec.
+From cryptis.core Require Import term minted.
+
 From reloc Require Import reloc.
+From cryptis.core Require Import minted_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -63,7 +65,7 @@ Proof. solve_inG. Qed.
 
 Section Rel.
 
-Context `{!heapGS Σ, !cfgGS Σ, !publicGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
 Notation iPropI := (iPropI Σ).

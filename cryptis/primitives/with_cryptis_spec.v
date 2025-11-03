@@ -8,9 +8,11 @@ From iris.program_logic Require Import atomic.
 From iris.heap_lang Require Import notation proofmode.
 From iris.heap_lang.lib Require Import nondet_bool ticket_lock.
 From cryptis Require Import term cryptis.
-From cryptis.core Require Import minted_spec.
-From cryptis.primitives Require Import notations pre_term comp simple with_cryptis.
+From cryptis.primitives Require Import notations pre_term comp simple.
+
+From cryptis.primitives Require Import with_cryptis.
 From reloc Require Import reloc.
+From cryptis.core Require Import minted_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -5,7 +5,9 @@ From iris.algebra Require Import gmap gset auth reservation_map.
 From iris.base_logic Require Import gen_heap invariants.
 From mathcomp Require ssrbool order path.
 From deriving Require deriving.
-From cryptis Require Export mathcomp_compat lib.
+From cryptis Require Export mathcomp_compat.
+
+From cryptis Require Import lib.
 From cryptis Require Import lib.adequacy.
 From reloc Require Import reloc.
 

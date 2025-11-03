@@ -4,8 +4,10 @@ From iris.algebra Require Import agree auth gset gmap list reservation_map excl.
 From iris.algebra Require Import functions.
 From iris.base_logic.lib Require Import saved_prop invariants.
 From iris.heap_lang Require Import notation proofmode.
-From cryptis Require Import lib gmeta nown.
+From cryptis Require Import lib.
 From cryptis.core Require Import term.
+
+From cryptis Require Import gmeta nown.
 From reloc Require Import reloc.
 
 Set Implicit Arguments.
@@ -14,7 +16,7 @@ Unset Printing Implicit Defensive.
 
 Section Minted.
 
-Context `{!heapGS Σ, !cfgGS Σ, !minted_specGS Σ}.
+Context `{!relocG Σ}.
 
 Notation iProp := (iProp Σ).
 

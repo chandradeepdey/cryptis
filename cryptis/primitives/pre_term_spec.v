@@ -1,8 +1,4 @@
-(* These proofs take much longer to check than the rest of the
-development. Since they don't have many dependencies, they are left in their own
-file to avoid slowing down the compilation process. *)
-
-From cryptis Require Import lib lib_spec.
+From cryptis Require Import lib.
 From mathcomp Require Import ssreflect.
 From mathcomp Require order.
 From stdpp Require Import gmap.
@@ -10,8 +6,11 @@ From iris.algebra Require Import agree auth gset gmap.
 From iris.base_logic.lib Require Import invariants.
 From iris.heap_lang Require Import notation proofmode.
 From cryptis.core Require Import pre_term.
-From cryptis.primitives Require Import notations pre_term.
+From cryptis.primitives Require Import notations.
+
+From cryptis.primitives Require Import pre_term.
 From reloc Require Import reloc.
+From cryptis Require Import lib_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
