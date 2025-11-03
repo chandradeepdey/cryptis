@@ -65,8 +65,8 @@ Qed.
 
 Lemma tp_nil E j :
   nclose specN ⊆ E →
-  refines_right j (repr (@nil A)) -∗
-  |={E}=> refines_right j (Val []%V).
+  refines_right j (Val []%V) ={E}=∗
+  refines_right j (repr (@nil A)).
 Proof.
 intros HE.
 by rewrite /NILV /= repr_list_unseal; iIntros "Hj"; tp_pures j.
