@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect.
 From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap list excl.
+From iris.algebra Require Import agree auth lib.gset_bij gmap list excl.
 From iris.algebra Require Import functions.
 From iris.base_logic.lib Require Import saved_prop invariants.
 From iris.heap_lang Require Import notation proofmode.
@@ -14,33 +14,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Section PartBij.
-
-Variable T : Type.
-Context `{!EqDecision T, !Countable T}.
-
-Implicit Types (R : gset (T * T)) (x y : T).
-
-Definition part_bij R : Prop :=
-  ∀ x y x' y', (x, y) ∈ R → (x', y') ∈ R → (x = x' ↔ y = y').
-
-Lemma part_bij_insert x y R :
-  part_bij R →
-  (∀ x' y', (x', y') ∈ R → x ≠ x' ∧ y ≠ y') →
-  part_bij ({[(x, y)]} ∪ R).
-Proof.
-move=> R_bij fresh x1 y1 x2 y2.
-rewrite !elem_of_union !elem_of_singleton.
-case=> [[-> ->]|H1] [[-> ->]|H2].
-- by split; eauto.
-- have [??] := fresh _ _ H2; split; intros; congruence.
-- have [??] := fresh _ _ H1; split; intros; congruence.
-- exact: R_bij.
-Qed.
-
-End PartBij.
-
-Definition term_part_bijR := authUR (gsetUR (term * term)).
+Definition term_part_bijR := gset_bijUR term term.
 
 Class publicGpreS Σ := PublicGPreS {
   publicGpreS_term_part_bij : inG Σ term_part_bijR;
@@ -73,51 +47,57 @@ Notation iPropI := (iPropI Σ).
 Implicit Types (k : senc_key) (t : term) (R : gset (term * term)).
 
 Definition enc_rel_auth t R : iProp :=
-  nown public_term_part_bij_name (nroot.@"enc".@t) (● R) ∗
-  ⌜part_bij R⌝.
+  nown public_term_part_bij_name (nroot.@"enc".@t)
+    (gset_bij_auth (DfracOwn 1) R).
 
 Definition enc_rel_frag t t1 t2 : iProp :=
-  nown public_term_part_bij_name (nroot.@"enc".@t) (◯ {[(t1, t2)]}).
+  nown public_term_part_bij_name (nroot.@"enc".@t)
+    (gset_bij_elem t1 t2).
 
 Lemma enc_rel_alloc t1 t2 t R :
-  (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
+  (∀ t2', (t1, t2') ∉ R) → (∀ t1', (t1', t2) ∉ R) →
   enc_rel_auth t R ==∗
   enc_rel_auth t ({[(t1, t2)]} ∪ R) ∗
   enc_rel_frag t t1 t2.
 Proof.
-iIntros "%fresh [own %bij_R]".
-iMod (nown_update with "own") as "[auth frag]".
-{ apply: auth_update_alloc.
-  apply: (gset_local_update _ _ ({[(t1, t2)]} ∪ R)).
-  set_solver. }
-rewrite -gset_op auth_frag_op nown_op.
-iDestruct "frag" as "[frag _]".
-iModIntro. iFrame. iPureIntro. exact: part_bij_insert.
+iIntros "%fresh1 %fresh2 own".
+iMod (nown_update with "own") as "own".
+apply: gset_bij_auth_extend => //=.
+iDestruct "own" as "[auth #frag]".
+rewrite -gset_op view_frag_op nown_op.
+iDestruct "frag" as "[#frag1 #frag2]".
+iModIntro. iFrame "#".
+iCombine "frag1 frag2" as "#frag".
+rewrite /enc_rel_auth /gset_bij_auth nown_op.
+by iFrame "#".
 Qed.
 
 Definition nonce_rel_auth R : iProp :=
-  nown public_term_part_bij_name (nroot.@"nonce") (● R) ∗
-  ⌜part_bij R⌝.
+  nown public_term_part_bij_name (nroot.@"nonce")
+    (gset_bij_auth (DfracOwn 1) R).
 
 Definition nonce_rel_frag t1 t2 : iProp :=
-  nown public_term_part_bij_name (nroot.@"nonce") (◯ {[(t1, t2)]}) ∗
+  nown public_term_part_bij_name (nroot.@"nonce")
+    (gset_bij_elem t1 t2) ∗
     minted_spec t1 ∗ minted t2.
 
 Lemma nonce_rel_alloc t1 t2 R :
-  (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
+  (∀ t2', (t1, t2') ∉ R) → (∀ t1', (t1', t2) ∉ R) →
   minted_spec t1 ∗ minted t2 ∗
   nonce_rel_auth R ==∗
   nonce_rel_auth ({[(t1, t2)]} ∪ R) ∗
   nonce_rel_frag t1 t2.
 Proof.
-iIntros "%fresh (mt1 & mt2 & [own %bij_R])".
-iMod (nown_update with "own") as "[auth frag]".
-{ apply: auth_update_alloc.
-  apply: (gset_local_update _ _ ({[(t1, t2)]} ∪ R)).
-  set_solver. }
-rewrite -gset_op auth_frag_op nown_op.
-iDestruct "frag" as "[frag _]".
-iModIntro. iFrame. iPureIntro. exact: part_bij_insert.
+iIntros "%fresh1 %fresh2 (mt1 & mt2 & own)".
+iMod (nown_update with "own") as "own".
+apply: gset_bij_auth_extend => //=.
+iDestruct "own" as "[auth #frag]".
+rewrite -gset_op view_frag_op nown_op.
+iDestruct "frag" as "[#frag1 #frag2]".
+iModIntro. iFrame "#". iFrame.
+iCombine "frag1 frag2" as "#frag".
+rewrite /nonce_rel_auth /gset_bij_auth nown_op.
+by iFrame "#".
 Qed.
 
 Fixpoint public t1 t2 : iProp :=
@@ -139,25 +119,25 @@ Fixpoint public t1 t2 : iProp :=
   end.
 
 Lemma public_TSeal k R t1 t2 :
-  (∀ t1' t2', (t1', t2') ∈ R → t1 ≠ t1' ∧ t2 ≠ t2') →
+  (∀ t2', (t1, t2') ∉ R) → (∀ t1', (t1', t2) ∉ R) →
   enc_rel_auth k R ==∗
   enc_rel_auth k ({[(t1, t2)]} ∪ R) ∗
   public (TSeal k t1) (TSeal k t2).
 Proof.
-iIntros "%fresh H●".
-iMod (enc_rel_alloc _ fresh with "H●") as "[H● H◯]".
+iIntros "%fresh1 %fresh2 H●".
+iMod (enc_rel_alloc _ fresh1 fresh2 with "H●") as "[H● H◯]".
 by iFrame.
 Qed.
 
 Lemma public_TNonce R (t1 t2: loc) :
-  (∀ t1' t2', (t1', t2') ∈ R → (TNonce t1) ≠ t1' ∧ (TNonce t2) ≠ t2') →
+  (∀ t2', (TNonce t1, t2') ∉ R) → (∀ t1', (t1', TNonce t2) ∉ R) →
   minted_spec (TNonce t1) ∗ minted (TNonce t2) ∗
   nonce_rel_auth R ==∗
   nonce_rel_auth ({[((TNonce t1), (TNonce t2))]} ∪ R) ∗
   public (TNonce t1) (TNonce t2).
 Proof.
-  iIntros "%fresh (#Ht1 & #Ht2 & H●)".
-  iMod (nonce_rel_alloc fresh with "[H●]") as "[H● H◯]".
+  iIntros "%fresh1 %fresh2 (#Ht1 & #Ht2 & H●)".
+  iMod (nonce_rel_alloc fresh1 fresh2 with "[H●]") as "[H● H◯]".
   - by iFrame "#".
   by iFrame.
 Qed.
