@@ -26,10 +26,10 @@ Implicit Types E : coPset.
 Implicit Types a : nonce.
 Implicit Types t : term.
 Implicit Types v : val.
-Implicit Types Ψ : val → iProp Σ.
+Implicit Types Ψ : val → val → iProp Σ.
 Implicit Types N : namespace.
 
-Lemma tp_eq_term E j t1 t2 Ψ :
+Lemma tp_eq_term E j t1 t2 :
   nclose specN ⊆ E →
   refines_right j (eq_term t1 t2) ={E}=∗
   refines_right j #(bool_decide (t1 = t2)).
@@ -40,9 +40,21 @@ last by move=> ?; iIntros "_"; iApply twp_eq_term => //.
 rewrite andb_True; split; apply term_pure.
 Qed.
 
+Lemma rel_eq_term t1 t2 t1' t2' Ψ :
+  Ψ #(bool_decide (t1 = t2)) #(bool_decide (t1' = t2')) -∗
+  REL (eq_term t1 t2) << (eq_term t1' t2') : Ψ.
+Proof.
+iIntros "HΨ".
+rel_bind_l (eq_term _ _)%E. iApply refines_wp_l.
+iApply wp_eq_term => /=.
+rel_bind_r (eq_term _ _)%E. iApply refines_step_r. iIntros (j) "Hj".
+iPoseProof (tp_eq_term with "Hj") as ">Hj" => //=.
+iFrame. rel_values.
+Qed.
+
 Import ssrbool seq path ssreflect.eqtype ssreflect.order.
 
-Lemma tp_texp E j t1 t2 Ψ :
+Lemma tp_texp E j t1 t2 :
   nclose specN ⊆ E →
   refines_right j (texp t1 t2) ={E}=∗
   refines_right j (TExp t1 t2).
@@ -51,6 +63,18 @@ move=> HE.
 iApply pure_twp_tp => //=;
 last by move=> ?; iIntros "_"; iApply twp_texp => //.
 rewrite andb_True; split; apply term_pure.
+Qed.
+
+Lemma rel_texp t1 t2 t1' t2' Ψ :
+  Ψ (TExp t1 t2) (TExp t1' t2') -∗
+  REL (texp t1 t2) << (texp t1' t2') : Ψ.
+Proof.
+iIntros "HΨ".
+rel_bind_l (texp _ _)%E. iApply refines_wp_l.
+iApply wp_texp => /=.
+rel_bind_r (texp _ _)%E. iApply refines_step_r. iIntros (j) "Hj".
+iPoseProof (tp_texp with "Hj") as ">Hj" => //=.
+iFrame. rel_values.
 Qed.
 
 End Proofs.

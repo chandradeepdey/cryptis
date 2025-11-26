@@ -63,6 +63,18 @@ rewrite (_ : (S n - 1)%Z = n); try lia.
 by iApply IH.
 Qed.
 
+Lemma rel_get_list (l1 l2 : list A) (n : nat) Ψ :
+  Ψ (repr (l1 !! n)) (repr (l2 !! n)) -∗
+  REL (repr l1 !! #n) << (repr l2 !! #n) : Ψ.
+Proof.
+iIntros "HΨ".
+rel_bind_l (_ !! _)%E. iApply refines_wp_l.
+iApply wp_get_list => /=.
+rel_bind_r (_ !! _)%E. iApply refines_step_r. iIntros (j) "Hj".
+iPoseProof (tp_get_list with "Hj") as ">Hj" => //=.
+iFrame. rel_values.
+Qed.
+
 Lemma tp_nil E j :
   nclose specN ⊆ E →
   refines_right j (Val []%V) ={E}=∗
@@ -407,6 +419,22 @@ case : b; last tp_store j'.
 all: tp_load j=> //.
 Qed.
 
+Lemma rel_nondet_bool (Ψ: val -> val -> iProp Σ) :
+  ▷ (∀ (b1: bool), ∃ (b2: bool), Ψ #b1 #b2) -∗
+  REL nondet_bool #() << nondet_bool #() : Ψ.
+Proof.
+iIntros "HΨ".
+rel_bind_l (nondet_bool #()). iApply refines_wp_l.
+iApply nondet_bool_spec => //=.
+iModIntro.
+iIntros (b1) "_".
+iPoseProof ("HΨ" $! b1) as "[%b2 HΨ]".
+rel_bind_r (nondet_bool #()). iApply refines_step_r.
+iIntros (j) "Hj".
+iPoseProof (tp_nondet_bool with "Hj") as ">Hj" => //.
+iFrame. rel_values.
+Qed.
+
 Lemma tp_nondet_nat_loop E j (m : nat) (n : nat) :
   nclose specN ⊆ E →
   refines_right j (nondet_nat_loop #m) ={E}=∗
@@ -440,6 +468,21 @@ have ->: (n + 0)%nat = n by lia.
 done.
 Qed.
 
+Lemma rel_nondet_nat (Ψ: val -> val -> iProp Σ) :
+  (∀ (n1: nat), ∃ (n2: nat), Ψ #n1 #n2) -∗
+  REL nondet_nat #() << nondet_nat #() : Ψ.
+Proof.
+iIntros "HΨ".
+rel_bind_l (nondet_nat #()). iApply refines_wp_l.
+iApply wp_nondet_nat => //=.
+iIntros (n1).
+iPoseProof ("HΨ" $! n1) as "[%n2 HΨ]".
+rel_bind_r (nondet_nat #()). iApply refines_step_r.
+iIntros (j) "Hj".
+iPoseProof (tp_nondet_nat with "Hj") as ">Hj" => //.
+iFrame. rel_values.
+Qed.
+
 Lemma tp_nondet_int E j (n : Z) :
   nclose specN ⊆ E →
   refines_right j (nondet_int #()) ={E}=∗
@@ -464,6 +507,21 @@ clear j'.
 case Hn: (0 <=? n)%Z in n' *; tp_pures j.
 - by have ->: n = n' by lia.
 - by have ->: n = (- n')%Z by lia.
+Qed.
+
+Lemma rel_nondet_int (Ψ: val -> val -> iProp Σ) :
+  (∀ (n1: Z), ∃ (n2: Z), Ψ #n1 #n2) -∗
+  REL nondet_int #() << nondet_int #() : Ψ.
+Proof.
+iIntros "HΨ".
+rel_bind_l (nondet_int #()). iApply refines_wp_l.
+iApply wp_nondet_int => //=.
+iIntros (n1).
+iPoseProof ("HΨ" $! n1) as "[%n2 HΨ]".
+rel_bind_r (nondet_int #()). iApply refines_step_r.
+iIntros (j) "Hj".
+iPoseProof (tp_nondet_int with "Hj") as ">Hj" => //.
+iFrame. rel_values.
 Qed.
 
 End NonDetProofs.

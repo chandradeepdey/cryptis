@@ -272,21 +272,25 @@ last by move=> ?; iIntros "_"; iApply twp_aenc' => //.
 rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
-Lemma tp_adec' E j (sk : aenc_key) (N : term) t Ψ :
+Lemma adec_tseal (sk : aenc_key) N t :
+  ∀ t', Spec.dec sk N t = Some t' →
+  t = TSeal (Spec.pkey sk) (Spec.tag N t').
+Proof.
+case: Spec.decP => [k_t t' H -> _ [<-]|t'] => //.
+by move: H => /Spec.open_key_aencK => ->.
+Qed.
+
+Lemma tp_adec' E j (sk : aenc_key) (N : term) t :
   nclose specN ⊆ E →
-  (∀ t', ⌜t = TSeal (Spec.pkey sk) (Spec.tag N t')⌝ -∗
-         ⌜Spec.dec sk N t = Some t'⌝ -∗
-         Ψ (SOMEV t')) ∧
-  (⌜Spec.dec sk N t = None⌝ → Ψ NONEV) -∗
   refines_right j (adec sk N t) ={E}=∗
-  ∃ (v : val), refines_right j v ∗ Ψ v.
+  refines_right j (repr (Spec.dec sk N t)).
 Proof.
 move=> HE.
-iIntros "HΨ Hj". tp_lam j; tp_pures j.
-iPoseProof (tp_dec with "Hj") as ">Hj" => //.
-case: Spec.decP => [k_t t' /Spec.open_key_aencK -> ->|].
-- iDestruct "HΨ" as "[HΨ1 _]". iFrame. iApply "HΨ1" => //.
-- iDestruct "HΨ" as "[_ HΨ2]". iFrame. iApply "HΨ2" => //.
+iApply pure_twp_tp => //=.
+rewrite !andb_True; repeat split; by apply term_pure.
+move=> ?; iIntros "_".
+wp_lam. wp_pures.
+by wp_apply twp_dec.
 Qed.
 
 Lemma tp_senc' E j (k N : term) t :
@@ -300,21 +304,25 @@ last by move=> ?; iIntros "_"; iApply twp_senc' => //.
 rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
-Lemma tp_sdec' E j (k : senc_key) (N : term) t Ψ :
+Lemma sdec_tseal (k : senc_key) N t :
+  ∀ t', Spec.dec k N t = Some t' →
+  t = TSeal k (Spec.tag N t').
+Proof.
+case: Spec.decP => [k_t t' H -> _ [<-]|t'] => //.
+by move: H => /Spec.open_key_sencK => ->.
+Qed.
+
+Lemma tp_sdec' E j (k : senc_key) (N : term) t :
   nclose specN ⊆ E →
-  ((∀ t', ⌜t = TSeal k (Spec.tag N t')⌝ -∗
-          ⌜Spec.dec k N t = Some t'⌝ -∗
-     Ψ (SOMEV t')) ∧
-   (⌜Spec.dec k N t = None⌝ → Ψ NONEV)) -∗
   refines_right j (sdec k N t) ={E}=∗
-  ∃ (v : val), refines_right j v ∗ Ψ v.
+  refines_right j (repr (Spec.dec k N t)).
 Proof.
 move=> HE.
-iIntros "HΨ Hj". tp_lam j; tp_pures j.
-iPoseProof (tp_dec with "Hj") as ">Hj" => //.
-case: Spec.decP => [k_t t' /Spec.open_key_sencK -> ->|].
-- iDestruct "HΨ" as "[HΨ1 _]". iFrame. iApply "HΨ1" => //.
-- iDestruct "HΨ" as "[_ HΨ2]". iFrame. iApply "HΨ2" => //.
+iApply pure_twp_tp => //=.
+rewrite !andb_True; repeat split; by apply term_pure.
+move=> ?; iIntros "_".
+wp_lam. wp_pures.
+by wp_apply twp_dec.
 Qed.
 
 Lemma tp_sign' E j (k N : term) t :
@@ -328,21 +336,25 @@ last by move=> ?; iIntros "_"; iApply twp_sign' => //.
 rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
-Lemma tp_verify' E j (sk : sign_key) N t Ψ :
+Lemma verify_tseal (sk : sign_key) N t :
+  ∀ t', Spec.dec (Spec.pkey sk) N t = Some t' →
+  t = TSeal sk (Spec.tag N t').
+Proof.
+case: Spec.decP => [k_t t' H -> _ [<-]|t'] => //.
+by move: H => /Spec.open_key_signK => ->.
+Qed.
+
+Lemma tp_verify' E j (sk : sign_key) (N : term) t :
   nclose specN ⊆ E →
-  (∀ t', ⌜t = TSeal sk (Spec.tag N t')⌝ -∗
-         ⌜Spec.dec (Spec.pkey sk) N t = Some t'⌝ -∗
-         Ψ (SOMEV t')) ∧
-  (⌜Spec.dec (Spec.pkey sk) N t = None⌝ → Ψ NONEV) ⊢
   refines_right j (verify (Spec.pkey sk) N t) ={E}=∗
-  ∃ (v : val), refines_right j v ∗ Ψ v.
+  refines_right j (repr (Spec.dec (Spec.pkey sk) N t)).
 Proof.
 move=> HE.
-iIntros "HΨ Hj". tp_lam j; tp_pures j.
-iPoseProof (tp_dec with "Hj") as ">Hj" => //.
-case: Spec.decP => [k_t t' /Spec.open_key_signK -> ->|].
-- iDestruct "HΨ" as "[HΨ1 _]". iFrame. iApply "HΨ1" => //.
-- iDestruct "HΨ" as "[_ HΨ2]". iFrame. iApply "HΨ2" => //.
+iApply pure_twp_tp => //=.
+rewrite !andb_True; repeat split; by apply term_pure.
+move=> ?; iIntros "_".
+wp_lam. wp_pures.
+by wp_apply twp_dec.
 Qed.
 
 Lemma tp_pkey E j (k : term) :

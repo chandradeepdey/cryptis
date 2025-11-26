@@ -33,7 +33,7 @@ Implicit Types v : val.
 Implicit Types Φ : prodO locO termO -n> iPropO Σ.
 Implicit Types Ψ : val → iProp Σ.
 
-Lemma twp_mk_nonce_gen E j :
+Lemma tp_mk_nonce_gen E j :
   nclose specN ⊆ E →
   refines_right j (mk_nonce #()) -∗
   |={E}=> ∃ t, refines_right j t ∗ ⌜is_nonce t⌝ ∗
