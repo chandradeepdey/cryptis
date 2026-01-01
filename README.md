@@ -30,8 +30,8 @@ In the `examples` you will find our case studies:
 
 Cryptis is known to compile with the following dependencies:
 
-- rocq-prover v9.0.0
-- rocq-mathcomp-ssreflect v2.4.0
+- rocq-prover v9.0.0 or v9.1.0
+- rocq-mathcomp-ssreflect v2.5.0
 - coq-deriving v0.2.2
 - coq-iris v4.4.0
 - coq-iris-heap-lang v4.4.0

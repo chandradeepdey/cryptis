@@ -2,7 +2,7 @@
 mathcomp and stdpp definitions. *)
 
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_order all_boot.
 From deriving Require Import deriving.
 From stdpp Require base countable.
 From Stdlib Require Import ZArith.ZArith Lia Permutation.
@@ -35,6 +35,7 @@ Definition Z_isOrder :=
     Z_leb_anti Z_leb_trans Z_leb_total.
 HB.instance Definition _ := Z_isOrder.
 
+#[warnings="-projection-no-head-constant"]
 HB.instance Definition _ := [isNew for locations.loc_car].
 HB.instance Definition _ := [Equality of locations.loc by <:].
 HB.instance Definition _ := [Choice of locations.loc by <:].
