@@ -3,7 +3,7 @@ From iris.heap_lang Require Import lang notation proofmode.
 From iris.heap_lang.lib Require Import nondet_bool.
 From iris.algebra Require Import gmap gset auth reservation_map.
 From iris.base_logic Require Import gen_heap invariants.
-From mathcomp Require ssrbool order path.
+From mathcomp Require ssrbool all_order path.
 From deriving Require deriving.
 From cryptis Require Export mathcomp_compat.
 
@@ -316,7 +316,7 @@ End DoUntil.
 
 Section Ordered.
 
-Import ssrbool seq ssreflect.order path deriving.instances.
+Import ssrbool seq all_order path deriving.instances.
 Variable (d : Order.disp_t) (A : orderType d).
 Context `{!Repr A, !relocG Σ}.
 Import Order Order.POrderTheory Order.TotalTheory.

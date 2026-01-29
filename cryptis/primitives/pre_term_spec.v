@@ -1,6 +1,5 @@
 From cryptis Require Import lib.
-From mathcomp Require Import ssreflect.
-From mathcomp Require order.
+From mathcomp Require all_order all_boot.
 From stdpp Require Import gmap.
 From iris.algebra Require Import agree auth gset gmap.
 From iris.base_logic.lib Require Import invariants.
@@ -43,7 +42,7 @@ Qed.
 
 Import ssrbool seq path.
 
-Import ssreflect.eqtype ssreflect.order.
+Import boot.eqtype all_order.
 
 Lemma tp_leq_pre_term E j (pt1 pt2 : PreTerm.pre_term) :
   nclose specN ⊆ E →

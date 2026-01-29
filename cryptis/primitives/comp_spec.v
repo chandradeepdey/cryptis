@@ -1,6 +1,5 @@
 From cryptis Require Import lib.
-From mathcomp Require Import ssreflect.
-From mathcomp Require order.
+From mathcomp Require all_order all_boot.
 From stdpp Require Import gmap.
 From iris.algebra Require Import agree auth gset gmap.
 From iris.base_logic.lib Require Import invariants.
@@ -52,7 +51,7 @@ iPoseProof (tp_eq_term with "Hj") as ">Hj" => //=.
 iFrame. rel_values.
 Qed.
 
-Import ssrbool seq path ssreflect.eqtype ssreflect.order.
+Import ssrbool seq path boot.eqtype all_order.
 
 Lemma tp_texp E j t1 t2 :
   nclose specN ⊆ E →
