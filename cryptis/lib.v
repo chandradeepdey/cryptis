@@ -115,7 +115,7 @@ Lemma reservation_map_disj {A : cmra} E x (a : A) :
   x ∉ E.
 Proof.
 rewrite reservation_map_valid_eq /= right_id_L left_id_L.
-by case=> _ /(_ x); rewrite lookup_singleton_eq; case.
+by case=> _ /(_ x); rewrite lookup_singleton; case.
 Qed.
 
 Lemma namespace_map_disj {A : cmra} E (N : namespace) (a : A) :
@@ -183,10 +183,10 @@ apply: (anti_symm _).
 - iIntros "H %k %Y %X_k"; rewrite big_sepS_forall; iIntros "%x %x_Y".
   iApply "H"; iPureIntro.
   apply/elem_of_union_list; exists Y; split => //.
-  by rewrite list_elem_of_lookup; eauto.
+  by rewrite elem_of_list_lookup; eauto.
 - iIntros "H %x %x_X".
   case/elem_of_union_list: x_X => Y [Y_X x_Y].
-  case/list_elem_of_lookup: Y_X => k X_k.
+  case/elem_of_list_lookup: Y_X => k X_k.
   iSpecialize ("H" $! _ _ X_k).
   by rewrite big_sepS_forall; iApply "H".
 Qed.
@@ -216,7 +216,7 @@ have {}e: ∀ x' : K, x' ∈ dom m ↔ x' ∈ ({[x]} : gset K) by rewrite e.
 have: x ∈ ({[x]} : gset K) by rewrite elem_of_singleton.
 rewrite -e elem_of_dom; case=> y m_x; exists y.
 apply: map_eq=> x'; case: (decide (x' = x))=> [ {x'}->|ne].
-  by rewrite lookup_singleton_eq.
+  by rewrite lookup_singleton.
 rewrite lookup_singleton_ne // -(@not_elem_of_dom _ _ (gset K)).
 by rewrite e elem_of_singleton.
 Qed.
@@ -1179,7 +1179,7 @@ Lemma insert_same {A} (m1 m2 : gmap string A) (i : string) (x : A) :
 Proof.
 move=> e12; apply map_eq => j.
 destruct (decide (j = i)) as [->|ne].
-- by rewrite !lookup_insert_eq.
+- by rewrite !lookup_insert.
 - by rewrite !lookup_insert_ne // e12.
 Qed.
 
@@ -1194,7 +1194,7 @@ Qed.
 
 Lemma binder_insert_delete {A} (m : gmap string A) (i : binder) (x : A) :
   binder_insert i x (binder_delete i m) = binder_insert i x m.
-Proof. case: i => //= i; exact: insert_delete_eq. Qed.
+Proof. case: i => //= i; exact: insert_delete_insert. Qed.
 
 Lemma binder_insert_delete2 {A} (m : gmap string A) (i j : binder) (x y : A) :
   binder_insert i x (binder_insert j y (binder_delete i (binder_delete j m))) =
@@ -1202,17 +1202,17 @@ Lemma binder_insert_delete2 {A} (m : gmap string A) (i j : binder) (x y : A) :
 Proof.
 rewrite -(binder_insert_delete m j y).
 case: i j => [|i] [|j] //=.
-- by rewrite insert_delete_eq.
-- rewrite delete_delete !insert_delete_eq.
+- by rewrite insert_delete_insert.
+- rewrite delete_commute !insert_delete_insert.
   destruct (decide (i = j)) as [->|i_j].
-    by rewrite insert_delete_eq.
-  by rewrite insert_insert_ne // insert_delete_eq insert_insert_ne //.
+    by rewrite insert_delete_insert.
+  by rewrite insert_commute // insert_delete_insert insert_commute //.
 Qed.
 
-Lemma binder_delete_delete {A} (m : gmap string A) i j :
+Lemma binder_delete_commute {A} (m : gmap string A) i j :
   binder_delete i (binder_delete j m) =
   binder_delete j (binder_delete i m).
-Proof. case: i j => [|i] [|j] //=; exact: delete_delete. Qed.
+Proof. case: i j => [|i] [|j] //=; exact: delete_commute. Qed.
 
 Definition nondet_nat_loop : val := rec: "loop" "n" :=
   if: nondet_bool #() then "n" else "loop" ("n" + #1).
