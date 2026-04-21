@@ -20,12 +20,16 @@ Notation iProp := (iProp Σ).
 Implicit Types (v : val) (t : term) (e : expr).
 Implicit Types (T S : val → iProp).
 
+(* have separate types for symmetric, asymetric, and sign keys *)
 Inductive type :=
 | Pub
 | Channel
 (* TODO: Use all key types *)
-| EK
-| DK
+| AEncT
+| ADecT
+| SEncT
+| SignT
+| VerifyT
 | Int
 | Bool
 | Unit
@@ -43,11 +47,20 @@ Definition Option τ := Sum Unit τ.
 Definition pub_type v : iProp :=
   ∃ t, ⌜v = t⌝ ∧ public t.
 
-Definition seal_key_type v : iProp :=
-  ∃ k, ⌜v = TKey Seal k⌝ ∧ public (TKey Seal k).
+Definition aenc_key_type v : iProp :=
+  ⌜∃ (sk : aenc_key), v = Spec.pkey sk⌝.
 
-Definition open_key_type v : iProp :=
-  ∃ k, ⌜v = TKey Open k⌝ ∧ public (TKey Open k).
+Definition adec_key_type v : iProp :=
+  ⌜∃ (sk: aenc_key), v = sk⌝.
+
+Definition senc_key_type v : iProp :=
+  ⌜∃ (sk : senc_key), v = sk⌝.
+
+Definition sign_key_type v : iProp :=
+  ⌜∃ (sk : sign_key), v = sk⌝.
+
+Definition verify_key_type v : iProp :=
+  ⌜∃ (sk : sign_key), v = Spec.pkey sk⌝.
 
 Definition int_type v : iProp :=
   ∃ n : Z, ⌜v = #n⌝.

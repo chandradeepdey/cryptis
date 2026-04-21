@@ -11,7 +11,7 @@ cryptis/lib/gen_adequacy.v
 cryptis/lib/adequacy.v
 cryptis/lib/session.v
 cryptis/lib/dh.v
-cryptis/lib/attacker_types.v
+# cryptis/lib/attacker_types.v
 cryptis/lib/replica.v
 cryptis/lib/gmeta.v
 cryptis/lib/nown.v
