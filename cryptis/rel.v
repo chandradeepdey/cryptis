@@ -65,13 +65,20 @@ Definition dolev_yao_consistent tr :=
   (∀ t1 t2, dolev_yao tr t1 t2 -> Spec.is_key t1 = Spec.is_key t2).
 
 Definition tables_consistent tr pub priv flow_l flow_r :=
+  gset_bijective pub ∧
+  gset_bijective priv ∧
+  (* pub and priv cannot contain the same term *)
   (∀ t1 t2 t2', (t1, t2) ∈ pub → (t1, t2') ∈ priv → False) ∧
   (∀ t1 t1' t2, (t1, t2) ∈ pub → (t1', t2) ∈ priv → False) ∧
+  (* pub is an extension of the trace, but not the full Dolev-Yao closure *)
+  (∀ t1 t2, (t1, t2) ∈ tr → (t1, t2) ∈ pub) ∧
   (∀ t1 t2, (t1, t2) ∈ pub → dolev_yao tr t1 t2) ∧
-  (∀ t1 t1' t2, (t1, t2) ∈ priv → dolev_yao tr t1 t1' → False) ∧
-  (∀ t1 t2 t2', (t1, t2) ∈ priv → dolev_yao tr t1 t2' → False) ∧
-  (∀ t1 t1' t2 t2', (t1, t1') ∈ flow_l → (t1, t2) ∈ pub → (t1', t2') ∈ pub) ∧
-  (∀ t1 t1' t2 t2', (t2, t2') ∈ flow_r → (t1, t2) ∈ pub → (t1', t2') ∈ pub).
+  (* priv restricts what can become publicly related eventually *)
+  (∀ t1 t2 t2', (t1, t2) ∈ priv → dolev_yao tr t1 t2' → t2 = t2') ∧
+  (∀ t1 t1' t2, (t1, t2) ∈ priv → dolev_yao tr t1' t2 → t1 = t1') ∧
+  (* flow must be consistent with pub *)
+  (∀ t1 t1' t2, (t1, t1') ∈ flow_l → (t1, t2) ∈ pub → ∃ t2', (t1', t2') ∈ pub) ∧
+  (∀ t1 t2 t2', (t2, t2') ∈ flow_r → (t1, t2) ∈ pub → ∃ t1', (t1', t2') ∈ pub).
 
 Section Rel.
 
