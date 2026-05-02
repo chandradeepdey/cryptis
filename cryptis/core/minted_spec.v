@@ -7,7 +7,7 @@ From iris.heap_lang Require Import notation proofmode.
 From cryptis Require Import lib.
 From cryptis.core Require Import term.
 
-From cryptis Require Import gmeta nown.
+From cryptis.core Require Import minted.
 From reloc Require Import reloc.
 
 Set Implicit Arguments.
@@ -20,23 +20,10 @@ Context `{!relocG Σ}.
 
 Notation iProp := (iProp Σ).
 
-Definition minted_spec_loc (a : loc) : iProp :=
-  a ↦ₛ□ #().
-
-Global Instance Persistent_minted_spec_loc a :
-  Persistent (minted_spec_loc a).
-Proof. apply _. Qed.
-
-Global Instance Timeless_minted_spec_loc a :
-  Timeless (minted_spec_loc a).
-Proof. apply _. Qed.
-
-Fact minted_spec_key : unit. Proof. exact: tt. Qed.
-
 Definition minted_spec : term → iProp :=
-  locked_with minted_spec_key (
+  locked_with minted_key (
     λ t, [∗ set] a ∈ nonces_of_term t,
-      minted_spec_loc a
+      meta a (nroot.@"minted_spec") ()
   )%I.
 
 Canonical minted_spec_unlock := [unlockable of minted_spec].
@@ -63,7 +50,7 @@ Proof.
 by rewrite unlock nonces_of_term_unseal /= !big_sepS_union_pers.
 Qed.
 
-Lemma minted_spec_TNonce a : minted_spec (TNonce a) ⊣⊢ minted_spec_loc a.
+Lemma minted_spec_TNonce a : minted_spec (TNonce a) ⊣⊢ meta a (nroot.@"minted_spec") ().
 Proof.
 by rewrite unlock nonces_of_term_unseal /= big_sepS_singleton.
 Qed.
@@ -145,15 +132,5 @@ Proof. by rewrite [term_of_senc_key]unlock minted_spec_TKey. Qed.
 
 Lemma minted_spec_sign k : minted_spec (SignKey k) ⊣⊢ minted_spec k.
 Proof. by rewrite [term_of_sign_key]unlock minted_spec_TKey. Qed.
-
-Lemma minted_spec_pre_alloc a :
-  a ↦ₛ #() -∗
-  ¬ minted_spec (TNonce a) ∧ |==> minted_spec (TNonce a).
-Proof.
-rewrite minted_spec_TNonce. iIntros "Ha"; iSplit.
-- iIntros "contra". iCombine "Ha contra" gives %[contra _].
-  by move/dfrac_valid_own_l: contra; auto.
-- by iMod (pointstoS_persist with "Ha").
-Qed.
 
 End Minted.
