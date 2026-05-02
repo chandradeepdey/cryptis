@@ -37,6 +37,7 @@ cryptis/cryptis.v
 # Relational-specific
 
 cryptis/core/minted_spec.v
+cryptis/core/term_meta_spec.v
 
 cryptis/primitives/notations.v
 cryptis/primitives/pre_term.v
@@ -143,4 +144,4 @@ examples/composite_game.v
 
 # Relational Cryptis
 
-cryptis/rel.v
+# cryptis/rel.v
