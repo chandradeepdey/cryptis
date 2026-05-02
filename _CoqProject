@@ -144,4 +144,4 @@ examples/composite_game.v
 
 # Relational Cryptis
 
-# cryptis/rel.v
+cryptis/rel.v
