@@ -39,7 +39,7 @@ Definition term_meta_spec_inv `{!term_meta_specGS Σ} : iProp :=
     [∗ set] t ∈ dom names, minted_spec t.
 
 Definition term_meta_spec_ctx `{!term_meta_specGS Σ} : iProp :=
-  inv (nroot.@"cryptis".@"meta") term_meta_spec_inv.
+  inv (nroot.@"cryptis".@"meta_spec") term_meta_spec_inv.
 
 Lemma term_meta_specGS_alloc E :
   term_metaGpreS Σ →
@@ -403,11 +403,11 @@ Variable ctx: iProp.
 Context `{!HasTermMetaSpecCtx ctx}.
 
 Lemma term_token_spec_alloc (T : gset term) (P Q : iProp) E :
-  ↑nroot.@"cryptis".@"meta" ⊆ E →
+  ↑nroot.@"cryptis".@"meta_spec" ⊆ E →
   ctx -∗
   (∀ t, ⌜t ∈ T⌝ -∗ P -∗ minted_spec t -∗ False) -∗
   (∀ t, ⌜t ∈ T⌝ -∗ Q -∗ minted_spec t) -∗
-  (P ∧ |={E ∖ ↑nroot.@"cryptis".@"meta"}=> Q) ={E}=∗
+  (P ∧ |={E ∖ ↑nroot.@"cryptis".@"meta_spec"}=> Q) ={E}=∗
   Q ∗ [∗ set] t ∈ T, term_token_spec t ⊤.
 Proof.
 iIntros "%sub ctx H1 H2 H3".
