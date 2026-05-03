@@ -39,6 +39,7 @@ cryptis/cryptis.v
 cryptis/core/minted_spec.v
 cryptis/core/term_meta_spec.v
 cryptis/core/public_spec.v
+cryptis/core/relational.v
 
 cryptis/primitives/notations.v
 cryptis/primitives/pre_term.v
@@ -122,9 +123,9 @@ examples/counter.v
 examples/nsl_secr.v
 examples/nsl_auth.v
 
-# Relational
+# Relational examples
 
-# examples/cpa_attacker.v
+# examples/cpa/impl.v
 
 ## NSL
 
@@ -141,8 +142,3 @@ examples/tls13.v
 examples/composite_game.v
 
 ## Storage
-
-
-# Relational Cryptis
-
-cryptis/rel.v

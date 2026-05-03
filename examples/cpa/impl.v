@@ -14,7 +14,7 @@ Unset Printing Implicit Defensive.
 
 Section CPA.
 
-Context `{!heapGS Σ, !spawnG Σ, !cryptisGS Σ}.
+Context `{!relocG Σ, !spawnG Σ}. (*, !relational_cryptisGS Σ}. *)
 Notation iProp := (iProp Σ).
 
 Implicit Types (t nonce : term).

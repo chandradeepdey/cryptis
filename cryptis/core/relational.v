@@ -50,10 +50,9 @@ Definition public_rel_pub_auth (pub: gset (term * term)) : iProp :=
 Definition public_rel_priv_auth (priv: gset (term * term)) : iProp :=
   own public_rel_priv_name (● (GSet priv)).
 
-Definition cryptis_rel_N := nroot .@ "cryptis_rel".
+Definition relational_cryptis_N := nroot.@"cryptis".@"relational".
 
-(* to be addressed- probably should not have existentials *)
-Definition cryptis_rel_inv : iProp :=
+Definition relational_cryptis_inv : iProp :=
   ∃ pub priv, public_rel_pub_auth pub ∗ public_rel_priv_auth priv.
 
 End Rel.
