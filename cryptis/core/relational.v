@@ -16,20 +16,15 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Class public_relGpreS Σ := Public_relGpreS {
-  #[local] public_relGpreS_pub :: inG Σ (gset_bijUR term term);
-  #[local] public_relGpreS_priv :: inG Σ (gset_bijUR term term);
-}.
+Notation public_relGpreS Σ := (inG Σ (gset_bijUR term term)).
 
 Class public_relGS Σ := Public_relGS {
-  #[local] public_rel_inG :: public_relGpreS Σ;
+  #[local] public_relGpreS_inG :: public_relGpreS Σ;
   public_rel_pub_name  : gname;
   public_rel_priv_name  : gname;
 }.
 
-Definition public_relΣ : gFunctors :=
-  #[GFunctor (gset_bijUR term term);
-    GFunctor (gset_bijUR term term)].
+Definition public_relΣ : gFunctors := #[GFunctor (gset_bijUR term term)].
 
 Global Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
 Proof. solve_inG. Qed.
@@ -53,12 +48,18 @@ Definition public_rel_priv_auth (priv: gset (term * term)) : iProp :=
 Definition relational_cryptis_N := nroot.@"cryptis".@"relational".
 
 Definition relational_cryptis_inv (pub priv: gset (term * term)) : lrel Σ := LRel
-  (public_rel_pub_auth pub ∗ public_rel_priv_auth priv)%I.
+  (λ v v',
+    (∃ t t' : term, ⌜v = t⌝ ∧ ⌜v' = t'⌝ ∧
+    match t, t' with
+    | TInt n, TInt n' => ⌜n = n'⌝
+    | _, _ => False
+    end
+    ))%I.
 
 (*
 THE IDEA
-
-⊢ REL send t << send t' : relational_cryptis_inv(?) t t'
+cryptis_ctx ∗ cryptis_spec_ctx ∗ cryptis_rel_ctx -∗
+⊢ REL send c t << send c t' : relational_cryptis_inv(?) t t'
 
 *)
 

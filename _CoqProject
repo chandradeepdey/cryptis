@@ -39,6 +39,7 @@ cryptis/cryptis.v
 cryptis/core/minted_spec.v
 cryptis/core/term_meta_spec.v
 cryptis/core/public_spec.v
+cryptis/cryptis_spec.v
 cryptis/core/relational.v
 
 cryptis/primitives/notations.v
