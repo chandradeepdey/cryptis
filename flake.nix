@@ -4,11 +4,13 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    nix-github-actions.url = "github:nix-community/nix-github-actions";
+    nix-github-actions.inputs.nixpkgs.follows = "nixpkgs";
     reloc.url = "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git?ref=local-changes";
     reloc.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, flake-parts, nixpkgs, reloc, ... }:
+  outputs = inputs@{ self, flake-parts, nixpkgs, nix-github-actions, reloc, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         # To import a flake module
@@ -39,6 +41,9 @@
 
         # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
         packages.default = pkgs.coqPackages.cryptis;
+
+        checks.default = self'.packages.default;
+
       };
       flake = {
 
@@ -46,12 +51,17 @@
         # agnostic ones like nixosModule and system-enumerating ones, although
         # those are more easily expressed in perSystem.
 
+        githubActions = nix-github-actions.lib.mkGithubMatrix {
+          checks = nixpkgs.lib.getAttrs
+            [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ]
+            self.checks;
+        };
+
         overlays.default = final: prev: {
           coqPackages = prev.coqPackages_9_1.overrideScope (final: prev: {
             cryptis = prev.mkCoqDerivation {
               pname = "cryptis";
               version = ./.;
-              useDune = true;
               propagatedBuildInputs = [
                 final.coq
                 final.mathcomp.ssreflect
