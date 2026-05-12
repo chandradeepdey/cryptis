@@ -105,7 +105,7 @@ Lemma tp_list `{!Repr A} E j (xs : list A) :
 Proof.
 move=> HE.
 elim: xs j => [|x xs IHxs] j /=; iIntros "Hj";
-first by iPoseProof (tp_nil with "Hj") as ">Hj" => //=.
+first by iPoseProof (@tp_nil A with "Hj") as ">Hj" => //=.
 tp_bind j (list_to_expr _).
 rewrite refines_right_bind.
 set j' := RefId _ _.
