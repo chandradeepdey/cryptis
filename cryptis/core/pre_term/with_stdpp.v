@@ -160,3 +160,15 @@ Proof.
   rewrite -repr_list_unseal.
   apply andb_prop_intro; split; by [| apply IHts].
 Qed.
+
+Require Import ssrbool.
+
+Lemma wf_peel pt pts :
+    PreTerm.wf_term (PreTerm.PTExp pt pts) →
+    ∀ pth pts', pts ≡ₚ pth :: pts' →
+    PreTerm.wf_term (PreTerm.PTExp pt pts').
+Proof.
+elim: pts => //= [contra | pt' pts' IH].
+- rewrite !andbF in contra.
+  destruct contra.
+-

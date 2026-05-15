@@ -6,7 +6,7 @@ From iris.algebra.lib Require Import gset_bij mono_list.
 From iris.base_logic.lib Require Import saved_prop invariants.
 From iris.heap_lang Require Import notation proofmode.
 From cryptis Require Import lib gmeta nown.
-From cryptis.core Require Import term minted public.
+From cryptis.core Require Import pre_term term minted public.
 
 From reloc Require Import reloc.
 From cryptis.core Require Import minted_spec.
@@ -84,10 +84,14 @@ Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d
   | THash t1', THash t2' =>
     publicly_related_pre t1' t2' ∨
     (public_rel_frag t1 t2 ∧ double_squiggle_pre P t1' t2')
-  | TExpN' _ _ _, TExpN' _ _ _ =>
-      False (* FIXME *)
+  | TExpN' t1' ts1 wf_pt1, TExpN' t2' ts2 wf_pt2 =>
+    ∀ ts1h ts1' ts2h ts2', ⌜ts1 ≡ₚ ts1h :: ts1' ∧ ts2 ≡ₚ ts2h :: ts2'⌝ →
+      (publicly_related_pre (TExpN' t1' ts1' ?) (TExpN' t2' ts2' ?) ∧
+        publicly_related_pre ts1h ts2h) ∨
+      (public_rel_frag t1 t2 ∧ double_squiggle_pre P (TExpN' t1' ts1' ?) (TExpN' t2' ts2' ?) ∧
+        double_squiggle_pre P ts1h ts2h)
   | _, _ =>
-      False (* WIP *)
+      False (* FUTURE WORK *)
   end%I.
 
 Local Instance publicly_related_pre_contractive : Contractive publicly_related_pre.
@@ -174,11 +178,13 @@ Lemma publicly_related_unfold :
     publicly_related t1' t2' ∨
     (public_rel_frag t1 t2 ∧ double_squiggle t1' t2')
   | TExpN' _ _ _, TExpN' _ _ _ =>
-      False (* FIXME *)
-  | TNonce l1, THash t2' =>
-    public_rel_frag t1 t2 (* t2' forever secret *)
+    ∀ ts1h ts1' ts2h ts2', ⌜ts1 ≡ₚ ts1h :: ts1' ∧ ts2 ≡ₚ ts2h :: ts2'⌝ →
+    (publicly_related (TExpN' t1' ts1' ?) (TExpN' t2' ts2' ?) ∧
+      publicly_related ts1h ts2h) ∨
+    (public_rel_frag t1 t2 ∧ double_squiggle (TExpN' t1' ts1' ?) (TExpN' t2' ts2' ?) ∧
+      double_squiggle ts1h ts2h)
   | _, _ =>
-      False (* WIP *)
+      False (* FUTURE WORK *)
   end.
 Proof.
   rewrite /double_squiggle publicly_related_unseal /publicly_related_def => t1 t2.
