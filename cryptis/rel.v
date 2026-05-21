@@ -50,6 +50,9 @@ Definition double_squiggle_pre (P: term -d> term -d> iPropO) t1 t2 :=
   (□ (∀ t2', ▷ P t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
   □ (∀ t1', ▷ P t1' t2 -∗ ▷ ⌜t1 = t1'⌝))%I.
 
+#[local] Instance double_squiggle_pre_persistent P t1 t2 : Persistent (double_squiggle_pre P t1 t2).
+Proof. apply _. Qed.
+
 Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d> iPropO :=
   fix publicly_related_pre t1 t2 {struct t1} : iProp :=
   match t1, t2 with
@@ -90,7 +93,39 @@ Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d
       False (* WIP *)
   end%I.
 
-Local Instance publicly_related_pre_contractive : Contractive publicly_related_pre.
+#[local] Instance publicly_related_pre_persistent P t1 t2 : Persistent (publicly_related_pre P t1 t2).
+Proof.
+elim/term_lt_ind: t1 t2 => // -[] //=.
+- move=> ? ? [] *; apply _.
+- move=> t11 t12 IH []; try apply _.
+  move=> t21 t22.
+  have IH1: Persistent (publicly_related_pre P t11 t21).
+  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  have IH2: Persistent (publicly_related_pre P t12 t22).
+  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  apply _.
+- move=> ? ? [] *; apply _.
+- move=> k1 t1' IH []; try apply _.
+  move=> k2 t2'.
+  have {}IH: Persistent (publicly_related_pre P t1' t2').
+  { apply IH. rewrite /tsize /=. lia. }
+  apply _.
+- move=> k1 t1' IH []; try apply _.
+  move=> k2 t2'.
+  have IH1: Persistent (publicly_related_pre P k1 k2).
+  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  have IH2: Persistent (publicly_related_pre P t1' t2').
+  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  apply _.
+- move=> t1' IH []; try apply _.
+  move=> t2'.
+  have {}IH: Persistent (publicly_related_pre P t1' t2').
+  { apply IH. rewrite /tsize /=. lia. }
+  apply _.
+all: apply _.
+Qed.
+
+#[local] Instance publicly_related_pre_contractive : Contractive publicly_related_pre.
 Proof.
   move=> n P P' HP t1 t2.
   elim/term_lt_ind: t1 t2 => // -[] //=.
@@ -175,8 +210,6 @@ Lemma publicly_related_unfold :
     (public_rel_frag t1 t2 ∧ double_squiggle t1' t2')
   | TExpN' _ _ _, TExpN' _ _ _ =>
       False (* FIXME *)
-  | TNonce l1, THash t2' =>
-    public_rel_frag t1 t2 (* t2' forever secret *)
   | _, _ =>
       False (* WIP *)
   end.
@@ -195,58 +228,38 @@ Proof.
   all: try by rewrite (fixpoint_unfold publicly_related_pre k1 k2).
 Qed.
 
-(* to be addressed- probably should not have existentials *)
-Definition cryptis_rel_inv : iProp :=
-  ∃ pub priv,
-      public_rel_pub_auth pub ∗
-      public_rel_priv_auth priv.
-
-Definition nonce_rel_frag t1 t2 : iProp :=
-  nown public_term_part_bij_name (nroot.@"nonce")
-    (gset_bij_elem t1 t2) ∗
-    minted_spec t1 ∗ minted t2.
-
-Lemma nonce_rel_alloc t1 t2 R :
-  (∀ t2', (t1, t2') ∉ R) → (∀ t1', (t1', t2) ∉ R) →
-  minted_spec t1 ∗ minted t2 ∗
-  nonce_rel_auth R ==∗
-  nonce_rel_auth ({[(t1, t2)]} ∪ R) ∗
-  nonce_rel_frag t1 t2.
+#[global] Instance publicly_related_persistent t1 t2 : Persistent (publicly_related t1 t2).
 Proof.
-iIntros "%fresh1 %fresh2 (mt1 & mt2 & own)".
-iMod (nown_update with "own") as "own".
-apply: gset_bij_auth_extend => //=.
-iDestruct "own" as "[auth #frag]".
-rewrite -gset_op view_frag_op nown_op.
-iDestruct "frag" as "[#frag1 #frag2]".
-iModIntro. iFrame "#". iFrame.
-iCombine "frag1 frag2" as "#frag".
-rewrite /nonce_rel_auth /gset_bij_auth nown_op.
-by iFrame "#".
+  rewrite /double_squiggle publicly_related_unseal /publicly_related_def.
+  rewrite (fixpoint_unfold publicly_related_pre t1 t2).
+  apply _.
 Qed.
 
-Lemma public_TSeal k R t1 t2 :
-  (∀ t2', (t1, t2') ∉ R) → (∀ t1', (t1', t2) ∉ R) →
-  enc_rel_auth k R ==∗
-  enc_rel_auth k ({[(t1, t2)]} ∪ R) ∗
-  public (TSeal k t1) (TSeal k t2).
+Lemma public_open_public k1 k2 t1 t2 :
+  publicly_related k1 k2 -∗
+  publicly_related t1 t2 -∗
+  publicly_related (TSeal k1 t1) (TSeal k2 t2).
 Proof.
-iIntros "%fresh1 %fresh2 H●".
-iMod (enc_rel_alloc _ fresh1 fresh2 with "H●") as "[H● H◯]".
-by iFrame.
+  iIntros "#Hk #Ht".
+  rewrite [publicly_related (TSeal _ _) _]publicly_related_unfold.
+  iLeft; auto.
 Qed.
 
-Lemma public_TNonce R (t1 t2: loc) :
-  (∀ t2', (TNonce t1, t2') ∉ R) → (∀ t1', (t1', TNonce t2) ∉ R) →
-  minted_spec (TNonce t1) ∗ minted (TNonce t2) ∗
-  nonce_rel_auth R ==∗
-  nonce_rel_auth ({[((TNonce t1), (TNonce t2))]} ∪ R) ∗
-  public (TNonce t1) (TNonce t2).
+Lemma private_open_public k1 k2 t1 t2 :
+  public_rel_frag (TSeal k1 t1) (TSeal k2 t2) -∗
+  double_squiggle k1 k2 -∗
+  double_squiggle t1 t2 -∗
+  publicly_related (TSeal k1 t1) (TSeal k2 t2).
 Proof.
-  iIntros "%fresh1 %fresh2 (#Ht1 & #Ht2 & H●)".
-  iMod (nonce_rel_alloc fresh1 fresh2 with "[H●]") as "[H● H◯]".
-  - by iFrame "#".
-  by iFrame.
-Qed.
+  iIntros "#H #IHk #IHt".
+  rewrite publicly_related_unfold.
+  iRight.
+Admitted.
+
+(*
+Prove that publicly related is preserved by all operations, including open
+Prove that publicly related is a partial bijection.
+publicly_related t1 t2 ∧ publicly_related t1 t2' → ▷ t2 = t2'
+*)
 
 End Rel.

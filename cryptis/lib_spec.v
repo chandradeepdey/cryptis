@@ -11,6 +11,7 @@ From cryptis.lib Require Export repr list list_match.
 From cryptis Require Import lib.
 From cryptis Require Import lib.adequacy.
 From reloc Require Import reloc.
+From cryptis.lib Require Export list_spec list_match_spec.
 
 (* THIS IS A VERY GROSS HACK *)
 Lemma heapGS_heapGpreS Σ `{!heapGS Σ} : heapGpreS Σ.
