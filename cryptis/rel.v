@@ -311,12 +311,18 @@ case: t2 => // k_t2 t2.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k1 [<-].
 case: decide => // k_t_k2 [<-].
-iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & Hrest)]"; first done.
+iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & #Hrest)]"; first done.
 move: k_t_k1; case: k_t1 => // => kt1 k1' k_t_k1.
 move: k_t_k2; case: k_t2 => // => kt2 k2' k_t_k2.
-move: k_t_k1; case: kt1 => // => k_t_k1.
-all: move: k_t_k2; case: kt2 => // => k_t_k2.
-all: iDestruct "Hrest" as "#[%_ Hrest]" => //=.
+iDestruct "Hrest" as "[<- Hrest]".
+case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-] /=.
+- rewrite publicly_related_TKey.
+  iDestruct "Hk" as "[_ Hk]".
+  by iApply "Hrest".
+- admit. (* Similar *)
+- admit. (* Similar *)
+Admitted.
+
 
 (*
 Prove that publicly related is preserved by all operations, including open
