@@ -174,6 +174,8 @@ Proof. rewrite -publicly_related_aux.(seal_eq) //. Qed.
 
 Definition double_squiggle := double_squiggle_pre publicly_related.
 
+Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
+
 Lemma publicly_related_unfold :
   ∀ t1 t2, publicly_related t1 t2 ⊣⊢
   match t1, t2 with
@@ -184,16 +186,16 @@ Lemma publicly_related_unfold :
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
     | AEnc => publicly_related t1' t2' ∨
-              (public_rel_frag t1 t2 ∧ double_squiggle t1' t2')
+              (public_rel_frag t1 t2 ∧ t1' ≈ t2')
     | ADec => publicly_related t1' t2'
     | Sign => publicly_related t1' t2'
     | Verify => publicly_related t1' t2' ∨
-                (public_rel_frag t1 t2 ∧ double_squiggle t1' t2')
+                (public_rel_frag t1 t2 ∧ t1' ≈ t2')
     | SEnc => publicly_related t1' t2'
     end
   | TSeal k1 t1', TSeal k2 t2' =>
     (publicly_related k1 k2 ∧ publicly_related t1' t2') ∨
-    (public_rel_frag t1 t2 ∧ double_squiggle k1 k2 ∧ double_squiggle t1' t2' ∧
+    (public_rel_frag t1 t2 ∧ k1 ≈ k2 ∧ t1' ≈ t2' ∧
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
@@ -207,7 +209,7 @@ Lemma publicly_related_unfold :
       end))
   | THash t1', THash t2' =>
     publicly_related t1' t2' ∨
-    (public_rel_frag t1 t2 ∧ double_squiggle t1' t2')
+    (public_rel_frag t1 t2 ∧ t1' ≈ t2')
   | TExpN' _ _ _, TExpN' _ _ _ =>
       False (* FIXME *)
   | _, _ =>
@@ -235,7 +237,7 @@ Proof.
   apply _.
 Qed.
 
-Lemma public_open_public k1 k2 t1 t2 :
+Lemma public_seal_public k1 k2 t1 t2 :
   publicly_related k1 k2 -∗
   publicly_related t1 t2 -∗
   publicly_related (TSeal k1 t1) (TSeal k2 t2).
@@ -245,16 +247,76 @@ Proof.
   iLeft; auto.
 Qed.
 
-Lemma private_open_public k1 k2 t1 t2 :
-  public_rel_frag (TSeal k1 t1) (TSeal k2 t2) -∗
-  double_squiggle k1 k2 -∗
-  double_squiggle t1 t2 -∗
-  publicly_related (TSeal k1 t1) (TSeal k2 t2).
+Lemma publicly_related_TInt n1 n2 :
+  publicly_related (TInt n1) (TInt n2) ⊣⊢ ⌜n1 = n2⌝.
+Proof. by rewrite publicly_related_unfold. Qed.
+
+Lemma publicly_related_TPair t11 t12 t21 t22 :
+  publicly_related (TPair t11 t12) (TPair t21 t22) ⊣⊢
+  (publicly_related t11 t21 ∧ publicly_related t12 t22).
+Proof. by rewrite publicly_related_unfold. Qed.
+
+Lemma publicly_related_TNonce l1 l2 :
+  publicly_related (TNonce l1) (TNonce l2) ⊣⊢
+  public_rel_frag (TNonce l1) (TNonce l2).
+Proof. by rewrite publicly_related_unfold. Qed.
+
+Lemma publicly_related_TKey kt1 kt2 t1 t2 :
+  publicly_related (TKey kt1 t1) (TKey kt2 t2) ⊣⊢
+  ⌜kt1 = kt2⌝ ∧
+  match kt1 with
+  | AEnc => publicly_related t1 t2 ∨
+            (public_rel_frag (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
+  | ADec => publicly_related t1 t2
+  | Sign => publicly_related t1 t2
+  | Verify => publicly_related t1 t2 ∨
+              (public_rel_frag (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
+  | SEnc => publicly_related t1 t2
+  end.
+Proof. by rewrite publicly_related_unfold. Qed.
+
+Lemma publicly_related_TSeal k1 k2 t1 t2 :
+  publicly_related (TSeal k1 t1) (TSeal k2 t2) ⊣⊢
+  (publicly_related k1 k2 ∧ publicly_related t1 t2) ∨
+  (public_rel_frag (TSeal k1 t1) (TSeal k2 t2) ∧
+   k1 ≈ k2 ∧ t1 ≈ t2 ∧
+   □ (match k1, k2 with
+      | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
+        match kt1 with
+        | AEnc => publicly_related k1 k2 → publicly_related t1 t2
+        | ADec => False
+        | Sign => publicly_related t1 t2 → publicly_related k1 k2
+        | Verify => False
+        | SEnc => publicly_related k1 k2 → publicly_related t1 t2
+        end
+      | _, _ => False
+      end)).
+Proof. by rewrite publicly_related_unfold. Qed.
+
+Lemma publicly_related_THash t1 t2 :
+  publicly_related (THash t1) (THash t2) ⊣⊢
+  (publicly_related t1 t2) ∨ (public_rel_frag (THash t1) (THash t2) ∧ t1 ≈ t2).
+Proof. by rewrite publicly_related_unfold. Qed.
+
+Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
+  Spec.open k1 t1 = Some t1' →
+  Spec.open k2 t2 = Some t2' →
+  publicly_related k1 k2 -∗
+  publicly_related t1 t2 -∗
+  publicly_related t1' t2'.
 Proof.
-  iIntros "#H #IHk #IHt".
-  rewrite publicly_related_unfold.
-  iRight.
-Admitted.
+rewrite /Spec.open.
+case: t1 => // k_t1 t1.
+case: t2 => // k_t2 t2.
+rewrite publicly_related_TSeal.
+case: decide => // k_t_k1 [<-].
+case: decide => // k_t_k2 [<-].
+iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & Hrest)]"; first done.
+move: k_t_k1; case: k_t1 => // => kt1 k1' k_t_k1.
+move: k_t_k2; case: k_t2 => // => kt2 k2' k_t_k2.
+move: k_t_k1; case: kt1 => // => k_t_k1.
+all: move: k_t_k2; case: kt2 => // => k_t_k2.
+all: iDestruct "Hrest" as "#[%_ Hrest]" => //=.
 
 (*
 Prove that publicly related is preserved by all operations, including open
