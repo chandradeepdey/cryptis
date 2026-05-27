@@ -76,11 +76,8 @@ Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
-        | AEnc => publicly_related_pre k1 k2 → publicly_related_pre t1' t2'
-        | ADec => False
-        | Sign => publicly_related_pre t1' t2' → publicly_related_pre k1 k2
-        | Verify => False
-        | SEnc => publicly_related_pre k1 k2 → publicly_related_pre t1' t2'
+        | ADec | Verify => False
+        | _ => publicly_related_pre k1 k2 → publicly_related_pre t1' t2'
         end
       | _, _ => False
       end))
@@ -199,11 +196,8 @@ Lemma publicly_related_unfold :
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
-        | AEnc => publicly_related k1 k2 → publicly_related t1' t2'
-        | ADec => False
-        | Sign => publicly_related t1' t2' → publicly_related k1 k2
-        | Verify => False
-        | SEnc => publicly_related k1 k2 → publicly_related t1' t2'
+        | ADec | Verify => False
+        | _ => publicly_related k1 k2 → publicly_related t1' t2'
         end
       | _, _ => False
       end))
@@ -235,16 +229,6 @@ Proof.
   rewrite /double_squiggle publicly_related_unseal /publicly_related_def.
   rewrite (fixpoint_unfold publicly_related_pre t1 t2).
   apply _.
-Qed.
-
-Lemma public_seal_public k1 k2 t1 t2 :
-  publicly_related k1 k2 -∗
-  publicly_related t1 t2 -∗
-  publicly_related (TSeal k1 t1) (TSeal k2 t2).
-Proof.
-  iIntros "#Hk #Ht".
-  rewrite [publicly_related (TSeal _ _) _]publicly_related_unfold.
-  iLeft; auto.
 Qed.
 
 Lemma publicly_related_TInt n1 n2 :
@@ -283,11 +267,8 @@ Lemma publicly_related_TSeal k1 k2 t1 t2 :
    □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
-        | AEnc => publicly_related k1 k2 → publicly_related t1 t2
-        | ADec => False
-        | Sign => publicly_related t1 t2 → publicly_related k1 k2
-        | Verify => False
-        | SEnc => publicly_related k1 k2 → publicly_related t1 t2
+        | ADec | Verify => False
+        | _ => publicly_related k1 k2 → publicly_related t1 t2
         end
       | _, _ => False
       end)).
@@ -303,7 +284,7 @@ Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
   Spec.open k2 t2 = Some t2' →
   publicly_related k1 k2 -∗
   publicly_related t1 t2 -∗
-  publicly_related t1' t2'.
+  t1' ≈ t2'.
 Proof.
 rewrite /Spec.open.
 case: t1 => // k_t1 t1.
@@ -311,16 +292,11 @@ case: t2 => // k_t2 t2.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k1 [<-].
 case: decide => // k_t_k2 [<-].
-iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & #Hrest)]"; first done.
-move: k_t_k1; case: k_t1 => // => kt1 k1' k_t_k1.
-move: k_t_k2; case: k_t2 => // => kt2 k2' k_t_k2.
-iDestruct "Hrest" as "[<- Hrest]".
-case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-] /=.
-- rewrite publicly_related_TKey.
-  iDestruct "Hk" as "[_ Hk]".
-  by iApply "Hrest".
-- admit. (* Similar *)
-- admit. (* Similar *)
+iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & #Hrest)]"; last done.
+rewrite /double_squiggle /double_squiggle_pre.
+iSplit; iIntros "%t' !> #Ht' !>".
+- admit.
+- admit.
 Admitted.
 
 
