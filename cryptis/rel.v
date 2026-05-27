@@ -77,7 +77,8 @@ Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
         | ADec | Verify => False
-        | _ => publicly_related_pre k1 k2 → publicly_related_pre t1' t2'
+        | Sign => publicly_related_pre t1' t2'
+        | AEnc | SEnc => publicly_related_pre k1 k2 → publicly_related_pre t1' t2'
         end
       | _, _ => False
       end))
@@ -197,6 +198,7 @@ Lemma publicly_related_unfold :
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
         | ADec | Verify => False
+        | Sign => publicly_related t1' t2'
         | _ => publicly_related k1 k2 → publicly_related t1' t2'
         end
       | _, _ => False
@@ -268,6 +270,7 @@ Lemma publicly_related_TSeal k1 k2 t1 t2 :
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
         | ADec | Verify => False
+        | Sign => publicly_related t1 t2
         | _ => publicly_related k1 k2 → publicly_related t1 t2
         end
       | _, _ => False
@@ -284,7 +287,7 @@ Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
   Spec.open k2 t2 = Some t2' →
   publicly_related k1 k2 -∗
   publicly_related t1 t2 -∗
-  t1' ≈ t2'.
+  publicly_related t1' t2'.
 Proof.
 rewrite /Spec.open.
 case: t1 => // k_t1 t1.
@@ -292,13 +295,15 @@ case: t2 => // k_t2 t2.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k1 [<-].
 case: decide => // k_t_k2 [<-].
-iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & #Hrest)]"; last done.
-rewrite /double_squiggle /double_squiggle_pre.
-iSplit; iIntros "%t' !> #Ht' !>".
-- admit.
-- admit.
-Admitted.
-
+iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & #Hrest)]"; first done.
+case: k_t1 k_t2 => // kt1 k1' [] // kt2 k2' in k_t_k1 k_t_k2 *.
+iDestruct "Hrest" as "[<- Hrest]".
+case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
+- iApply "Hrest". rewrite publicly_related_TKey.
+  by iDestruct "Hk" as "[??]".
+- iApply "Hrest". rewrite publicly_related_TKey.
+  by iDestruct "Hk" as "[??]".
+Qed.
 
 (*
 Prove that publicly related is preserved by all operations, including open
