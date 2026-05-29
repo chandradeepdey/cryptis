@@ -42,6 +42,7 @@ cryptis/cryptis.v
 
 cryptis/core/minted_spec.v
 cryptis/core/term_meta_spec.v
+cryptis/core/rel.v
 
 cryptis/primitives/notations.v
 cryptis/primitives/pre_term.v
@@ -153,8 +154,3 @@ examples/tls13.v
 examples/composite_game.v
 
 ## Storage
-
-
-# Relational Cryptis
-
-# cryptis/rel.v

@@ -305,10 +305,176 @@ case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
   by iDestruct "Hk" as "[??]".
 Qed.
 
-(*
-Prove that publicly related is preserved by all operations, including open
-Prove that publicly related is a partial bijection.
-publicly_related t1 t2 ∧ publicly_related t1 t2' → ▷ t2 = t2'
-*)
+Lemma publicly_related_part_bij_1 t1 t2 t2' :
+  publicly_related t1 t2 -∗
+  publicly_related t1 t2' -∗
+  ▷ ⌜t2 = t2'⌝.
+Proof.
+elim/term_lt_ind: t1 t2 t2' => t1 IH t2 t2'.
+rewrite !publicly_related_unfold.
+case: t1 IH.
+- move=> n1 IH.
+  case: t2; auto.
+  move=> n2.
+  case: t2'; auto.
+  move=> n2'.
+  iIntros (H1 H2).
+  iPureIntro.
+  congruence.
+- move=> t11 t12 IH.
+  case: t2; auto.
+  move=> t21 t22.
+  case: t2'; auto.
+  move=> t2'1 t2'2.
+  iIntros "#[H21 H22] #[H2'1 H2'2]".
+  iAssert (▷ ⌜t21 = t2'1⌝)%I as ">->".
+  { iApply (IH t11). rewrite /tsize /= ssrnat.addnE.
+    lia. all: auto. }
+  iAssert (▷ ⌜t22 = t2'2⌝)%I as ">->".
+  { iApply (IH t12). rewrite /tsize /= ssrnat.addnE.
+    lia. all: auto. }
+  auto.
+- move=> l1 _.
+  case: t2; auto.
+  iIntros (l2) "#H2".
+  case: t2'; auto.
+  iIntros (l2') "#H2'".
+  iCombine "H2 H2'" gives %H%gset_bij_elem_agree.
+  iPureIntro. by apply H.
+- move=> kt1 t1 IH.
+  case: t2; auto.
+  iIntros (kt2 t2) "[-> #Ht2]".
+  case: t2'; auto.
+  iIntros (kt2' t2') "[-> #Ht2']".
+  have {}IH: (∀ t2 t2', publicly_related t1 t2 -∗
+                        publicly_related t1 t2' -∗
+                        ▷ ⌜t2 = t2'⌝).
+  { apply IH. rewrite /tsize /=. lia. }
+  case: kt2'.
+    iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
+    iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
+    * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+      { by iApply IH. }
+      done.
+    * iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
+      rewrite /double_squiggle /double_squiggle_pre.
+      iDestruct "≈t'" as "#[#≈t' _]".
+      by iApply "≈t'".
+      done.
+    * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+      rewrite /double_squiggle /double_squiggle_pre.
+      iDestruct "≈t" as "#[#≈t _]".
+      by iApply "≈t".
+      done.
+    * iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+      iPureIntro. by apply H.
+  + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+    { by iApply IH. }
+    done.
+  + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+    { by iApply IH. }
+    done.
+  + iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
+    iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
+    * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+      { by iApply IH. }
+      done.
+    * iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
+      rewrite /double_squiggle /double_squiggle_pre.
+      iDestruct "≈t'" as "#[#≈t' _]".
+      by iApply "≈t'".
+      done.
+    * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+      rewrite /double_squiggle /double_squiggle_pre.
+      iDestruct "≈t" as "#[#≈t _]".
+      by iApply "≈t".
+      done.
+    * iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+      iPureIntro. by apply H.
+  + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+    { by iApply IH. }
+    done.
+- move=> k1 t1 IH.
+  case: t2; auto.
+  iIntros (k2 t2) "#Ht2".
+  case: t2'; auto.
+  iIntros (k2' t2') "#Ht2'".
+  have IH1: (∀ k2 k2', publicly_related k1 k2 -∗
+                       publicly_related k1 k2' -∗
+                       ▷ ⌜k2 = k2'⌝).
+  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  have IH2: (∀ t2 t2', publicly_related t1 t2 -∗
+                       publicly_related t1 t2' -∗
+                       ▷ ⌜t2 = t2'⌝).
+  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  clear IH.
+  iDestruct "Ht2" as "#[[Hk2 Ht2]|[Hfrag (≈k & ≈t & #Hrest)]]";
+  iDestruct "Ht2'" as "#[[Hk2' Ht2']|[Hfrag' (≈k' & ≈t' & #Hrest')]]".
+  + iAssert (▷ ⌜k2 = k2'⌝)%I as "#Hk".
+    { by iApply IH1. }
+    iAssert (▷ ⌜t2 = t2'⌝)%I as "#Ht".
+    { by iApply IH2. }
+    iModIntro.
+    iDestruct "Hk" as %Hk.
+    iDestruct "Ht" as %Ht.
+    iPureIntro.
+    congruence.
+  + iAssert (▷ ⌜k2' = k2⌝)%I as "#Hk".
+    rewrite /double_squiggle /double_squiggle_pre.
+    iDestruct "≈k'" as "#[#≈k' _]".
+    by iApply "≈k'".
+    iAssert (▷ ⌜t2' = t2⌝)%I as "#Ht".
+    rewrite /double_squiggle /double_squiggle_pre.
+    iDestruct "≈t'" as "#[#≈t' _]".
+    by iApply "≈t'".
+    iModIntro.
+    iDestruct "Hk" as %Hk.
+    iDestruct "Ht" as %Ht.
+    iPureIntro.
+    congruence.
+  + iAssert (▷ ⌜k2 = k2'⌝)%I as "#Hk".
+    rewrite /double_squiggle /double_squiggle_pre.
+    iDestruct "≈k" as "#[#≈k _]".
+    by iApply "≈k".
+    iAssert (▷ ⌜t2 = t2'⌝)%I as "#Ht".
+    rewrite /double_squiggle /double_squiggle_pre.
+    iDestruct "≈t" as "#[#≈t _]".
+    by iApply "≈t".
+    iModIntro.
+    iDestruct "Hk" as %Hk.
+    iDestruct "Ht" as %Ht.
+    iPureIntro.
+    congruence.
+  + iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+    iPureIntro. by apply H.
+- move=> t1 IH.
+  case: t2; auto.
+  iIntros (t2) "#Ht2".
+  case: t2'; auto.
+  iIntros (t2') "#Ht2'".
+  have {}IH: (∀ t2 t2', publicly_related t1 t2 -∗
+                        publicly_related t1 t2' -∗
+                        ▷ ⌜t2 = t2'⌝).
+  { apply IH. rewrite /tsize /=. lia. }
+  iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
+  iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
+  + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+    { by iApply IH. }
+    done.
+  + iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
+    rewrite /double_squiggle /double_squiggle_pre.
+    iDestruct "≈t'" as "#[#≈t' _]".
+    by iApply "≈t'".
+    done.
+  + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
+    rewrite /double_squiggle /double_squiggle_pre.
+    iDestruct "≈t" as "#[#≈t _]".
+    by iApply "≈t".
+    done.
+  + iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+    iPureIntro. by apply H.
+- auto.
+- case: t2; auto.
+Qed.
 
 End Rel.
