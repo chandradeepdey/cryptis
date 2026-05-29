@@ -16,6 +16,11 @@ depends: [
   "coq-deriving" {= "0.2.3"}
   "rocq-iris" {= "4.5.0"}
   "rocq-iris-heap-lang" {= "4.5.0"}
+  "coq-reloc" {= "dev"}
+]
+
+pin-depends: [
+  ["coq-reloc.dev" "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git#883acc3d8ebf844ece524be24370fa8a85713e13"]
 ]
 
 build: [make "-j%{jobs}%"]
