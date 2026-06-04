@@ -10,7 +10,6 @@ From cryptis.core Require Import term minted public.
 
 From reloc Require Import reloc.
 From cryptis.core Require Import minted_spec.
-From cryptis.core Require Import term_meta_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

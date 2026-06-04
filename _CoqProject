@@ -41,7 +41,6 @@ cryptis/cryptis.v
 # Relational-specific
 
 cryptis/core/minted_spec.v
-cryptis/core/term_meta_spec.v
 cryptis/core/rel.v
 
 cryptis/primitives/notations.v
