@@ -2,10 +2,10 @@ From mathcomp Require Import ssreflect.
 From stdpp Require Import gmap.
 From iris.algebra Require Import agree auth gset gmap list excl.
 From iris.algebra Require Import functions.
-From iris.algebra.lib Require Import gset_bij mono_list.
-From iris.base_logic.lib Require Import saved_prop invariants.
+From iris.algebra.lib Require Import mono_list.
+From iris.base_logic.lib Require Import saved_prop invariants gset_bij.
 From iris.heap_lang Require Import notation proofmode.
-From cryptis Require Import lib gmeta nown.
+From cryptis Require Import lib gmeta nown cryptis.
 From cryptis.core Require Import term minted public.
 
 From reloc Require Import reloc.
@@ -15,17 +15,12 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Notation public_relGpreS Σ := (inG Σ (gset_bijUR term term)).
-
 Class public_relGS Σ := Public_relGS {
-  #[local] public_relGpreS_inG :: public_relGpreS Σ;
+  #[local] public_relGpreS_inG :: gset_bijG Σ term term;
   public_rel_name  : gname;
 }.
 
-Definition public_relΣ : gFunctors := #[GFunctor (gset_bijUR term term)].
-
-Global Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
-Proof. solve_inG. Qed.
+Definition public_relΣ : gFunctors := #[gset_bijΣ term term].
 
 Implicit Types (pub: gset (term * term)) (t: term).
 
@@ -38,12 +33,51 @@ Notation iPropO := (iPropO Σ).
 Notation iPropI := (iPropI Σ).
 
 Definition public_rel_auth pub : iProp :=
-  own public_rel_name (gset_bij_auth (DfracOwn 1) pub).
+  gset_bij_own_auth public_rel_name (DfracOwn 1) pub.
 
-Definition public_rel_frag t1 t2 : iProp :=
-  own public_rel_name (gset_bij_elem t1 t2).
+Definition public_rel_elem t1 t2 : iProp :=
+  gset_bij_own_elem public_rel_name t1 t2.
 
 Definition cryptis_rel_N := nroot .@ "cryptis_rel".
+
+Definition cryptis_rel_inv pub : iProp :=
+  public_rel_auth pub ∗ ([∗ set] p ∈ pub, minted p.1 ∧ minted_spec p.2).
+
+Definition cryptis_rel_ctx : iProp :=
+  inv cryptisN (∃ pub, cryptis_rel_inv pub).
+
+Lemma public_rel_extend E t t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  (¬ minted t ∧ |==> minted t) -∗
+  (¬ minted_spec t' ∧ |==> minted_spec t') -∗
+  |={E}=> public_rel_elem t t' ∗ minted t ∗ minted_spec t'.
+Proof.
+  iIntros (HE) "#Hinv Hmintt Hmintt'".
+  iInv "Hinv" as "(%pub & (>Hauth & Hmint))".
+  iAssert (▷ ⌜∀ t', (t, t') ∉ pub⌝)%I as "#>%Htnpub".
+  { iModIntro. iIntros (t'' Ht'').
+    rewrite big_sepS_forall.
+    iSpecialize ("Hmint" $! (t, t'') with "[//]").
+    iDestruct "Hmintt" as "[Hnmintt _]".
+    iDestruct "Hmint" as "[Hmintt _]".
+    by iApply "Hnmintt". }
+  iAssert (▷ ⌜∀ t, (t, t') ∉ pub⌝)%I as "#>%Ht'npub".
+  { iModIntro. iIntros (t'' Ht'').
+    rewrite big_sepS_forall.
+    iSpecialize ("Hmint" $! (t'', t') with "[//]").
+    iDestruct "Hmintt'" as "[Hnmintt' _]".
+    iDestruct "Hmint" as "[_ Hmintt']".
+    by iApply "Hnmintt'". }
+  iMod (gset_bij_own_extend with "Hauth") as "[Hauth #Hfrag]"; eauto.
+  iDestruct "Hmintt" as "[_ >#Hmintt]".
+  iDestruct "Hmintt'" as "[_ >#Hmintt']".
+  iModIntro.
+  iFrame.
+  rewrite big_sepS_union_pers big_sepS_singleton.
+  iFrame.
+  by iFrame "#".
+Qed.
 
 Definition double_squiggle_pre (P: term -d> term -d> iPropO) t1 t2 :=
   (□ (∀ t2', ▷ P t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
@@ -58,20 +92,20 @@ Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
   | TPair t11 t12, TPair t21 t22 =>
       publicly_related_pre t11 t21 ∧ publicly_related_pre t12 t22
-  | TNonce l1, TNonce l2 => public_rel_frag t1 t2
+  | TNonce l1, TNonce l2 => public_rel_elem t1 t2
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
     | AEnc => publicly_related_pre t1' t2' ∨
-              (public_rel_frag t1 t2 ∧ double_squiggle_pre P t1' t2')
+              (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
     | ADec => publicly_related_pre t1' t2'
     | Sign => publicly_related_pre t1' t2'
     | Verify => publicly_related_pre t1' t2' ∨
-                (public_rel_frag t1 t2 ∧ double_squiggle_pre P t1' t2')
+                (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
     | SEnc => publicly_related_pre t1' t2'
     end
   | TSeal k1 t1', TSeal k2 t2' =>
     (publicly_related_pre k1 k2 ∧ publicly_related_pre t1' t2') ∨
-    (public_rel_frag t1 t2 ∧ double_squiggle_pre P k1 k2 ∧ double_squiggle_pre P t1' t2' ∧
+    (public_rel_elem t1 t2 ∧ double_squiggle_pre P k1 k2 ∧ double_squiggle_pre P t1' t2' ∧
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
@@ -83,7 +117,7 @@ Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d
       end))
   | THash t1', THash t2' =>
     publicly_related_pre t1' t2' ∨
-    (public_rel_frag t1 t2 ∧ double_squiggle_pre P t1' t2')
+    (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
   | TExpN' _ _ _, TExpN' _ _ _ =>
       False (* FIXME *)
   | _, _ =>
@@ -179,20 +213,20 @@ Lemma publicly_related_unfold :
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
   | TPair t11 t12, TPair t21 t22 =>
       publicly_related t11 t21 ∧ publicly_related t12 t22
-  | TNonce l1, TNonce l2 => public_rel_frag t1 t2
+  | TNonce l1, TNonce l2 => public_rel_elem t1 t2
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
     | AEnc => publicly_related t1' t2' ∨
-              (public_rel_frag t1 t2 ∧ t1' ≈ t2')
+              (public_rel_elem t1 t2 ∧ t1' ≈ t2')
     | ADec => publicly_related t1' t2'
     | Sign => publicly_related t1' t2'
     | Verify => publicly_related t1' t2' ∨
-                (public_rel_frag t1 t2 ∧ t1' ≈ t2')
+                (public_rel_elem t1 t2 ∧ t1' ≈ t2')
     | SEnc => publicly_related t1' t2'
     end
   | TSeal k1 t1', TSeal k2 t2' =>
     (publicly_related k1 k2 ∧ publicly_related t1' t2') ∨
-    (public_rel_frag t1 t2 ∧ k1 ≈ k2 ∧ t1' ≈ t2' ∧
+    (public_rel_elem t1 t2 ∧ k1 ≈ k2 ∧ t1' ≈ t2' ∧
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
@@ -204,7 +238,7 @@ Lemma publicly_related_unfold :
       end))
   | THash t1', THash t2' =>
     publicly_related t1' t2' ∨
-    (public_rel_frag t1 t2 ∧ t1' ≈ t2')
+    (public_rel_elem t1 t2 ∧ t1' ≈ t2')
   | TExpN' _ _ _, TExpN' _ _ _ =>
       False (* FIXME *)
   | _, _ =>
@@ -243,7 +277,7 @@ Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_TNonce l1 l2 :
   publicly_related (TNonce l1) (TNonce l2) ⊣⊢
-  public_rel_frag (TNonce l1) (TNonce l2).
+  public_rel_elem (TNonce l1) (TNonce l2).
 Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_TKey kt1 kt2 t1 t2 :
@@ -251,11 +285,11 @@ Lemma publicly_related_TKey kt1 kt2 t1 t2 :
   ⌜kt1 = kt2⌝ ∧
   match kt1 with
   | AEnc => publicly_related t1 t2 ∨
-            (public_rel_frag (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
+            (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
   | ADec => publicly_related t1 t2
   | Sign => publicly_related t1 t2
   | Verify => publicly_related t1 t2 ∨
-              (public_rel_frag (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
+              (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
   | SEnc => publicly_related t1 t2
   end.
 Proof. by rewrite publicly_related_unfold. Qed.
@@ -263,7 +297,7 @@ Proof. by rewrite publicly_related_unfold. Qed.
 Lemma publicly_related_TSeal k1 k2 t1 t2 :
   publicly_related (TSeal k1 t1) (TSeal k2 t2) ⊣⊢
   (publicly_related k1 k2 ∧ publicly_related t1 t2) ∨
-  (public_rel_frag (TSeal k1 t1) (TSeal k2 t2) ∧
+  (public_rel_elem (TSeal k1 t1) (TSeal k2 t2) ∧
    k1 ≈ k2 ∧ t1 ≈ t2 ∧
    □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
@@ -278,7 +312,7 @@ Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_THash t1 t2 :
   publicly_related (THash t1) (THash t2) ⊣⊢
-  (publicly_related t1 t2) ∨ (public_rel_frag (THash t1) (THash t2) ∧ t1 ≈ t2).
+  (publicly_related t1 t2) ∨ (public_rel_elem (THash t1) (THash t2) ∧ t1 ≈ t2).
 Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
@@ -338,7 +372,7 @@ case: t1 IH.
   iIntros (l2) "#H2".
   case: t2'; auto.
   iIntros (l2') "#H2'".
-  iCombine "H2 H2'" gives %H%gset_bij_elem_agree.
+  iPoseProof (gset_bij_own_elem_agree with "H2 H2'") as "%H".
   iPureIntro. by apply H.
 - move=> kt1 t1 IH.
   case: t2; auto.
@@ -365,7 +399,7 @@ case: t1 IH.
       iDestruct "≈t" as "#[#≈t _]".
       by iApply "≈t".
       done.
-    * iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+    * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
   + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
     { by iApply IH. }
@@ -388,7 +422,7 @@ case: t1 IH.
       iDestruct "≈t" as "#[#≈t _]".
       by iApply "≈t".
       done.
-    * iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+    * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
   + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
     { by iApply IH. }
@@ -444,7 +478,7 @@ case: t1 IH.
     iDestruct "Ht" as %Ht.
     iPureIntro.
     congruence.
-  + iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+  + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
 - move=> t1 IH.
   case: t2; auto.
@@ -470,7 +504,7 @@ case: t1 IH.
     iDestruct "≈t" as "#[#≈t _]".
     by iApply "≈t".
     done.
-  + iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+  + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
 - auto.
 - case: t2; auto.
@@ -510,7 +544,7 @@ case: t2 IH.
   iIntros (l1) "#H1".
   case: t1'; auto.
   iIntros (l1') "#H1'".
-  iCombine "H1 H1'" gives %H%gset_bij_elem_agree.
+  iPoseProof (gset_bij_own_elem_agree with "H1 H1'") as "%H".
   iPureIntro. by apply H.
 - move=> kt2 t2 IH.
   case: t1; auto.
@@ -537,7 +571,7 @@ case: t2 IH.
       iDestruct "≈t" as "#[_ #≈t]".
       by iApply "≈t".
       done.
-    * iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+    * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
   + iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
     { by iApply IH. }
@@ -560,7 +594,7 @@ case: t2 IH.
       iDestruct "≈t" as "#[_ #≈t]".
       by iApply "≈t".
       done.
-    * iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+    * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
   + iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
     { by iApply IH. }
@@ -616,7 +650,7 @@ case: t2 IH.
     iDestruct "Ht" as %Ht.
     iPureIntro.
     congruence.
-  + iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+  + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
 - move=> t2 IH.
   case: t1; auto.
@@ -642,7 +676,7 @@ case: t2 IH.
     iDestruct "≈t" as "#[_ #≈t]".
     by iApply "≈t".
     done.
-  + iCombine "Hfrag Hfrag'" gives %H%gset_bij_elem_agree.
+  + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
 - case: t1; auto.
 - case: t1; auto.
