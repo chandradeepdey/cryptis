@@ -1,14 +1,8 @@
-From mathcomp Require Import ssreflect.
-From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap list excl.
-From iris.algebra Require Import functions.
-From iris.algebra.lib Require Import mono_list.
-From iris.base_logic.lib Require Import saved_prop invariants gset_bij.
-From iris.heap_lang Require Import notation proofmode.
-From cryptis Require Import lib gmeta nown cryptis.
-From cryptis.core Require Import term minted public.
-
+From iris.base_logic.lib Require Import gset_bij.
 From reloc Require Import reloc.
+From cryptis Require Import lib.
+From cryptis.core Require Import term minted.
+From cryptis Require Import cryptis.
 From cryptis.core Require Import minted_spec.
 
 Set Implicit Arguments.
@@ -22,23 +16,23 @@ Class public_relGS Σ := Public_relGS {
 
 Definition public_relΣ : gFunctors := #[gset_bijΣ term term].
 
-Implicit Types (pub: gset (term * term)) (t: term).
-
 Section Rel.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
 Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
-Notation iPropI := (iPropI Σ).
+Notation lrelO := (term -d> term -d> iPropO).
+
+Implicit Types t : term.
+Implicit Types pub : gset (term * term).
+Implicit Types P : lrelO.
 
 Definition public_rel_auth pub : iProp :=
   gset_bij_own_auth public_rel_name (DfracOwn 1) pub.
 
 Definition public_rel_elem t1 t2 : iProp :=
   gset_bij_own_elem public_rel_name t1 t2.
-
-Definition cryptis_rel_N := nroot .@ "cryptis_rel".
 
 Definition cryptis_rel_inv pub : iProp :=
   public_rel_auth pub ∗ ([∗ set] p ∈ pub, minted p.1 ∧ minted_spec p.2).
@@ -79,14 +73,14 @@ Proof.
   by iFrame "#".
 Qed.
 
-Definition double_squiggle_pre (P: term -d> term -d> iPropO) t1 t2 :=
+Definition double_squiggle_pre P : lrelO := λ t1 t2,
   (□ (∀ t2', ▷ P t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
   □ (∀ t1', ▷ P t1' t2 -∗ ▷ ⌜t1 = t1'⌝))%I.
 
 #[local] Instance double_squiggle_pre_persistent P t1 t2 : Persistent (double_squiggle_pre P t1 t2).
 Proof. apply _. Qed.
 
-Definition publicly_related_pre (P: term -d> term -d> iPropO) : term -d> term -d> iPropO :=
+Definition publicly_related_pre P : lrelO :=
   fix publicly_related_pre t1 t2 {struct t1} : iProp :=
   match t1, t2 with
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
@@ -196,7 +190,7 @@ Proof.
     f_equiv. solve_contractive.
 Qed.
 
-#[local] Definition publicly_related_def : term -d> term -d> iPropO :=
+#[local] Definition publicly_related_def : lrelO :=
   fixpoint (publicly_related_pre).
 #[local] Definition publicly_related_aux : seal publicly_related_def. Proof. by eexists. Qed.
 Definition publicly_related := publicly_related_aux.(unseal).

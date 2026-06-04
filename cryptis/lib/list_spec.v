@@ -1,10 +1,5 @@
-From iris.heap_lang Require Import lang notation proofmode.
-From mathcomp Require ssrbool order path.
-From cryptis Require Export mathcomp_compat.
-From cryptis Require Import lib.repr.
-
-From cryptis Require Import lib.list.
 From reloc Require Import reloc.
+From cryptis.lib Require Import repr list.
 
 Section ListLemmas.
 
@@ -306,7 +301,7 @@ End DoUntil.
 Section Ordered.
 
 #[warnings="-ambiguous-paths"]
-Import ssrbool seq all_order path deriving.instances.
+Import ssrbool seq all_order path.
 Variable (d : Order.disp_t) (A : orderType d).
 Context `{!Repr A, !relocG Σ}.
 Import Order Order.POrderTheory Order.TotalTheory.

@@ -1,9 +1,5 @@
-From iris.heap_lang Require Import lang notation proofmode.
-From mathcomp Require ssrbool order path.
-From cryptis Require Import lib.repr.
-
-From cryptis Require Import lib.list_match.
 From reloc Require Import reloc.
+From cryptis.lib Require Import repr list_match.
 
 Section ListLemmas.
 

@@ -1,16 +1,7 @@
-From stdpp Require Import base countable gmap.
-From iris.heap_lang Require Import lang notation proofmode.
 From iris.heap_lang.lib Require Import nondet_bool.
-From iris.algebra Require Import gmap gset auth reservation_map.
-From iris.base_logic Require Import gen_heap invariants.
-From mathcomp Require ssrbool order path.
-From deriving Require deriving.
-From cryptis Require Export mathcomp_compat.
-From cryptis.lib Require Export repr list list_match.
-
-From cryptis Require Import lib.
-From cryptis Require Import lib.adequacy.
 From reloc Require Import reloc.
+From cryptis Require Import lib.
+From cryptis.lib Require adequacy.
 From cryptis.lib Require Export list_spec list_match_spec.
 
 (* THIS IS A VERY GROSS HACK *)
@@ -35,7 +26,7 @@ Lemma pure_twp_tp Σ E j e (v: val) :
   refines_right j v.
 Proof.
   move=> Hpure Hinv HE.
-  have H := heap_twp_pure_exec _ _ _ Hpure Hinv.
+  have H := adequacy.heap_twp_pure_exec _ _ _ Hpure Hinv.
   have heapGpreS0: heapGpreS Σ by apply heapGS_heapGpreS; apply _.
   apply H in heapGpreS0 as (v' & Hev' & ->).
   clear Hinv H.
@@ -51,10 +42,12 @@ Section NonDetProofs.
 Context `{!relocG Σ}.
 
 Implicit Types E : coPset.
-Implicit Types v : val.
-Implicit Types Ψ : val → iProp Σ.
+Implicit Types b : bool.
+Implicit Types m n : nat.
+Implicit Types x : Z.
+Implicit Types Ψ : lrel Σ.
 
-Lemma tp_nondet_bool E j (b : bool) :
+Lemma tp_nondet_bool E j b :
   nclose specN ⊆ E →
   refines_right j (nondet_bool #()) ={E}=∗
   refines_right j #b.
@@ -75,8 +68,8 @@ case : b; last tp_store j'.
 all: tp_load j=> //.
 Qed.
 
-Lemma rel_nondet_bool (Ψ: val -> val -> iProp Σ) :
-  ▷ (∀ (b1: bool), ∃ (b2: bool), Ψ #b1 #b2) -∗
+Lemma rel_nondet_bool Ψ :
+  ▷ (∀ b1, ∃ b2, Ψ #b1 #b2) -∗
   REL nondet_bool #() << nondet_bool #() : Ψ.
 Proof.
 iIntros "HΨ".
@@ -91,7 +84,7 @@ iPoseProof (tp_nondet_bool with "Hj") as ">Hj" => //.
 iFrame. rel_values.
 Qed.
 
-Lemma tp_nondet_nat_loop E j (m : nat) (n : nat) :
+Lemma tp_nondet_nat_loop E j m n :
   nclose specN ⊆ E →
   refines_right j (nondet_nat_loop #m) ={E}=∗
   refines_right j #(n + m)%nat.
@@ -106,13 +99,13 @@ tp_rec j; tp_bind j (nondet_bool _); rewrite refines_right_bind;
 - iPoseProof ((tp_nondet_bool _ _ false HE) with "Hj") as ">Hj".
   rewrite -refines_right_bind => /=.
   tp_pures j.
-  have ->: (m + 1)%Z = (m + 1)%nat by lia.
+  have ->: (m + 1)%Z = m + 1 by lia.
   iPoseProof (IHn' with "Hj") as ">Hj".
-  have ->: (n' + (m + 1))%nat = S (n' + m) by lia.
+  have ->: n' + (m + 1) = S (n' + m) by lia.
   done.
 Qed.
 
-Lemma tp_nondet_nat E j (n: nat) :
+Lemma tp_nondet_nat E j n :
   nclose specN ⊆ E →
   refines_right j (nondet_nat #()) ={E}=∗
   refines_right j #n.
@@ -120,12 +113,12 @@ Proof.
 move=> HE.
 iIntros "Hj". tp_lam j.
 iPoseProof (tp_nondet_nat_loop _ _ 0 n HE with "Hj") as ">Hj".
-have ->: (n + 0)%nat = n by lia.
+have ->: n + 0 = n by lia.
 done.
 Qed.
 
-Lemma rel_nondet_nat (Ψ: val -> val -> iProp Σ) :
-  (∀ (n1: nat), ∃ (n2: nat), Ψ #n1 #n2) -∗
+Lemma rel_nondet_nat Ψ :
+  (∀ n1, ∃ n2, Ψ #n1 #n2) -∗
   REL nondet_nat #() << nondet_nat #() : Ψ.
 Proof.
 iIntros "HΨ".
@@ -139,41 +132,41 @@ iPoseProof (tp_nondet_nat with "Hj") as ">Hj" => //.
 iFrame. rel_values.
 Qed.
 
-Lemma tp_nondet_int E j (n : Z) :
+Lemma tp_nondet_int E j x :
   nclose specN ⊆ E →
   refines_right j (nondet_int #()) ={E}=∗
-  refines_right j #n.
+  refines_right j #x.
 Proof.
 move=> HE.
 iIntros "Hj"; rewrite /nondet_int; tp_pures j.
 tp_bind j (nondet_nat _).
 rewrite refines_right_bind.
 set j' := RefId _ _.
-pose n' := if (0 <=? n)%Z then Z.to_nat n else Z.to_nat (-n).
-iPoseProof (tp_nondet_nat _ _ n' HE with "Hj") as ">Hj".
+pose n := if (0 <=? x)%Z then Z.to_nat x else Z.to_nat (-x).
+iPoseProof (tp_nondet_nat _ _ n HE with "Hj") as ">Hj".
 rewrite -refines_right_bind => /=.
 clear j'.
 tp_pures j.
 tp_bind j (nondet_bool _).
 rewrite refines_right_bind.
 set j' := RefId _ _.
-iPoseProof (tp_nondet_bool _ _ (0 <=? n)%Z HE with "Hj") as ">Hj".
+iPoseProof (tp_nondet_bool _ _ (0 <=? x)%Z HE with "Hj") as ">Hj".
 rewrite -refines_right_bind => /=.
 clear j'.
-case Hn: (0 <=? n)%Z in n' *; tp_pures j.
-- by have ->: n = n' by lia.
-- by have ->: n = (- n')%Z by lia.
+case Hn: (0 <=? x)%Z in n *; tp_pures j.
+- by have ->: x = n by lia.
+- by have ->: x = (- n)%Z by lia.
 Qed.
 
-Lemma rel_nondet_int (Ψ: val -> val -> iProp Σ) :
-  (∀ (n1: Z), ∃ (n2: Z), Ψ #n1 #n2) -∗
+Lemma rel_nondet_int Ψ :
+  (∀ x1, ∃ x2, Ψ #x1 #x2) -∗
   REL nondet_int #() << nondet_int #() : Ψ.
 Proof.
 iIntros "HΨ".
 rel_bind_l (nondet_int #()). iApply refines_wp_l.
 iApply wp_nondet_int => //=.
-iIntros (n1).
-iPoseProof ("HΨ" $! n1) as "[%n2 HΨ]".
+iIntros (x1).
+iPoseProof ("HΨ" $! x1) as "[%x2 HΨ]".
 rel_bind_r (nondet_int #()). iApply refines_step_r.
 iIntros (j) "Hj".
 iPoseProof (tp_nondet_int with "Hj") as ">Hj" => //.

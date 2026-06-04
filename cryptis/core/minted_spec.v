@@ -1,14 +1,6 @@
-From mathcomp Require Import ssreflect.
-From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap list reservation_map excl.
-From iris.algebra Require Import functions.
-From iris.base_logic.lib Require Import saved_prop invariants.
-From iris.heap_lang Require Import notation proofmode.
+From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.core Require Import term.
-
-From cryptis Require Import gmeta nown.
-From reloc Require Import reloc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -23,11 +15,11 @@ Notation iProp := (iProp Σ).
 Definition minted_spec_loc (a : loc) : iProp :=
   a ↦ₛ□ #().
 
-Global Instance Persistent_minted_spec_loc a :
+#[global] Instance Persistent_minted_spec_loc a :
   Persistent (minted_spec_loc a).
 Proof. apply _. Qed.
 
-Global Instance Timeless_minted_spec_loc a :
+#[global] Instance Timeless_minted_spec_loc a :
   Timeless (minted_spec_loc a).
 Proof. apply _. Qed.
 
@@ -41,10 +33,10 @@ Definition minted_spec : term → iProp :=
 
 Canonical minted_spec_unlock := [unlockable of minted_spec].
 
-Global Instance Persistent_minted_spec t : Persistent (minted_spec t).
+#[global] Instance Persistent_minted_spec t : Persistent (minted_spec t).
 Proof. rewrite unlock; apply _. Qed.
 
-Global Instance Timeless_minted_spec t : Timeless (minted_spec t).
+#[global] Instance Timeless_minted_spec t : Timeless (minted_spec t).
 Proof. rewrite unlock; apply _. Qed.
 
 Lemma subterm_minted_spec t1 t2 :

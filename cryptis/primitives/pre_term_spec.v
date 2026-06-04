@@ -1,14 +1,7 @@
-From cryptis Require Import lib.
-From mathcomp Require all_order all_boot.
-From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap.
-From iris.base_logic.lib Require Import invariants.
-From iris.heap_lang Require Import notation proofmode.
-From cryptis.core Require Import pre_term.
-From cryptis.primitives Require Import notations.
-
-From cryptis.primitives Require Import pre_term.
 From reloc Require Import reloc.
+From cryptis Require Import lib.
+From cryptis.core Require Import pre_term.
+From cryptis.primitives Require Import pre_term.
 From cryptis Require Import lib_spec.
 
 Set Implicit Arguments.
@@ -17,19 +10,12 @@ Unset Printing Implicit Defensive.
 
 Section Proofs.
 
-Import ssreflect ssrbool.
-
 Context `{!relocG Σ}.
-Notation nonce := loc.
 
 Implicit Types E : coPset.
-Implicit Types a : nonce.
 Implicit Types pt : PreTerm.pre_term.
-Implicit Types v : val.
-Implicit Types Ψ : val → iProp Σ.
-Implicit Types N : namespace.
 
-Lemma tp_eq_pre_term E j (pt1 pt2 : PreTerm.pre_term) :
+Lemma tp_eq_pre_term E j pt1 pt2 :
   nclose specN ⊆ E →
   refines_right j (eq_term (repr pt1) (repr pt2)) -∗
   |={E}=> refines_right j #(bool_decide (pt1 = pt2)).
@@ -40,11 +26,9 @@ last by move=> ?; iIntros "_"; iApply twp_eq_pre_term => //.
 rewrite andb_True; split; apply val_of_pre_term_pure.
 Qed.
 
-Import ssrbool seq path.
+Import all_order.
 
-Import boot.eqtype all_order.
-
-Lemma tp_leq_pre_term E j (pt1 pt2 : PreTerm.pre_term) :
+Lemma tp_leq_pre_term E j pt1 pt2 :
   nclose specN ⊆ E →
   refines_right j (leq_term (repr pt1) (repr pt2)) -∗
   |={E}=> refines_right j #(pt1 <= pt2)%O.

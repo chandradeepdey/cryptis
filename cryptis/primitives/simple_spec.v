@@ -1,16 +1,6 @@
-From cryptis Require Import lib.
-From mathcomp Require Import ssreflect.
-From mathcomp Require order.
-From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap reservation_map.
-From iris.base_logic.lib Require Import invariants saved_prop.
-From iris.program_logic Require Import atomic.
-From iris.heap_lang Require Import notation proofmode.
-From iris.heap_lang.lib Require Import nondet_bool.
-From cryptis Require Import term.
-From cryptis.primitives Require Import notations pre_term comp.
-
 From reloc Require Import reloc.
+From cryptis Require Import lib.
+From cryptis.core Require Import term.
 From cryptis.primitives Require Import simple.
 From cryptis Require Import lib_spec.
 
@@ -21,19 +11,15 @@ Unset Printing Implicit Defensive.
 Section Proofs.
 
 Context `{!relocG Σ}.
-Notation nonce := loc.
 
 Implicit Types E : coPset.
-Implicit Types a : nonce.
 Implicit Types t : term.
-Implicit Types v : val.
-Implicit Types Φ : prodO locO termO -n> iPropO Σ.
-Implicit Types Ψ : val → iProp Σ.
+Implicit Types x : Z.
 
-Lemma tp_tint E j (n : Z) :
+Lemma tp_tint E j x :
   nclose specN ⊆ E →
-  refines_right j (tint #n) ={E}=∗
-  refines_right j (TInt n).
+  refines_right j (tint #x) ={E}=∗
+  refines_right j (TInt x).
 Proof.
 move=> HE.
 iApply pure_twp_tp => //=;

@@ -1,16 +1,7 @@
-From cryptis Require Import lib.
-From mathcomp Require all_order all_boot.
-From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap.
-From iris.base_logic.lib Require Import invariants.
-From iris.heap_lang Require Import notation proofmode.
-From cryptis.core Require Import term.
-From cryptis.primitives Require Import notations pre_term.
-
-From cryptis.primitives Require Import comp.
 From reloc Require Import reloc.
+From cryptis.core Require Import term.
+From cryptis.primitives Require Import pre_term comp.
 From cryptis Require Import lib_spec.
-From cryptis.primitives Require Import pre_term_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -19,14 +10,10 @@ Unset Printing Implicit Defensive.
 Section Proofs.
 
 Context `{!relocG Σ}.
-Notation nonce := loc.
 
 Implicit Types E : coPset.
-Implicit Types a : nonce.
 Implicit Types t : term.
-Implicit Types v : val.
-Implicit Types Ψ : val → val → iProp Σ.
-Implicit Types N : namespace.
+Implicit Types Ψ : lrel Σ.
 
 Lemma tp_eq_term E j t1 t2 :
   nclose specN ⊆ E →
@@ -50,8 +37,6 @@ rel_bind_r (eq_term _ _)%E. iApply refines_step_r. iIntros (j) "Hj".
 iPoseProof (tp_eq_term with "Hj") as ">Hj" => //=.
 iFrame. rel_values.
 Qed.
-
-Import ssrbool seq path boot.eqtype all_order.
 
 Lemma tp_texp E j t1 t2 :
   nclose specN ⊆ E →
