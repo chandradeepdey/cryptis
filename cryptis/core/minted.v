@@ -155,4 +155,15 @@ Proof. by rewrite [term_of_senc_key]unlock minted_TKey. Qed.
 Lemma minted_sign k : minted (SignKey k) ⊣⊢ minted k.
 Proof. by rewrite [term_of_sign_key]unlock minted_TKey. Qed.
 
+Definition mintable t : iProp := ¬ minted t ∧ |==> minted t.
+
+Lemma mintable_alloc a : meta_token a ⊤ -∗ mintable (TNonce a).
+Proof.
+iIntros "token". iSplit.
+{ rewrite minted_TNonce. iIntros "contra".
+  by iDestruct (meta_meta_token with "token contra") as "[]". }
+iMod (meta_set _ _ () (nroot.@"minted") with "token") as "#minted" => //.
+by rewrite minted_TNonce.
+Qed.
+
 End Minted.

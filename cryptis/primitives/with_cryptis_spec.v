@@ -110,27 +110,27 @@ iSplit.
 Qed.
 
 Lemma mk_nonce_gen_l E (Ψ : val -> iProp Σ) :
-  (∀ t, ⌜is_nonce t⌝ -∗
-        (¬ minted t ∧ |==> minted t) -∗
-        Ψ t) -∗
+  (∀ t, ⌜is_nonce t⌝ -∗ mintable t -∗ Ψ t) -∗
   WP mk_nonce #()%V @ E [{ Ψ }].
 Proof.
 rewrite /mk_nonce; iIntros "mint".
 wp_pures.
 wp_pures; wp_bind (ref _)%E; iApply twp_alloc=> //.
-iIntros (l) "[Hl _]".
-Admitted.
+iIntros (l) "[_ Htoken]".
+iPoseProof (mintable_alloc with "Htoken") as "fresh".
+wp_pures. rewrite val_of_term_unseal /=.
+iModIntro. iApply ("mint" $! (TNonce l))=> //=.
+Qed.
 
 Lemma mk_nonce_gen_r E j :
   nclose specN ⊆ E →
   refines_right j (mk_nonce #()) -∗
-  |={E}=> ∃ t, refines_right j t ∗ ⌜is_nonce t⌝ ∗
-               (¬ minted_spec t ∧ |==> minted_spec t).
+  |={E}=> ∃ t, refines_right j t ∗ ⌜is_nonce t⌝ ∗ mintable_spec t.
 Proof.
 iIntros "% j"; rewrite /mk_nonce.
 tp_pures j.
 tp_alloc j as a "Ha".
-iPoseProof (minted_spec_pre_alloc with "Ha") as "Ha".
+iPoseProof (mintable_spec_alloc with "Ha") as "Ha".
 tp_pures j.
 iExists (TNonce a).
 rewrite val_of_term_unseal. by iFrame.

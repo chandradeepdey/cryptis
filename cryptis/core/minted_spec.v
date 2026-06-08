@@ -166,14 +166,31 @@ Proof. by rewrite [term_of_senc_key]unlock minted_spec_TKey. Qed.
 Lemma minted_spec_sign k : minted_spec (SignKey k) ⊣⊢ minted_spec k.
 Proof. by rewrite [term_of_sign_key]unlock minted_spec_TKey. Qed.
 
-Lemma minted_spec_pre_alloc a :
-  a ↦ₛ #() -∗
-  ¬ minted_spec (TNonce a) ∧ |==> minted_spec (TNonce a).
+Definition mintable_spec t : iProp := ¬ minted_spec t ∧ |==> minted_spec t.
+
+Lemma mintable_spec_alloc a : a ↦ₛ #() -∗ mintable_spec (TNonce a).
 Proof.
-rewrite minted_spec_TNonce. iIntros "Ha"; iSplit.
+rewrite /mintable_spec minted_spec_TNonce. iIntros "Ha"; iSplit.
 - iIntros "contra". iCombine "Ha contra" gives %[contra _].
   by move/dfrac_valid_own_l: contra; auto.
 - by iMod (pointstoS_persist with "Ha").
+Qed.
+
+Lemma mintable_spec_alloc_2 a t :
+□ (minted_spec a ↔ minted_spec t) -∗
+  mintable_spec a -∗ mintable_spec t.
+Proof.
+iIntros "#[H1 H2] H".
+rewrite /mintable_spec.
+iSplit.
+- iDestruct "H" as "[H _]".
+  iIntros "contra".
+  iApply "H".
+  by iApply "H2".
+- iDestruct "H" as "[_ H]".
+  iMod "H" as "H".
+  iModIntro.
+  by iApply "H1".
 Qed.
 
 End Minted.
