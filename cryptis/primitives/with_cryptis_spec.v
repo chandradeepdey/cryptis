@@ -21,6 +21,16 @@ Unset Printing Implicit Defensive.
 Local Existing Instance cryptisGS_tlock.
 Local Existing Instance ticket_lock.
 
+#[local] Definition sender : val :=
+  rec: "loop" "l" "t" :=
+  "l" <- "t";;
+  "loop" "l" "t".
+
+Definition mk_channel_rel : val :=
+  λ: <>,
+  let: "l" := ref (TInt 0) in
+  (λ: "t", Fork (sender "l" "t"), λ: <>, !"l").
+
 Section Proofs.
 
 Context `{!relocG Σ, !public_relGS Σ}.
@@ -40,21 +50,11 @@ Definition channel_rel : lrel Σ := LRel (λ c c',
 #[global] Instance channel_rel_persistent c c' : Persistent (channel_rel c c').
 Proof. apply _. Qed.
 
-Definition sender : val :=
-  rec: "loop" "l" "t" :=
-  "l" <- "t";;
-  "loop" "l" "t".
-
-Definition mk_channel' : val :=
-  λ: <>,
-  let: "l" := ref (TInt 0) in
-  (λ: "t", Fork (sender "l" "t"), λ: <>, !"l").
-
-Definition chan_inv' l l' : iProp Σ :=
+Definition chan_rel_inv l l' : iProp Σ :=
   ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ publicly_related t t'.
 
-Lemma rel_sender (l l': loc) t t' :
-  inv cryptisN (chan_inv' l l') -∗
+#[local] Lemma rel_sender (l l': loc) t t' :
+  inv cryptisN (chan_rel_inv l l') -∗
   publicly_related t t' -∗
   REL (sender #l t) << (sender #l' t') : lrel_unit.
 Proof.
@@ -74,14 +74,14 @@ by iFrame.
 done.
 Qed.
 
-Lemma rel_mk_channel :
-  ⊢ REL mk_channel' #() << mk_channel' #() : channel_rel.
+Lemma rel_mk_channel_rel :
+  ⊢ REL mk_channel_rel #() << mk_channel_rel #() : channel_rel.
 Proof.
-rewrite /mk_channel'.
+rewrite /mk_channel_rel.
 rel_pures_l. rel_pures_r.
 rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
 rel_pures_l. rel_pures_r.
-iMod (inv_alloc cryptisN _ (chan_inv' l l') with "[Hl Hl']") as "#Hinv".
+iMod (inv_alloc cryptisN _ (chan_rel_inv l l') with "[Hl Hl']") as "#Hinv".
 iFrame. by rewrite publicly_related_TInt.
 rel_values.
 iModIntro.
@@ -109,9 +109,29 @@ iSplit.
   by iApply "H".
 Qed.
 
-Lemma mk_nonce_gen_l E (Ψ : val -> iProp Σ) :
+Lemma rel_send c c' t t' :
+  channel_rel c c' -∗
+  ▷ publicly_related t t' -∗
+  REL send c t << send c' t' : lrel_unit.
+Proof.
+iDestruct 1 as (sf rf sf' rf') "(-> & -> & #H & _)".
+iIntros "#?"; rewrite /send; rel_pures_l; rel_pures_r.
+by iApply "H".
+Qed.
+
+Lemma rel_recv c c' Ψ :
+  channel_rel c c' -∗
+  (∀ t t', publicly_related t t' -∗ Ψ t t') -∗
+  REL recv c << recv c' : Ψ.
+Proof.
+iDestruct 1 as (sf rf sf' rf') "(-> & -> & #_ & #H)".
+iIntros "?"; rewrite /recv; rel_pures_l; rel_pures_r.
+by iApply "H".
+Qed.
+
+Lemma twp_mk_nonce_rel (Ψ : val -> iProp Σ) :
   (∀ t, ⌜is_nonce t⌝ -∗ mintable t -∗ Ψ t) -∗
-  WP mk_nonce #()%V @ E [{ Ψ }].
+  WP mk_nonce #()%V [{ Ψ }].
 Proof.
 rewrite /mk_nonce; iIntros "mint".
 wp_pures.
@@ -122,8 +142,16 @@ wp_pures. rewrite val_of_term_unseal /=.
 iModIntro. iApply ("mint" $! (TNonce l))=> //=.
 Qed.
 
-Lemma mk_nonce_gen_r E j :
-  nclose specN ⊆ E →
+Lemma wp_mk_nonce_rel (Ψ : val -> iProp Σ) :
+  (∀ t, ⌜is_nonce t⌝ -∗ mintable t -∗ Ψ t) -∗
+  WP mk_nonce #()%V {{ Ψ }}.
+Proof.
+  iIntros "H".
+  by iApply twp_wp; iApply (twp_mk_nonce_rel with "H").
+Qed.
+
+Lemma tp_mk_nonce E j :
+  ↑specN ⊆ E →
   refines_right j (mk_nonce #()) -∗
   |={E}=> ∃ t, refines_right j t ∗ ⌜is_nonce t⌝ ∗ mintable_spec t.
 Proof.
@@ -137,7 +165,7 @@ rewrite val_of_term_unseal. by iFrame.
 Qed.
 
 Lemma tp_mk_aenc_key E j :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (mk_aenc_key #()) -∗
   |={E}=> ∃ t, refines_right j t.
 Proof.
