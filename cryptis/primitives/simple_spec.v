@@ -17,7 +17,7 @@ Implicit Types t : term.
 Implicit Types x : Z.
 
 Lemma tp_tint E j x :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (tint #x) ={E}=∗
   refines_right j (TInt x).
 Proof.
@@ -27,7 +27,7 @@ move=> ?; iIntros "_"; iApply twp_tint => //.
 Qed.
 
 Lemma tp_to_int E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (to_int t) ={E}=∗
   refines_right j (repr (Spec.to_int t)).
 Proof.
@@ -38,7 +38,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_tuple E j t1 t2 :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (tuple t1 t2) ={E}=∗
   refines_right j (TPair t1 t2).
 Proof.
@@ -49,7 +49,7 @@ rewrite andb_True; split; apply term_pure.
 Qed.
 
 Lemma tp_untuple E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (untuple t) ={E}=∗
   refines_right j (repr (Spec.untuple t)).
 Proof.
@@ -60,7 +60,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_term_of_list E j ts :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (term_of_list (repr ts)) ={E}=∗
   refines_right j (repr (Spec.of_list ts)).
 Proof.
@@ -74,7 +74,7 @@ by rewrite -repr_list_unseal.
 Qed.
 
 Lemma tp_list_of_term E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (list_of_term t) ={E}=∗
   refines_right j (repr (Spec.to_list t)).
 Proof.
@@ -85,7 +85,7 @@ rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
 Lemma tp_list `{!Repr A} E j (xs : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (list_to_expr xs) ={E}=∗
   refines_right j (repr xs).
 Proof.
@@ -102,7 +102,7 @@ iPoseProof (tp_cons with "Hj") as ">Hj" => //=.
 Qed.
 
 Lemma tp_tag E j (N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (tag N t) ={E}=∗
   refines_right j (repr (Spec.tag N t)).
 Proof.
@@ -113,7 +113,7 @@ rewrite andb_True; split; apply term_pure.
 Qed.
 
 Lemma tp_untag E j (N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (untag N t) ={E}=∗
   refines_right j (repr (Spec.untag N t)).
 Proof.
@@ -124,7 +124,7 @@ rewrite andb_True; split; apply term_pure.
 Qed.
 
 Lemma tp_key kt E j (k : term) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (key kt k) ={E}=∗
   refines_right j (TKey kt k : val).
 Proof.
@@ -135,7 +135,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_seal E j t1 t2 :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (seal t1 t2) ={E}=∗
   refines_right j (TSeal t1 t2).
 Proof.
@@ -146,7 +146,7 @@ rewrite andb_True; split; apply term_pure.
 Qed.
 
 Lemma tp_hash E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (hash t) ={E}=∗
   refines_right j (THash t).
 Proof.
@@ -157,7 +157,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_derive_aenc_key E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (derive_aenc_key t) ={E}=∗
   refines_right j (AEncKey t : term).
 Proof.
@@ -169,7 +169,7 @@ by have <- : AEncKey t = TKey ADec t :> term by rewrite [term_of_aenc_key]unlock
 Qed.
 
 Lemma tp_derive_senc_key E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (derive_senc_key t) ={E}=∗
   refines_right j (SEncKey t : term).
 Proof.
@@ -181,7 +181,7 @@ by have <- : SEncKey t = TKey SEnc t :> term by rewrite [term_of_senc_key]unlock
 Qed.
 
 Lemma tp_derive_sign_key E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (derive_sign_key t) ={E}=∗
   refines_right j (SignKey t : term).
 Proof.
@@ -193,7 +193,7 @@ by have <- : SignKey t = TKey Sign t :> term by rewrite [term_of_sign_key]unlock
 Qed.
 
 Lemma tp_to_key E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (to_key t) ={E}=∗
   refines_right j (repr (Spec.to_key t)).
 Proof.
@@ -204,7 +204,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_open_key E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (open_key t) ={E}=∗
   refines_right j (repr (Spec.open_key t)).
 Proof.
@@ -215,7 +215,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_open E j t1 t2 :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (open t1 t2) ={E}=∗
   refines_right j (repr (Spec.open t1 t2)).
 Proof.
@@ -226,7 +226,7 @@ rewrite andb_True; split; apply term_pure.
 Qed.
 
 Lemma tp_enc E j (k N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (enc k N t) ={E}=∗
   refines_right j (Spec.enc k N t).
 Proof.
@@ -237,7 +237,7 @@ rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
 Lemma tp_dec E j (k N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (dec k N t) ={E}=∗
   refines_right j (repr (Spec.dec k N t)).
 Proof.
@@ -248,7 +248,7 @@ rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
 Lemma tp_aenc' E j (pk N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (aenc pk N t) ={E}=∗
   refines_right j (Spec.enc pk N t).
 Proof.
@@ -267,7 +267,7 @@ by move: H => /Spec.open_key_aencK => ->.
 Qed.
 
 Lemma tp_adec' E j (sk : aenc_key) (N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (adec sk N t) ={E}=∗
   refines_right j (repr (Spec.dec sk N t)).
 Proof.
@@ -280,7 +280,7 @@ by wp_apply twp_dec.
 Qed.
 
 Lemma tp_senc' E j (k N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (senc k N t) ={E}=∗
   refines_right j (Spec.enc k N t).
 Proof.
@@ -299,7 +299,7 @@ by move: H => /Spec.open_key_sencK => ->.
 Qed.
 
 Lemma tp_sdec' E j (k : senc_key) (N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (sdec k N t) ={E}=∗
   refines_right j (repr (Spec.dec k N t)).
 Proof.
@@ -312,7 +312,7 @@ by wp_apply twp_dec.
 Qed.
 
 Lemma tp_sign' E j (k N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (sign k N t) ={E}=∗
   refines_right j (Spec.enc k N t).
 Proof.
@@ -331,7 +331,7 @@ by move: H => /Spec.open_key_signK => ->.
 Qed.
 
 Lemma tp_verify' E j (sk : sign_key) (N : term) t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (verify (Spec.pkey sk) N t) ={E}=∗
   refines_right j (repr (Spec.dec (Spec.pkey sk) N t)).
 Proof.
@@ -344,7 +344,7 @@ by wp_apply twp_dec.
 Qed.
 
 Lemma tp_pkey E j (k : term) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (pkey k) ={E}=∗
   refines_right j (Spec.pkey k).
 Proof.
@@ -355,7 +355,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_is_key E j t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (is_key t) ={E}=∗
   refines_right j (repr (Spec.is_key t)).
 Proof.
@@ -366,7 +366,7 @@ apply term_pure.
 Qed.
 
 Lemma tp_has_key_type E j kt t :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (has_key_type (repr kt) t) ={E}=∗
   refines_right j #(Spec.has_key_type kt t).
 Proof.

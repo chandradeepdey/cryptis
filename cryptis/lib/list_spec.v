@@ -8,7 +8,7 @@ Context `{!Repr A, !Repr B, !relocG Σ}.
 Implicit Types (x : A) (xs : list A).
 
 Lemma tp_get_list E j (l : list A) (n : nat) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (repr l !! #n) -∗
   |={E}=> refines_right j (repr (l !! n)).
 Proof.
@@ -33,7 +33,7 @@ iFrame. rel_values.
 Qed.
 
 Lemma tp_nil E j :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (Val []%V) ={E}=∗
   refines_right j (repr (@nil A)).
 Proof.
@@ -42,7 +42,7 @@ by rewrite /NILV /= repr_list_unseal; iIntros "Hj"; tp_pures j.
 Qed.
 
 Lemma tp_cons E j x xs :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (repr x :: repr xs) -∗
   |={E}=> refines_right j (repr (x :: xs)).
 Proof.
@@ -51,7 +51,7 @@ by rewrite /= repr_list_unseal; iIntros "post"; rewrite /CONS; tp_pures j.
 Qed.
 
 Lemma tp_eq_list `{EqDecision A} E j (f : val) (l1 l2 : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ (x1 x2 : A) j',
       x1 ∈ l1 →
       refines_right j' (f (repr x1) (repr x2)) -∗
@@ -76,7 +76,7 @@ case: (bool_decide_reflect (l1 = l2)) => [->|n_l1l2].
 Qed.
 
 Lemma tp_scan_list `{Repr A} E j φ ψ (f : val) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   □ (∀ j (x : A), ψ NONEV ∗ φ x ∗
         refines_right j (f (repr x)) ={E}=∗
       ∃ (ov : option val), ψ (repr ov) ∗ refines_right j (repr ov)) -∗
@@ -102,7 +102,7 @@ by iFrame.
 Qed.
 
 Lemma tp_find_list E j (f : A → bool) (fimpl : val) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j (x : A), refines_right j (fimpl (repr x)) ={E}=∗
     refines_right j #(f x)) →
   refines_right j (find_list fimpl (repr l)) ={E}=∗
@@ -121,7 +121,7 @@ iPoseProof (IHt with "Hj") as "Hj" => //.
 Qed.
 
 Lemma tp_filter_list E j (f : A → bool) (fimpl : val) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j (x : A), refines_right j (fimpl (repr x)) ={E}=∗
     refines_right j #(f x)) →
   refines_right j (filter_list fimpl (repr l)) ={E}=∗
@@ -144,7 +144,7 @@ case : (f h) => // /=; tp_pures j; done.
 Qed.
 
 Lemma tp_append_lists E j (l1 l2 : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (append_lists (repr l1) (repr l2)) ={E}=∗
     refines_right j (repr (l1 ++ l2)).
 Proof.
@@ -161,7 +161,7 @@ by tp_pures j.
 Qed.
 
 Lemma tp_map_list E j (f : A -> B) (fimpl : val) xs :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j, Forall (λ y, refines_right j (fimpl (repr y)) ={E}=∗
      refines_right j (repr (f y))) xs) →
   refines_right j (map_list fimpl (repr xs)) ={E}=∗
@@ -187,7 +187,7 @@ by tp_pures j.
 Qed.
 
 Lemma tp_foldr_list E j (f : B -> A -> A) (fimpl : val) (l : list B) x :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j (b : B) (a : A), refines_right j (fimpl (repr b) (repr a)) ={E}=∗
     refines_right j (repr (f b a))) →
   refines_right j (foldr_list fimpl (repr x) (repr l)) ={E}=∗
@@ -214,7 +214,7 @@ Variable (A : eqType).
 Context `{!Repr A, !relocG Σ}.
 
 Lemma tp_mem_list E j (eqImpl : heap_lang.val) (v : A) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j (x y : A), refines_right j (eqImpl (repr x) (repr y)) ={E}=∗
     refines_right j #(eq_op x y)) →
   refines_right j (mem_list eqImpl (repr v) (repr l)) ={E}=∗
@@ -234,7 +234,7 @@ case (List.find (eq_op v) l) => *; by tp_pures j.
 Qed.
 
 Lemma tp_rem_list E j (eqImpl : heap_lang.val) (v : A) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j (x y : A), refines_right j (eqImpl (repr x) (repr y)) ={E}=∗
     refines_right j #(eq_op x y)) →
   refines_right j (rem_list eqImpl (repr v) (repr l)) ={E}=∗
@@ -308,7 +308,7 @@ Import Order Order.POrderTheory Order.TotalTheory.
 Implicit Types (x y z : A) (s : seqlexi_with d A).
 
 Lemma tp_insert_sorted E j (f : val) (x : A) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   is_true (sorted le l) →
   (∀ j (y z : A),
       refines_right j (f (repr y) (repr z)) ={E}=∗
@@ -343,7 +343,7 @@ apply: order_path_min => //; apply: le_trans.
 Qed.
 
 Lemma tp_insertion_sort E j (f : val) (l : list A) :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j (x y : A), refines_right j (f (repr x) (repr y)) ={E}=∗
     refines_right j #(le x y)) →
   refines_right j (insertion_sort f (repr l)) ={E}=∗
@@ -365,7 +365,7 @@ apply /permPl /perm_sort.
 Qed.
 
 Lemma tp_leq_list E j (feq : val) (fle : val) s1 s2 :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   (∀ j x1 x2,
       refines_right j (feq (repr x1) (repr x2)) ={E}=∗
         refines_right j #(eqtype.eq_op x1 x2)) →

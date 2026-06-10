@@ -21,7 +21,7 @@ Lemma pure_twp_tp Σ E j e (v: val) :
   pure_expr e →
   (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
   ∀ `{!relocG Σ},
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j e ={E}=∗
   refines_right j v.
 Proof.
@@ -48,7 +48,7 @@ Implicit Types x : Z.
 Implicit Types Ψ : lrel Σ.
 
 Lemma tp_nondet_bool E j b :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (nondet_bool #()) ={E}=∗
   refines_right j #b.
 Proof.
@@ -85,7 +85,7 @@ iFrame. rel_values.
 Qed.
 
 Lemma tp_nondet_nat_loop E j m n :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (nondet_nat_loop #m) ={E}=∗
   refines_right j #(n + m)%nat.
 Proof.
@@ -106,7 +106,7 @@ tp_rec j; tp_bind j (nondet_bool _); rewrite refines_right_bind;
 Qed.
 
 Lemma tp_nondet_nat E j n :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (nondet_nat #()) ={E}=∗
   refines_right j #n.
 Proof.
@@ -133,7 +133,7 @@ iFrame. rel_values.
 Qed.
 
 Lemma tp_nondet_int E j x :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (nondet_int #()) ={E}=∗
   refines_right j #x.
 Proof.

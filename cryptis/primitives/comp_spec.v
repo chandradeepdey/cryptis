@@ -16,7 +16,7 @@ Implicit Types t : term.
 Implicit Types Ψ : lrel Σ.
 
 Lemma tp_eq_term E j t1 t2 :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (eq_term t1 t2) ={E}=∗
   refines_right j #(bool_decide (t1 = t2)).
 Proof.
@@ -39,7 +39,7 @@ iFrame. rel_values.
 Qed.
 
 Lemma tp_texp E j t1 t2 :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (texp t1 t2) ={E}=∗
   refines_right j (TExp t1 t2).
 Proof.

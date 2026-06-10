@@ -8,7 +8,7 @@ Context `{!Repr A, !Repr B, !relocG Σ}.
 Implicit Types (x : A) (xs : list A).
 
 Lemma tp_list_match_aux E j (vs : list A) evs vars k :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   elements (free_vars k) ## vars →
   refines_right j (list_match_aux vars evs k) -∗
   (∀ j', refines_right j' evs ={E}=∗ refines_right j' (repr_list vs)) -∗
@@ -51,7 +51,7 @@ set j' := RefId _ _. tp_pures j'. by rewrite /j' -refines_right_bind /=.
 Qed.
 
 Lemma tp_close_vars E j vars vs k :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   length vars = length vs →
   refines_right j (fill (napp vars vs) (close_vars vars k)) ={E}=∗
   refines_right j (nsubst vars vs k).
@@ -76,7 +76,7 @@ by apply IH.
 Qed.
 
 Lemma tp_list_match E j vars (vs : list A) k :
-  nclose specN ⊆ E →
+  ↑specN ⊆ E →
   refines_right j (list_match vars (repr vs) k) ={E}=∗
   let v := if decide (length vars = length vs) then
               nsubst vars (map repr vs) k
