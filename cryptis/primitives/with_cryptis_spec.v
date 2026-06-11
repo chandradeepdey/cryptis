@@ -1,7 +1,7 @@
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
-From cryptis.core Require Import minted_spec rel.
+From cryptis.core Require Import term_meta minted_spec term_meta_spec rel.
 From cryptis.primitives Require Import simple_spec.
 
 Set Implicit Arguments.
@@ -20,7 +20,7 @@ Definition mk_channel_rel : val :=
 
 Section Proofs.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !public_relGS Σ, !term_metaGS Σ, !term_meta_specGS Σ}.
 
 Notation nonce := loc.
 Implicit Types E : coPset.
@@ -117,36 +117,77 @@ iIntros "?"; rewrite /recv; rel_pures_l; rel_pures_r.
 by iApply "H".
 Qed.
 
-Lemma twp_mk_nonce_rel φ :
-  (∀ t, ⌜is_nonce t⌝ -∗ mintable t -∗ φ t) -∗
+Lemma twp_mk_nonce_rel (T': term → gset term) φ :
+  cryptis_rel_ctx -∗
+  (∀ t, [∗ set] t' ∈ T' t, □ (minted t ↔ minted t')) -∗
+  (∀ t, ⌜is_nonce t⌝ -∗
+        minted t -∗
+        ([∗ set] t' ∈ T' t, term_token t' ⊤) -∗
+        φ t) -∗
   WP mk_nonce #()%V [{ φ }].
 Proof.
-rewrite /mk_nonce; iIntros "mint".
+rewrite /mk_nonce; iIntros "#Hctx #minted_T' mint".
 wp_pures.
 wp_pures; wp_bind (ref _)%E; iApply twp_alloc=> //.
 iIntros (l) "[_ Htoken]".
 iPoseProof (mintable_alloc with "Htoken") as "fresh".
+set t:= TNonce l.
+iMod (term_token_alloc (T' t) (¬ minted t) (minted t) with "Hctx [] [] [fresh]") as "(#post & token)"=> //.
+- iIntros "%t' %t'_t contra minted_t'". iApply "contra".
+  iSpecialize ("minted_T'" $! t).
+  rewrite big_sepS_delete //.
+  iDestruct "minted_T'" as "[#e _]". by iApply "e".
+- iIntros "%t' %t'_t minted_t".
+  iSpecialize ("minted_T'" $! t).
+  rewrite big_sepS_delete //.
+  iDestruct "minted_T'" as "[#e _]". by iApply "e".
+- iSplit.
+  + by iDestruct "fresh" as "[fresh _]".
+  + by iDestruct "fresh" as "[_ >fresh]".
 wp_pures. rewrite val_of_term_unseal /=.
 iModIntro. iApply ("mint" $! (TNonce l))=> //=.
 Qed.
 
-Lemma wp_mk_nonce_rel φ :
-  (∀ t, ⌜is_nonce t⌝ -∗ mintable t -∗ φ t) -∗
+Lemma wp_mk_nonce_rel (T': term → gset term) φ :
+  cryptis_rel_ctx -∗
+  (∀ t, [∗ set] t' ∈ T' t, □ (minted t ↔ minted t')) -∗
+  (∀ t, ⌜is_nonce t⌝ -∗
+        minted t -∗
+        ([∗ set] t' ∈ T' t, term_token t' ⊤) -∗
+        φ t) -∗
   WP mk_nonce #()%V {{ φ }}.
 Proof.
-  iIntros "H".
-  by iApply twp_wp; iApply (twp_mk_nonce_rel with "H").
+  iIntros "H H1 H2".
+  by iApply twp_wp; iApply (twp_mk_nonce_rel with "H H1 H2").
 Qed.
 
-Lemma tp_mk_nonce E j :
+Lemma tp_mk_nonce (T': term → gset term) E j :
   ↑specN ⊆ E →
+  ↑cryptisN.@"meta" ⊆ E →
+  cryptis_rel_ctx -∗
+  (∀ t, [∗ set] t' ∈ T' t, □ (minted_spec t ↔ minted_spec t')) -∗
   refines_right j (mk_nonce #()) -∗
-  |={E}=> ∃ t, refines_right j t ∗ ⌜is_nonce t⌝ ∗ mintable_spec t.
+  |={E}=> ∃ t, refines_right j t ∗
+                ⌜is_nonce t⌝ ∗ minted_spec t ∗
+                ([∗ set] t' ∈ T' t, term_token_spec t' ⊤).
 Proof.
-iIntros "% Hj"; rewrite /mk_nonce.
+iIntros "% % #Hctx #minted_spec_T' Hj"; rewrite /mk_nonce.
 tp_pures j.
 tp_alloc j as a "Ha".
-iPoseProof (mintable_spec_alloc with "Ha") as "Ha".
+iPoseProof (mintable_spec_alloc with "Ha") as "fresh".
+set t:= TNonce a.
+iMod (term_token_spec_alloc (T' t) (¬ minted_spec t) (minted_spec t) with "Hctx [] [] [fresh]") as "(#post & token)"=> //.
+- iIntros "%t' %t'_t contra minted_spec_t'". iApply "contra".
+  iSpecialize ("minted_spec_T'" $! t).
+  rewrite big_sepS_delete //.
+  iDestruct "minted_spec_T'" as "[#e _]". by iApply "e".
+- iIntros "%t' %t'_t minted_spec_t".
+  iSpecialize ("minted_spec_T'" $! t).
+  rewrite big_sepS_delete //.
+  iDestruct "minted_spec_T'" as "[#e _]". by iApply "e".
+- iSplit.
+  + by iDestruct "fresh" as "[fresh _]".
+  + by iDestruct "fresh" as "[_ >fresh]".
 tp_pures j.
 iExists (TNonce a).
 rewrite val_of_term_unseal. by iFrame.
@@ -154,20 +195,25 @@ Qed.
 
 (* twp ??? *)
 Lemma wp_mk_aenc_key_rel φ :
-  (∀ sk : aenc_key, minted sk -∗ φ sk) -∗
+  cryptis_rel_ctx -∗
+  (∀ sk : aenc_key, minted sk -∗ term_token sk ⊤ -∗ φ sk) -∗
   WP mk_aenc_key #() {{ φ }}.
 Proof.
-iIntros "mint". rewrite /mk_aenc_key.
+iIntros "#Hctx mint". rewrite /mk_aenc_key.
 wp_pures.
-wp_apply wp_mk_nonce_rel as "%t %Hnonce Hmint".
-iDestruct "Hmint" as "[_ >Hmint]".
+wp_apply (wp_mk_nonce_rel (λ t, {[(AEncKey t) : term]}) with "[//]") as "%t %Hnonce #Hmint Htt".
+{ iIntros "%t". rewrite [term_of_aenc_key]unlock big_sepS_singleton minted_TKey.
+  iModIntro. by iSplit; iIntros "?". }
+rewrite big_sepS_singleton.
 wp_pures; wp_apply wp_derive_aenc_key.
-iApply "mint".
+iApply "mint" => //.
 by iApply minted_aenc.
 Qed.
 
 Lemma tp_mk_aenc_key E j :
   ↑specN ⊆ E →
+  ↑cryptisN.@"meta" ⊆ E →
+  cryptis_rel_ctx -∗
   refines_right j (mk_aenc_key #()) -∗
   |={E}=> ∃ (sk : aenc_key), refines_right j sk ∗ minted_spec sk.
 Proof.

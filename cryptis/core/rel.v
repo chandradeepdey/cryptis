@@ -51,7 +51,13 @@ Definition cryptis_rel_inv pub : iProp :=
     term_meta_spec p.2 (cryptisN.@"public_rel") ()).
 
 Definition cryptis_rel_ctx : iProp :=
-  inv cryptisN (∃ pub, cryptis_rel_inv pub).
+  term_meta_ctx ∗ term_meta_spec_ctx ∗ inv cryptisN (∃ pub, cryptis_rel_inv pub).
+
+#[global] Instance cryptis_rel_ctx_has_term_meta_ctx : HasTermMetaCtx cryptis_rel_ctx.
+Proof. split; last apply _. by iIntros "#[H _]". Qed.
+
+#[global] Instance cryptis_rel_ctx_has_term_meta_spec_ctx : HasTermMetaSpecCtx cryptis_rel_ctx.
+Proof. split; last apply _. by iIntros "#[_ [H _]]". Qed.
 
 Lemma public_rel_extend E t t' :
   ↑cryptisN ⊆ E →
@@ -60,7 +66,7 @@ Lemma public_rel_extend E t t' :
   term_token_spec t' (↑cryptisN.@"public_rel") -∗
   |={E}=> public_rel_elem t t'.
 Proof.
-  iIntros (HE) "#Hinv Htt Htts".
+  iIntros (HE) "#(_ & _ & Hinv) Htt Htts".
   iInv "Hinv" as "(%pub & (>Hauth & Htoken))".
   iAssert (▷ ⌜∀ t', (t, t') ∉ pub⌝)%I as "#>%Htnpub".
   { iModIntro. iIntros (t'' Ht'').
