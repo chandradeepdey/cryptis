@@ -1,6 +1,7 @@
 From iris.base_logic.lib Require Import gset_bij.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
+From cryptis.lib Require Import saved_prop.
 From cryptis.core Require Import term minted.
 From cryptis Require Import cryptis.
 From cryptis.core Require Import minted_spec.
@@ -10,16 +11,24 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Class public_relGpreS Σ := Public_relGpreS {
+  #[local] public_relGpreS_bij :: gset_bijG Σ term term;
+  #[local] public_relGpreS_prop :: savedPropG Σ;
+}.
+
 Class public_relGS Σ := Public_relGS {
-  #[local] public_relGpreS_inG :: gset_bijG Σ term term;
+  #[global] public_rel_inG :: public_relGpreS Σ;
   public_rel_name  : gname;
 }.
 
-Definition public_relΣ : gFunctors := #[gset_bijΣ term term].
+Definition public_relΣ : gFunctors := #[gset_bijΣ term term; savedPropΣ].
+
+#[global] Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
+Proof. solve_inG. Qed.
 
 Section Rel.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !public_relGS Σ, !term_metaGS Σ, !term_meta_specGS Σ}.
 
 Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
@@ -36,7 +45,10 @@ Definition public_rel_elem t1 t2 : iProp :=
   gset_bij_own_elem public_rel_name t1 t2.
 
 Definition cryptis_rel_inv pub : iProp :=
-  public_rel_auth pub ∗ ([∗ set] p ∈ pub, minted p.1 ∧ minted_spec p.2).
+  public_rel_auth pub ∗
+  ([∗ set] p ∈ pub,
+    term_meta p.1 (cryptisN.@"public_rel") () ∗
+    term_meta_spec p.2 (cryptisN.@"public_rel") ()).
 
 Definition cryptis_rel_ctx : iProp :=
   inv cryptisN (∃ pub, cryptis_rel_inv pub).
@@ -44,29 +56,27 @@ Definition cryptis_rel_ctx : iProp :=
 Lemma public_rel_extend E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  (¬ minted t ∧ |==> minted t) -∗
-  (¬ minted_spec t' ∧ |==> minted_spec t') -∗
-  |={E}=> public_rel_elem t t' ∗ minted t ∗ minted_spec t'.
+  term_token t (↑cryptisN.@"public_rel") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel") -∗
+  |={E}=> public_rel_elem t t'.
 Proof.
-  iIntros (HE) "#Hinv Hmintt Hmintt'".
-  iInv "Hinv" as "(%pub & (>Hauth & Hmint))".
+  iIntros (HE) "#Hinv Htt Htts".
+  iInv "Hinv" as "(%pub & (>Hauth & Htoken))".
   iAssert (▷ ⌜∀ t', (t, t') ∉ pub⌝)%I as "#>%Htnpub".
   { iModIntro. iIntros (t'' Ht'').
     rewrite big_sepS_forall.
-    iSpecialize ("Hmint" $! (t, t'') with "[//]").
-    iDestruct "Hmintt" as "[Hnmintt _]".
-    iDestruct "Hmint" as "[Hmintt _]".
-    by iApply "Hnmintt". }
+    iSpecialize ("Htoken" $! (t, t'') with "[//]").
+    iDestruct "Htoken" as "[Htoken _]".
+    iDestruct (term_meta_token with "Htt Htoken") as "[]"=> //. }
   iAssert (▷ ⌜∀ t, (t, t') ∉ pub⌝)%I as "#>%Ht'npub".
   { iModIntro. iIntros (t'' Ht'').
     rewrite big_sepS_forall.
-    iSpecialize ("Hmint" $! (t'', t') with "[//]").
-    iDestruct "Hmintt'" as "[Hnmintt' _]".
-    iDestruct "Hmint" as "[_ Hmintt']".
-    by iApply "Hnmintt'". }
+    iSpecialize ("Htoken" $! (t'', t') with "[//]").
+    iDestruct "Htoken" as "[_ Htokens]".
+    iDestruct (term_meta_spec_token with "Htts Htokens") as "[]"=> //. }
   iMod (gset_bij_own_extend with "Hauth") as "[Hauth #Hfrag]"; eauto.
-  iDestruct "Hmintt" as "[_ >#Hmintt]".
-  iDestruct "Hmintt'" as "[_ >#Hmintt']".
+  iMod (term_meta_set (cryptisN.@"public_rel") () with "Htt") as "#Htt"=> //.
+  iMod (term_meta_spec_set (cryptisN.@"public_rel") () with "Htts") as "#Htts"=> //.
   iModIntro.
   iFrame.
   rewrite big_sepS_union_pers big_sepS_singleton.
