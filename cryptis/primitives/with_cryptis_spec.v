@@ -175,9 +175,7 @@ iIntros "% Hj"; rewrite /mk_aenc_key.
 tp_pures j.
 tp_bind j (mk_nonce _).
 rewrite refines_right_bind.
-iPoseProof (tp_mk_nonce with "Hj") as ">(%t & Hj & %Hnonce & Hmint)"=> //=.
-(* JUST WHY??? *)
-have ->: (AppRCtx (λ: "n", derive_aenc_key "n") :: tp_ctx j) = ([AppRCtx (λ: "n", derive_aenc_key "n")] ++ tp_ctx j)=> //.
+iPoseProof (tp_mk_nonce with "Hj") as ">(%t & Hj & %Hnonce & Hmint)"=> //.
 rewrite -refines_right_bind=> /=.
 tp_pures j.
 iPoseProof (tp_derive_aenc_key with "Hj") as ">Hj" => //=.
@@ -208,9 +206,7 @@ iIntros "% Hj"; rewrite /mk_sign_key.
 tp_pures j.
 tp_bind j (mk_nonce _).
 rewrite refines_right_bind.
-iPoseProof (tp_mk_nonce with "Hj") as ">(%t & Hj & %Hnonce & Hmint)"=> //=.
-(* JUST WHY??? *)
-have ->: (AppRCtx (λ: "n", derive_sign_key "n") :: tp_ctx j) = ([AppRCtx (λ: "n", derive_sign_key "n")] ++ tp_ctx j)=> //.
+iPoseProof (tp_mk_nonce with "Hj") as ">(%t & Hj & %Hnonce & Hmint)"=> //.
 rewrite -refines_right_bind=> /=.
 tp_pures j.
 iPoseProof (tp_derive_sign_key with "Hj") as ">Hj" => //=.
@@ -241,9 +237,7 @@ iIntros "% Hj"; rewrite /mk_senc_key.
 tp_pures j.
 tp_bind j (mk_nonce _).
 rewrite refines_right_bind.
-iPoseProof (tp_mk_nonce with "Hj") as ">(%t & Hj & %Hnonce & Hmint)"=> //=.
-(* JUST WHY??? *)
-have ->: (AppRCtx (λ: "n", derive_senc_key "n") :: tp_ctx j) = ([AppRCtx (λ: "n", derive_senc_key "n")] ++ tp_ctx j)=> //.
+iPoseProof (tp_mk_nonce with "Hj") as ">(%t & Hj & %Hnonce & Hmint)"=> //.
 rewrite -refines_right_bind=> /=.
 tp_pures j.
 iPoseProof (tp_derive_senc_key with "Hj") as ">Hj" => //=.
