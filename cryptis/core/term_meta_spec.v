@@ -16,15 +16,13 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Local Existing Instance term_meta_meta.
-Local Existing Instance term_meta_names.
+#[local] Existing Instance term_meta_meta.
+#[local] Existing Instance term_meta_names.
 
 Class term_meta_specGS Σ : Type := TermMetaSpecGS {
-  term_meta_spec_inG  : term_metaGpreS Σ;
+  #[global] term_meta_spec_inG  :: term_metaGpreS Σ;
   term_meta_spec_name : gname;
 }.
-
-Global Existing Instance term_meta_spec_inG.
 
 Section TermMetaSpec.
 
