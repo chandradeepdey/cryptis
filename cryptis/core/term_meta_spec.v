@@ -1,5 +1,4 @@
 From reloc Require Import reloc.
-From iris.algebra Require Import agree.
 From iris.base_logic.lib Require Import ghost_map.
 From cryptis Require Import lib.
 From cryptis.lib Require Import gmeta nown saved_prop.

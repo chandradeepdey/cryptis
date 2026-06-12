@@ -1,3 +1,4 @@
+From elpi.apps Require Import locker.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.core Require Import term.
@@ -23,15 +24,8 @@ Proof. apply _. Qed.
   Timeless (minted_spec_loc a).
 Proof. apply _. Qed.
 
-Fact minted_spec_key : unit. Proof. exact: tt. Qed.
-
-Definition minted_spec : term → iProp :=
-  locked_with minted_spec_key (
-    λ t, [∗ set] a ∈ nonces_of_term t,
-      minted_spec_loc a
-  )%I.
-
-Canonical minted_spec_unlock := [unlockable of minted_spec].
+lock Definition minted_spec t : iProp :=
+  [∗ set] a ∈ nonces_of_term t, minted_spec_loc a.
 
 #[global] Instance Persistent_minted_spec t : Persistent (minted_spec t).
 Proof. rewrite unlock; apply _. Qed.
