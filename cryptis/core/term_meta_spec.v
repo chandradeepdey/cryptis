@@ -1,16 +1,9 @@
-From mathcomp Require Import ssreflect.
-From stdpp Require Import gmap.
-From iris.algebra Require Import agree auth gset gmap list reservation_map excl.
-From iris.algebra Require Import functions.
-From iris.base_logic.lib Require Import invariants.
-From iris.heap_lang Require Import notation proofmode.
+From reloc Require Import reloc.
+From iris.algebra Require Import agree.
+From iris.base_logic.lib Require Import ghost_map.
 From cryptis Require Import lib.
 From cryptis.lib Require Import gmeta nown saved_prop.
-From cryptis.core Require Import term minted.
-
-From cryptis.core Require Import term_meta.
-From reloc Require Import reloc.
-From cryptis.core Require Import minted_spec.
+From cryptis.core Require Import term term_meta minted_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -33,7 +26,7 @@ Notation iPropI := (iPropI Σ).
 
 Definition term_meta_spec_inv `{!term_meta_specGS Σ} : iProp :=
   ∃ names : gmap term gname,
-    own term_meta_spec_name (● ((to_agree <$> names) : gmap _ _)) ∗
+    ghost_map_auth term_meta_spec_name 1 names ∗
     [∗ set] t ∈ dom names, minted_spec t.
 
 Definition term_meta_spec_ctx `{!term_meta_specGS Σ} : iProp :=
@@ -44,11 +37,10 @@ Lemma term_meta_specGS_alloc E :
   ⊢ |={E}=> ∃ (H : term_meta_specGS Σ), term_meta_spec_ctx.
 Proof.
 move=> ?; iStartProof.
-iMod (own_alloc (● (∅ : gmap term (agree gname)))) as (γ_names) "names_auth".
-  by apply auth_auth_valid.
+iMod ghost_map_alloc_empty as (γ_names) "names_auth".
 pose (H := TermMetaSpecGS _ γ_names).
 iExists H. iApply inv_alloc.
-iExists ∅. rewrite fmap_empty /=. iFrame.
+iExists ∅. iFrame.
 by rewrite dom_empty_L big_sepS_empty.
 Qed.
 
@@ -69,8 +61,7 @@ Class HasTermMetaSpecCtx (ctx : iProp) := {
 Local Existing Instance has_term_meta_spec_ctx_persistent.
 
 Definition term_spec_name t γ : iProp :=
-  minted_spec t ∗
-  own term_meta_spec_name (◯ {[t := to_agree γ]}).
+  minted_spec t ∗ t ↪[term_meta_spec_name]□ γ.
 
 Global Instance term_spec_name_persistent t γ : Persistent (term_spec_name t γ).
 Proof. apply _. Qed.
@@ -84,11 +75,7 @@ Lemma term_spec_name_agree t γ1 γ2 :
   ⌜γ1 = γ2⌝.
 Proof.
 iIntros "[_ name1] [_ name2]".
-iPoseProof (own_valid_2 with "name1 name2") as "%valid".
-rewrite -auth_frag_op auth_frag_valid in valid.
-move/(_ t): valid.
-rewrite lookup_op !lookup_singleton_eq -Some_op Some_valid.
-by move=> /to_agree_op_inv_L ->.
+iApply (ghost_map_elem_agree with "name1 name2").
 Qed.
 
 Lemma term_spec_name_minted_spec t γ : term_spec_name t γ -∗ minted_spec t.
@@ -353,10 +340,10 @@ Lemma term_token_spec_alloc_aux (T : gset term) (P Q : iProp) E :
 Proof.
 assert (∀ names : gmap term gname,
   dom names ## T →
-  own term_meta_spec_name (● ((to_agree <$> names) : gmap term _)) ==∗
+  ghost_map_auth term_meta_spec_name 1 names ==∗
   ∃ names' : gmap term gname,
   ⌜dom names' = dom names ∪ T⌝ ∗
-  own term_meta_spec_name (● ((to_agree <$> names') : gmap term _)) ∗
+  ghost_map_auth term_meta_spec_name 1 names' ∗
   [∗ set] t ∈ T, minted_spec t -∗ term_token_spec t ⊤) as names_alloc.
 { induction T as [|t T fresh IH] using set_ind_L.
   - iIntros "%names _ own !>". iExists names.
@@ -365,11 +352,8 @@ assert (∀ names : gmap term gname,
     have t_names : t ∉ dom names by set_solver.
     have {}dis : dom names ## T by set_solver.
     iMod gmeta_token_alloc as "(%γ & token)".
-    iMod (own_update with "own") as "[own frag]".
-    { eapply auth_update_alloc.
-      apply (alloc_singleton_local_update _ t (to_agree γ)) => //.
-      by rewrite lookup_fmap (_ : names !! t = None) // -not_elem_of_dom. }
-    rewrite -fmap_insert.
+    iMod (ghost_map_insert_persist t γ with "own") as "[own frag]".
+    { by rewrite -not_elem_of_dom. }
     have {}dis: dom (<[t := γ]>names) ## T.
       rewrite dom_insert; set_solver.
     iMod (IH _ dis with "own") as "(%names' & %dom_names' & own & tokens)".
