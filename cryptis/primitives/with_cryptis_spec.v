@@ -20,7 +20,7 @@ Definition mk_channel_rel : val :=
 
 Section Proofs.
 
-Context `{!relocG Σ, !public_relGS Σ, !term_metaGS Σ, !term_meta_specGS Σ}.
+Context `{!relocG Σ, !public_relGS Σ}.
 
 Notation nonce := loc.
 Implicit Types E : coPset.

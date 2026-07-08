@@ -13,22 +13,29 @@ Unset Printing Implicit Defensive.
 
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_bij :: gset_bijG Σ term term;
+  #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
   #[local] public_relGpreS_prop :: savedPropG Σ;
 }.
 
 Class public_relGS Σ := Public_relGS {
-  #[global] public_rel_inG :: public_relGpreS Σ;
+  #[global] public_relGS_bij :: gset_bijG Σ term term;
+  #[global] public_rel_term_meta :: term_metaGS Σ;
+  #[global] public_rel_term_meta_spec :: term_meta_specGS Σ;
+  #[global] public_relGS_prop :: savedPropG Σ;
   public_rel_name  : gname;
 }.
 
-Definition public_relΣ : gFunctors := #[gset_bijΣ term term; savedPropΣ].
+Definition public_relΣ : gFunctors :=
+  #[gset_bijΣ term term;
+    term_metaΣ;
+    savedPropΣ].
 
 #[global] Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
 Proof. solve_inG. Qed.
 
 Section Rel.
 
-Context `{!relocG Σ, !public_relGS Σ, !term_metaGS Σ, !term_meta_specGS Σ}.
+Context `{!relocG Σ, !public_relGS Σ}.
 
 Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
@@ -44,14 +51,17 @@ Definition public_rel_auth pub : iProp :=
 Definition public_rel_elem t1 t2 : iProp :=
   gset_bij_own_elem public_rel_name t1 t2.
 
-Definition cryptis_rel_inv pub : iProp :=
+Definition public_rel_inv pub : iProp :=
   public_rel_auth pub ∗
   ([∗ set] p ∈ pub,
     term_meta p.1 (cryptisN.@"public_rel") () ∗
     term_meta_spec p.2 (cryptisN.@"public_rel") ()).
 
+Definition public_rel_ctx : iProp :=
+  inv cryptisN (∃ pub, public_rel_inv pub).
+
 Definition cryptis_rel_ctx : iProp :=
-  term_meta_ctx ∗ term_meta_spec_ctx ∗ inv cryptisN (∃ pub, cryptis_rel_inv pub).
+  term_meta_ctx ∗ term_meta_spec_ctx ∗ public_rel_ctx.
 
 #[global] Instance cryptis_rel_ctx_has_term_meta_ctx : HasTermMetaCtx cryptis_rel_ctx.
 Proof. split; last apply _. by iIntros "#[H _]". Qed.
@@ -90,6 +100,32 @@ Proof.
   by iFrame "#".
 Qed.
 
+Definition pnonce_rel t1 t2 : iProp :=
+  □ term_prop t1 (cryptisN.@"public_rel_pnonce") ∧
+  □ term_prop_spec t2 (cryptisN.@"public_rel_pnonce").
+
+#[global] Instance Persistent_pnonce_rel t1 t2 : Persistent (pnonce_rel t1 t2).
+Proof. apply _. Qed.
+
+Lemma pnonce_rel_alloc t1 t2 E (P : iProp) :
+  ↑cryptisN.@"public_rel_pnonce" ⊆ E →
+    term_token t1 E ∗ term_token_spec t2 E ==∗
+  □ (pnonce_rel t1 t2 ↔ ▷ □ P) ∗
+    term_token t1 (E ∖ ↑cryptisN.@"public_rel_pnonce") ∗
+    term_token_spec t2 (E ∖ ↑cryptisN.@"public_rel_pnonce").
+Proof.
+  iIntros (?) "[token token_spec]".
+  iMod (term_prop_alloc (nroot.@"cryptis".@"public_rel_pnonce") P with "token")
+    as "[#H1 $]" => //.
+  iMod (term_prop_spec_alloc (nroot.@"cryptis".@"public_rel_pnonce") P with "token_spec")
+    as "[#H2 $]" => //.
+  iIntros "!> !>"; iSplit; iIntros "#H3".
+  - by iDestruct "H3" as "#[H3 _]"; iSpecialize ("H1" with "H3"); eauto.
+  - rewrite /pnonce_rel; iSplit; iIntros "!>".
+    + iApply "H1"; eauto.
+    + iApply "H2"; eauto.
+Qed.
+
 Definition double_squiggle_pre P : lrelO := λ t1 t2,
   (□ (∀ t2', ▷ P t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
   □ (∀ t1', ▷ P t1' t2 -∗ ▷ ⌜t1 = t1'⌝))%I.
@@ -103,7 +139,7 @@ Definition publicly_related_pre P : lrelO :=
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
   | TPair t11 t12, TPair t21 t22 =>
       publicly_related_pre t11 t21 ∧ publicly_related_pre t12 t22
-  | TNonce l1, TNonce l2 => public_rel_elem t1 t2
+  | TNonce l1, TNonce l2 => public_rel_elem t1 t2 ∧ ◇ pnonce_rel t1 t2
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
     | AEnc => publicly_related_pre t1' t2' ∨
@@ -224,7 +260,7 @@ Lemma publicly_related_unfold :
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
   | TPair t11 t12, TPair t21 t22 =>
       publicly_related t11 t21 ∧ publicly_related t12 t22
-  | TNonce l1, TNonce l2 => public_rel_elem t1 t2
+  | TNonce l1, TNonce l2 => public_rel_elem t1 t2 ∧ ◇ pnonce_rel t1 t2
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
     | AEnc => publicly_related t1' t2' ∨
@@ -288,7 +324,8 @@ Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_TNonce l1 l2 :
   publicly_related (TNonce l1) (TNonce l2) ⊣⊢
-  public_rel_elem (TNonce l1) (TNonce l2).
+  public_rel_elem (TNonce l1) (TNonce l2) ∧
+    ◇ pnonce_rel (TNonce l1) (TNonce l2).
 Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_TKey kt1 kt2 t1 t2 :
@@ -380,9 +417,9 @@ case: t1 IH.
   auto.
 - move=> l1 _.
   case: t2; auto.
-  iIntros (l2) "#H2".
+  iIntros (l2) "#[H2 _]".
   case: t2'; auto.
-  iIntros (l2') "#H2'".
+  iIntros (l2') "#[H2' _]".
   iPoseProof (gset_bij_own_elem_agree with "H2 H2'") as "%H".
   iPureIntro. by apply H.
 - move=> kt1 t1 IH.
@@ -552,9 +589,9 @@ case: t2 IH.
   auto.
 - move=> l2 _.
   case: t1; auto.
-  iIntros (l1) "#H1".
+  iIntros (l1) "#[H1 _]".
   case: t1'; auto.
-  iIntros (l1') "#H1'".
+  iIntros (l1') "#[H1' _]".
   iPoseProof (gset_bij_own_elem_agree with "H1 H1'") as "%H".
   iPureIntro. by apply H.
 - move=> kt2 t2 IH.
@@ -703,3 +740,19 @@ move=> t1'. apply publicly_related_part_bij_2.
 Qed.
 
 End Rel.
+
+Lemma public_relGS_alloc `{!relocG Σ} E :
+  public_relGpreS Σ →
+  ⊢ |={E}=> ∃ (H : public_relGS Σ),
+              public_rel_ctx.
+Proof.
+move=> ?; iStartProof.
+iMod term_metaGS_alloc as "[% #?]".
+iMod term_meta_specGS_alloc as "[% #?]".
+iMod (gset_bij_own_alloc_empty (A:=term) (B:=term)) as "[%γ Hauth]".
+pose (Hpub := Public_relGS _ _ _ _ γ).
+iExists Hpub.
+iMod (inv_alloc cryptisN _ (∃ pub, public_rel_inv pub)%I with "[Hauth]") as "#Hinv".
+{ iFrame. by rewrite big_sepS_empty. }
+by iFrame "#".
+Qed.

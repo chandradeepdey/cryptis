@@ -444,6 +444,8 @@ Qed.
 
 End TermPropSpec.
 
+Arguments term_prop_spec_alloc {Σ _ _ _ t} N P.
+
 Section TermPredSpec.
 
 Context {A : Type} `{!relocG Σ, !term_meta_specGS Σ, !savedPredG Σ A}.
@@ -479,3 +481,5 @@ by iApply (term_token_spec_own with "token own").
 Qed.
 
 End TermPredSpec.
+
+Arguments term_pred_spec_alloc {_ Σ _ _ _ t} N _ φ.
