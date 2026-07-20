@@ -252,7 +252,7 @@ Proof. rewrite -publicly_related_aux.(seal_eq) //. Qed.
 
 Definition double_squiggle := double_squiggle_pre publicly_related.
 
-Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
+#[local] Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
 
 Lemma publicly_related_unfold :
   ∀ t1 t2, publicly_related t1 t2 ⊣⊢
@@ -384,6 +384,81 @@ case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
   by iDestruct "Hk" as "[??]".
 - iApply "Hrest". rewrite publicly_related_TKey.
   by iDestruct "Hk" as "[??]".
+Qed.
+
+Lemma publicly_related_aenc_key_seed (k1 k2 : aenc_key) :
+  publicly_related k1 k2 ⊣⊢
+  publicly_related (seed_of_aenc_key k1) (seed_of_aenc_key k2).
+Proof.
+  rewrite [term_of_aenc_key]unlock=> /=.
+  rewrite publicly_related_TKey.
+  iSplit.
+  - iIntros "(_ & ?)". eauto.
+  - eauto.
+Qed.
+
+Lemma publicly_related_aenc_key_pkey (k1 k2 : aenc_key) :
+  publicly_related (Spec.pkey k1) (Spec.pkey k2) ⊣⊢
+  publicly_related (seed_of_aenc_key k1) (seed_of_aenc_key k2) ∨
+  (public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2)).
+Proof.
+rewrite [term_of_aenc_key]unlock=> /=.
+rewrite publicly_related_TKey.
+iSplit.
+- iIntros "(_ & ?)". eauto.
+- eauto.
+Qed.
+
+Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
+  publicly_related k1 k2 -∗
+  ∃ (k2' : aenc_key), ⌜k2 = k2'⌝.
+Proof.
+rewrite [term_of_aenc_key]unlock publicly_related_unfold /=.
+case: k2; eauto.
+iIntros (kt2 k2) "(<- & _)".
+by iExists (AEncKey k2).
+Qed.
+
+Lemma publicly_related_term_aenc_key (k1 : term) (k2 : aenc_key) :
+  publicly_related k1 k2 -∗
+  ∃ (k1' : aenc_key), ⌜k1 = k1'⌝.
+Proof.
+rewrite [term_of_aenc_key]unlock publicly_related_unfold /=.
+case: k1; eauto.
+iIntros (kt1 k1) "(-> & _)".
+by iExists (AEncKey k1).
+Qed.
+
+Lemma double_squiggle_aenc_key_seed (k1 k2 : aenc_key) :
+  k1 ≈ k2 ⊣⊢
+  (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2).
+Proof.
+rewrite /double_squiggle /double_squiggle_pre.
+f_equiv; f_equiv; iSplit.
+- iIntros "H %k2' #Hpub".
+  pose k2'' := AEncKey k2'.
+  rewrite -[k2']/(seed_of_aenc_key k2'').
+  rewrite -publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  apply term_of_aenc_key_inj in H.
+  by rewrite H.
+- iIntros "H %k2' #Hpub".
+  iMod (publicly_related_aenc_key_term with "Hpub") as "(%k2'' & ->)".
+  rewrite publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
+- iIntros "H %k1' #Hpub".
+  pose k1'' := AEncKey k1'.
+  rewrite -[k1']/(seed_of_aenc_key k1'').
+  rewrite -publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  apply term_of_aenc_key_inj in H.
+  by rewrite H.
+- iIntros "H %k1' #Hpub".
+  iMod (publicly_related_term_aenc_key with "Hpub") as "(%k1'' & ->)".
+  rewrite publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
 Qed.
 
 #[local] Lemma publicly_related_part_bij_1 t1 t2 t2' :
@@ -740,6 +815,8 @@ move=> t1'. apply publicly_related_part_bij_2.
 Qed.
 
 End Rel.
+
+Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
 
 Lemma public_relGS_alloc `{!relocG Σ} E :
   public_relGpreS Σ →
