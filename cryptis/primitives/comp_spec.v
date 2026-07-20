@@ -13,7 +13,7 @@ Context `{!relocG Σ}.
 
 Implicit Types E : coPset.
 Implicit Types t : term.
-Implicit Types Ψ : lrel Σ.
+Implicit Types Ψ : val → val → iProp Σ.
 
 Lemma tp_eq_term E j t1 t2 :
   ↑specN ⊆ E →

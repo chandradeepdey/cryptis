@@ -45,7 +45,7 @@ Implicit Types E : coPset.
 Implicit Types b : bool.
 Implicit Types m n : nat.
 Implicit Types x : Z.
-Implicit Types Ψ : lrel Σ.
+Implicit Types Ψ : val → val → iProp Σ.
 
 Lemma tp_nondet_bool E j b :
   ↑specN ⊆ E →

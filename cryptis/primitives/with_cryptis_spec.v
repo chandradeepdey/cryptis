@@ -28,9 +28,9 @@ Implicit Types a : nonce.
 Implicit Types t : term.
 Implicit Types v : val.
 Implicit Types φ : val → iProp Σ.
-Implicit Types Ψ : lrel Σ.
+Implicit Types Ψ : val → val → iProp Σ.
 
-Definition channel_rel : lrel Σ := LRel (λ c c',
+Definition channel_rel : val → val → iProp Σ := LRel (λ c c',
   ∃ (sf rf sf' rf' : val), ⌜c = (sf, rf)%V⌝ ∗ ⌜c' = (sf', rf')%V⌝  ∗
   □ (∀ t t' Ψ, publicly_related t t' -∗ Ψ #() #() -∗ REL sf t << sf' t' : Ψ) ∗
   □ (∀ Ψ, (∀ t t', publicly_related t t' -∗ Ψ t t') -∗ REL rf #() << rf' #() : Ψ))%I.
