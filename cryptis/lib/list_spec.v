@@ -7,17 +7,17 @@ Context `{!Repr A, !Repr B, !relocG Σ}.
 
 Implicit Types (x : A) (xs : list A).
 
-Lemma rel_get_list_l K e R (l: list A) (n: nat) :
-  (REL fill K (repr (l !! n)%stdpp : expr) << e : R) -∗
-  REL fill K (repr l !! #n) << e : R.
+Lemma rel_get_list_l K e (l: list A) (n: nat) Ψ :
+  (REL fill K (repr (l !! n)%stdpp : expr) << e : Ψ) -∗
+  REL fill K (repr l !! #n) << e : Ψ.
 Proof.
 iIntros "H".
 by iApply refines_wp_l; wp_apply wp_get_list.
 Qed.
 
-Lemma rel_get_list_r K e R (l: list A) (n: nat) :
-  (REL e << fill K (repr (l !! n)%stdpp : expr) : R) -∗
-  REL e << fill K (repr l !! #n) : R.
+Lemma rel_get_list_r K e (l: list A) (n: nat) Ψ :
+  (REL e << fill K (repr (l !! n)%stdpp : expr) : Ψ) -∗
+  REL e << fill K (repr l !! #n) : Ψ.
 Proof.
 rewrite /= repr_list_unseal.
 elim: n l => [|n IH] [|x l] /=; iIntros "H";
