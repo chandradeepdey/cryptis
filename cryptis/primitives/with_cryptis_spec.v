@@ -1,7 +1,7 @@
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
-From cryptis.core Require Import term_meta minted_spec term_meta_spec rel.
+From cryptis.core Require Import minted_spec term_meta_spec rel.
 From cryptis.primitives Require Import simple_spec.
 
 Set Implicit Arguments.
@@ -193,32 +193,34 @@ iExists (TNonce a).
 rewrite val_of_term_unseal. by iFrame.
 Qed.
 
-(* twp ??? *)
-Lemma wp_mk_aenc_key_rel φ :
+Lemma rel_mk_aenc_key_l K e Ψ :
   cryptis_rel_ctx -∗
-  (∀ sk : aenc_key, minted sk -∗ term_token sk ⊤ -∗ φ sk) -∗
-  WP mk_aenc_key #() {{ φ }}.
+  (∀ sk : aenc_key, minted sk -∗ term_token sk ⊤ -∗
+    (REL fill K (sk : expr) << e : Ψ)) -∗
+  REL fill K (mk_aenc_key #()) << e : Ψ.
 Proof.
-iIntros "#Hctx mint". rewrite /mk_aenc_key.
-wp_pures.
+iIntros "#Hctx H". rewrite /mk_aenc_key.
+rel_pures_l. iApply refines_wp_l.
 wp_apply (wp_mk_nonce_rel (λ t, {[(AEncKey t) : term]}) with "[//]") as "%t %Hnonce #Hmint Htt".
 { iIntros "%t". rewrite [term_of_aenc_key]unlock big_sepS_singleton minted_TKey.
   iModIntro. by iSplit; iIntros "?". }
 rewrite big_sepS_singleton.
 wp_pures; wp_apply wp_derive_aenc_key.
-iApply "mint" => //.
+iApply "H" => //.
 by iApply minted_aenc.
 Qed.
 
-Lemma tp_mk_aenc_key E j :
+Lemma rel_mk_aenc_key_r E K e Ψ :
   ↑specN ⊆ E →
   ↑cryptisN.@"meta" ⊆ E →
   cryptis_rel_ctx -∗
-  refines_right j (mk_aenc_key #()) -∗
-  |={E}=> ∃ (sk : aenc_key), refines_right j sk ∗ minted_spec sk ∗ term_token_spec sk ⊤.
+  (∀ sk : aenc_key, minted_spec sk -∗ term_token_spec sk ⊤ -∗
+    (REL e << fill K (sk : expr) : Ψ)) -∗
+  REL e << fill K (mk_aenc_key #()) : Ψ.
 Proof.
-iIntros "% % #Hctx Hj"; rewrite /mk_aenc_key.
-tp_pures j.
+iIntros "% % #Hctx H". rewrite /mk_aenc_key.
+rel_pures_r. iApply refines_step_r.
+iIntros (j) "Hj".
 tp_bind j (mk_nonce _).
 rewrite refines_right_bind.
 iPoseProof (tp_mk_nonce (λ t, {[(AEncKey t) : term]}) with "[//] [] Hj") as ">(%t & Hj & %Hnonce & #Hmint & Htts)"=> //.
@@ -228,7 +230,7 @@ rewrite -refines_right_bind=> /=.
 tp_pures j.
 iPoseProof (tp_derive_aenc_key with "Hj") as ">Hj" => //=.
 rewrite big_sepS_singleton. iFrame.
-by iApply minted_spec_aenc.
+iApply "H"=> //. by iApply minted_spec_aenc.
 Qed.
 
 Lemma wp_mk_sign_key_rel φ :

@@ -354,6 +354,33 @@ last by move=> ?; iIntros "_"; iApply twp_pkey => //.
 apply term_pure.
 Qed.
 
+Lemma rel_pkey_l K (k: term) (e: expr) Ψ :
+  (REL fill K (Spec.pkey k : expr) << e : Ψ) -∗
+  REL fill K (pkey k) << e : Ψ.
+Proof.
+iIntros "H". iApply refines_wp_l.
+by wp_apply wp_pkey=> /=.
+Qed.
+
+Lemma rel_pkey_r K (k: term) (e: expr) Ψ :
+  (REL e << fill K (Spec.pkey k : expr) : Ψ) -∗
+  REL e << fill K (pkey k) : Ψ.
+Proof.
+iIntros "H". iApply refines_step_r.
+iIntros (j) "Hj".
+iPoseProof (tp_pkey with "Hj") as ">Hj"=> //.
+by iFrame.
+Qed.
+
+Lemma rel_pkey (k k': term) (Ψ: val → val → iProp Σ) :
+  Ψ (Spec.pkey k) (Spec.pkey k') -∗
+  REL pkey k << pkey k' : Ψ.
+Proof.
+iIntros "Ψ".
+rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
+rel_values.
+Qed.
+
 Lemma tp_is_key E j t :
   ↑specN ⊆ E →
   refines_right j (is_key t) ={E}=∗

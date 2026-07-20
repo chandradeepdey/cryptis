@@ -7,29 +7,23 @@ Context `{!Repr A, !Repr B, !relocG Σ}.
 
 Implicit Types (x : A) (xs : list A).
 
-Lemma tp_get_list E j (l : list A) (n : nat) :
-  ↑specN ⊆ E →
-  refines_right j (repr l !! #n) -∗
-  |={E}=> refines_right j (repr (l !! n)).
+Lemma rel_get_list_l K e R (l: list A) (n: nat) :
+  (REL fill K (repr (l !! n)%stdpp : expr) << e : R) -∗
+  REL fill K (repr l !! #n) << e : R.
 Proof.
-intros HE.
-rewrite /= repr_list_unseal.
-elim: n l j => [|n IH] [|x l] /= j; iIntros "Hj";
-tp_rec j; tp_pures j; eauto; simpl; auto.
-rewrite (_ : (S n - 1)%Z = n); try lia.
-by iApply IH.
+iIntros "H".
+by iApply refines_wp_l; wp_apply wp_get_list.
 Qed.
 
-Lemma rel_get_list (l1 l2 : list A) (n : nat) Ψ :
-  Ψ (repr (l1 !! n)) (repr (l2 !! n)) -∗
-  REL (repr l1 !! #n) << (repr l2 !! #n) : Ψ.
+Lemma rel_get_list_r K e R (l: list A) (n: nat) :
+  (REL e << fill K (repr (l !! n)%stdpp : expr) : R) -∗
+  REL e << fill K (repr l !! #n) : R.
 Proof.
-iIntros "HΨ".
-rel_bind_l (_ !! _)%E. iApply refines_wp_l.
-iApply wp_get_list => /=.
-rel_bind_r (_ !! _)%E. iApply refines_step_r. iIntros (j) "Hj".
-iPoseProof (tp_get_list with "Hj") as ">Hj" => //=.
-iFrame. rel_values.
+rewrite /= repr_list_unseal.
+elim: n l => [|n IH] [|x l] /=; iIntros "H";
+rel_rec_r; rel_pures_r; eauto.
+rewrite (_ : (S n - 1)%Z = n); try lia.
+by iApply IH.
 Qed.
 
 Lemma tp_nil E j :
