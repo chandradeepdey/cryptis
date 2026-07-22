@@ -38,12 +38,12 @@ Definition alice : val := λ: "c",
   let: "pkA" := pkey "skA" in
   send "c" "pkA";;
   let: "nonce" := mk_nonce #() in
-  bind: "msg_0" := recv "c" in
-  bind: "msg_1" := recv "c" in
+  let: "msg_0" := recv "c" in
+  let: "msg_1" := recv "c" in
   let: "b" := nondet_bool #() in
   let: "msg" := if: "b" then "msg_0" else "msg_1" in
   send "c" (aenc "pkA" (Tag $ N.@"m") (term_of_list ["nonce"; "msg"]));;
-  bind: "b'" := recv "c" in
+  let: "b'" := recv "c" in
   let: "b'" := eq_term (TInt 1) "b'" in
   ("b", "b'").
 
@@ -58,17 +58,37 @@ Proof.
 iIntros "#Hctx #Hc". rewrite /alice.
 rel_pures_l. rel_pures_r.
 rel_apply_l (rel_mk_aenc_key_l with "[//]").
-iIntros (skA) "#mint token".
+iIntros (skA) "#mint_skA token_skA".
 rel_apply_r (rel_mk_aenc_key_r with "[//]").
-iIntros "%skA' #mint_spec token_spec".
+iIntros "%skA' #mint_spec_skA' token_spec_skA'".
 rel_pures_l. rel_pures_r.
 rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
 rel_pures_l. rel_pures_r.
-rel_bind_l (send _ _). rel_bind_r (send _ _).
-iAssert (|={⊤}=> publicly_related (Spec.pkey skA) (Spec.pkey skA'))%I with "[token token_spec]" as ">#Hpub".
+iAssert (|={⊤}=> publicly_related (Spec.pkey skA) (Spec.pkey skA'))%I
+          with "[token_skA token_spec_skA']" as ">#Hpub".
 { iApply publicly_related_aenc_key_pkey. iLeft.
   iApply publicly_related_aenc_key_seed. admit. }
-iApply (refines_bind _ _ _ lrel_unit);
-first by iApply (rel_send with "[] []") => //=.
+rel_bind_l (send _ _). rel_bind_r (send _ _).
+iApply (refines_bind _ _ _ lrel_unit); first by iApply rel_send.
 iIntros (? ?) "[-> ->]"=> /=.
 rel_pures_l. rel_pures_r.
+rel_apply_l (rel_mk_nonce_l _ _ (λ _, ∅) with "[//]").
+{ iIntros "%t". by iApply big_sepS_empty. }
+iIntros (nonce) "%Hnonce #mint_nonce _".
+rel_apply_r (rel_mk_nonce_r _ _ (λ _, ∅) with "[//]").
+{ iIntros "%t". by iApply big_sepS_empty. }
+iIntros (nonce') "%Hnonce' #mint_spec_nonce' _".
+rel_pures_l. rel_pures_r.
+rel_bind_l (recv _). rel_bind_r (recv _).
+iApply (refines_bind _ _ _ (λ v v', ∃ t t', ⌜v = t ∧ v' = t'⌝ ∧ publicly_related t t')%I);
+  first by iApply (rel_recv with "[//]"); eauto.
+iIntros (? ?) "(%msg_0 & %msg_0' & [-> ->] & #Hmsg_0)"=> /=.
+rel_pures_l. rel_pures_r.
+rel_bind_l (recv _). rel_bind_r (recv _).
+iApply (refines_bind _ _ _ (λ v v', ∃ t t', ⌜v = t ∧ v' = t'⌝ ∧ publicly_related t t')%I);
+  first by iApply (rel_recv with "[//]"); eauto.
+iIntros (? ?) "(%msg_1 & %msg_1' & [-> ->] & #Hmsg_1)"=> /=.
+rel_pures_l. rel_pures_r.
+Admitted.
+
+End CPA.
