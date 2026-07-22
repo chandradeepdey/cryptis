@@ -9,6 +9,7 @@ From cryptis Require Import role.
 From cryptis.primitives Require Import attacker.
 
 From reloc Require Import reloc.
+From cryptis Require Import lib_spec.
 From cryptis.core Require Import minted_spec term_meta_spec rel.
 From cryptis.primitives Require Import simple_spec with_cryptis_spec.
 
@@ -47,15 +48,29 @@ Definition alice : val := λ: "c",
   let: "b'" := eq_term (TInt 1) "b'" in
   ("b", "b'").
 
+Definition alice' : val := λ: "c",
+  let: "skA" := mk_aenc_key #() in
+  let: "pkA" := pkey "skA" in
+  send "c" "pkA";;
+  let: "nonce" := mk_nonce #() in
+  let: "msg_0" := recv "c" in
+  let: "msg_1" := recv "c" in
+  let: "b" := #true in
+  let: "msg" := if: "b" then "msg_0" else "msg_1" in
+  send "c" (aenc "pkA" (Tag $ N.@"m") (term_of_list ["nonce"; "msg"]));;
+  let: "b'" := recv "c" in
+  let: "b'" := eq_term (TInt 1) "b'" in
+  ("b", "b'").
+
 Lemma rel_alice c c' (b: bool) :
   cryptis_rel_ctx -∗
   channel_rel c c' -∗
-  REL alice c << alice c' : λ p1 p2,
+  REL alice c << alice' c' : λ p1 p2,
     ⌜∃ b1 b'1 b2 b'2 : bool,
     p1 = (#b1, #b'1)%V ∧ p2 = (#b2, #b'2)%V ∧
     (b = b1 → b ≠ b2 ∧ b'1 = b'2)⌝.
 Proof.
-iIntros "#Hctx #Hc". rewrite /alice.
+iIntros "#Hctx #Hc". rewrite /alice /alice'.
 rel_pures_l. rel_pures_r.
 rel_apply_l (rel_mk_aenc_key_l with "[//]").
 iIntros (skA) "#mint_skA token_skA".
@@ -89,6 +104,11 @@ iApply (refines_bind _ _ _ (λ v v', ∃ t t', ⌜v = t ∧ v' = t'⌝ ∧ publi
   first by iApply (rel_recv with "[//]"); eauto.
 iIntros (? ?) "(%msg_1 & %msg_1' & [-> ->] & #Hmsg_1)"=> /=.
 rel_pures_l. rel_pures_r.
+rel_apply_l rel_nondet_bool_l. iIntros ([]).
+- rel_pures_l. rel_pures_r.
+  admit.
+- rel_pures_l. rel_pures_r.
+  admit.
 Admitted.
 
 End CPA.
