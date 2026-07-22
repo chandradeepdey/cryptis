@@ -189,8 +189,7 @@ iIntros (t) "%Hnonce #Hmint Htt".
 rewrite big_sepS_singleton.
 rel_pures_l. iApply refines_wp_l.
 wp_apply wp_derive_aenc_key.
-iApply "mint" => //.
-by iApply minted_aenc.
+iApply "mint" => //. by iApply minted_aenc.
 Qed.
 
 Lemma rel_mk_aenc_key_r K e Ψ :
@@ -224,66 +223,58 @@ iIntros (t) " %Hnonce #Hmint Htt".
 rewrite big_sepS_singleton.
 rel_pures_l. iApply refines_wp_l.
 wp_apply wp_derive_sign_key.
-iApply "mint" => //.
-by iApply minted_sign.
+iApply "mint" => //. by iApply minted_sign.
 Qed.
 
-Lemma tp_mk_sign_key E j :
-  ↑specN ⊆ E →
-  ↑cryptisN.@"meta" ⊆ E →
+Lemma rel_mk_sign_key_r K e Ψ :
   cryptis_rel_ctx -∗
-  refines_right j (mk_sign_key #()) -∗
-  |={E}=> ∃ (sk : sign_key), refines_right j sk ∗ minted_spec sk ∗ term_token_spec sk ⊤.
+  (∀ sk : sign_key, minted_spec sk -∗ term_token_spec sk ⊤ -∗
+    (REL e << fill K (sk : expr) : Ψ)) -∗
+  REL e << fill K (mk_sign_key #()) : Ψ.
 Proof.
-iIntros "% % #Hctx Hj"; rewrite /mk_sign_key.
-tp_pures j.
-tp_bind j (mk_nonce _).
-rewrite refines_right_bind.
-iPoseProof (tp_mk_nonce (λ t, {[(SignKey t) : term]}) with "[//] [] Hj") as ">(%t & Hj & %Hnonce & #Hmint & Htts)"=> //.
+iIntros "#Hctx mint"; rewrite /mk_sign_key.
+rel_pures_r. rel_apply_r (rel_mk_nonce_r _ _ (λ t, {[(SignKey t) : term]}))=> //.
 { iIntros "%t". rewrite [term_of_sign_key]unlock big_sepS_singleton minted_spec_TKey.
   iModIntro. by iSplit; iIntros "?". }
-rewrite -refines_right_bind=> /=.
-tp_pures j.
+iIntros (t) "%Hnonce #Hmint Htts".
+rel_pures_r. iApply refines_step_r. iIntros (j) "Hj".
 iPoseProof (tp_derive_sign_key with "Hj") as ">Hj" => //=.
 rewrite big_sepS_singleton. iFrame.
-by iApply minted_spec_sign.
+iApply "mint"=> //. by iApply minted_spec_sign.
 Qed.
 
-Lemma wp_mk_senc_key_rel φ :
+Lemma rel_mk_senc_key_l K e Ψ :
   cryptis_rel_ctx -∗
-  (∀ k : senc_key, minted k -∗ term_token k ⊤ -∗ φ k) -∗
-  WP mk_senc_key #() {{ φ }}.
+  (∀ k : senc_key, minted k -∗ term_token k ⊤ -∗
+    (REL fill K (k : expr) << e : Ψ)) -∗
+  REL fill K (mk_senc_key #()) << e : Ψ.
 Proof.
-iIntros "#Hctx mint". rewrite /mk_senc_key.
-wp_pures.
-wp_apply (wp_mk_nonce_rel (λ t, {[(SEncKey t) : term]}) with "[//]") as "%t %Hnonce #Hmint Htt".
+iIntros "#Hctx mint"; rewrite /mk_senc_key.
+rel_pures_l. rel_apply_l (rel_mk_nonce_l _ _ (λ t, {[(SEncKey t) : term]}))=> //.
 { iIntros "%t". rewrite [term_of_senc_key]unlock big_sepS_singleton minted_TKey.
   iModIntro. by iSplit; iIntros "?". }
+iIntros (t) "%Hnonce #Hmint Htt".
 rewrite big_sepS_singleton.
-wp_pures; wp_apply wp_derive_senc_key.
-iApply "mint"=> //.
-by iApply minted_senc.
+rel_pures_l. iApply refines_wp_l.
+wp_apply wp_derive_senc_key.
+iApply "mint"=> //. by iApply minted_senc.
 Qed.
 
-Lemma tp_mk_senc_key E j :
-  ↑specN ⊆ E →
-  ↑cryptisN.@"meta" ⊆ E →
+Lemma rel_mk_senc_key_r K e Ψ :
   cryptis_rel_ctx -∗
-  refines_right j (mk_senc_key #()) -∗
-  |={E}=> ∃ (k : senc_key), refines_right j k ∗ minted_spec k ∗ term_token_spec k ⊤.
+  (∀ k : senc_key, minted_spec k -∗ term_token_spec k ⊤ -∗
+    (REL e << fill K (k : expr) : Ψ)) -∗
+  REL e << fill K (mk_senc_key #()) : Ψ.
 Proof.
-iIntros "% % #Hctx Hj"; rewrite /mk_senc_key.
-tp_pures j.
-tp_bind j (mk_nonce _).
-rewrite refines_right_bind.
-iPoseProof (tp_mk_nonce (λ t, {[(SEncKey t) : term]}) with "[//] [] Hj") as ">(%t & Hj & %Hnonce & #Hmint & Htts)"=> //.
+iIntros "#Hctx mint"; rewrite /mk_senc_key.
+rel_pures_r. rel_apply_r (rel_mk_nonce_r _ _ (λ t, {[(SEncKey t) : term]}))=> //.
 { iIntros "%t". rewrite [term_of_senc_key]unlock big_sepS_singleton minted_spec_TKey.
   iModIntro. by iSplit; iIntros "?". }
-rewrite -refines_right_bind=> /=.
-tp_pures j.
+iIntros (t) "%Hnonce #Hmint Htts".
+rel_pures_r. iApply refines_step_r. iIntros (j) "Hj".
 iPoseProof (tp_derive_senc_key with "Hj") as ">Hj" => //=.
 rewrite big_sepS_singleton. iFrame.
-by iApply minted_spec_senc.
+iApply "mint"=> //. by iApply minted_spec_senc.
 Qed.
 
 End Proofs.
