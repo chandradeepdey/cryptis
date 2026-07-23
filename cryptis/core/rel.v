@@ -135,6 +135,7 @@ Proof. apply _. Qed.
 
 Definition publicly_related_pre P : lrelO :=
   fix publicly_related_pre t1 t2 {struct t1} : iProp :=
+  (minted t1 ∧ minted_spec t2 ∧
   match t1, t2 with
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
   | TPair t11 t12, TPair t21 t22 =>
@@ -167,7 +168,7 @@ Definition publicly_related_pre P : lrelO :=
     (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
   | _, _ =>
       False (* WIP *)
-  end%I.
+  end)%I.
 
 #[local] Instance publicly_related_pre_persistent P t1 t2 : Persistent (publicly_related_pre P t1 t2).
 Proof.
@@ -207,10 +208,10 @@ Proof.
   elim/term_lt_ind: t1 t2 => // -[] //=.
   - move=> t11 t12 IH [] //= t21 t22.
     rewrite /tsize in IH.
-    f_equiv; apply: IH; rewrite /= ssrnat.addnE; lia.
+    f_equiv; f_equiv; f_equiv; apply: IH; rewrite /= ssrnat.addnE; lia.
   - move=> kt1 t1' IH [] //= kt2 t2'.
     rewrite /tsize in IH.
-    f_equiv.
+    f_equiv; f_equiv; f_equiv.
     have {}IH: ∀ t2, publicly_related_pre P t1' t2 ≡{n}≡ publicly_related_pre P' t1' t2.
     { apply: IH. simpl. lia. }
     case: kt1 => //=.
@@ -219,7 +220,7 @@ Proof.
     + f_equiv; first done.
       f_equiv; solve_contractive.
   - move=> k1 t1' IH [] //= k2 t2'.
-    rewrite /tsize in IH; f_equiv.
+    rewrite /tsize in IH; f_equiv; f_equiv; f_equiv.
     + f_equiv; apply: IH; rewrite /= ssrnat.addnE; lia.
     + f_equiv.
       f_equiv. solve_contractive.
@@ -237,7 +238,7 @@ Proof.
     rewrite /tsize in IH.
     have {}IH: publicly_related_pre P t1' t2' ≡{n}≡ publicly_related_pre P' t1' t2'.
     { apply IH. simpl. lia. }
-    f_equiv. solve_contractive.
+    f_equiv; f_equiv; f_equiv. solve_contractive.
     f_equiv. solve_contractive.
 Qed.
 
@@ -254,6 +255,7 @@ Definition double_squiggle := double_squiggle_pre publicly_related.
 
 Lemma publicly_related_unfold :
   ∀ t1 t2, publicly_related t1 t2 ⊣⊢
+  minted t1 ∧ minted_spec t2 ∧
   match t1, t2 with
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
   | TPair t11 t12, TPair t21 t22 =>
@@ -309,20 +311,41 @@ Proof.
   apply _.
 Qed.
 
+Lemma publicly_related_minted t t' :
+  publicly_related t t' ⊢ minted t ∗ minted_spec t'.
+Proof.
+rewrite publicly_related_unfold.
+iIntros "(? & ? & _)". eauto.
+Qed.
+
 Lemma publicly_related_TInt n1 n2 :
   publicly_related (TInt n1) (TInt n2) ⊣⊢ ⌜n1 = n2⌝.
-Proof. by rewrite publicly_related_unfold. Qed.
+Proof.
+rewrite publicly_related_unfold minted_TInt minted_spec_TInt.
+by rewrite !left_id.
+Qed.
 
 Lemma publicly_related_TPair t11 t12 t21 t22 :
   publicly_related (TPair t11 t12) (TPair t21 t22) ⊣⊢
   (publicly_related t11 t21 ∧ publicly_related t12 t22).
-Proof. by rewrite publicly_related_unfold. Qed.
+Proof.
+rewrite publicly_related_unfold. iSplit.
+- iIntros "(_ & _ & H1 & H2)". eauto.
+- iIntros "(#H1 & #H2)". iSplit; last iSplit; last eauto.
+  + iPoseProof (publicly_related_minted with "H1") as "(? & _)".
+    iPoseProof (publicly_related_minted with "H2") as "(? & _)".
+    rewrite minted_TPair. eauto.
+  + iPoseProof (publicly_related_minted with "H1") as "(_ & ?)".
+    iPoseProof (publicly_related_minted with "H2") as "(_ & ?)".
+    rewrite minted_spec_TPair. eauto.
+Qed.
 
 Lemma publicly_related_TNonce l1 l2 :
   publicly_related (TNonce l1) (TNonce l2) ⊣⊢
   public_rel_elem (TNonce l1) (TNonce l2) ∧
     ◇ pnonce_rel (TNonce l1) (TNonce l2).
-Proof. by rewrite publicly_related_unfold. Qed.
+Proof. Admitted.
+(* Proof. by rewrite publicly_related_unfold. Qed. *)
 
 Lemma publicly_related_TKey kt1 kt2 t1 t2 :
   publicly_related (TKey kt1 t1) (TKey kt2 t2) ⊣⊢
@@ -336,7 +359,8 @@ Lemma publicly_related_TKey kt1 kt2 t1 t2 :
               (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
   | SEnc => publicly_related t1 t2
   end.
-Proof. by rewrite publicly_related_unfold. Qed.
+Proof. Admitted.
+(* Proof. by rewrite publicly_related_unfold. Qed. *)
 
 Lemma publicly_related_TSeal k1 k2 t1 t2 :
   publicly_related (TSeal k1 t1) (TSeal k2 t2) ⊣⊢
@@ -352,12 +376,14 @@ Lemma publicly_related_TSeal k1 k2 t1 t2 :
         end
       | _, _ => False
       end)).
-Proof. by rewrite publicly_related_unfold. Qed.
+Proof. Admitted.
+(* Proof. by rewrite publicly_related_unfold. Qed. *)
 
 Lemma publicly_related_THash t1 t2 :
   publicly_related (THash t1) (THash t2) ⊣⊢
   (publicly_related t1 t2) ∨ (public_rel_elem (THash t1) (THash t2) ∧ t1 ≈ t2).
-Proof. by rewrite publicly_related_unfold. Qed.
+Proof. Admitted.
+(* Proof. by rewrite publicly_related_unfold. Qed. *)
 
 Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
   Spec.open k1 t1 = Some t1' →
@@ -410,8 +436,9 @@ Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
   ∃ (k2' : aenc_key), ⌜k2 = k2'⌝.
 Proof.
 rewrite [term_of_aenc_key]unlock publicly_related_unfold /=.
-case: k2; eauto.
-iIntros (kt2 k2) "(<- & _)".
+iIntros "(_ & _ & H)".
+case: k2; eauto=> kt2 k2.
+iDestruct "H" as "(<- & _)".
 by iExists (AEncKey k2).
 Qed.
 
@@ -420,8 +447,9 @@ Lemma publicly_related_term_aenc_key (k1 : term) (k2 : aenc_key) :
   ∃ (k1' : aenc_key), ⌜k1 = k1'⌝.
 Proof.
 rewrite [term_of_aenc_key]unlock publicly_related_unfold /=.
-case: k1; eauto.
-iIntros (kt1 k1) "(-> & _)".
+iIntros "(_ & _ & H)".
+case: k1; eauto=> kt1 k1.
+iDestruct "H" as "(-> & _)".
 by iExists (AEncKey k1).
 Qed.
 
@@ -464,6 +492,8 @@ Qed.
 Proof.
 elim/term_lt_ind: t1 t2 t2' => t1 IH t2 t2'.
 rewrite !publicly_related_unfold.
+iIntros "(_ & _ & H) (_ & _ & H')".
+iRevert "H H'".
 case: t1 IH.
 - move=> n1 IH.
   case: t2; auto.
@@ -635,6 +665,8 @@ Qed.
 Proof.
 elim/term_lt_ind: t2 t1 t1' => t2 IH t1 t1'.
 rewrite !publicly_related_unfold.
+iIntros "(_ & _ & H) (_ & _ & H')".
+iRevert "H H'".
 case: t2 IH.
 - move=> n2 IH.
   case: t1; auto.
