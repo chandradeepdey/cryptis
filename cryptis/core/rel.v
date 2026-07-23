@@ -165,8 +165,6 @@ Definition publicly_related_pre P : lrelO :=
   | THash t1', THash t2' =>
     publicly_related_pre t1' t2' ∨
     (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
-  | TExpN' _ _ _, TExpN' _ _ _ =>
-      False (* FIXME *)
   | _, _ =>
       False (* WIP *)
   end%I.
@@ -286,8 +284,6 @@ Lemma publicly_related_unfold :
   | THash t1', THash t2' =>
     publicly_related t1' t2' ∨
     (public_rel_elem t1 t2 ∧ t1' ≈ t2')
-  | TExpN' _ _ _, TExpN' _ _ _ =>
-      False (* FIXME *)
   | _, _ =>
       False (* WIP *)
   end.
@@ -630,7 +626,6 @@ case: t1 IH.
   + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
 - auto.
-- case: t2; auto.
 Qed.
 
 #[local] Lemma publicly_related_part_bij_2 t1 t1' t2 :
@@ -801,7 +796,6 @@ case: t2 IH.
     done.
   + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
-- case: t1; auto.
 - case: t1; auto.
 Qed.
 

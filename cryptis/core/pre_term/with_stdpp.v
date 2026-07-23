@@ -158,7 +158,7 @@ Lemma val_of_pre_term_pure (pt : PreTerm.pre_term) :
 Proof.
   induction pt; try (destruct o; eauto;
     simpl; by apply andb_prop_intro).
-  simpl; apply andb_prop_intro; split; first done.
+  simpl.
   induction ts; first by rewrite repr_list_unseal.
   simpl in *.
   destruct X as [X1 X2].

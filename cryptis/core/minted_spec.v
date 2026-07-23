@@ -7,7 +7,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Section Minted.
+Section MintedSpec.
 
 Context `{!relocG Σ}.
 
@@ -25,7 +25,7 @@ Proof. apply _. Qed.
 Proof. apply _. Qed.
 
 lock Definition minted_spec t : iProp :=
-  [∗ set] a ∈ nonces_of_term t, minted_spec_loc a.
+  [∗ set] a ∈ nonces_of_term t, minted_spec_loc (nonce_loc a).
 
 #[global] Instance Persistent_minted_spec t : Persistent (minted_spec t).
 Proof. rewrite unlock; apply _. Qed.
@@ -49,7 +49,7 @@ Proof.
 by rewrite unlock nonces_of_term_unseal /= !big_sepS_union_pers.
 Qed.
 
-Lemma minted_spec_TNonce a : minted_spec (TNonce a) ⊣⊢ minted_spec_loc a.
+Lemma minted_spec_TNonce a : minted_spec (TNonce a) ⊣⊢ minted_spec_loc (nonce_loc a).
 Proof.
 by rewrite unlock nonces_of_term_unseal /= big_sepS_singleton.
 Qed.
@@ -69,17 +69,21 @@ Lemma minted_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
 
 Lemma minted_spec_TExpN t ts :
-  ~ is_exp t -> invs_canceled ts ->
+  ~ is_exp t -> is_true (atomic ts) -> invs_canceled ts ->
   minted_spec (TExpN t ts) ⊣⊢ minted_spec t ∧ [∗ list] t' ∈ ts, minted_spec t'.
 Proof.
-move => /negb_True ??.
-rewrite unlock nonces_of_term_TExpN // cancel_exps_canceled // big_sepS_union_pers.
+move => /negb_True nx atom ic.
+rewrite unlock (nonces_of_term_TExpN (proj2 (is_trueP _) nx) atom).
+rewrite (cancel_invs_canceled atom ic) big_sepS_union_pers.
 by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma minted_spec_base_exps t :
   minted_spec t ⊣⊢ minted_spec (base t) ∧ [∗ list] t' ∈ exps t, minted_spec t'.
-Proof. rewrite -{1}[t]base_expsK minted_spec_TExpN //; exact: invs_canceled_exps. Qed.
+Proof.
+rewrite -{1}[t]base_expsK minted_spec_TExpN //; last exact: invs_canceled_exps.
+exact: atom_exps.
+Qed.
 
 Lemma all_minted_spec_TExpN t ts :
   minted_spec t ∧ ([∗ list] t' ∈ ts, minted_spec t') ⊢ minted_spec (TExpN t ts).
@@ -94,18 +98,31 @@ rewrite big_sepL_elem_of // big_sepS_forall.
 by iApply "Hts".
 Qed.
 
+Lemma minted_spec_tfactors t :
+  minted_spec t ⊣⊢ [∗ list] t' ∈ tfactors t, minted_spec t'.
+Proof.
+rewrite unlock (nonces_of_term_tfactors t).
+by rewrite big_sepS_union_list_pers big_sepL_fmap.
+Qed.
+
 Lemma minted_spec_TExp t1 t2 :
   ~ is_exp t1 ->
   minted_spec (TExp t1 t2) ⊣⊢ minted_spec t1 ∧ minted_spec t2.
 Proof.
-move => /negb_True ?.
-rewrite unlock nonces_of_term_TExpN // cancel_exps1.
-by rewrite big_sepS_union_pers /= union_empty_r_L.
+move => nx.
+have -> : TExp t1 t2 = TExpN t1 (tfactors t2) by rewrite /TExpN tfactorsK.
+rewrite (minted_spec_TExpN nx (atom_tfactors t2)
+           (proj1 (is_trueP _) (invs_canceled_tfactors t2))).
+by rewrite -minted_spec_tfactors.
 Qed.
 
 Lemma all_minted_spec_TExp t1 t2 :
   minted_spec t1 ∧ minted_spec t2 ⊢ minted_spec (TExp t1 t2).
-Proof. by iIntros; iApply all_minted_spec_TExpN; rewrite big_sepL_singleton. Qed.
+Proof.
+have -> : TExp t1 t2 = TExpN t1 (tfactors t2) by rewrite /TExpN tfactorsK.
+rewrite (minted_spec_tfactors t2).
+exact: (all_minted_spec_TExpN t1 (tfactors t2)).
+Qed.
 
 Lemma minted_spec_nonces_of_term t :
   minted_spec t ⊣⊢ [∗ set] a ∈ nonces_of_term t, minted_spec (TNonce a).
@@ -162,7 +179,7 @@ Proof. by rewrite [term_of_sign_key]unlock minted_spec_TKey. Qed.
 
 Definition mintable_spec t : iProp := ¬ minted_spec t ∧ |==> minted_spec t.
 
-Lemma mintable_spec_alloc a : a ↦ₛ #() -∗ mintable_spec (TNonce a).
+Lemma mintable_spec_alloc a : a ↦ₛ #() -∗ mintable_spec (TNonce (Nonce a)).
 Proof.
 rewrite /mintable_spec minted_spec_TNonce. iIntros "Ha"; iSplit.
 - iIntros "contra". iCombine "Ha contra" gives %[contra _].
@@ -187,4 +204,4 @@ iSplit.
   by iApply "H1".
 Qed.
 
-End Minted.
+End MintedSpec.
