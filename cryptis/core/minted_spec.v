@@ -179,7 +179,7 @@ Proof. by rewrite [term_of_sign_key]unlock minted_spec_TKey. Qed.
 
 Definition mintable_spec t : iProp := ¬ minted_spec t ∧ |==> minted_spec t.
 
-Lemma mintable_spec_alloc a : a ↦ₛ #() -∗ mintable_spec (TNonce (Nonce a)).
+Lemma mintable_spec_alloc a : (nonce_loc a) ↦ₛ #() -∗ mintable_spec a.
 Proof.
 rewrite /mintable_spec minted_spec_TNonce. iIntros "Ha"; iSplit.
 - iIntros "contra". iCombine "Ha contra" gives %[contra _].

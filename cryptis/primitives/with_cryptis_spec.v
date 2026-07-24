@@ -128,7 +128,7 @@ Lemma rel_mk_nonce_l K e (T': term → gset term) Ψ :
 Proof.
 iIntros "#Hctx #minted_T' mint"; rewrite /mk_nonce.
 rel_pures_l. rel_alloc_meta_l l as "[_ Htoken]".
-iPoseProof (mintable_alloc with "Htoken") as "fresh".
+iPoseProof (mintable_alloc (Nonce l) with "Htoken") as "fresh".
 set t:= TNonce (Nonce l).
 iMod (term_token_alloc (T' t) (¬ minted t) (minted t) with "Hctx [] [] [fresh]") as "(#post & token)"=> //.
 - iIntros "%t' %t'_t contra minted_t'". iApply "contra".
@@ -157,7 +157,7 @@ Lemma rel_mk_nonce_r K e (T': term → gset term) Ψ :
 Proof.
 iIntros "#Hctx #minted_spec_T' mint"; rewrite /mk_nonce.
 rel_pures_r. rel_alloc_r l as "Hl".
-iPoseProof (mintable_spec_alloc with "Hl") as "fresh".
+iPoseProof (mintable_spec_alloc (Nonce l) with "Hl") as "fresh".
 set t:= TNonce (Nonce l).
 iMod (term_token_spec_alloc (T' t) (¬ minted_spec t) (minted_spec t) with "Hctx [] [] [fresh]") as "(#post & token)"=> //.
 - iIntros "%t' %t'_t contra minted_spec_t'". iApply "contra".

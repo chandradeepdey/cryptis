@@ -176,7 +176,7 @@ Proof. by rewrite [term_of_sign_key]unlock minted_TKey. Qed.
 
 Definition mintable t : iProp := ¬ minted t ∧ |==> minted t.
 
-Lemma mintable_alloc a : meta_token a ⊤ -∗ mintable (TNonce (Nonce a)).
+Lemma mintable_alloc a : meta_token (nonce_loc a) ⊤ -∗ mintable a.
 Proof.
 iIntros "token". iSplit.
 { rewrite minted_TNonce. iIntros "contra".
