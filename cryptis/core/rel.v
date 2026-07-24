@@ -330,7 +330,7 @@ Lemma publicly_related_TPair t11 t12 t21 t22 :
   (publicly_related t11 t21 ∧ publicly_related t12 t22).
 Proof.
 rewrite publicly_related_unfold. iSplit.
-- iIntros "(_ & _ & H1 & H2)". eauto.
+- iIntros "(_ & _ & ?)". eauto.
 - iIntros "(#H1 & #H2)". iSplit; last iSplit; last eauto.
   + iPoseProof (publicly_related_minted with "H1") as "(? & _)".
     iPoseProof (publicly_related_minted with "H2") as "(? & _)".
@@ -340,50 +340,87 @@ rewrite publicly_related_unfold. iSplit.
     rewrite minted_spec_TPair. eauto.
 Qed.
 
-Lemma publicly_related_TNonce l1 l2 :
-  publicly_related (TNonce l1) (TNonce l2) ⊣⊢
-  public_rel_elem (TNonce l1) (TNonce l2) ∧
-    ◇ pnonce_rel (TNonce l1) (TNonce l2).
-Proof. Admitted.
-(* Proof. by rewrite publicly_related_unfold. Qed. *)
+Lemma publicly_related_TNonce a1 a2 :
+  publicly_related (TNonce a1) (TNonce a2) ⊣⊢
+  minted a1 ∧ minted_spec a2 ∧
+    public_rel_elem a1 a2 ∧ ◇ pnonce_rel a1 a2.
+Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_TKey kt1 kt2 t1 t2 :
   publicly_related (TKey kt1 t1) (TKey kt2 t2) ⊣⊢
   ⌜kt1 = kt2⌝ ∧
   match kt1 with
   | AEnc => publicly_related t1 t2 ∨
-            (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
+            (minted t1 ∧ minted_spec t2 ∧
+              public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
   | ADec => publicly_related t1 t2
   | Sign => publicly_related t1 t2
   | Verify => publicly_related t1 t2 ∨
-              (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
+              (minted t1 ∧ minted_spec t2 ∧
+                public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
   | SEnc => publicly_related t1 t2
   end.
-Proof. Admitted.
-(* Proof. by rewrite publicly_related_unfold. Qed. *)
+Proof.
+rewrite publicly_related_unfold. iSplit.
+- iIntros "#(? & ? & -> & H)". iSplit=> //.
+  rewrite minted_TKey. rewrite minted_spec_TKey.
+  case: kt2=> //; iDestruct "H" as "[H | H]"; eauto.
+- iIntros "#(-> & H)". iSplit; last iSplit; last eauto.
+  + rewrite minted_TKey.
+    case: kt2; rewrite publicly_related_minted;
+    try (iDestruct "H" as "[H _]"; eauto);
+    try (iDestruct "H" as "[[H _]|[H _]]"; eauto).
+  + rewrite minted_spec_TKey.
+    case: kt2; rewrite publicly_related_minted;
+    try (iDestruct "H" as "[_ ?]"; eauto);
+    try (iDestruct "H" as "[[_ ?]|[_ [? _]]]"; eauto).
+  + iSplit=> //. case: kt2=> //;
+    iDestruct "H" as "[?|(_ & _ & ?)]"; eauto.
+Qed.
 
 Lemma publicly_related_TSeal k1 k2 t1 t2 :
   publicly_related (TSeal k1 t1) (TSeal k2 t2) ⊣⊢
   (publicly_related k1 k2 ∧ publicly_related t1 t2) ∨
-  (public_rel_elem (TSeal k1 t1) (TSeal k2 t2) ∧
-   k1 ≈ k2 ∧ t1 ≈ t2 ∧
-   □ (match k1, k2 with
-      | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
-        match kt1 with
-        | ADec | Verify => False
-        | Sign => publicly_related t1 t2
-        | _ => publicly_related k1 k2 → publicly_related t1 t2
-        end
-      | _, _ => False
-      end)).
-Proof. Admitted.
-(* Proof. by rewrite publicly_related_unfold. Qed. *)
+  (minted (TSeal k1 t1) ∧ minted_spec (TSeal k2 t2) ∧
+    public_rel_elem (TSeal k1 t1) (TSeal k2 t2) ∧
+    k1 ≈ k2 ∧ t1 ≈ t2 ∧
+    □ (match k1, k2 with
+        | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
+          match kt1 with
+          | ADec | Verify => False
+          | Sign => publicly_related t1 t2
+          | _ => publicly_related k1 k2 → publicly_related t1 t2
+          end
+        | _, _ => False
+        end)).
+Proof.
+rewrite publicly_related_unfold. iSplit.
+- iIntros "#(? & ? & [?|?])"; eauto.
+- iIntros "#[[H1 H2]|(? & ? & ?)]"; (iSplit; last iSplit); eauto.
+  all: rewrite !publicly_related_minted ?minted_TSeal ?minted_spec_TSeal.
+  + iDestruct "H1" as "[? _]". iDestruct "H2" as "[? _]". eauto.
+  + iDestruct "H1" as "[_ ?]". iDestruct "H2" as "[_ ?]". eauto.
+Qed.
 
 Lemma publicly_related_THash t1 t2 :
   publicly_related (THash t1) (THash t2) ⊣⊢
-  (publicly_related t1 t2) ∨ (public_rel_elem (THash t1) (THash t2) ∧ t1 ≈ t2).
-Proof. Admitted.
-(* Proof. by rewrite publicly_related_unfold. Qed. *)
+  (publicly_related t1 t2) ∨
+  (minted t1 ∧ minted_spec t2 ∧
+    public_rel_elem (THash t1) (THash t2) ∧ t1 ≈ t2).
+Proof.
+rewrite publicly_related_unfold. iSplit.
+- iIntros "#(? & ? & [?|?])"; eauto.
+  rewrite minted_THash minted_spec_THash; eauto.
+- iIntros "#[H|(? & ? & ?)]".
+  + iAssert (minted (THash t1)) as "Hmint".
+    { rewrite publicly_related_minted minted_THash.
+      iDestruct "H" as "[? _]"; eauto. }
+    iAssert (minted_spec (THash t2)) as "Hmint_spec".
+    { rewrite publicly_related_minted minted_spec_THash.
+      iDestruct "H" as "[_ ?]"; eauto. }
+    eauto.
+  + rewrite minted_THash minted_spec_THash. eauto.
+Qed.
 
 Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
   Spec.open k1 t1 = Some t1' →
@@ -398,7 +435,7 @@ case: t2 => // k_t2 t2.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k1 [<-].
 case: decide => // k_t_k2 [<-].
-iIntros "#Hk #[[_ Ht]|(Hfrag & ≈k & ≈t & #Hrest)]"; first done.
+iIntros "#Hk #[[_ Ht]|(_ & _ & Hfrag & ≈k & ≈t & #Hrest)]"; first done.
 case: k_t1 k_t2 => // kt1 k1' [] // kt2 k2' in k_t_k1 k_t_k2 *.
 iDestruct "Hrest" as "[<- Hrest]".
 case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
@@ -422,13 +459,13 @@ Qed.
 Lemma publicly_related_aenc_key_pkey (k1 k2 : aenc_key) :
   publicly_related (Spec.pkey k1) (Spec.pkey k2) ⊣⊢
   publicly_related (seed_of_aenc_key k1) (seed_of_aenc_key k2) ∨
-  (public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2)).
+  (minted (seed_of_aenc_key k1) ∧ minted_spec (seed_of_aenc_key k2) ∧
+    public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2)).
 Proof.
 rewrite [term_of_aenc_key]unlock=> /=.
 rewrite publicly_related_TKey.
-iSplit.
-- iIntros "(_ & ?)". eauto.
-- eauto.
+iSplit; eauto.
+iIntros "#(_ & [?|(? & ? & ?)])"; eauto.
 Qed.
 
 Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
