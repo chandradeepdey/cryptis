@@ -8,6 +8,17 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* TODO: this should be in ReLoC *)
+Lemma refines_bind' `{!relocG Σ} K K' E A (e e' : expr) :
+  (REL e << e' @ E : λ v v',
+              (REL fill K (of_val v) << fill K' (of_val v') : A)) -∗
+  REL fill K e << fill K' e' @ E : A.
+Proof.
+iIntros "H".
+iApply (refines_bind with "H").
+eauto.
+Qed.
+
 #[local] Definition sender : val :=
   rec: "loop" "l" "t" :=
   "l" <- "t";;
