@@ -1,6 +1,5 @@
 From stdpp Require Import base gmap.
 From mathcomp Require Import ssreflect.
-From mathcomp Require ssrbool.
 From iris.algebra Require Import agree auth csum gset gmap excl frac.
 From iris.algebra Require Import reservation_map.
 From iris.heap_lang Require Import notation proofmode.
@@ -119,24 +118,6 @@ Qed.
 
 Definition iso_dh_key_share t : iProp :=
   ⌜length (exps t) = 1⌝.
-
-Lemma nonce_Nmul t : is_nonce t -> is_true (negb (is_mul t)).
-Proof. by case: t. Qed.
-
-(* With binary [TExp], [TExp (TExp g a) b] is no longer definitionally
-   [TExpN g [b; a]]; these shims recover the old spellings. *)
-Lemma TExp2_TExpN g a b : TExp (TExp g a) b = TExpN g [b; a].
-Proof.
-rewrite (_ : TExp g a = TExpN g [a]); last by rewrite /TExpN TMulN1.
-by rewrite TExp_TExpN.
-Qed.
-
-Lemma TExp_comm g a b : TExp (TExp g a) b = TExp (TExp g b) a.
-Proof.
-rewrite (_ : TExp g a = TExpN g [a]); last by rewrite /TExpN TMulN1.
-rewrite (_ : TExp g b = TExpN g [b]); last by rewrite /TExpN TMulN1.
-by rewrite !TExp_TExpN TExpC2.
-Qed.
 
 Definition si_key si : senc_key :=
   SEncKey
@@ -359,13 +340,12 @@ iApply (seal_pred_token_drop with "token"). solve_ndisj.
 Qed.
 
 Lemma public_dh_share a :
-  is_true (negb (is_mul a)) ->
+  negb (is_mul a) ->
   minted a -∗
   □ (∀ t, exp_pred_base a t ↔ ▷ □ iso_dh_key_share t) -∗
   public (TExp (TInt 0) a).
 Proof.
 move=> Nm; iIntros "#m_a #pred_a".
-have Nm' : Is_true (negb (is_mul a)) := proj1 (is_trueP _) Nm.
 rewrite public_TExp_iff //; last by case.
 rewrite minted_TInt public_TInt.
 do !iSplit => //; last by iIntros "!> _".
@@ -373,13 +353,13 @@ iApply exp_pred_intro1. iApply "pred_a". iPureIntro. rewrite /iso_dh_key_share.
 rewrite (_ : TExp (TInt 0) a = TExpN (TInt 0) [a]); last by rewrite /TExpN TMulN1.
 rewrite exps_TExpN' //.
 - by case.
-- by rewrite /atomic /= Nm.
+- by rewrite /atomic; apply/Forall_singleton.
 - exact: (invs_canceled1 Nm).
 Qed.
 
 Lemma public_dh_secret1 a b :
-  is_true (negb (is_mul a)) ->
-  is_true (negb (is_mul b)) ->
+  negb (is_mul a) ->
+  negb (is_mul b) ->
   minted a -∗
   minted b -∗
   □ (∀ t, exp_pred_base a t ↔ ▷ □ iso_dh_key_share t) -∗
@@ -395,8 +375,8 @@ move=> Nm_a Nm_b; iIntros "#m_a #m_b #pred_a #pred_b #[H|H]".
 Qed.
 
 Lemma public_dh_secret2 a b :
-  is_true (negb (is_mul a)) ->
-  is_true (negb (is_mul b)) ->
+  negb (is_mul a) ->
+  negb (is_mul b) ->
   a ≠ b →
   a ≠ TInv b →
   □ (∀ t, exp_pred_base a t ↔ ▷ □ iso_dh_key_share t) -∗
@@ -405,10 +385,8 @@ Lemma public_dh_secret2 a b :
   public a ∨ public b.
 Proof.
 move=> Nm_a Nm_b; iIntros "%a_b %a_bV #pred_a #pred_b #p".
-have Nm_a' : Is_true (negb (is_mul a)) := proj1 (is_trueP _) Nm_a.
-have Nm_b' : Is_true (negb (is_mul b)) := proj1 (is_trueP _) Nm_b.
 have NInt : ¬ is_exp (TInt 0) by case.
-have atom_ab : is_true (atomic [a; b]) by rewrite /atomic /= Nm_a Nm_b.
+have atom_ab : atomic [a; b] by rewrite /atomic Forall_cons Forall_singleton; split.
 have ic_ab : invs_canceled [a; b] by apply/(invs_canceled2 Nm_a Nm_b).
 iPoseProof (public_minted with "p") as "m".
 iAssert (minted a ∧ minted b)%I as "[ma mb]".
@@ -435,8 +413,8 @@ rewrite !list_elem_of_singleton in a_c b_c; congruence.
 Qed.
 
 Lemma public_dh_secret' a b (P : iProp) :
-  is_true (negb (is_mul a)) ->
-  is_true (negb (is_mul b)) ->
+  negb (is_mul a) ->
+  negb (is_mul b) ->
   a ≠ b →
   a ≠ TInv b →
   □ (public a ↔ P) -∗

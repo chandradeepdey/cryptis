@@ -10,6 +10,25 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* DH term-algebra shims.  With binary [TExp], [TExp (TExp g a) b] is no longer
+   definitionally [TExpN g [b; a]]; these lemmas recover the old spellings.  They
+   are pure (no Iris), so they live outside [Section DH]. *)
+Lemma nonce_Nmul t : is_nonce t -> negb (is_mul t).
+Proof. by case: t. Qed.
+
+Lemma TExp2_TExpN g a b : TExp (TExp g a) b = TExpN g [b; a].
+Proof.
+rewrite (_ : TExp g a = TExpN g [a]); last by rewrite /TExpN TMulN1.
+by rewrite TExp_TExpN.
+Qed.
+
+Lemma TExp_comm g a b : TExp (TExp g a) b = TExp (TExp g b) a.
+Proof.
+rewrite (_ : TExp g a = TExpN g [a]); last by rewrite /TExpN TMulN1.
+rewrite (_ : TExp g b = TExpN g [b]); last by rewrite /TExpN TMulN1.
+by rewrite !TExp_TExpN TExpC2.
+Qed.
+
 Section DH.
 
 Context `{!cryptisGS Σ, !heapGS Σ}.
@@ -71,9 +90,8 @@ set t' := TExp g a.
 have exps_t': exps t' = [a].
   apply Permutation_singleton_r.
   rewrite /t' (_ : TExp g a = TExpN g [a]); last by rewrite /TExpN TMulN1.
-  rewrite exps_TExpN ?exps_expN //=;
-    [by rewrite cancel_invs1
-    |by rewrite ssrbool.andbT; exact: (proj2 (is_trueP _) Nm_a)].
+  have atom_a : atomic [a] by rewrite /atomic; apply/Forall_singleton.
+  by rewrite (exps_TExpN' gNX atom_a (invs_canceled1 Nm_a)).
 (* /MOVE *)
 have a_t' : a ∈ exps t' by rewrite exps_t'; set_solver.
 iPoseProof (exp_pred_inv_same with "p_t") as "[#contra|H]" => //.
@@ -97,13 +115,11 @@ Proof.
 iIntros "%gXN %a_b %a_bV #aP #bP #p".
 iAssert ⌜negb (is_mul a)⌝%I as %Nm_a; first by iDestruct "aP" as "(_ & $ & _)".
 iAssert ⌜negb (is_mul b)⌝%I as %Nm_b; first by iDestruct "bP" as "(_ & $ & _)".
-have atom_ab : is_true (atomic [a; b]).
-  by rewrite /= (proj2 (is_trueP _) Nm_a) (proj2 (is_trueP _) Nm_b).
+have atom_ab : atomic [a; b].
+  by rewrite /atomic Forall_cons Forall_singleton; split.
 have exps_t : exps (TExpN g [a; b]) ≡ₚ [a; b].
-  rewrite exps_TExpN ?exps_expN //=.
-  by rewrite (cancel_invs_canceled atom_ab
-    (proj2 (invs_canceled2 (proj2 (is_trueP _) Nm_a)
-                           (proj2 (is_trueP _) Nm_b)) a_bV)).
+  by rewrite (exps_TExpN' gXN atom_ab
+    (proj2 (invs_canceled2 Nm_a Nm_b) a_bV)).
 have a_t : a ∈ exps (TExpN g [a; b]) by rewrite exps_t; set_solver.
 have b_t : b ∈ exps (TExpN g [a; b]) by rewrite exps_t; set_solver.
 iPoseProof (exp_pred_exps a_t with "p") as "[dh_a _]".
@@ -141,9 +157,8 @@ rewrite public_TExp_iff //; do !iSplit => //.
   iPureIntro; suff -> : exps (TExp g a) = [a] by [].
   apply Permutation_singleton_r.
   rewrite (_ : TExp g a = TExpN g [a]); last by rewrite /TExpN TMulN1.
-  rewrite exps_TExpN ?exps_expN //=;
-    [by rewrite cancel_invs1
-    |by rewrite ssrbool.andbT; exact: (proj2 (is_trueP _) Nm_a)].
+  have atom_a : atomic [a] by rewrite /atomic; apply/Forall_singleton.
+  by rewrite (exps_TExpN' gXN atom_a (invs_canceled1 Nm_a)).
 - iModIntro; iIntros "#p".
   by iApply False_public; last iApply "aP1".
 Qed.
