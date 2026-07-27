@@ -177,9 +177,9 @@ elim/term_lt_ind: t1 t2 => // -[] //=.
 - move=> t11 t12 IH []; try apply _.
   move=> t21 t22.
   have IH1: Persistent (publicly_related_pre P t11 t21).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   have IH2: Persistent (publicly_related_pre P t12 t22).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   apply _.
 - move=> ? ? [] *; apply _.
 - move=> k1 t1' IH []; try apply _.
@@ -190,9 +190,9 @@ elim/term_lt_ind: t1 t2 => // -[] //=.
 - move=> k1 t1' IH []; try apply _.
   move=> k2 t2'.
   have IH1: Persistent (publicly_related_pre P k1 k2).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   have IH2: Persistent (publicly_related_pre P t1' t2').
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   apply _.
 - move=> t1' IH []; try apply _.
   move=> t2'.
@@ -208,7 +208,7 @@ Proof.
   elim/term_lt_ind: t1 t2 => // -[] //=.
   - move=> t11 t12 IH [] //= t21 t22.
     rewrite /tsize in IH.
-    f_equiv; f_equiv; f_equiv; apply: IH; rewrite /= ssrnat.addnE; lia.
+    f_equiv; f_equiv; f_equiv; apply: IH; rewrite /=; lia.
   - move=> kt1 t1' IH [] //= kt2 t2'.
     rewrite /tsize in IH.
     f_equiv; f_equiv; f_equiv.
@@ -221,7 +221,7 @@ Proof.
       f_equiv; solve_contractive.
   - move=> k1 t1' IH [] //= k2 t2'.
     rewrite /tsize in IH; f_equiv; f_equiv; f_equiv.
-    + f_equiv; apply: IH; rewrite /= ssrnat.addnE; lia.
+    + f_equiv; apply: IH; rewrite /=; lia.
     + f_equiv.
       f_equiv. solve_contractive.
       f_equiv. solve_contractive.
@@ -230,9 +230,9 @@ Proof.
       case: k2 => //= kt2 k2.
       f_equiv.
       have IH1: publicly_related_pre P t1' t2' ≡{n}≡ publicly_related_pre P' t1' t2'.
-      { apply: IH. rewrite /= ssrnat.addnE. lia. }
+      { apply: IH. rewrite /=. lia. }
       have IH2: publicly_related_pre P k1 k2 ≡{n}≡ publicly_related_pre P' k1 k2.
-      { apply: IH. rewrite /= ssrnat.addnE. lia. }
+      { apply: IH. rewrite /=. lia. }
       case: kt1 => //=; by f_equiv.
   - move=> t1' IH [] //= t2'.
     rewrite /tsize in IH.
@@ -547,10 +547,10 @@ case: t1 IH.
   move=> t2'1 t2'2.
   iIntros "#[H21 H22] #[H2'1 H2'2]".
   iAssert (▷ ⌜t21 = t2'1⌝)%I as ">->".
-  { iApply (IH t11). rewrite /tsize /= ssrnat.addnE.
+  { iApply (IH t11). rewrite /tsize /=.
     lia. all: auto. }
   iAssert (▷ ⌜t22 = t2'2⌝)%I as ">->".
-  { iApply (IH t12). rewrite /tsize /= ssrnat.addnE.
+  { iApply (IH t12). rewrite /tsize /=.
     lia. all: auto. }
   auto.
 - move=> l1 _.
@@ -621,11 +621,11 @@ case: t1 IH.
   have IH1: (∀ k2 k2', publicly_related k1 k2 -∗
                        publicly_related k1 k2' -∗
                        ▷ ⌜k2 = k2'⌝).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   have IH2: (∀ t2 t2', publicly_related t1 t2 -∗
                        publicly_related t1 t2' -∗
                        ▷ ⌜t2 = t2'⌝).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   clear IH.
   iDestruct "Ht2" as "#[[Hk2 Ht2]|[Hfrag (≈k & ≈t & #Hrest)]]";
   iDestruct "Ht2'" as "#[[Hk2' Ht2']|[Hfrag' (≈k' & ≈t' & #Hrest')]]".
@@ -720,10 +720,10 @@ case: t2 IH.
   move=> t1'1 t1'2.
   iIntros "#[H11 H12] #[H1'1 H1'2]".
   iAssert (▷ ⌜t11 = t1'1⌝)%I as ">->".
-  { iApply (IH t21). rewrite /tsize /= ssrnat.addnE.
+  { iApply (IH t21). rewrite /tsize /=.
     lia. all: auto. }
   iAssert (▷ ⌜t12 = t1'2⌝)%I as ">->".
-  { iApply (IH t22). rewrite /tsize /= ssrnat.addnE.
+  { iApply (IH t22). rewrite /tsize /=.
     lia. all: auto. }
   auto.
 - move=> l2 _.
@@ -794,11 +794,11 @@ case: t2 IH.
   have IH1: (∀ k1 k1', publicly_related k1 k2 -∗
                        publicly_related k1' k2 -∗
                        ▷ ⌜k1 = k1'⌝).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   have IH2: (∀ t1 t1', publicly_related t1 t2 -∗
                        publicly_related t1' t2 -∗
                        ▷ ⌜t1 = t1'⌝).
-  { apply IH. rewrite /tsize /= ssrnat.addnE. lia. }
+  { apply IH. rewrite /tsize /=. lia. }
   clear IH.
   iDestruct "Ht1" as "#[[Hk1 Ht1]|[Hfrag (≈k & ≈t & #Hrest)]]";
   iDestruct "Ht1'" as "#[[Hk1' Ht1']|[Hfrag' (≈k' & ≈t' & #Hrest')]]".

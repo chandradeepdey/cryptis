@@ -69,11 +69,11 @@ Lemma minted_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
 
 Lemma minted_spec_TExpN t ts :
-  ~ is_exp t -> is_true (atomic ts) -> invs_canceled ts ->
+  ~ is_exp t -> atomic ts -> invs_canceled ts ->
   minted_spec (TExpN t ts) ⊣⊢ minted_spec t ∧ [∗ list] t' ∈ ts, minted_spec t'.
 Proof.
 move => /negb_True nx atom ic.
-rewrite unlock (nonces_of_term_TExpN (proj2 (is_trueP _) nx) atom).
+rewrite unlock (nonces_of_term_TExpN nx atom).
 rewrite (cancel_invs_canceled atom ic) big_sepS_union_pers.
 by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
@@ -112,7 +112,7 @@ Proof.
 move => nx.
 have -> : TExp t1 t2 = TExpN t1 (tfactors t2) by rewrite /TExpN tfactorsK.
 rewrite (minted_spec_TExpN nx (atom_tfactors t2)
-           (proj1 (is_trueP _) (invs_canceled_tfactors t2))).
+           (invs_canceled_tfactors t2)).
 by rewrite -minted_spec_tfactors.
 Qed.
 
