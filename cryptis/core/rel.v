@@ -58,7 +58,7 @@ Definition public_rel_inv pub : iProp :=
     term_meta_spec p.2 (cryptisN.@"public_rel") ()).
 
 Definition public_rel_ctx : iProp :=
-  inv cryptisN (∃ pub, public_rel_inv pub).
+  inv (cryptisN.@"public_rel") (∃ pub, public_rel_inv pub).
 
 Definition cryptis_rel_ctx : iProp :=
   term_meta_ctx ∗ term_meta_spec_ctx ∗ public_rel_ctx.
@@ -101,23 +101,23 @@ Proof.
 Qed.
 
 Definition pnonce_rel t1 t2 : iProp :=
-  □ term_prop t1 (cryptisN.@"public_rel_pnonce") ∧
-  □ term_prop_spec t2 (cryptisN.@"public_rel_pnonce").
+  □ term_prop t1 (cryptisN.@"public_rel".@"pnonce") ∧
+  □ term_prop_spec t2 (cryptisN.@"public_rel".@"pnonce").
 
 #[global] Instance Persistent_pnonce_rel t1 t2 : Persistent (pnonce_rel t1 t2).
 Proof. apply _. Qed.
 
 Lemma pnonce_rel_alloc t1 t2 E (P : iProp) :
-  ↑cryptisN.@"public_rel_pnonce" ⊆ E →
+  ↑cryptisN.@"public_rel".@"pnonce" ⊆ E →
     term_token t1 E ∗ term_token_spec t2 E ==∗
   □ (pnonce_rel t1 t2 ↔ ▷ □ P) ∗
-    term_token t1 (E ∖ ↑cryptisN.@"public_rel_pnonce") ∗
-    term_token_spec t2 (E ∖ ↑cryptisN.@"public_rel_pnonce").
+    term_token t1 (E ∖ ↑cryptisN.@"public_rel".@"pnonce") ∗
+    term_token_spec t2 (E ∖ ↑cryptisN.@"public_rel".@"pnonce").
 Proof.
   iIntros (?) "[token token_spec]".
-  iMod (term_prop_alloc (nroot.@"cryptis".@"public_rel_pnonce") P with "token")
+  iMod (term_prop_alloc (nroot.@"cryptis".@"public_rel".@"pnonce") P with "token")
     as "[#H1 $]" => //.
-  iMod (term_prop_spec_alloc (nroot.@"cryptis".@"public_rel_pnonce") P with "token_spec")
+  iMod (term_prop_spec_alloc (nroot.@"cryptis".@"public_rel".@"pnonce") P with "token_spec")
     as "[#H2 $]" => //.
   iIntros "!> !>"; iSplit; iIntros "#H3".
   - by iDestruct "H3" as "#[H3 _]"; iSpecialize ("H1" with "H3"); eauto.
@@ -892,7 +892,7 @@ iMod term_meta_specGS_alloc as "[% #?]".
 iMod (gset_bij_own_alloc_empty (A:=term) (B:=term)) as "[%γ Hauth]".
 pose (Hpub := Public_relGS _ _ _ _ γ).
 iExists Hpub.
-iMod (inv_alloc cryptisN _ (∃ pub, public_rel_inv pub)%I with "[Hauth]") as "#Hinv".
+iMod (inv_alloc (cryptisN.@"public_rel") _ (∃ pub, public_rel_inv pub)%I with "[Hauth]") as "#Hinv".
 { iFrame. by rewrite big_sepS_empty. }
 by iFrame "#".
 Qed.

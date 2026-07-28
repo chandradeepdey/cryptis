@@ -53,7 +53,7 @@ Definition chan_rel_inv l l' : iProp Σ :=
   ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ publicly_related t t'.
 
 #[local] Lemma rel_sender (l l': loc) t t' :
-  inv cryptisN (chan_rel_inv l l') -∗
+  inv (cryptisN.@"channel_rel") (chan_rel_inv l l') -∗
   publicly_related t t' -∗
   REL (sender #l t) << (sender #l' t') : lrel_unit.
 Proof.
@@ -62,7 +62,7 @@ iLöb as "IH".
 rel_rec_l. rel_rec_r.
 rel_pures_l. rel_pures_r.
 rel_store_l_atomic.
-iInv cryptisN as "(%t1 & %t1' & (Hl & Hl' & #Hrel))" "Hclose".
+iInv (cryptisN.@"channel_rel") as "(%t1 & %t1' & (Hl & Hl' & #Hrel))" "Hclose".
 iModIntro.
 iExists t1. iFrame.
 iIntros "!> Hl".
@@ -80,7 +80,7 @@ rewrite /mk_channel_rel.
 rel_pures_l. rel_pures_r.
 rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
 rel_pures_l. rel_pures_r.
-iMod (inv_alloc cryptisN _ (chan_rel_inv l l') with "[Hl Hl']") as "#Hinv".
+iMod (inv_alloc (cryptisN.@"channel_rel") _ (chan_rel_inv l l') with "[Hl Hl']") as "#Hinv".
 iFrame. by rewrite publicly_related_TInt.
 rel_values.
 iModIntro.
@@ -96,7 +96,7 @@ iSplit.
 - iIntros (Ψ) "!> H".
   rel_pures_l. rel_pures_r.
   rel_load_l_atomic.
-  iInv cryptisN as "(%t & %t' & Hl & Hl' & #Hrel)" "Hclose".
+  iInv (cryptisN.@"channel_rel") as "(%t & %t' & Hl & Hl' & #Hrel)" "Hclose".
   iModIntro.
   iExists t.
   iFrame.
