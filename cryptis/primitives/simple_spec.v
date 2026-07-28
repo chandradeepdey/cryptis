@@ -84,21 +84,19 @@ last by move=> ?; iIntros "_"; iApply twp_list_of_term => //.
 rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
-Lemma tp_list `{!Repr A} E j (xs : list A) :
-  ↑specN ⊆ E →
-  refines_right j (list_to_expr xs) ={E}=∗
-  refines_right j (repr xs).
+Lemma rel_list_l `{!Repr A} K e (xs : list A) Ψ :
+  (REL fill K (repr xs : expr) << e : Ψ) -∗
+  REL fill K (list_to_expr xs) << e : Ψ.
+Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_list. Qed.
+
+Lemma rel_list_r `{!Repr A} K e (xs : list A) Ψ :
+  (REL e << fill K (repr xs : expr) : Ψ) -∗
+  REL e << fill K (list_to_expr xs) : Ψ.
 Proof.
-move=> HE.
-elim: xs j => [|x xs IHxs] j /=; iIntros "Hj";
-first by iPoseProof (@tp_nil A with "Hj") as ">Hj" => //=.
-tp_bind j (list_to_expr _).
-rewrite refines_right_bind.
-set j' := RefId _ _.
-iPoseProof (IHxs with "Hj") as ">Hj".
-rewrite -refines_right_bind /=.
-clear j'.
-iPoseProof (tp_cons with "Hj") as ">Hj" => //=.
+elim: xs K => [|x xs IH] /= K; iIntros "H".
+  by rel_apply_r rel_nil_r.
+rel_bind_r (list_to_expr _); iApply IH.
+by rel_apply_r rel_cons_r.
 Qed.
 
 Lemma tp_tag E j (N : term) t :
@@ -123,15 +121,17 @@ last by move=> ?; iIntros "_"; iApply twp_untag => //.
 rewrite andb_True; split; apply term_pure.
 Qed.
 
-Lemma tp_key kt E j (k : term) :
-  ↑specN ⊆ E →
-  refines_right j (key kt k) ={E}=∗
-  refines_right j (TKey kt k : val).
+Lemma rel_key_l K e kt (k : term) Ψ :
+  (REL fill K (TKey kt k : expr) << e : Ψ) -∗
+  REL fill K (key kt k) << e : Ψ.
+Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_key. Qed.
+
+Lemma rel_key_r K e kt (k : term) Ψ :
+  (REL e << fill K (TKey kt k : expr) : Ψ) -∗
+  REL e << fill K (key kt k) : Ψ.
 Proof.
-move=> HE.
-iApply pure_twp_tp => //=;
-last by move=> ?; iIntros "_"; iApply twp_key => //.
-apply term_pure.
+rewrite val_of_term_unseal /=.
+by iIntros "post"; rel_rec_r; rel_pures_r.
 Qed.
 
 Lemma tp_seal E j t1 t2 :
@@ -156,51 +156,62 @@ last by move=> ?; iIntros "_"; iApply twp_hash => //.
 apply term_pure.
 Qed.
 
-Lemma tp_derive_aenc_key E j t :
-  ↑specN ⊆ E →
-  refines_right j (derive_aenc_key t) ={E}=∗
-  refines_right j (AEncKey t : term).
+Lemma rel_derive_aenc_key_l K e t Ψ :
+  ▷ (REL fill K (AEncKey t : expr) << e : Ψ) -∗
+  REL fill K (derive_aenc_key t) << e : Ψ.
+Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_aenc_key. Qed.
+
+Lemma rel_derive_aenc_key_r K e t Ψ :
+  (REL e << fill K (AEncKey t : expr) : Ψ) -∗
+  REL e << fill K (derive_aenc_key t) : Ψ.
 Proof.
-move=> HE.
-iIntros "Hj".
-tp_lam j.
-iPoseProof (tp_key with "Hj") as ">Hj" => //.
-by have <- : AEncKey t = TKey ADec t :> term by rewrite [term_of_aenc_key]unlock.
+iIntros "post". rel_rec_r. rel_apply_r rel_key_r.
+have <- : AEncKey t = TKey ADec t :> term by rewrite [term_of_aenc_key]unlock.
+by iApply "post".
 Qed.
 
-Lemma tp_derive_senc_key E j t :
-  ↑specN ⊆ E →
-  refines_right j (derive_senc_key t) ={E}=∗
-  refines_right j (SEncKey t : term).
+Lemma rel_derive_senc_key_l K e t Ψ :
+  ▷ (REL fill K (SEncKey t : expr) << e : Ψ) -∗
+  REL fill K (derive_senc_key t) << e : Ψ.
+Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_senc_key. Qed.
+
+Lemma rel_derive_senc_key_r K e t Ψ :
+  (REL e << fill K (SEncKey t : expr) : Ψ) -∗
+  REL e << fill K (derive_senc_key t) : Ψ.
 Proof.
-move=> HE.
-iIntros "Hj".
-tp_lam j.
-iPoseProof (tp_key with "Hj") as ">Hj" => //.
-by have <- : SEncKey t = TKey SEnc t :> term by rewrite [term_of_senc_key]unlock.
+iIntros "post". rel_rec_r. rel_apply_r rel_key_r.
+have <- : SEncKey t = TKey SEnc t :> term by rewrite [term_of_senc_key]unlock.
+by iApply "post".
 Qed.
 
-Lemma tp_derive_sign_key E j t :
-  ↑specN ⊆ E →
-  refines_right j (derive_sign_key t) ={E}=∗
-  refines_right j (SignKey t : term).
+Lemma rel_derive_sign_key_l K e t Ψ :
+  ▷ (REL fill K (SignKey t : expr) << e : Ψ) -∗
+  REL fill K (derive_sign_key t) << e : Ψ.
+Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_sign_key. Qed.
+
+Lemma rel_derive_sign_key_r K e t Ψ :
+  (REL e << fill K (SignKey t : expr) : Ψ) -∗
+  REL e << fill K (derive_sign_key t) : Ψ.
 Proof.
-move=> HE.
-iIntros "Hj".
-tp_lam j.
-iPoseProof (tp_key with "Hj") as ">Hj" => //.
-by have <- : SignKey t = TKey Sign t :> term by rewrite [term_of_sign_key]unlock.
+iIntros "post". rel_rec_r. rel_apply_r rel_key_r.
+have <- : SignKey t = TKey Sign t :> term by rewrite [term_of_sign_key]unlock.
+by iApply "post".
 Qed.
 
-Lemma tp_to_key E j t :
-  ↑specN ⊆ E →
-  refines_right j (to_key t) ={E}=∗
-  refines_right j (repr (Spec.to_key t)).
+Lemma rel_to_key_l K e t Ψ :
+  (REL fill K (repr (Spec.to_key t) : expr) << e : Ψ) -∗
+  REL fill K (to_key t) << e : Ψ.
+Proof. iIntros "?". by iApply refines_wp_l; iApply twp_wp; wp_apply twp_to_key. Qed.
+
+Lemma rel_to_key_r K e t Ψ :
+  (REL e << fill K (repr (Spec.to_key t) : expr) : Ψ) -∗
+  REL e << fill K (to_key t) : Ψ.
 Proof.
-move=> HE.
-iApply pure_twp_tp => //=;
-last by move=> ?; iIntros "_"; iApply twp_to_key => //.
-apply term_pure.
+iIntros "H".
+rewrite /repr /repr_option /repr /repr_prod.
+rewrite /repr /repr_term !val_of_term_unseal.
+case: t => [n|t1 t2|a|kt k|k m|h|pt wf nf]; try by rel_rec_r; rel_pures_r.
+by case: pt wf nf => [o|[kt2||] operand|[||] b e'|ts] wf nf //=; rel_rec_r; rel_pures_r.
 Qed.
 
 Lemma tp_open_key E j t :
@@ -357,28 +368,17 @@ Qed.
 Lemma rel_pkey_l K (k: term) (e: expr) Ψ :
   (REL fill K (Spec.pkey k : expr) << e : Ψ) -∗
   REL fill K (pkey k) << e : Ψ.
-Proof.
-iIntros "H". iApply refines_wp_l.
-by wp_apply wp_pkey=> /=.
-Qed.
+Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_pkey. Qed.
 
 Lemma rel_pkey_r K (k: term) (e: expr) Ψ :
   (REL e << fill K (Spec.pkey k : expr) : Ψ) -∗
   REL e << fill K (pkey k) : Ψ.
 Proof.
-iIntros "H". iApply refines_step_r.
-iIntros (j) "Hj".
-iPoseProof (tp_pkey with "Hj") as ">Hj"=> //.
-by iFrame.
-Qed.
-
-Lemma rel_pkey (k k': term) (Ψ: val → val → iProp Σ) :
-  Ψ (Spec.pkey k) (Spec.pkey k') -∗
-  REL pkey k << pkey k' : Ψ.
-Proof.
-iIntros "Ψ".
-rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
-rel_values.
+iIntros "H"; rewrite /Spec.pkey.
+rel_rec_r; rel_apply_r rel_to_key_r.
+case: k; try by move=> *; rel_pures_r.
+move=> kt t; rel_pures_r.
+by case: kt; rel_pures_r; try rel_apply_r rel_key_r.
 Qed.
 
 Lemma tp_is_key E j t :
