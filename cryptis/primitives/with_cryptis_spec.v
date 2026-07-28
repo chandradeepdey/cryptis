@@ -198,8 +198,7 @@ rel_pures_l. rel_apply_l (rel_mk_nonce_l _ _ (λ t, {[(AEncKey t) : term]}))=> /
   iModIntro. by iSplit; iIntros "?". }
 iIntros (t) "%Hnonce #Hmint Htt".
 rewrite big_sepS_singleton.
-rel_pures_l. iApply refines_wp_l.
-wp_apply wp_derive_aenc_key.
+rel_pures_l. rel_apply_l rel_derive_aenc_key_l.
 iApply "mint" => //. by iApply minted_aenc.
 Qed.
 
@@ -214,9 +213,8 @@ rel_pures_r. rel_apply_r (rel_mk_nonce_r _ _ (λ t, {[(AEncKey t) : term]}))=> /
 { iIntros "%t". rewrite [term_of_aenc_key]unlock big_sepS_singleton minted_spec_TKey.
   iModIntro. by iSplit; iIntros "?". }
 iIntros (t) "%Hnonce #Hmint Htts".
-rel_pures_r. iApply refines_step_r. iIntros (j) "Hj".
-iPoseProof (tp_derive_aenc_key with "Hj") as ">Hj" => //=.
-rewrite big_sepS_singleton. iFrame.
+rel_pures_r. rel_apply_r rel_derive_aenc_key_r.
+rewrite big_sepS_singleton.
 iApply "mint"=> //. by iApply minted_spec_aenc.
 Qed.
 
@@ -232,8 +230,7 @@ rel_pures_l. rel_apply_l (rel_mk_nonce_l _ _ (λ t, {[(SignKey t) : term]}))=> /
   iModIntro. by iSplit; iIntros "?". }
 iIntros (t) " %Hnonce #Hmint Htt".
 rewrite big_sepS_singleton.
-rel_pures_l. iApply refines_wp_l.
-wp_apply wp_derive_sign_key.
+rel_pures_l. rel_apply_l rel_derive_sign_key_l.
 iApply "mint" => //. by iApply minted_sign.
 Qed.
 
@@ -248,9 +245,8 @@ rel_pures_r. rel_apply_r (rel_mk_nonce_r _ _ (λ t, {[(SignKey t) : term]}))=> /
 { iIntros "%t". rewrite [term_of_sign_key]unlock big_sepS_singleton minted_spec_TKey.
   iModIntro. by iSplit; iIntros "?". }
 iIntros (t) "%Hnonce #Hmint Htts".
-rel_pures_r. iApply refines_step_r. iIntros (j) "Hj".
-iPoseProof (tp_derive_sign_key with "Hj") as ">Hj" => //=.
-rewrite big_sepS_singleton. iFrame.
+rel_pures_r. rel_apply_r rel_derive_sign_key_r.
+rewrite big_sepS_singleton.
 iApply "mint"=> //. by iApply minted_spec_sign.
 Qed.
 
@@ -266,8 +262,7 @@ rel_pures_l. rel_apply_l (rel_mk_nonce_l _ _ (λ t, {[(SEncKey t) : term]}))=> /
   iModIntro. by iSplit; iIntros "?". }
 iIntros (t) "%Hnonce #Hmint Htt".
 rewrite big_sepS_singleton.
-rel_pures_l. iApply refines_wp_l.
-wp_apply wp_derive_senc_key.
+rel_pures_l. rel_apply_l rel_derive_senc_key_l.
 iApply "mint"=> //. by iApply minted_senc.
 Qed.
 
@@ -282,9 +277,8 @@ rel_pures_r. rel_apply_r (rel_mk_nonce_r _ _ (λ t, {[(SEncKey t) : term]}))=> /
 { iIntros "%t". rewrite [term_of_senc_key]unlock big_sepS_singleton minted_spec_TKey.
   iModIntro. by iSplit; iIntros "?". }
 iIntros (t) "%Hnonce #Hmint Htts".
-rel_pures_r. iApply refines_step_r. iIntros (j) "Hj".
-iPoseProof (tp_derive_senc_key with "Hj") as ">Hj" => //=.
-rewrite big_sepS_singleton. iFrame.
+rel_pures_r. rel_apply_r rel_derive_senc_key_r.
+rewrite big_sepS_singleton.
 iApply "mint"=> //. by iApply minted_spec_senc.
 Qed.
 
