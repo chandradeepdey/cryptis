@@ -282,6 +282,28 @@ rewrite big_sepS_singleton.
 iApply "mint"=> //. by iApply minted_spec_senc.
 Qed.
 
+Lemma rel_aenc_l E K e (sk : aenc_key) N t Ψ :
+  (∀ m, ⌜m = Spec.enc (Spec.pkey sk) (Tag N) t⌝ -∗
+    REL fill K (m : expr) << e @ E : Ψ) -∗
+  REL fill K (aenc (Spec.pkey sk) (Tag N) t) << e @ E : Ψ.
+Proof.
+iIntros "post".
+rel_rec_l. rel_pures_l. rel_apply_l rel_enc_l.
+by iApply "post".
+Qed.
+
+Lemma rel_aenc_r E K e (sk : aenc_key) N t Ψ :
+  ↑specN ⊆ E →
+  (∀ m, ⌜m = Spec.enc (Spec.pkey sk) (Tag N) t⌝ -∗
+    REL e << fill K (m : expr) @ E : Ψ) -∗
+  REL e << fill K (aenc (Spec.pkey sk) (Tag N) t) @ E : Ψ.
+Proof.
+move=> ?.
+iIntros "post".
+rel_rec_r. rel_pures_r. rel_apply_r rel_enc_r.
+by iApply "post".
+Qed.
+
 End Proofs.
 
 Arguments channel_rel {Σ _ _}.

@@ -59,13 +59,25 @@ last by move=> ?; iIntros "_"; iApply twp_untuple => //.
 apply term_pure.
 Qed.
 
-Lemma tp_term_of_list E j ts :
-  ↑specN ⊆ E →
-  refines_right j (term_of_list (repr ts)) ={E}=∗
-  refines_right j (repr (Spec.of_list ts)).
+Lemma rel_term_of_list_l E K e ts Ψ :
+  (REL fill K (repr (Spec.of_list ts) : expr) << e @ E : Ψ) -∗
+  REL fill K (term_of_list (repr ts)) << e @ E : Ψ.
 Proof.
-move=> HE.
-iApply pure_twp_tp => //=;
+iApply pure_twp_rel_l => //=;
+last by move=> ?; iIntros "_"; iApply twp_term_of_list => //.
+rewrite !andb_True; repeat split; first by apply term_pure.
+elim: ts => [| t ts' IHts']; rewrite repr_list_unseal => //=.
+rewrite andb_True; split; first by apply term_pure.
+by rewrite -repr_list_unseal.
+Qed.
+
+Lemma rel_term_of_list_r E K e ts Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (repr (Spec.of_list ts) : expr) @ E : Ψ) -∗
+  REL e << fill K (term_of_list (repr ts)) @ E : Ψ.
+Proof.
+move=> ?.
+iApply pure_twp_rel_r => //=;
 last by move=> ?; iIntros "_"; iApply twp_term_of_list => //.
 rewrite !andb_True; repeat split; first by apply term_pure.
 elim: ts => [| t ts' IHts']; rewrite repr_list_unseal => //=.
@@ -236,13 +248,22 @@ last by move=> ?; iIntros "_"; iApply twp_open => //.
 rewrite andb_True; split; apply term_pure.
 Qed.
 
-Lemma tp_enc E j (k N : term) t :
-  ↑specN ⊆ E →
-  refines_right j (enc k N t) ={E}=∗
-  refines_right j (Spec.enc k N t).
+Lemma rel_enc_l E K e k N t Ψ :
+  (REL fill K (Spec.enc k N t : expr) << e @ E : Ψ) -∗
+  REL fill K (enc k N t) << e @ E : Ψ.
 Proof.
-move=> HE.
-iApply pure_twp_tp => //=;
+iApply pure_twp_rel_l=> //=;
+last by move=> ?; iIntros "_"; iApply twp_enc => //.
+rewrite !andb_True; repeat split; by apply term_pure.
+Qed.
+
+Lemma rel_enc_r E K e k N t Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
+  REL e << fill K (enc k N t) @ E : Ψ.
+Proof.
+move=> ?.
+iApply pure_twp_rel_r=> //=;
 last by move=> ?; iIntros "_"; iApply twp_enc => //.
 rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
