@@ -93,10 +93,25 @@ rel_pures_l. rel_pures_r.
 rel_apply_l rel_nondet_bool_l. iIntros ([]).
 - rel_apply_r (rel_nondet_bool_r _ _ false).
   rel_pures_l. rel_pures_r.
+  set K := [AppRCtx (send c);
+  AppRCtx
+  (λ: <>,
+  let: "b'" := recv c in
+  let: "b'" := eq_term (TInt 1) "b'" in (#true, "b'"))].
+  set e := (send c'
+  (aenc (Spec.pkey skA') (Tag (N.@"m"))
+  (term_of_list (nonce' :: msg_1' :: InjLV #())));;
+  let: "b'" := recv c' in let: "b'" := eq_term (TInt 1) "b'" in
+  (#false, "b'"))%E.
+  set Ψ := (λ p1 p2 : val,
+  ⌜∃ b1 b'1 b2 b'2 : bool,
+  p1 = (#b1, #b'1)%V ∧ p2 = (#b2, #b'2)%V ∧ (b = b1
+  → b ≠ b2 ∧ b'1 = b'2)⌝)%I.
+  set t := (term_of_list (nonce :: msg_0 :: InjLV #())%E).
+  (* rel_apply_l rel_term_of_list_l. ?? *)
+  rel_apply_l (rel_aenc_l ⊤ K e skA (N.@"m") _ Ψ).
   admit.
 - rel_apply_r (rel_nondet_bool_r _ _ true).
   rel_pures_l. rel_pures_r.
   admit.
 Admitted.
-
-End CPA.
