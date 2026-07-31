@@ -17,6 +17,7 @@ Proof.
   { by case: Hproph_map. }
 Qed.
 
+#[deprecated(note = "remove after translating everything to REL")]
 Lemma pure_twp_tp Σ E j e (v: val) :
   pure_expr e →
   (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
@@ -35,6 +36,41 @@ Proof.
   apply rtc_nsteps in Hev' as (n & Hev').
   have H2: PureExec True n e v by rewrite /PureExec //.
   iApply step_pure=> //.
+Qed.
+
+Lemma pure_twp_rel_l Σ E K e t A (v: val) :
+  pure_expr e →
+  (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
+  ∀ `{!relocG Σ},
+  (REL fill K (v : expr) << t @ E : A)
+  ⊢ REL fill K e << t @ E : A.
+Proof.
+move=> Hpure Hinv ?.
+have H := adequacy.heap_twp_pure_exec _ _ _ Hpure Hinv.
+have heapGpreS0: heapGpreS Σ by apply heapGS_heapGpreS; apply _.
+apply H in heapGpreS0 as (v' & Hev' & ->).
+clear Hinv H.
+apply rtc_nsteps in Hev' as (n & Hev').
+apply (refines_masked_l _ n _ _ _ _ _ True)=> //.
+by rewrite /PureExec.
+Qed.
+
+Lemma pure_twp_rel_r Σ E K e t A (v: val) :
+  pure_expr e →
+  (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
+  ∀ `{!relocG Σ},
+  ↑specN ⊆ E →
+  (REL t << fill K (v : expr) @ E : A)
+  ⊢ REL t << fill K e @ E : A.
+Proof.
+move=> Hpure Hinv ? HE.
+have H := adequacy.heap_twp_pure_exec _ _ _ Hpure Hinv.
+have heapGpreS0: heapGpreS Σ by apply heapGS_heapGpreS; apply _.
+apply H in heapGpreS0 as (v' & Hev' & ->).
+clear Hinv H.
+apply rtc_nsteps in Hev' as (n & Hev').
+apply (refines_pure_r _ _ _ _ _ _ n HE True)=> //.
+by rewrite /PureExec.
 Qed.
 
 Section NonDetProofs.
