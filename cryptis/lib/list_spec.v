@@ -7,18 +7,23 @@ Context `{!Repr A, !Repr B, !relocG Σ}.
 
 Implicit Types (x : A) (xs : list A).
 
-Lemma rel_get_list_l K e (l: list A) (n: nat) Ψ :
-  (REL fill K (repr (l !! n)%stdpp : expr) << e : Ψ) -∗
-  REL fill K (repr l !! #n) << e : Ψ.
+Lemma rel_get_list_l E K e (l: list A) (n: nat) Ψ :
+  (REL fill K (repr (l !! n)%stdpp : expr) << e @ E : Ψ) -∗
+  REL fill K (repr l !! #n) << e @ E : Ψ.
 Proof.
-iIntros "H".
-by iApply refines_wp_l; wp_apply wp_get_list.
+rewrite /= repr_list_unseal.
+elim: n l => [|n IH] [|x l] /=; iIntros "H";
+rel_rec_l; rel_pures_l; eauto.
+rewrite (_ : (S n - 1)%Z = n); try lia.
+by iApply IH.
 Qed.
 
-Lemma rel_get_list_r K e (l: list A) (n: nat) Ψ :
-  (REL e << fill K (repr (l !! n)%stdpp : expr) : Ψ) -∗
-  REL e << fill K (repr l !! #n) : Ψ.
+Lemma rel_get_list_r E K e (l: list A) (n: nat) Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (repr (l !! n)%stdpp : expr) @ E : Ψ) -∗
+  REL e << fill K (repr l !! #n) @ E : Ψ.
 Proof.
+move=> ?.
 rewrite /= repr_list_unseal.
 elim: n l => [|n IH] [|x l] /=; iIntros "H";
 rel_rec_r; rel_pures_r; eauto.
@@ -26,74 +31,71 @@ rewrite (_ : (S n - 1)%Z = n); try lia.
 by iApply IH.
 Qed.
 
-Lemma rel_nil_l K e Ψ :
-  (REL fill K (repr (@nil A) : expr) << e : Ψ) -∗
-  REL fill K (Val []%V) << e : Ψ .
-Proof. iIntros "?". by iApply refines_wp_l; wp_apply (@wp_nil A). Qed.
+Lemma rel_nil_l E K e Ψ :
+  (REL fill K (repr (@nil A) : expr) << e @ E : Ψ) -∗
+  REL fill K (Val []%V) << e @ E : Ψ .
+Proof. by rewrite /NILV /= repr_list_unseal; iIntros "?"; rel_pures_l. Qed.
 
-Lemma rel_nil_r K e Ψ :
-  (REL e << fill K (repr (@nil A) : expr) : Ψ) -∗
-  REL e << fill K (Val []%V) : Ψ .
+Lemma rel_nil_r E K e Ψ :
+  (REL e << fill K (repr (@nil A) : expr) @ E : Ψ) -∗
+  REL e << fill K (Val []%V) @ E : Ψ .
 Proof. by rewrite /NILV /= repr_list_unseal; iIntros "?"; rel_pures_r. Qed.
 
-Lemma rel_cons_l K e x xs Ψ :
-  (REL fill K (repr (x :: xs)%list : expr) << e : Ψ) -∗
-  REL fill K (repr x :: repr xs) << e : Ψ.
-Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_cons. Qed.
+Lemma rel_cons_l E K e x xs Ψ :
+  (REL fill K (repr (x :: xs)%list : expr) << e @ E : Ψ) -∗
+  REL fill K (repr x :: repr xs) << e @ E : Ψ.
+Proof. by rewrite /= repr_list_unseal; iIntros "?"; rewrite /CONS; rel_pures_l. Qed.
 
-Lemma rel_cons_r K e x xs Ψ :
-  (REL e << fill K (repr (x :: xs)%list : expr) : Ψ) -∗
-  REL e << fill K (repr x :: repr xs) : Ψ.
-Proof. by rewrite /= repr_list_unseal; iIntros "?"; rewrite /CONS; rel_pures_r. Qed.
-
-Lemma rel_eq_list_l `{EqDecision A} K e (f : val) (l1 l2 : list A) Ψ :
-  (∀ (x1 x2 : A) E Ψ,
-      x1 ∈ l1 →
-      Ψ #(bool_decide (x1 = x2)) -∗
-      WP f (repr x1) (repr x2) @ E [{ Ψ }]) →
-  (REL fill K (#(bool_decide (l1 = l2)) : expr) << e : Ψ) -∗
-  REL fill K (eq_list f (repr l1) (repr l2)) << e : Ψ.
+Lemma rel_cons_r E K e x xs Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (repr (x :: xs)%list : expr) @ E : Ψ) -∗
+  REL e << fill K (repr x :: repr xs) @ E : Ψ.
 Proof.
-iIntros (H) "?". iApply refines_wp_l.
-iApply twp_wp; wp_apply twp_eq_list; eauto.
+move=> ?.
+by rewrite /= repr_list_unseal; iIntros "?"; rewrite /CONS; rel_pures_r.
 Qed.
 
-#[local] Lemma tp_eq_list `{EqDecision A} E j (f : val) (l1 l2 : list A) :
-  ↑specN ⊆ E →
-  (∀ (x1 x2 : A) j',
+Lemma rel_eq_list_l `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
+  (∀ E K e (x1 x2 : A) Ψ,
       x1 ∈ l1 →
-      refines_right j' (f (repr x1) (repr x2)) -∗
-      |={E}=> refines_right j' #(bool_decide (x1 = x2))) →
-  refines_right j (eq_list f (repr l1) (repr l2)) -∗
-  |={E}=> refines_right j #(bool_decide (l1 = l2)).
+      (REL fill K (#(bool_decide (x1 = x2)) : expr) << e @ E : Ψ) -∗
+      REL fill K (f (repr x1) (repr x2)) << e @ E : Ψ) →
+  (REL fill K (#(bool_decide (l1 = l2)) : expr) << e @ E : Ψ) -∗
+  REL fill K (eq_list f (repr l1) (repr l2)) << e @ E : Ψ.
 Proof.
-move=> HE Hf.
 rewrite repr_list_unseal /=.
-elim: l1 l2 => [|x1 l1 IH] [|x2 l2] /= in Hf *; iIntros "Hj";
-  tp_rec j; tp_pures j; do 1?by iApply "Hj".
-tp_bind j (f _ _).
-rewrite refines_right_bind.
-iPoseProof (Hf with "Hj") as ">Hj"; try set_solver.
-rewrite -refines_right_bind /=.
-case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2]; tp_pures j; last first.
-  rewrite bool_decide_decide decide_False //; congruence.
-iPoseProof (IH with "Hj") as ">Hj"; first by move=> *; iApply Hf; set_solver.
+elim: l1 l2 Ψ => [|x1 l1 IH] [|x2 l2] Ψ rel_f_l /=;
+  iIntros "post" ; rel_rec_l; rel_pures_l; do 1?by iApply "post".
+rel_bind_l (f _ _). iApply (rel_f_l _ _ _ x1 x2); first by set_solver.
+case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2] /=; rel_pures_l; last first.
+  rewrite bool_decide_decide decide_False; by [iApply "post"|congruence].
+iApply IH; first by move=> *; iApply rel_f_l; set_solver.
 case: (bool_decide_reflect (l1 = l2)) => [->|n_l1l2].
 - by rewrite bool_decide_decide decide_True.
 - by rewrite bool_decide_decide decide_False //; congruence.
 Qed.
 
-Lemma rel_eq_list_r `{EqDecision A} K e (f : val) (l1 l2 : list A) Ψ :
-  (∀ (x1 x2 : A) E j,
+Lemma rel_eq_list_r `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
+  ↑specN ⊆ E →
+  (∀ E K e (x1 x2 : A),
+      ↑specN ⊆ E →
       x1 ∈ l1 →
-      refines_right j (f (repr x1) (repr x2)) -∗
-      |={E}=> refines_right j #(bool_decide (x1 = x2))) →
-  (REL e << fill K (#(bool_decide (l1 = l2)) : expr) : Ψ) -∗
-  REL e << fill K (eq_list f (repr l1) (repr l2)) : Ψ.
+      (REL e << fill K (#(bool_decide (x1 = x2)) : expr) @ E : Ψ) -∗
+      REL e << fill K (f (repr x1) (repr x2)) @ E : Ψ) →
+  (REL e << fill K (#(bool_decide (l1 = l2)) : expr) @ E : Ψ) -∗
+  REL e << fill K (eq_list f (repr l1) (repr l2)) @ E : Ψ.
 Proof.
-iIntros (?) "?". iApply refines_step_r.
-iIntros (j) "Hj". iPoseProof (tp_eq_list with "Hj") as ">Hj"; eauto.
-by iFrame.
+move=> HE.
+rewrite repr_list_unseal /=.
+elim: l1 l2 Ψ => [|x1 l1 IH] [|x2 l2] Ψ rel_f_r /=;
+  iIntros "post" ; rel_rec_r; rel_pures_r; do 1?by iApply "post".
+rel_bind_r (f _ _). iApply (rel_f_r _ _ _ x1 x2 HE); first by set_solver.
+case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2] /=; rel_pures_r; last first.
+  rewrite bool_decide_decide decide_False; by [iApply "post"|congruence].
+iApply IH; first by move=> *; iApply rel_f_r; set_solver.
+case: (bool_decide_reflect (l1 = l2)) => [->|n_l1l2].
+- by rewrite bool_decide_decide decide_True.
+- by rewrite bool_decide_decide decide_False //; congruence.
 Qed.
 
 Lemma tp_scan_list `{Repr A} E j φ ψ (f : val) (l : list A) :
