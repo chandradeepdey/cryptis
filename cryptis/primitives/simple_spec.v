@@ -96,15 +96,22 @@ last by move=> ?; iIntros "_"; iApply twp_list_of_term => //.
 rewrite !andb_True; repeat split; by apply term_pure.
 Qed.
 
-Lemma rel_list_l `{!Repr A} K e (xs : list A) Ψ :
-  (REL fill K (repr xs : expr) << e : Ψ) -∗
-  REL fill K (list_to_expr xs) << e : Ψ.
-Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_list. Qed.
-
-Lemma rel_list_r `{!Repr A} K e (xs : list A) Ψ :
-  (REL e << fill K (repr xs : expr) : Ψ) -∗
-  REL e << fill K (list_to_expr xs) : Ψ.
+Lemma rel_list_l `{!Repr A} E K e (xs : list A) Ψ :
+  (REL fill K (repr xs : expr) << e @ E : Ψ) -∗
+  REL fill K (list_to_expr xs) << e @ E : Ψ.
 Proof.
+elim: xs K => [|x xs IH] /= K; iIntros "post".
+  by rel_apply_l rel_nil_l.
+rel_bind_l (list_to_expr _); iApply IH.
+by rel_apply_l rel_cons_l.
+Qed.
+
+Lemma rel_list_r `{!Repr A} E K e (xs : list A) Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (repr xs : expr) @ E : Ψ) -∗
+  REL e << fill K (list_to_expr xs) @ E : Ψ.
+Proof.
+move=> ?.
 elim: xs K => [|x xs IH] /= K; iIntros "H".
   by rel_apply_r rel_nil_r.
 rel_bind_r (list_to_expr _); iApply IH.
