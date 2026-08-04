@@ -70,7 +70,7 @@ Proof. split; last apply _. by iIntros "#[H _]". Qed.
 Proof. split; last apply _. by iIntros "#[_ [H _]]". Qed.
 
 Lemma public_rel_extend E t t' :
-  ↑cryptisN ⊆ E →
+  ↑cryptisN.@"public_rel" ⊆ E →
   cryptis_rel_ctx -∗
   term_token t (↑cryptisN.@"public_rel") -∗
   term_token_spec t' (↑cryptisN.@"public_rel") -∗
