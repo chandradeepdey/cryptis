@@ -474,6 +474,31 @@ case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
   by iDestruct "Hk" as "[??]".
 Qed.
 
+Lemma publicly_related_Tag N1 N2 : PUB⟨Tag N1, Tag N2⟩ ⊣⊢ ⌜N1 = N2⌝.
+Proof.
+rewrite Tag_unseal publicly_related_TInt. iSplit.
+- iIntros "%H". injection H as H. by apply encode_inj in H.
+- iIntros "->". done.
+Qed.
+
+Lemma publicly_related_Tag_term N1 (N2 : term) :
+  PUB⟨Tag N1, N2⟩ -∗
+  ⌜N2 = Tag N1⌝.
+Proof.
+iIntros "#H".
+rewrite Tag_unseal /Tag_def.
+by iPoseProof (publicly_related_TInt_term with "H") as "->".
+Qed.
+
+Lemma publicly_related_term_Tag (N1 : term) N2 :
+  PUB⟨N1, Tag N2⟩ -∗
+  ⌜N1 = Tag N2⌝.
+Proof.
+iIntros "#H".
+rewrite Tag_unseal /Tag_def.
+by iPoseProof (publicly_related_term_TInt with "H") as "->".
+Qed.
+
 Lemma publicly_related_tag N1 N2 t1 t2 :
   PUB⟨Spec.tag (Tag N1) t1, Spec.tag (Tag N2) t2⟩ ⊣⊢
   ⌜N1 = N2⌝ ∧ PUB⟨t1, t2⟩.
@@ -481,18 +506,13 @@ Proof.
 iSplit.
 - iIntros "#H".
   rewrite Spec.tag_unseal /Spec.tag_def.
-  rewrite publicly_related_TPair.
-  iDestruct "H" as "[H1 H2]".
-  iSplit; eauto.
-  rewrite Tag_unseal /Tag_def publicly_related_TInt.
-  iDestruct "H1" as "%H".
-  iPureIntro.
-  injection H as H. by apply encode_inj in H.
+  rewrite publicly_related_TPair publicly_related_Tag.
+  iDestruct "H" as "[-> H]".
+  by iFrame "#".
 - iIntros "[-> #H]".
   rewrite Spec.tag_unseal /Spec.tag_def.
-  rewrite publicly_related_TPair.
-  iSplit; eauto.
-  by rewrite Tag_unseal /Tag_def publicly_related_TInt.
+  rewrite publicly_related_TPair publicly_related_Tag.
+  by iFrame "#".
 Qed.
 
 Lemma publicly_related_tag_term N t1 (t2 : term) :
@@ -504,9 +524,8 @@ rewrite Spec.tag_unseal /Spec.tag_def.
 iPoseProof (publicly_related_TPair_term with "H") as "(%t21 & %t22 & ->)".
 rewrite publicly_related_TPair.
 iDestruct "H" as "[H1 H2]".
-rewrite Tag_unseal /Tag_def.
-iPoseProof (publicly_related_TInt_term with "H1") as "->".
-eauto.
+iPoseProof (publicly_related_Tag_term with "H1") as "->".
+by iExists t22.
 Qed.
 
 Lemma publicly_related_term_tag (t1 : term) N t2 :
@@ -518,12 +537,11 @@ rewrite Spec.tag_unseal /Spec.tag_def.
 iPoseProof (publicly_related_term_TPair with "H") as "(%t11 & %t12 & ->)".
 rewrite publicly_related_TPair.
 iDestruct "H" as "[H1 H2]".
-rewrite Tag_unseal /Tag_def.
-iPoseProof (publicly_related_term_TInt with "H1") as "->".
-eauto.
+iPoseProof (publicly_related_term_Tag with "H1") as "->".
+by iExists t12.
 Qed.
 
-Lemma publicly_related_aenc_key_seed (k1 k2 : aenc_key) :
+Lemma publicly_related_adec_key' (k1 k2 : aenc_key) :
   PUB⟨k1, k2⟩ ⊣⊢
   PUB⟨seed_of_aenc_key k1, seed_of_aenc_key k2⟩.
 Proof.
@@ -556,7 +574,7 @@ iDestruct "H" as "(-> & _)".
 by iExists (AEncKey k1).
 Qed.
 
-Lemma publicly_related_later_aenc_key_seed (k1 k2 : aenc_key) :
+Lemma publicly_related_later_adec_key' (k1 k2 : aenc_key) :
   PUB▷⟨k1, k2⟩ ⊣⊢
   PUB▷⟨seed_of_aenc_key k1, seed_of_aenc_key k2⟩.
 Proof.
@@ -565,30 +583,30 @@ f_equiv; f_equiv; iSplit.
 - iIntros "H %k2' #Hpub".
   pose k2'' := AEncKey k2'.
   rewrite -[k2']/(seed_of_aenc_key k2'').
-  rewrite -publicly_related_aenc_key_seed.
+  rewrite -publicly_related_adec_key'.
   iMod ("H" with "Hpub") as "%H".
   apply term_of_aenc_key_inj in H.
   by rewrite H.
 - iIntros "H %k2' #Hpub".
   iMod (publicly_related_aenc_key_term with "Hpub") as "(%k2'' & ->)".
-  rewrite publicly_related_aenc_key_seed.
+  rewrite publicly_related_adec_key'.
   iMod ("H" with "Hpub") as "%H".
   by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
 - iIntros "H %k1' #Hpub".
   pose k1'' := AEncKey k1'.
   rewrite -[k1']/(seed_of_aenc_key k1'').
-  rewrite -publicly_related_aenc_key_seed.
+  rewrite -publicly_related_adec_key'.
   iMod ("H" with "Hpub") as "%H".
   apply term_of_aenc_key_inj in H.
   by rewrite H.
 - iIntros "H %k1' #Hpub".
   iMod (publicly_related_term_aenc_key with "Hpub") as "(%k1'' & ->)".
-  rewrite publicly_related_aenc_key_seed.
+  rewrite publicly_related_adec_key'.
   iMod ("H" with "Hpub") as "%H".
   by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
 Qed.
 
-Lemma publicly_related_aenc_key_pkey (k1 k2 : aenc_key) :
+Lemma publicly_related_aenc_key (k1 k2 : aenc_key) :
   PUB⟨Spec.pkey k1, Spec.pkey k2⟩ ⊣⊢
   PUB⟨k1, k2⟩ ∨
   (minted k1 ∧ minted_spec k2 ∧
@@ -600,7 +618,7 @@ iSplit.
   iIntros "#(_ & [?|(? & ? & ? & ?)])"; first eauto.
   iRight.
   rewrite minted_TKey minted_spec_TKey.
-  rewrite -publicly_related_later_aenc_key_seed.
+  rewrite -publicly_related_later_adec_key'.
   rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def.
   eauto.
 - rewrite !publicly_related_TKey.
@@ -608,7 +626,7 @@ iSplit.
   iSplit=> //.
   iRight.
   rewrite minted_TKey minted_spec_TKey.
-  rewrite -publicly_related_later_aenc_key_seed.
+  rewrite -publicly_related_later_adec_key'.
   rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def.
   eauto.
 Qed.
@@ -636,23 +654,11 @@ by iExists (AEncKey k1).
 Qed.
 
 Lemma publicly_related_later_tag N t1 t2 :
-  PUB▷⟨t1, t2⟩ ⊣⊢
-  PUB▷⟨Spec.tag (Tag N) t1, Spec.tag (Tag N) t2⟩.
+  PUB▷⟨Spec.tag (Tag N) t1, Spec.tag (Tag N) t2⟩ ⊣⊢
+  PUB▷⟨t1, t2⟩.
 Proof.
 rewrite /publicly_related_later /publicly_related_later_pre.
 iSplit; iIntros "#[#H1 #H2]"; iSplit.
-- iIntros (t2') "!> #Hpub".
-  iAssert (▷ ∃ t2'', ⌜t2' = Spec.tag (Tag N) t2''⌝)%I as "#>[%t2'' ->]".
-  { iModIntro. by iApply publicly_related_tag_term. }
-  rewrite publicly_related_tag.
-  iDestruct "Hpub" as "[_ Hpub]".
-  by iPoseProof ("H1" with "Hpub") as ">->".
-- iIntros (t1') "!> #Hpub".
-  iAssert (▷ ∃ t1'', ⌜t1' = Spec.tag (Tag N) t1''⌝)%I as "#>[%t1'' ->]".
-  { iModIntro. by iApply publicly_related_term_tag. }
-  rewrite publicly_related_tag.
-  iDestruct "Hpub" as "[_ Hpub]".
-  by iPoseProof ("H2" with "Hpub") as ">->".
 - iIntros (t2') "!> #Hpub".
   iAssert (▷ PUB⟨Spec.tag (Tag N) t1, Spec.tag (Tag N) t2'⟩)%I as "#H".
   { iApply publicly_related_tag. eauto. }
@@ -665,6 +671,18 @@ iSplit; iIntros "#[#H1 #H2]"; iSplit.
   iPoseProof ("H2" with "H") as ">%H".
   iPureIntro.
   by apply Spec.tag_inj in H as [_ H].
+- iIntros (t2') "!> #Hpub".
+  iAssert (▷ ∃ t2'', ⌜t2' = Spec.tag (Tag N) t2''⌝)%I as "#>[%t2'' ->]".
+  { iModIntro. by iApply publicly_related_tag_term. }
+  rewrite publicly_related_tag.
+  iDestruct "Hpub" as "[_ Hpub]".
+  by iPoseProof ("H1" with "Hpub") as ">->".
+- iIntros (t1') "!> #Hpub".
+  iAssert (▷ ∃ t1'', ⌜t1' = Spec.tag (Tag N) t1''⌝)%I as "#>[%t1'' ->]".
+  { iModIntro. by iApply publicly_related_term_tag. }
+  rewrite publicly_related_tag.
+  iDestruct "Hpub" as "[_ Hpub]".
+  by iPoseProof ("H2" with "Hpub") as ">->".
 Qed.
 
 Lemma publicly_related_aenc (sk1 sk2 : aenc_key) N (t1 t2 : term) :
@@ -689,7 +707,7 @@ iSplit.
     rewrite minted_TSeal minted_tag minted_spec_TSeal minted_spec_tag.
     iDestruct "Hmint" as "[Hmintsk Hmintt]".
     iDestruct "Hmint_spec" as "[Hmint_specsk Hmint_spect]".
-    rewrite -publicly_related_later_tag.
+    rewrite publicly_related_later_tag.
     do 7 iSplit=> //.
     iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect Hpub ≈sk ≈t".
     rewrite publicly_related_TKey.
@@ -707,7 +725,7 @@ iSplit.
     iAssert (minted_spec (Spec.enc (Spec.pkey sk2) (Tag N) t2)) as "#Hmint_spec".
     { rewrite /Spec.enc minted_spec_TSeal minted_spec_tag. eauto. }
     iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect".
-    do 4 iSplit=> //. iSplit; first by rewrite -publicly_related_later_tag.
+    do 4 iSplit=> //. iSplit; first by rewrite publicly_related_later_tag.
     iClear "Hpub ≈sk ≈t Hmint Hmint_spec".
     iModIntro.
     rewrite /Spec.pkey [term_of_aenc_key]unlock /term_of_aenc_key_def.

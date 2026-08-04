@@ -100,7 +100,7 @@ rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
 rel_pures_l. rel_pures_r.
 iAssert (|={⊤}=> PUB⟨Spec.pkey skA, Spec.pkey skA'⟩)%I
           with "[token_skA token_spec_skA']" as ">#Hpub".
-{ iApply publicly_related_aenc_key_pkey. iRight.
+{ iApply publicly_related_aenc_key. iRight.
   iFrame "#".
   admit. }
 rel_bind_l (send _ _). rel_bind_r (send _ _).
