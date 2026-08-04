@@ -56,7 +56,7 @@ by rewrite /= repr_list_unseal; iIntros "?"; rewrite /CONS; rel_pures_r.
 Qed.
 
 Lemma rel_eq_list_l `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
-  (∀ E K e (x1 x2 : A) Ψ,
+  (∀ K (x1 x2 : A) Ψ,
       x1 ∈ l1 →
       (REL fill K (#(bool_decide (x1 = x2)) : expr) << e @ E : Ψ) -∗
       REL fill K (f (repr x1) (repr x2)) << e @ E : Ψ) →
@@ -66,7 +66,7 @@ Proof.
 rewrite repr_list_unseal /=.
 elim: l1 l2 Ψ => [|x1 l1 IH] [|x2 l2] Ψ rel_f_l /=;
   iIntros "post" ; rel_rec_l; rel_pures_l; do 1?by iApply "post".
-rel_bind_l (f _ _). iApply (rel_f_l _ _ _ x1 x2); first by set_solver.
+rel_bind_l (f _ _). iApply (rel_f_l _ x1 x2); first by set_solver.
 case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2] /=; rel_pures_l; last first.
   rewrite bool_decide_decide decide_False; by [iApply "post"|congruence].
 iApply IH; first by move=> *; iApply rel_f_l; set_solver.
@@ -77,7 +77,7 @@ Qed.
 
 Lemma rel_eq_list_r `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
   ↑specN ⊆ E →
-  (∀ E K e (x1 x2 : A),
+  (∀ K (x1 x2 : A),
       ↑specN ⊆ E →
       x1 ∈ l1 →
       (REL e << fill K (#(bool_decide (x1 = x2)) : expr) @ E : Ψ) -∗
@@ -89,7 +89,7 @@ move=> HE.
 rewrite repr_list_unseal /=.
 elim: l1 l2 Ψ => [|x1 l1 IH] [|x2 l2] Ψ rel_f_r /=;
   iIntros "post" ; rel_rec_r; rel_pures_r; do 1?by iApply "post".
-rel_bind_r (f _ _). iApply (rel_f_r _ _ _ x1 x2 HE); first by set_solver.
+rel_bind_r (f _ _). iApply (rel_f_r _ x1 x2 HE); first by set_solver.
 case: (bool_decide_reflect (x1 = x2)) => [->|n_x1x2] /=; rel_pures_r; last first.
   rewrite bool_decide_decide decide_False; by [iApply "post"|congruence].
 iApply IH; first by move=> *; iApply rel_f_r; set_solver.
