@@ -126,11 +126,11 @@ Proof.
     + iApply "H2"; eauto.
 Qed.
 
-Definition double_squiggle_pre P : lrelO := λ t1 t2,
+Definition publicly_related_later_pre P : lrelO := λ t1 t2,
   (□ (∀ t2', ▷ P t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
   □ (∀ t1', ▷ P t1' t2 -∗ ▷ ⌜t1 = t1'⌝))%I.
 
-#[local] Instance double_squiggle_pre_persistent P t1 t2 : Persistent (double_squiggle_pre P t1 t2).
+#[local] Instance publicly_related_later_pre_persistent P t1 t2 : Persistent (publicly_related_later_pre P t1 t2).
 Proof. apply _. Qed.
 
 Definition publicly_related_pre P : lrelO :=
@@ -144,16 +144,16 @@ Definition publicly_related_pre P : lrelO :=
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
     | AEnc => publicly_related_pre t1' t2' ∨
-              (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
+              (public_rel_elem t1 t2 ∧ publicly_related_later_pre P t1' t2')
     | ADec => publicly_related_pre t1' t2'
     | Sign => publicly_related_pre t1' t2'
     | Verify => publicly_related_pre t1' t2' ∨
-                (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
+                (public_rel_elem t1 t2 ∧ publicly_related_later_pre P t1' t2')
     | SEnc => publicly_related_pre t1' t2'
     end
   | TSeal k1 t1', TSeal k2 t2' =>
     (publicly_related_pre k1 k2 ∧ publicly_related_pre t1' t2') ∨
-    (public_rel_elem t1 t2 ∧ double_squiggle_pre P k1 k2 ∧ double_squiggle_pre P t1' t2' ∧
+    (public_rel_elem t1 t2 ∧ publicly_related_later_pre P k1 k2 ∧ publicly_related_later_pre P t1' t2' ∧
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
@@ -165,7 +165,7 @@ Definition publicly_related_pre P : lrelO :=
       end))
   | THash t1', THash t2' =>
     publicly_related_pre t1' t2' ∨
-    (public_rel_elem t1 t2 ∧ double_squiggle_pre P t1' t2')
+    (public_rel_elem t1 t2 ∧ publicly_related_later_pre P t1' t2')
   | _, _ =>
       False (* WIP *)
   end)%I.
@@ -249,48 +249,45 @@ Definition publicly_related := publicly_related_aux.(unseal).
 #[local] Lemma publicly_related_unseal : publicly_related = publicly_related_def.
 Proof. rewrite -publicly_related_aux.(seal_eq) //. Qed.
 
-Definition double_squiggle := double_squiggle_pre publicly_related.
+Definition publicly_related_later := publicly_related_later_pre publicly_related.
 
-#[local] Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
+#[local] Notation "PUB▷⟨ a , b ⟩" := (publicly_related_later a b)
+  (at level 70, no associativity, format "PUB▷⟨ a , b ⟩").
+#[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
+  (at level 70, no associativity, format "PUB⟨ a , b ⟩").
 
 Lemma publicly_related_unfold :
-  ∀ t1 t2, publicly_related t1 t2 ⊣⊢
+  ∀ t1 t2, PUB⟨t1, t2⟩ ⊣⊢
   minted t1 ∧ minted_spec t2 ∧
   match t1, t2 with
   | TInt n1, TInt n2 => ⌜n1 = n2⌝
-  | TPair t11 t12, TPair t21 t22 =>
-      publicly_related t11 t21 ∧ publicly_related t12 t22
+  | TPair t11 t12, TPair t21 t22 => PUB⟨t11, t21⟩ ∧ PUB⟨t12, t22⟩
   | TNonce l1, TNonce l2 => public_rel_elem t1 t2 ∧ ◇ pnonce_rel t1 t2
   | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
     match kt1 with
-    | AEnc => publicly_related t1' t2' ∨
-              (public_rel_elem t1 t2 ∧ t1' ≈ t2')
-    | ADec => publicly_related t1' t2'
-    | Sign => publicly_related t1' t2'
-    | Verify => publicly_related t1' t2' ∨
-                (public_rel_elem t1 t2 ∧ t1' ≈ t2')
-    | SEnc => publicly_related t1' t2'
+    | AEnc => PUB⟨t1', t2'⟩ ∨ (public_rel_elem t1 t2 ∧ PUB▷⟨t1', t2'⟩)
+    | ADec => PUB⟨t1', t2'⟩
+    | Sign => PUB⟨t1', t2'⟩
+    | Verify => PUB⟨t1', t2'⟩ ∨ (public_rel_elem t1 t2 ∧ PUB▷⟨t1', t2'⟩)
+    | SEnc => PUB⟨t1', t2'⟩
     end
   | TSeal k1 t1', TSeal k2 t2' =>
-    (publicly_related k1 k2 ∧ publicly_related t1' t2') ∨
-    (public_rel_elem t1 t2 ∧ k1 ≈ k2 ∧ t1' ≈ t2' ∧
+    (PUB⟨k1, k2⟩ ∧ PUB⟨t1', t2'⟩) ∨
+    (public_rel_elem t1 t2 ∧ PUB▷⟨k1, k2⟩ ∧ PUB▷⟨t1', t2'⟩ ∧
     □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
         match kt1 with
         | ADec | Verify => False
-        | Sign => publicly_related t1' t2'
-        | _ => publicly_related k1 k2 → publicly_related t1' t2'
+        | Sign => PUB⟨t1', t2'⟩
+        | _ => PUB⟨k1, k2⟩ → PUB⟨t1', t2'⟩
         end
       | _, _ => False
       end))
-  | THash t1', THash t2' =>
-    publicly_related t1' t2' ∨
-    (public_rel_elem t1 t2 ∧ t1' ≈ t2')
-  | _, _ =>
-      False (* WIP *)
+  | THash t1', THash t2' => PUB⟨t1', t2'⟩ ∨ (public_rel_elem t1 t2 ∧ PUB▷⟨t1', t2'⟩)
+  | _, _ => False (* WIP *)
   end.
 Proof.
-  rewrite /double_squiggle publicly_related_unseal /publicly_related_def => t1 t2.
+  rewrite /publicly_related_later publicly_related_unseal /publicly_related_def => t1 t2.
   rewrite (fixpoint_unfold publicly_related_pre t1 t2).
   case: t1 => //= [t11 t12|kt1 t1'|k1 t1'|t1'].
   1: case: t2 => //= t21 t22.
@@ -304,29 +301,29 @@ Proof.
   all: try by rewrite (fixpoint_unfold publicly_related_pre k1 k2).
 Qed.
 
-#[global] Instance publicly_related_persistent t1 t2 : Persistent (publicly_related t1 t2).
+#[global] Instance publicly_related_persistent t1 t2 : Persistent (PUB⟨t1, t2⟩).
 Proof.
-  rewrite /double_squiggle publicly_related_unseal /publicly_related_def.
+  rewrite /publicly_related_later publicly_related_unseal /publicly_related_def.
   rewrite (fixpoint_unfold publicly_related_pre t1 t2).
   apply _.
 Qed.
 
 Lemma publicly_related_minted t t' :
-  publicly_related t t' ⊢ minted t ∗ minted_spec t'.
+  PUB⟨t, t'⟩ ⊢ minted t ∗ minted_spec t'.
 Proof.
 rewrite publicly_related_unfold.
 iIntros "(? & ? & _)". eauto.
 Qed.
 
 Lemma publicly_related_TInt n1 n2 :
-  publicly_related (TInt n1) (TInt n2) ⊣⊢ ⌜n1 = n2⌝.
+  PUB⟨TInt n1, TInt n2⟩ ⊣⊢ ⌜n1 = n2⌝.
 Proof.
 rewrite publicly_related_unfold minted_TInt minted_spec_TInt.
 by rewrite !left_id.
 Qed.
 
 Lemma publicly_related_TInt_term n (t2 : term) :
-  publicly_related (TInt n) t2 -∗ ⌜t2 = TInt n⌝.
+  PUB⟨TInt n, t2⟩ -∗ ⌜t2 = TInt n⌝.
 Proof.
 rewrite publicly_related_unfold.
 iIntros "(_ & _ & H)". case: t2; eauto.
@@ -334,7 +331,7 @@ iIntros (?). by iDestruct "H" as "->".
 Qed.
 
 Lemma publicly_related_term_TInt (t1 : term) n :
-  publicly_related t1 (TInt n) -∗ ⌜t1 = TInt n⌝.
+  PUB⟨t1, TInt n⟩ -∗ ⌜t1 = TInt n⌝.
 Proof.
 rewrite publicly_related_unfold.
 iIntros "(_ & _ & H)". case: t1; eauto.
@@ -342,8 +339,8 @@ iIntros (?). by iDestruct "H" as "->".
 Qed.
 
 Lemma publicly_related_TPair t11 t12 t21 t22 :
-  publicly_related (TPair t11 t12) (TPair t21 t22) ⊣⊢
-  (publicly_related t11 t21 ∧ publicly_related t12 t22).
+  PUB⟨TPair t11 t12, TPair t21 t22⟩ ⊣⊢
+  PUB⟨t11, t21⟩ ∧ PUB⟨t12, t22⟩.
 Proof.
 rewrite publicly_related_unfold. iSplit.
 - iIntros "(_ & _ & ?)". eauto.
@@ -357,7 +354,7 @@ rewrite publicly_related_unfold. iSplit.
 Qed.
 
 Lemma publicly_related_TPair_term t11 t12 (t2 : term) :
-  publicly_related (TPair t11 t12) t2 -∗
+  PUB⟨TPair t11 t12, t2⟩ -∗
   ∃ t21 t22, ⌜t2 = TPair t21 t22⌝.
 Proof.
 rewrite publicly_related_unfold.
@@ -365,7 +362,7 @@ iIntros "(_ & _ & ?)". case: t2; eauto.
 Qed.
 
 Lemma publicly_related_term_TPair (t1 : term) t21 t22 :
-  publicly_related t1 (TPair t21 t22) -∗
+  PUB⟨t1, TPair t21 t22⟩ -∗
   ∃ t11 t12, ⌜t1 = TPair t11 t12⌝.
 Proof.
 rewrite publicly_related_unfold.
@@ -373,24 +370,24 @@ iIntros "(_ & _ & ?)". case: t1; eauto.
 Qed.
 
 Lemma publicly_related_TNonce a1 a2 :
-  publicly_related (TNonce a1) (TNonce a2) ⊣⊢
+  PUB⟨TNonce a1, TNonce a2⟩ ⊣⊢
   minted a1 ∧ minted_spec a2 ∧
     public_rel_elem a1 a2 ∧ ◇ pnonce_rel a1 a2.
 Proof. by rewrite publicly_related_unfold. Qed.
 
 Lemma publicly_related_TKey kt1 kt2 t1 t2 :
-  publicly_related (TKey kt1 t1) (TKey kt2 t2) ⊣⊢
+  PUB⟨TKey kt1 t1, TKey kt2 t2⟩ ⊣⊢
   ⌜kt1 = kt2⌝ ∧
   match kt1 with
-  | AEnc => publicly_related t1 t2 ∨
+  | AEnc => PUB⟨t1, t2⟩ ∨
             (minted t1 ∧ minted_spec t2 ∧
-              public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
-  | ADec => publicly_related t1 t2
-  | Sign => publicly_related t1 t2
-  | Verify => publicly_related t1 t2 ∨
+              public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ PUB▷⟨t1, t2⟩)
+  | ADec => PUB⟨t1, t2⟩
+  | Sign => PUB⟨t1, t2⟩
+  | Verify => PUB⟨t1, t2⟩ ∨
               (minted t1 ∧ minted_spec t2 ∧
-                public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ t1 ≈ t2)
-  | SEnc => publicly_related t1 t2
+                public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ PUB▷⟨t1, t2⟩)
+  | SEnc => PUB⟨t1, t2⟩
   end.
 Proof.
 rewrite publicly_related_unfold. iSplit.
@@ -411,17 +408,17 @@ rewrite publicly_related_unfold. iSplit.
 Qed.
 
 Lemma publicly_related_TSeal k1 k2 t1 t2 :
-  publicly_related (TSeal k1 t1) (TSeal k2 t2) ⊣⊢
-  (publicly_related k1 k2 ∧ publicly_related t1 t2) ∨
+  PUB⟨TSeal k1 t1, TSeal k2 t2⟩ ⊣⊢
+  (PUB⟨k1, k2⟩ ∧ PUB⟨t1, t2⟩) ∨
   (minted (TSeal k1 t1) ∧ minted_spec (TSeal k2 t2) ∧
     public_rel_elem (TSeal k1 t1) (TSeal k2 t2) ∧
-    k1 ≈ k2 ∧ t1 ≈ t2 ∧
+    PUB▷⟨k1, k2⟩ ∧ PUB▷⟨t1, t2⟩ ∧
     □ (match k1, k2 with
         | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
           match kt1 with
           | ADec | Verify => False
-          | Sign => publicly_related t1 t2
-          | _ => publicly_related k1 k2 → publicly_related t1 t2
+          | Sign => PUB⟨t1, t2⟩
+          | _ => PUB⟨k1, k2⟩ → PUB⟨t1, t2⟩
           end
         | _, _ => False
         end)).
@@ -435,10 +432,10 @@ rewrite publicly_related_unfold. iSplit.
 Qed.
 
 Lemma publicly_related_THash t1 t2 :
-  publicly_related (THash t1) (THash t2) ⊣⊢
-  (publicly_related t1 t2) ∨
+  PUB⟨THash t1, THash t2⟩ ⊣⊢
+  PUB⟨t1, t2⟩ ∨
   (minted t1 ∧ minted_spec t2 ∧
-    public_rel_elem (THash t1) (THash t2) ∧ t1 ≈ t2).
+    public_rel_elem (THash t1) (THash t2) ∧ PUB▷⟨t1, t2⟩).
 Proof.
 rewrite publicly_related_unfold. iSplit.
 - iIntros "#(? & ? & [?|?])"; eauto.
@@ -457,9 +454,9 @@ Qed.
 Lemma publicly_related_open k1 k2 t1 t2 t1' t2' :
   Spec.open k1 t1 = Some t1' →
   Spec.open k2 t2 = Some t2' →
-  publicly_related k1 k2 -∗
-  publicly_related t1 t2 -∗
-  publicly_related t1' t2'.
+  PUB⟨k1, k2⟩ -∗
+  PUB⟨t1, t2⟩ -∗
+  PUB⟨t1', t2'⟩.
 Proof.
 rewrite /Spec.open.
 case: t1 => // k_t1 t1.
@@ -478,8 +475,8 @@ case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
 Qed.
 
 Lemma publicly_related_tag N1 N2 t1 t2 :
-  publicly_related (Spec.tag (Tag N1) t1) (Spec.tag (Tag N2) t2) ⊣⊢
-  ⌜N1 = N2⌝ ∧ publicly_related t1 t2.
+  PUB⟨Spec.tag (Tag N1) t1, Spec.tag (Tag N2) t2⟩ ⊣⊢
+  ⌜N1 = N2⌝ ∧ PUB⟨t1, t2⟩.
 Proof.
 iSplit.
 - iIntros "#H".
@@ -499,7 +496,7 @@ iSplit.
 Qed.
 
 Lemma publicly_related_tag_term N t1 (t2 : term) :
-  publicly_related (Spec.tag (Tag N) t1) t2 -∗
+  PUB⟨Spec.tag (Tag N) t1, t2⟩ -∗
   ∃ t2', ⌜t2 = Spec.tag (Tag N) t2'⌝.
 Proof.
 iIntros "#H".
@@ -513,7 +510,7 @@ eauto.
 Qed.
 
 Lemma publicly_related_term_tag (t1 : term) N t2 :
-  publicly_related t1 (Spec.tag (Tag N) t2) -∗
+  PUB⟨t1, Spec.tag (Tag N) t2⟩ -∗
   ∃ t1', ⌜t1 = Spec.tag (Tag N) t1'⌝.
 Proof.
 iIntros "#H".
@@ -527,8 +524,8 @@ eauto.
 Qed.
 
 Lemma publicly_related_aenc_key_seed (k1 k2 : aenc_key) :
-  publicly_related k1 k2 ⊣⊢
-  publicly_related (seed_of_aenc_key k1) (seed_of_aenc_key k2).
+  PUB⟨k1, k2⟩ ⊣⊢
+  PUB⟨seed_of_aenc_key k1, seed_of_aenc_key k2⟩.
 Proof.
   rewrite [term_of_aenc_key]unlock=> /=.
   rewrite publicly_related_TKey.
@@ -538,7 +535,7 @@ Proof.
 Qed.
 
 Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
-  publicly_related k1 k2 -∗
+  PUB⟨k1, k2⟩ -∗
   ∃ (k2' : aenc_key), ⌜k2 = k2'⌝.
 Proof.
 rewrite [term_of_aenc_key]unlock publicly_related_unfold /=.
@@ -549,7 +546,7 @@ by iExists (AEncKey k2).
 Qed.
 
 Lemma publicly_related_term_aenc_key (k1 : term) (k2 : aenc_key) :
-  publicly_related k1 k2 -∗
+  PUB⟨k1, k2⟩ -∗
   ∃ (k1' : aenc_key), ⌜k1 = k1'⌝.
 Proof.
 rewrite [term_of_aenc_key]unlock publicly_related_unfold /=.
@@ -559,11 +556,11 @@ iDestruct "H" as "(-> & _)".
 by iExists (AEncKey k1).
 Qed.
 
-Lemma double_squiggle_aenc_key_seed (k1 k2 : aenc_key) :
-  k1 ≈ k2 ⊣⊢
-  (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2).
+Lemma publicly_related_later_aenc_key_seed (k1 k2 : aenc_key) :
+  PUB▷⟨k1, k2⟩ ⊣⊢
+  PUB▷⟨seed_of_aenc_key k1, seed_of_aenc_key k2⟩.
 Proof.
-rewrite /double_squiggle /double_squiggle_pre.
+rewrite /publicly_related_later /publicly_related_later_pre.
 f_equiv; f_equiv; iSplit.
 - iIntros "H %k2' #Hpub".
   pose k2'' := AEncKey k2'.
@@ -592,10 +589,10 @@ f_equiv; f_equiv; iSplit.
 Qed.
 
 Lemma publicly_related_aenc_key_pkey (k1 k2 : aenc_key) :
-  publicly_related (Spec.pkey k1) (Spec.pkey k2) ⊣⊢
-  publicly_related k1 k2 ∨
+  PUB⟨Spec.pkey k1, Spec.pkey k2⟩ ⊣⊢
+  PUB⟨k1, k2⟩ ∨
   (minted k1 ∧ minted_spec k2 ∧
-    public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ k1 ≈ k2).
+    public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ PUB▷⟨k1, k2⟩).
 Proof.
 rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def=> /=.
 iSplit.
@@ -603,7 +600,7 @@ iSplit.
   iIntros "#(_ & [?|(? & ? & ? & ?)])"; first eauto.
   iRight.
   rewrite minted_TKey minted_spec_TKey.
-  rewrite -double_squiggle_aenc_key_seed.
+  rewrite -publicly_related_later_aenc_key_seed.
   rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def.
   eauto.
 - rewrite !publicly_related_TKey.
@@ -611,13 +608,13 @@ iSplit.
   iSplit=> //.
   iRight.
   rewrite minted_TKey minted_spec_TKey.
-  rewrite -double_squiggle_aenc_key_seed.
+  rewrite -publicly_related_later_aenc_key_seed.
   rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def.
   eauto.
 Qed.
 
 Lemma publicly_related_aenc_key_pkey_term (sk1 : aenc_key) (k2 : term) :
-  publicly_related (Spec.pkey sk1) k2 -∗
+  PUB⟨Spec.pkey sk1, k2⟩ -∗
   ∃ (sk2' : aenc_key), ⌜k2 = Spec.pkey sk2'⌝.
 Proof.
 rewrite /Spec.pkey [term_of_aenc_key]unlock /= publicly_related_unfold.
@@ -628,7 +625,7 @@ by iExists (AEncKey k2).
 Qed.
 
 Lemma publicly_related_term_aenc_key_pkey (k1 : term) (sk2 : aenc_key) :
-  publicly_related k1 (Spec.pkey sk2) -∗
+  PUB⟨k1, Spec.pkey sk2⟩ -∗
   ∃ (sk1' : aenc_key), ⌜k1 = Spec.pkey sk1'⌝.
 Proof.
 rewrite /Spec.pkey [term_of_aenc_key]unlock /= publicly_related_unfold.
@@ -638,11 +635,11 @@ iDestruct "H" as "(<- & _)".
 by iExists (AEncKey k1).
 Qed.
 
-Lemma double_squiggle_tag N t1 t2 :
-  t1 ≈ t2 ⊣⊢
-  Spec.tag (Tag N) t1 ≈ Spec.tag (Tag N) t2.
+Lemma publicly_related_later_tag N t1 t2 :
+  PUB▷⟨t1, t2⟩ ⊣⊢
+  PUB▷⟨Spec.tag (Tag N) t1, Spec.tag (Tag N) t2⟩.
 Proof.
-rewrite /double_squiggle /double_squiggle_pre.
+rewrite /publicly_related_later /publicly_related_later_pre.
 iSplit; iIntros "#[#H1 #H2]"; iSplit.
 - iIntros (t2') "!> #Hpub".
   iAssert (▷ ∃ t2'', ⌜t2' = Spec.tag (Tag N) t2''⌝)%I as "#>[%t2'' ->]".
@@ -657,13 +654,13 @@ iSplit; iIntros "#[#H1 #H2]"; iSplit.
   iDestruct "Hpub" as "[_ Hpub]".
   by iPoseProof ("H2" with "Hpub") as ">->".
 - iIntros (t2') "!> #Hpub".
-  iAssert (▷ publicly_related (Spec.tag (Tag N) t1) (Spec.tag (Tag N) t2'))%I as "#H".
+  iAssert (▷ PUB⟨Spec.tag (Tag N) t1, Spec.tag (Tag N) t2'⟩)%I as "#H".
   { iApply publicly_related_tag. eauto. }
   iPoseProof ("H1" with "H") as ">%H".
   iPureIntro.
   by apply Spec.tag_inj in H as [_ H].
 - iIntros (t1') "!> #Hpub".
-  iAssert (▷ publicly_related (Spec.tag (Tag N) t1') (Spec.tag (Tag N) t2))%I as "#H".
+  iAssert (▷ PUB⟨Spec.tag (Tag N) t1', Spec.tag (Tag N) t2⟩)%I as "#H".
   { iApply publicly_related_tag. eauto. }
   iPoseProof ("H2" with "H") as ">%H".
   iPureIntro.
@@ -671,16 +668,15 @@ iSplit; iIntros "#[#H1 #H2]"; iSplit.
 Qed.
 
 Lemma publicly_related_aenc (sk1 sk2 : aenc_key) N (t1 t2 : term) :
-  publicly_related (Spec.enc (Spec.pkey sk1) (Tag N) t1)
-                    (Spec.enc (Spec.pkey sk2) (Tag N) t2) ⊣⊢
-  (publicly_related (Spec.pkey sk1) (Spec.pkey sk2) ∧
-    publicly_related t1 t2) ∨
+  PUB⟨Spec.enc (Spec.pkey sk1) (Tag N) t1,
+                    Spec.enc (Spec.pkey sk2) (Tag N) t2⟩ ⊣⊢
+  (PUB⟨Spec.pkey sk1, Spec.pkey sk2⟩ ∧ PUB⟨t1, t2⟩) ∨
   (minted (Spec.pkey sk1) ∧ minted t1 ∧
     minted_spec (Spec.pkey sk2) ∧ minted_spec t2 ∧
-  public_rel_elem (Spec.enc (Spec.pkey sk1) (Tag N) t1)
-                    (Spec.enc (Spec.pkey sk2) (Tag N) t2)
-                    ∧ (Spec.pkey sk1 ≈ Spec.pkey sk2) ∧ t1 ≈ t2 ∧
-  □ (publicly_related sk1 sk2 → publicly_related t1 t2)).
+    public_rel_elem (Spec.enc (Spec.pkey sk1) (Tag N) t1)
+                      (Spec.enc (Spec.pkey sk2) (Tag N) t2) ∧
+    PUB▷⟨Spec.pkey sk1, Spec.pkey sk2⟩ ∧ PUB▷⟨t1, t2⟩ ∧
+    □ (PUB⟨sk1, sk2⟩ → PUB⟨t1, t2⟩)).
 Proof.
 iSplit.
 - iIntros "#Hpub".
@@ -693,7 +689,7 @@ iSplit.
     rewrite minted_TSeal minted_tag minted_spec_TSeal minted_spec_tag.
     iDestruct "Hmint" as "[Hmintsk Hmintt]".
     iDestruct "Hmint_spec" as "[Hmint_specsk Hmint_spect]".
-    rewrite -double_squiggle_tag.
+    rewrite -publicly_related_later_tag.
     do 7 iSplit=> //.
     iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect Hpub ≈sk ≈t".
     rewrite publicly_related_TKey.
@@ -711,7 +707,7 @@ iSplit.
     iAssert (minted_spec (Spec.enc (Spec.pkey sk2) (Tag N) t2)) as "#Hmint_spec".
     { rewrite /Spec.enc minted_spec_TSeal minted_spec_tag. eauto. }
     iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect".
-    do 4 iSplit=> //. iSplit; first by rewrite -double_squiggle_tag.
+    do 4 iSplit=> //. iSplit; first by rewrite -publicly_related_later_tag.
     iClear "Hpub ≈sk ≈t Hmint Hmint_spec".
     iModIntro.
     rewrite /Spec.pkey [term_of_aenc_key]unlock /term_of_aenc_key_def.
@@ -723,9 +719,7 @@ iSplit.
 Qed.
 
 #[local] Lemma publicly_related_part_bij_1 t1 t2 t2' :
-  publicly_related t1 t2 -∗
-  publicly_related t1 t2' -∗
-  ▷ ⌜t2 = t2'⌝.
+  PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝.
 Proof.
 elim/term_lt_ind: t1 t2 t2' => t1 IH t2 t2'.
 rewrite !publicly_related_unfold.
@@ -765,9 +759,7 @@ case: t1 IH.
   iIntros (kt2 t2) "[-> #Ht2]".
   case: t2'; auto.
   iIntros (kt2' t2') "[-> #Ht2']".
-  have {}IH: (∀ t2 t2', publicly_related t1 t2 -∗
-                        publicly_related t1 t2' -∗
-                        ▷ ⌜t2 = t2'⌝).
+  have {}IH: (∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   case: kt2'.
     iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
@@ -776,12 +768,12 @@ case: t1 IH.
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t'" as "#[#≈t' _]".
       by iApply "≈t'".
       done.
     * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t" as "#[#≈t _]".
       by iApply "≈t".
       done.
@@ -799,12 +791,12 @@ case: t1 IH.
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t'" as "#[#≈t' _]".
       by iApply "≈t'".
       done.
     * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t" as "#[#≈t _]".
       by iApply "≈t".
       done.
@@ -818,13 +810,9 @@ case: t1 IH.
   iIntros (k2 t2) "#Ht2".
   case: t2'; auto.
   iIntros (k2' t2') "#Ht2'".
-  have IH1: (∀ k2 k2', publicly_related k1 k2 -∗
-                       publicly_related k1 k2' -∗
-                       ▷ ⌜k2 = k2'⌝).
+  have IH1: (∀ k2 k2', PUB⟨k1, k2⟩ -∗ PUB⟨k1, k2'⟩ -∗ ▷ ⌜k2 = k2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
-  have IH2: (∀ t2 t2', publicly_related t1 t2 -∗
-                       publicly_related t1 t2' -∗
-                       ▷ ⌜t2 = t2'⌝).
+  have IH2: (∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   clear IH.
   iDestruct "Ht2" as "#[[Hk2 Ht2]|[Hfrag (≈k & ≈t & #Hrest)]]";
@@ -839,11 +827,11 @@ case: t1 IH.
     iPureIntro.
     congruence.
   + iAssert (▷ ⌜k2' = k2⌝)%I as "#Hk".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈k'" as "#[#≈k' _]".
     by iApply "≈k'".
     iAssert (▷ ⌜t2' = t2⌝)%I as "#Ht".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t'" as "#[#≈t' _]".
     by iApply "≈t'".
     iModIntro.
@@ -852,11 +840,11 @@ case: t1 IH.
     iPureIntro.
     congruence.
   + iAssert (▷ ⌜k2 = k2'⌝)%I as "#Hk".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈k" as "#[#≈k _]".
     by iApply "≈k".
     iAssert (▷ ⌜t2 = t2'⌝)%I as "#Ht".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t" as "#[#≈t _]".
     by iApply "≈t".
     iModIntro.
@@ -871,9 +859,7 @@ case: t1 IH.
   iIntros (t2) "#Ht2".
   case: t2'; auto.
   iIntros (t2') "#Ht2'".
-  have {}IH: (∀ t2 t2', publicly_related t1 t2 -∗
-                        publicly_related t1 t2' -∗
-                        ▷ ⌜t2 = t2'⌝).
+  have {}IH: (∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
   iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
@@ -881,12 +867,12 @@ case: t1 IH.
     { by iApply IH. }
     done.
   + iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t'" as "#[#≈t' _]".
     by iApply "≈t'".
     done.
   + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t" as "#[#≈t _]".
     by iApply "≈t".
     done.
@@ -896,9 +882,7 @@ case: t1 IH.
 Qed.
 
 #[local] Lemma publicly_related_part_bij_2 t1 t1' t2 :
-  publicly_related t1 t2 -∗
-  publicly_related t1' t2 -∗
-  ▷ ⌜t1 = t1'⌝.
+  PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝.
 Proof.
 elim/term_lt_ind: t2 t1 t1' => t2 IH t1 t1'.
 rewrite !publicly_related_unfold.
@@ -938,9 +922,7 @@ case: t2 IH.
   iIntros (kt1 t1) "[-> #Ht1]".
   case: t1'; auto.
   iIntros (kt1' t1') "[-> #Ht1']".
-  have {}IH: (∀ t1 t1', publicly_related t1 t2 -∗
-                        publicly_related t1' t2 -∗
-                        ▷ ⌜t1 = t1'⌝).
+  have {}IH: (∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   case: kt2.
     iDestruct "Ht1" as "#[Ht2|[Hfrag ≈t]]";
@@ -949,12 +931,12 @@ case: t2 IH.
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t1' = t1⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t'" as "#[_ #≈t']".
       by iApply "≈t'".
       done.
     * iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t" as "#[_ #≈t]".
       by iApply "≈t".
       done.
@@ -972,12 +954,12 @@ case: t2 IH.
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t1' = t1⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t'" as "#[_ #≈t']".
       by iApply "≈t'".
       done.
     * iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
-      rewrite /double_squiggle /double_squiggle_pre.
+      rewrite /publicly_related_later /publicly_related_later_pre.
       iDestruct "≈t" as "#[_ #≈t]".
       by iApply "≈t".
       done.
@@ -991,13 +973,9 @@ case: t2 IH.
   iIntros (k1 t1) "#Ht1".
   case: t1'; auto.
   iIntros (k1' t1') "#Ht1'".
-  have IH1: (∀ k1 k1', publicly_related k1 k2 -∗
-                       publicly_related k1' k2 -∗
-                       ▷ ⌜k1 = k1'⌝).
+  have IH1: (∀ k1 k1', PUB⟨k1, k2⟩ -∗ PUB⟨k1', k2⟩ -∗ ▷ ⌜k1 = k1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
-  have IH2: (∀ t1 t1', publicly_related t1 t2 -∗
-                       publicly_related t1' t2 -∗
-                       ▷ ⌜t1 = t1'⌝).
+  have IH2: (∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   clear IH.
   iDestruct "Ht1" as "#[[Hk1 Ht1]|[Hfrag (≈k & ≈t & #Hrest)]]";
@@ -1012,11 +990,11 @@ case: t2 IH.
     iPureIntro.
     congruence.
   + iAssert (▷ ⌜k1' = k1⌝)%I as "#Hk".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈k'" as "#[_ #≈k']".
     by iApply "≈k'".
     iAssert (▷ ⌜t1' = t1⌝)%I as "#Ht".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t'" as "#[_ #≈t']".
     by iApply "≈t'".
     iModIntro.
@@ -1025,11 +1003,11 @@ case: t2 IH.
     iPureIntro.
     congruence.
   + iAssert (▷ ⌜k1 = k1'⌝)%I as "#Hk".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈k" as "#[_ #≈k]".
     by iApply "≈k".
     iAssert (▷ ⌜t1 = t1'⌝)%I as "#Ht".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t" as "#[_ #≈t]".
     by iApply "≈t".
     iModIntro.
@@ -1044,9 +1022,7 @@ case: t2 IH.
   iIntros (t1) "#Ht1".
   case: t1'; auto.
   iIntros (t1') "#Ht1'".
-  have {}IH: (∀ t1 t1', publicly_related t1 t2 -∗
-                        publicly_related t1' t2 -∗
-                        ▷ ⌜t1 = t1'⌝).
+  have {}IH: (∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   iDestruct "Ht1" as "#[Ht1|[Hfrag ≈t]]";
   iDestruct "Ht1'" as "#[Ht1'|[Hfrag' ≈t']]".
@@ -1054,12 +1030,12 @@ case: t2 IH.
     { by iApply IH. }
     done.
   + iAssert (▷ ⌜t1' = t1⌝)%I as ">->".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t'" as "#[_ #≈t']".
     by iApply "≈t'".
     done.
   + iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
-    rewrite /double_squiggle /double_squiggle_pre.
+    rewrite /publicly_related_later /publicly_related_later_pre.
     iDestruct "≈t" as "#[_ #≈t]".
     by iApply "≈t".
     done.
@@ -1069,8 +1045,8 @@ case: t2 IH.
 Qed.
 
 Lemma publicly_related_part_bij t1 t2 :
-  (∀ t2', publicly_related t1 t2 -∗ publicly_related t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
-  (∀ t1', publicly_related t1 t2 -∗ publicly_related t1' t2 -∗ ▷ ⌜t1 = t1'⌝).
+  (∀ t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝) ∧
+  (∀ t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
 Proof.
 split.
 apply publicly_related_part_bij_1.
@@ -1078,9 +1054,7 @@ move=> t1'. apply publicly_related_part_bij_2.
 Qed.
 
 Lemma publicly_related_part_bij' t1 t1' t2 t2' :
-  publicly_related t1 t1' -∗
-  publicly_related t2 t2' -∗
-  ▷ ⌜t1 = t2 ↔ t1' = t2'⌝.
+  PUB⟨t1, t1'⟩ -∗ PUB⟨t2, t2'⟩ -∗ ▷ ⌜t1 = t2 ↔ t1' = t2'⌝.
 Proof.
 iIntros "#Ht1 #Ht2".
 iSplit.
@@ -1092,7 +1066,10 @@ Qed.
 
 End Rel.
 
-Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
+Notation "PUB▷⟨ a , b ⟩" := (publicly_related_later a b)
+  (at level 70, no associativity, format "PUB▷⟨ a , b ⟩").
+Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
+  (at level 70, no associativity, format "PUB⟨ a , b ⟩").
 
 Lemma public_relGS_alloc `{!relocG Σ} E :
   public_relGpreS Σ →

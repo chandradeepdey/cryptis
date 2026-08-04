@@ -43,18 +43,18 @@ Implicit Types Ψ : val → val → iProp Σ.
 
 Definition channel_rel : val → val → iProp Σ := LRel (λ c c',
   ∃ (sf rf sf' rf' : val), ⌜c = (sf, rf)%V⌝ ∗ ⌜c' = (sf', rf')%V⌝  ∗
-  □ (∀ t t' Ψ, publicly_related t t' -∗ Ψ #() #() -∗ REL sf t << sf' t' : Ψ) ∗
-  □ (∀ Ψ, (∀ t t', publicly_related t t' -∗ Ψ t t') -∗ REL rf #() << rf' #() : Ψ))%I.
+  □ (∀ t t' Ψ, PUB⟨t, t'⟩ -∗ Ψ #() #() -∗ REL sf t << sf' t' : Ψ) ∗
+  □ (∀ Ψ, (∀ t t', PUB⟨t, t'⟩ -∗ Ψ t t') -∗ REL rf #() << rf' #() : Ψ))%I.
 
 #[global] Instance channel_rel_persistent c c' : Persistent (channel_rel c c').
 Proof. apply _. Qed.
 
 Definition chan_rel_inv l l' : iProp Σ :=
-  ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ publicly_related t t'.
+  ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ PUB⟨t, t'⟩.
 
 #[local] Lemma rel_sender (l l': loc) t t' :
   inv (cryptisN.@"channel_rel") (chan_rel_inv l l') -∗
-  publicly_related t t' -∗
+  PUB⟨t, t'⟩ -∗
   REL (sender #l t) << (sender #l' t') : lrel_unit.
 Proof.
 iIntros "#Hinv #Ht".
@@ -110,7 +110,7 @@ Qed.
 
 Lemma rel_send c c' t t' :
   channel_rel c c' -∗
-  ▷ publicly_related t t' -∗
+  (▷ PUB⟨t, t'⟩) -∗
   REL send c t << send c' t' : lrel_unit.
 Proof.
 iDestruct 1 as (sf rf sf' rf') "(-> & -> & #H & _)".
@@ -120,7 +120,7 @@ Qed.
 
 Lemma rel_recv c c' Ψ :
   channel_rel c c' -∗
-  (∀ t t', publicly_related t t' -∗ Ψ t t') -∗
+  (∀ t t', PUB⟨t, t'⟩ -∗ Ψ t t') -∗
   REL recv c << recv c' : Ψ.
 Proof.
 iDestruct 1 as (sf rf sf' rf') "(-> & -> & #_ & #H)".

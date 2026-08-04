@@ -56,7 +56,7 @@ Lemma rel_aenc' (sk sk' : aenc_key) (m m' : term) (Ψ : val → val → iProp) :
   cryptis_rel_ctx -∗
   minted (Spec.pkey sk) -∗ minted_spec (Spec.pkey sk') -∗
   minted m -∗ minted_spec m' -∗
-  (∀ c c', publicly_related c c' -∗ Ψ c c') -∗
+  (∀ c c', PUB⟨c, c'⟩ -∗ Ψ c c') -∗
   REL aenc' (Spec.pkey sk) m << aenc' (Spec.pkey sk') m' : Ψ.
 Proof.
 iIntros "#Hctx #mintsk #mint_specsk' #mintm #mint_specm' post". rewrite /aenc'.
@@ -98,7 +98,7 @@ iIntros "%skA' #mint_spec_skA' token_spec_skA'".
 rel_pures_l. rel_pures_r.
 rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
 rel_pures_l. rel_pures_r.
-iAssert (|={⊤}=> publicly_related (Spec.pkey skA) (Spec.pkey skA'))%I
+iAssert (|={⊤}=> PUB⟨Spec.pkey skA, Spec.pkey skA'⟩)%I
           with "[token_skA token_spec_skA']" as ">#Hpub".
 { iApply publicly_related_aenc_key_pkey. iRight.
   iFrame "#".
