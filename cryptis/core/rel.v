@@ -1077,6 +1077,19 @@ apply publicly_related_part_bij_1.
 move=> t1'. apply publicly_related_part_bij_2.
 Qed.
 
+Lemma publicly_related_part_bij' t1 t1' t2 t2' :
+  publicly_related t1 t1' -∗
+  publicly_related t2 t2' -∗
+  ▷ ⌜t1 = t2 ↔ t1' = t2'⌝.
+Proof.
+iIntros "#Ht1 #Ht2".
+iSplit.
+- iIntros "%H". rewrite H.
+  iApply publicly_related_part_bij_1=> //.
+- iIntros "%H". rewrite H.
+  iApply publicly_related_part_bij_2=> //.
+Qed.
+
 End Rel.
 
 Infix "≈" := double_squiggle (at level 50, no associativity) : bi_scope.
