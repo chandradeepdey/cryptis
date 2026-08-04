@@ -537,18 +537,6 @@ Proof.
   - eauto.
 Qed.
 
-Lemma publicly_related_aenc_key_pkey (k1 k2 : aenc_key) :
-  publicly_related (Spec.pkey k1) (Spec.pkey k2) ⊣⊢
-  publicly_related (seed_of_aenc_key k1) (seed_of_aenc_key k2) ∨
-  (minted (seed_of_aenc_key k1) ∧ minted_spec (seed_of_aenc_key k2) ∧
-    public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2)).
-Proof.
-rewrite [term_of_aenc_key]unlock=> /=.
-rewrite publicly_related_TKey.
-iSplit; eauto.
-iIntros "#(_ & [?|(? & ? & ?)])"; eauto.
-Qed.
-
 Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
   publicly_related k1 k2 -∗
   ∃ (k2' : aenc_key), ⌜k2 = k2'⌝.
@@ -569,6 +557,63 @@ iIntros "(_ & _ & H)".
 case: k1; eauto=> kt1 k1.
 iDestruct "H" as "(-> & _)".
 by iExists (AEncKey k1).
+Qed.
+
+Lemma double_squiggle_aenc_key_seed (k1 k2 : aenc_key) :
+  k1 ≈ k2 ⊣⊢
+  (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2).
+Proof.
+rewrite /double_squiggle /double_squiggle_pre.
+f_equiv; f_equiv; iSplit.
+- iIntros "H %k2' #Hpub".
+  pose k2'' := AEncKey k2'.
+  rewrite -[k2']/(seed_of_aenc_key k2'').
+  rewrite -publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  apply term_of_aenc_key_inj in H.
+  by rewrite H.
+- iIntros "H %k2' #Hpub".
+  iMod (publicly_related_aenc_key_term with "Hpub") as "(%k2'' & ->)".
+  rewrite publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
+- iIntros "H %k1' #Hpub".
+  pose k1'' := AEncKey k1'.
+  rewrite -[k1']/(seed_of_aenc_key k1'').
+  rewrite -publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  apply term_of_aenc_key_inj in H.
+  by rewrite H.
+- iIntros "H %k1' #Hpub".
+  iMod (publicly_related_term_aenc_key with "Hpub") as "(%k1'' & ->)".
+  rewrite publicly_related_aenc_key_seed.
+  iMod ("H" with "Hpub") as "%H".
+  by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
+Qed.
+
+Lemma publicly_related_aenc_key_pkey (k1 k2 : aenc_key) :
+  publicly_related (Spec.pkey k1) (Spec.pkey k2) ⊣⊢
+  publicly_related k1 k2 ∨
+  (minted k1 ∧ minted_spec k2 ∧
+    public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧ k1 ≈ k2).
+Proof.
+rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def=> /=.
+iSplit.
+- rewrite !publicly_related_TKey.
+  iIntros "#(_ & [?|(? & ? & ? & ?)])"; first eauto.
+  iRight.
+  rewrite minted_TKey minted_spec_TKey.
+  rewrite -double_squiggle_aenc_key_seed.
+  rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def.
+  eauto.
+- rewrite !publicly_related_TKey.
+  iIntros "#[[_ ?]|(? & ? & ? & ?)]"; first eauto.
+  iSplit=> //.
+  iRight.
+  rewrite minted_TKey minted_spec_TKey.
+  rewrite -double_squiggle_aenc_key_seed.
+  rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def.
+  eauto.
 Qed.
 
 Lemma publicly_related_aenc_key_pkey_term (sk1 : aenc_key) (k2 : term) :
@@ -625,38 +670,6 @@ iSplit; iIntros "#[#H1 #H2]"; iSplit.
   by apply Spec.tag_inj in H as [_ H].
 Qed.
 
-Lemma double_squiggle_aenc_key_seed (k1 k2 : aenc_key) :
-  k1 ≈ k2 ⊣⊢
-  (seed_of_aenc_key k1) ≈ (seed_of_aenc_key k2).
-Proof.
-rewrite /double_squiggle /double_squiggle_pre.
-f_equiv; f_equiv; iSplit.
-- iIntros "H %k2' #Hpub".
-  pose k2'' := AEncKey k2'.
-  rewrite -[k2']/(seed_of_aenc_key k2'').
-  rewrite -publicly_related_aenc_key_seed.
-  iMod ("H" with "Hpub") as "%H".
-  apply term_of_aenc_key_inj in H.
-  by rewrite H.
-- iIntros "H %k2' #Hpub".
-  iMod (publicly_related_aenc_key_term with "Hpub") as "(%k2'' & ->)".
-  rewrite publicly_related_aenc_key_seed.
-  iMod ("H" with "Hpub") as "%H".
-  by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
-- iIntros "H %k1' #Hpub".
-  pose k1'' := AEncKey k1'.
-  rewrite -[k1']/(seed_of_aenc_key k1'').
-  rewrite -publicly_related_aenc_key_seed.
-  iMod ("H" with "Hpub") as "%H".
-  apply term_of_aenc_key_inj in H.
-  by rewrite H.
-- iIntros "H %k1' #Hpub".
-  iMod (publicly_related_term_aenc_key with "Hpub") as "(%k1'' & ->)".
-  rewrite publicly_related_aenc_key_seed.
-  iMod ("H" with "Hpub") as "%H".
-  by rewrite [term_of_aenc_key]unlock /term_of_aenc_key_def H.
-Qed.
-
 Lemma publicly_related_aenc (sk1 sk2 : aenc_key) N (t1 t2 : term) :
   publicly_related (Spec.enc (Spec.pkey sk1) (Tag N) t1)
                     (Spec.enc (Spec.pkey sk2) (Tag N) t2) ⊣⊢
@@ -667,8 +680,7 @@ Lemma publicly_related_aenc (sk1 sk2 : aenc_key) N (t1 t2 : term) :
   public_rel_elem (Spec.enc (Spec.pkey sk1) (Tag N) t1)
                     (Spec.enc (Spec.pkey sk2) (Tag N) t2)
                     ∧ (Spec.pkey sk1 ≈ Spec.pkey sk2) ∧ t1 ≈ t2 ∧
-  □ (publicly_related (seed_of_aenc_key sk1) (seed_of_aenc_key sk2) →
-                      publicly_related t1 t2)).
+  □ (publicly_related sk1 sk2 → publicly_related t1 t2)).
 Proof.
 iSplit.
 - iIntros "#Hpub".
@@ -684,7 +696,8 @@ iSplit.
     rewrite -double_squiggle_tag.
     do 7 iSplit=> //.
     iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect Hpub ≈sk ≈t".
-    iIntros "!> #H".
+    rewrite publicly_related_TKey.
+    iIntros "!> #[_ H]".
     iPoseProof ("Hskt" with "H") as "Hpub".
     rewrite publicly_related_tag.
     by iDestruct "Hpub" as "[_ Hpub]".
@@ -704,7 +717,8 @@ iSplit.
     rewrite /Spec.pkey [term_of_aenc_key]unlock /term_of_aenc_key_def.
     iSplit; first done.
     iIntros "#Hpub".
-    iPoseProof ("Hskt" with "Hpub") as "#Ht".
+    rewrite publicly_related_TKey.
+    iPoseProof ("Hskt" with "[Hpub]") as "#Ht"; first eauto.
     rewrite publicly_related_tag; eauto.
 Qed.
 
