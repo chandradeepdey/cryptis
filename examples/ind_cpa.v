@@ -72,12 +72,10 @@ rel_apply_l rel_nil_l.
 repeat rel_apply_l rel_cons_l. rel_apply_l rel_term_of_list_l.
 rel_apply_r rel_nil_r.
 repeat rel_apply_r rel_cons_r. rel_apply_r rel_term_of_list_r.
-rel_apply_l rel_aenc_l.
-iIntros (cmsg) "%Hcmsg".
-rel_apply_r rel_aenc_r.
-iIntros (cmsg') "%Hcmsg'".
+rel_apply_l rel_aenc'_l. iModIntro.
+rel_apply_r rel_aenc'_r.
 rel_values. iApply "post".
-rewrite Hcmsg Hcmsg' publicly_related_aenc.
+rewrite publicly_related_aenc.
 iRight.
 rewrite minted_of_list minted_spec_of_list=> /=.
 iFrame "#".
