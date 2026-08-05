@@ -55,18 +55,33 @@ Definition alice : val := λ: "c",
 Lemma rel_aenc' (sk sk' : aenc_key) (m m' : term) (Ψ : val → val → iProp) :
   cryptis_rel_ctx -∗
   minted (Spec.pkey sk) -∗ minted_spec (Spec.pkey sk') -∗
+  PUB⟨Spec.pkey sk, Spec.pkey sk'⟩ -∗
   minted m -∗ minted_spec m' -∗
   (∀ c c', PUB⟨c, c'⟩ -∗ Ψ c c') -∗
   REL aenc' (Spec.pkey sk) m << aenc' (Spec.pkey sk') m' : Ψ.
 Proof.
-iIntros "#Hctx #mintsk #mint_specsk' #mintm #mint_specm' post". rewrite /aenc'.
+iIntros "#Hctx #mint_sk #mint_spec_sk' #pub_sk #mint_m #mint_spec_m' post". rewrite /aenc'.
 rel_pures_l. rel_pures_r.
-rel_apply_l (rel_mk_nonce_l _ _ (λ _, ∅) with "[//]").
-{ iIntros "%t". by iApply big_sepS_empty. }
-iIntros (nonce) "%Hnonce #mint_nonce _".
-rel_apply_r (rel_mk_nonce_r _ _ (λ _, ∅) with "[//]").
-{ iIntros "%t". by iApply big_sepS_empty. }
-iIntros (nonce') "%Hnonce' #mint_spec_nonce' _".
+rel_apply_l (rel_mk_nonce_l _ _
+              (λ nonce, {[ Spec.enc (Spec.pkey sk) (Tag (N.@"m")) (Spec.of_list [nonce; m]) ]})
+              with "[//]").
+{ iIntros "%t". rewrite big_sepS_singleton.
+  iModIntro. iSplit; iIntros "#H";
+    rewrite /Spec.enc minted_TSeal minted_tag minted_of_list /=.
+  - iFrame "#".
+  - iDestruct "H" as "[_ [? _]]". iFrame "#". }
+iIntros (nonce) "%Hnonce #mint_nonce tt_nonce".
+rewrite big_sepS_singleton.
+rel_apply_r (rel_mk_nonce_r _ _
+              (λ nonce', {[ Spec.enc (Spec.pkey sk') (Tag (N.@"m")) (Spec.of_list [nonce'; m']) ]})
+              with "[//]").
+{ iIntros "%t". rewrite big_sepS_singleton.
+  iModIntro. iSplit; iIntros "#H";
+    rewrite /Spec.enc minted_spec_TSeal minted_spec_tag minted_spec_of_list /=.
+  - iFrame "#".
+  - iDestruct "H" as "[_ [? _]]". iFrame "#". }
+iIntros (nonce') "%Hnonce' #mint_spec_nonce' tt_spec_nonce'".
+rewrite big_sepS_singleton.
 rel_pures_l. rel_pures_r.
 rel_apply_l rel_nil_l.
 repeat rel_apply_l rel_cons_l. rel_apply_l rel_term_of_list_l.
@@ -79,6 +94,12 @@ rewrite publicly_related_aenc.
 iRight.
 rewrite minted_of_list minted_spec_of_list=> /=.
 iFrame "#".
+iClear "mint_sk mint_spec_sk' mint_m mint_spec_m' mint_nonce mint_spec_nonce'".
+rewrite (term_token_difference _ (↑cryptisN.@"public_rel"))=> //.
+iDestruct "tt_nonce" as "[tt_nonce _]".
+rewrite (term_token_spec_difference _ (↑cryptisN.@"public_rel"))=> //.
+iDestruct "tt_spec_nonce'" as "[tt_spec_nonce' _]".
+iMod (public_rel_extend with "[//] [tt_nonce] [tt_spec_nonce']")=>//.
 Admitted.
 
 Lemma rel_alice c c' (b: bool) :
