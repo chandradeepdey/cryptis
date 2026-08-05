@@ -464,7 +464,7 @@ case: t2 => // k_t2 t2.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k1 [<-].
 case: decide => // k_t_k2 [<-].
-iIntros "#Hk #[[_ Ht]|(_ & _ & Hfrag & ≈k & ≈t & #Hrest)]"; first done.
+iIntros "#Hk #[[_ Ht]|(_ & _ & Hfrag & pub▷_k & pub▷_t & #Hrest)]"; first done.
 case: k_t1 k_t2 => // kt1 k1' [] // kt2 k2' in k_t_k1 k_t_k2 *.
 iDestruct "Hrest" as "[<- Hrest]".
 case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-].
@@ -700,7 +700,7 @@ iSplit.
 - iIntros "#Hpub".
   rewrite /Spec.enc /Spec.pkey [term_of_aenc_key]unlock /term_of_aenc_key_def
           publicly_related_TSeal.
-  iDestruct "Hpub" as "[[? H]|(Hmint & Hmint_spec & Hpub & ≈sk & ≈t & _ & #Hskt)]".
+  iDestruct "Hpub" as "[[? H]|(Hmint & Hmint_spec & Hpub & pub▷_sk & pub▷_t & _ & #Hskt)]".
   + rewrite publicly_related_tag.
     iDestruct "H" as "[_ H]". eauto.
   + iRight.
@@ -709,14 +709,14 @@ iSplit.
     iDestruct "Hmint_spec" as "[Hmint_specsk Hmint_spect]".
     rewrite publicly_related_later_tag.
     do 7 iSplit=> //.
-    iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect Hpub ≈sk ≈t".
+    iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect Hpub pub▷_sk pub▷_t".
     rewrite publicly_related_TKey.
     iIntros "!> #[_ H]".
     iPoseProof ("Hskt" with "H") as "Hpub".
     rewrite publicly_related_tag.
     by iDestruct "Hpub" as "[_ Hpub]".
 - iIntros "#[[? ?]|(Hmintsk & Hmintt & Hmint_specsk & Hmint_spect &
-                        Hpub & ≈sk & ≈t & #Hskt)]".
+                        Hpub & pub▷_sk & pub▷_t & #Hskt)]".
   + rewrite /Spec.enc. rewrite publicly_related_TSeal. iLeft.
     rewrite publicly_related_tag; eauto.
   + rewrite publicly_related_TSeal. iRight.
@@ -726,7 +726,7 @@ iSplit.
     { rewrite /Spec.enc minted_spec_TSeal minted_spec_tag. eauto. }
     iClear "Hmintsk Hmintt Hmint_specsk Hmint_spect".
     do 4 iSplit=> //. iSplit; first by rewrite publicly_related_later_tag.
-    iClear "Hpub ≈sk ≈t Hmint Hmint_spec".
+    iClear "Hpub pub▷_sk pub▷_t Hmint Hmint_spec".
     iModIntro.
     rewrite /Spec.pkey [term_of_aenc_key]unlock /term_of_aenc_key_def.
     iSplit; first done.
@@ -780,20 +780,20 @@ case: t1 IH.
   have {}IH: (∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   case: kt2'.
-    iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
-    iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
+    iDestruct "Ht2" as "#[Ht2|[Hfrag pub▷_t]]";
+    iDestruct "Ht2'" as "#[Ht2'|[Hfrag' pub▷_t']]".
     * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t'" as "#[#≈t' _]".
-      by iApply "≈t'".
+      iDestruct "pub▷_t'" as "#[#pub▷_t' _]".
+      by iApply "pub▷_t'".
       done.
     * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t" as "#[#≈t _]".
-      by iApply "≈t".
+      iDestruct "pub▷_t" as "#[#pub▷_t _]".
+      by iApply "pub▷_t".
       done.
     * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
@@ -803,20 +803,20 @@ case: t1 IH.
   + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
     { by iApply IH. }
     done.
-  + iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
-    iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
+  + iDestruct "Ht2" as "#[Ht2|[Hfrag pub▷_t]]";
+    iDestruct "Ht2'" as "#[Ht2'|[Hfrag' pub▷_t']]".
     * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t'" as "#[#≈t' _]".
-      by iApply "≈t'".
+      iDestruct "pub▷_t'" as "#[#pub▷_t' _]".
+      by iApply "pub▷_t'".
       done.
     * iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t" as "#[#≈t _]".
-      by iApply "≈t".
+      iDestruct "pub▷_t" as "#[#pub▷_t _]".
+      by iApply "pub▷_t".
       done.
     * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
@@ -833,8 +833,8 @@ case: t1 IH.
   have IH2: (∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   clear IH.
-  iDestruct "Ht2" as "#[[Hk2 Ht2]|[Hfrag (≈k & ≈t & #Hrest)]]";
-  iDestruct "Ht2'" as "#[[Hk2' Ht2']|[Hfrag' (≈k' & ≈t' & #Hrest')]]".
+  iDestruct "Ht2" as "#[[Hk2 Ht2]|[Hfrag (pub▷_k & pub▷_t & #Hrest)]]";
+  iDestruct "Ht2'" as "#[[Hk2' Ht2']|[Hfrag' (pub▷_k' & pub▷_t' & #Hrest')]]".
   + iAssert (▷ ⌜k2 = k2'⌝)%I as "#Hk".
     { by iApply IH1. }
     iAssert (▷ ⌜t2 = t2'⌝)%I as "#Ht".
@@ -846,12 +846,12 @@ case: t1 IH.
     congruence.
   + iAssert (▷ ⌜k2' = k2⌝)%I as "#Hk".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈k'" as "#[#≈k' _]".
-    by iApply "≈k'".
+    iDestruct "pub▷_k'" as "#[#pub▷_k' _]".
+    by iApply "pub▷_k'".
     iAssert (▷ ⌜t2' = t2⌝)%I as "#Ht".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t'" as "#[#≈t' _]".
-    by iApply "≈t'".
+    iDestruct "pub▷_t'" as "#[#pub▷_t' _]".
+    by iApply "pub▷_t'".
     iModIntro.
     iDestruct "Hk" as %Hk.
     iDestruct "Ht" as %Ht.
@@ -859,12 +859,12 @@ case: t1 IH.
     congruence.
   + iAssert (▷ ⌜k2 = k2'⌝)%I as "#Hk".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈k" as "#[#≈k _]".
-    by iApply "≈k".
+    iDestruct "pub▷_k" as "#[#pub▷_k _]".
+    by iApply "pub▷_k".
     iAssert (▷ ⌜t2 = t2'⌝)%I as "#Ht".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t" as "#[#≈t _]".
-    by iApply "≈t".
+    iDestruct "pub▷_t" as "#[#pub▷_t _]".
+    by iApply "pub▷_t".
     iModIntro.
     iDestruct "Hk" as %Hk.
     iDestruct "Ht" as %Ht.
@@ -879,20 +879,20 @@ case: t1 IH.
   iIntros (t2') "#Ht2'".
   have {}IH: (∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ▷ ⌜t2 = t2'⌝).
   { apply IH. rewrite /tsize /=. lia. }
-  iDestruct "Ht2" as "#[Ht2|[Hfrag ≈t]]";
-  iDestruct "Ht2'" as "#[Ht2'|[Hfrag' ≈t']]".
+  iDestruct "Ht2" as "#[Ht2|[Hfrag pub▷_t]]";
+  iDestruct "Ht2'" as "#[Ht2'|[Hfrag' pub▷_t']]".
   + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
     { by iApply IH. }
     done.
   + iAssert (▷ ⌜t2' = t2⌝)%I as ">->".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t'" as "#[#≈t' _]".
-    by iApply "≈t'".
+    iDestruct "pub▷_t'" as "#[#pub▷_t' _]".
+    by iApply "pub▷_t'".
     done.
   + iAssert (▷ ⌜t2 = t2'⌝)%I as ">->".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t" as "#[#≈t _]".
-    by iApply "≈t".
+    iDestruct "pub▷_t" as "#[#pub▷_t _]".
+    by iApply "pub▷_t".
     done.
   + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
@@ -943,20 +943,20 @@ case: t2 IH.
   have {}IH: (∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   case: kt2.
-    iDestruct "Ht1" as "#[Ht2|[Hfrag ≈t]]";
-    iDestruct "Ht1'" as "#[Ht2'|[Hfrag' ≈t']]".
+    iDestruct "Ht1" as "#[Ht2|[Hfrag pub▷_t]]";
+    iDestruct "Ht1'" as "#[Ht2'|[Hfrag' pub▷_t']]".
     * iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t1' = t1⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t'" as "#[_ #≈t']".
-      by iApply "≈t'".
+      iDestruct "pub▷_t'" as "#[_ #pub▷_t']".
+      by iApply "pub▷_t'".
       done.
     * iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t" as "#[_ #≈t]".
-      by iApply "≈t".
+      iDestruct "pub▷_t" as "#[_ #pub▷_t]".
+      by iApply "pub▷_t".
       done.
     * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
@@ -966,20 +966,20 @@ case: t2 IH.
   + iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
     { by iApply IH. }
     done.
-  + iDestruct "Ht1" as "#[Ht1|[Hfrag ≈t]]";
-    iDestruct "Ht1'" as "#[Ht1'|[Hfrag' ≈t']]".
+  + iDestruct "Ht1" as "#[Ht1|[Hfrag pub▷_t]]";
+    iDestruct "Ht1'" as "#[Ht1'|[Hfrag' pub▷_t']]".
     * iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
       { by iApply IH. }
       done.
     * iAssert (▷ ⌜t1' = t1⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t'" as "#[_ #≈t']".
-      by iApply "≈t'".
+      iDestruct "pub▷_t'" as "#[_ #pub▷_t']".
+      by iApply "pub▷_t'".
       done.
     * iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
       rewrite /publicly_related_later /publicly_related_later_pre.
-      iDestruct "≈t" as "#[_ #≈t]".
-      by iApply "≈t".
+      iDestruct "pub▷_t" as "#[_ #pub▷_t]".
+      by iApply "pub▷_t".
       done.
     * iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
       iPureIntro. by apply H.
@@ -996,8 +996,8 @@ case: t2 IH.
   have IH2: (∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
   clear IH.
-  iDestruct "Ht1" as "#[[Hk1 Ht1]|[Hfrag (≈k & ≈t & #Hrest)]]";
-  iDestruct "Ht1'" as "#[[Hk1' Ht1']|[Hfrag' (≈k' & ≈t' & #Hrest')]]".
+  iDestruct "Ht1" as "#[[Hk1 Ht1]|[Hfrag (pub▷_k & pub▷_t & #Hrest)]]";
+  iDestruct "Ht1'" as "#[[Hk1' Ht1']|[Hfrag' (pub▷_k' & pub▷_t' & #Hrest')]]".
   + iAssert (▷ ⌜k1 = k1'⌝)%I as "#Hk".
     { by iApply IH1. }
     iAssert (▷ ⌜t1 = t1'⌝)%I as "#Ht".
@@ -1009,12 +1009,12 @@ case: t2 IH.
     congruence.
   + iAssert (▷ ⌜k1' = k1⌝)%I as "#Hk".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈k'" as "#[_ #≈k']".
-    by iApply "≈k'".
+    iDestruct "pub▷_k'" as "#[_ #pub▷_k']".
+    by iApply "pub▷_k'".
     iAssert (▷ ⌜t1' = t1⌝)%I as "#Ht".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t'" as "#[_ #≈t']".
-    by iApply "≈t'".
+    iDestruct "pub▷_t'" as "#[_ #pub▷_t']".
+    by iApply "pub▷_t'".
     iModIntro.
     iDestruct "Hk" as %Hk.
     iDestruct "Ht" as %Ht.
@@ -1022,12 +1022,12 @@ case: t2 IH.
     congruence.
   + iAssert (▷ ⌜k1 = k1'⌝)%I as "#Hk".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈k" as "#[_ #≈k]".
-    by iApply "≈k".
+    iDestruct "pub▷_k" as "#[_ #pub▷_k]".
+    by iApply "pub▷_k".
     iAssert (▷ ⌜t1 = t1'⌝)%I as "#Ht".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t" as "#[_ #≈t]".
-    by iApply "≈t".
+    iDestruct "pub▷_t" as "#[_ #pub▷_t]".
+    by iApply "pub▷_t".
     iModIntro.
     iDestruct "Hk" as %Hk.
     iDestruct "Ht" as %Ht.
@@ -1042,20 +1042,20 @@ case: t2 IH.
   iIntros (t1') "#Ht1'".
   have {}IH: (∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ▷ ⌜t1 = t1'⌝).
   { apply IH. rewrite /tsize /=. lia. }
-  iDestruct "Ht1" as "#[Ht1|[Hfrag ≈t]]";
-  iDestruct "Ht1'" as "#[Ht1'|[Hfrag' ≈t']]".
+  iDestruct "Ht1" as "#[Ht1|[Hfrag pub▷_t]]";
+  iDestruct "Ht1'" as "#[Ht1'|[Hfrag' pub▷_t']]".
   + iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
     { by iApply IH. }
     done.
   + iAssert (▷ ⌜t1' = t1⌝)%I as ">->".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t'" as "#[_ #≈t']".
-    by iApply "≈t'".
+    iDestruct "pub▷_t'" as "#[_ #pub▷_t']".
+    by iApply "pub▷_t'".
     done.
   + iAssert (▷ ⌜t1 = t1'⌝)%I as ">->".
     rewrite /publicly_related_later /publicly_related_later_pre.
-    iDestruct "≈t" as "#[_ #≈t]".
-    by iApply "≈t".
+    iDestruct "pub▷_t" as "#[_ #pub▷_t]".
+    by iApply "pub▷_t".
     done.
   + iPoseProof (gset_bij_own_elem_agree with "Hfrag Hfrag'") as "%H".
     iPureIntro. by apply H.
