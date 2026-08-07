@@ -1,4 +1,5 @@
-From iris.base_logic.lib Require Import gset_bij.
+From stdpp Require Import sets.
+From iris.algebra Require Import cmra ofe view gmap.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import saved_prop.
@@ -11,22 +12,185 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Inductive state :=
+  | Private (ts : gset term)
+  | Public (t : term)
+  | Invalid.
+
+Section cmra.
+
+  Context {SI : sidx}.
+
+  Canonical Structure stateO := leibnizO state.
+
+  #[local] Instance state_op_instance : Op state := λ s1 s2,
+    match s1, s2 with
+    | Private ts1, Private ts2 => Private (ts1 ∪ ts2)
+    | Private ts, Public t | Public t, Private ts =>
+      if bool_decide (ts ⊆ {[ t ]}) then Public t else Invalid
+    | Public t1, Public t2 =>
+      if bool_decide (t1 = t2) then Public t1 else Invalid
+    | _, _ => Invalid
+    end.
+
+  #[local] Instance state_pcore_instance : PCore state := Some.
+
+  #[local] Instance state_valid_instance : Valid state := λ s,
+    match s with
+    | Invalid => False
+    | _ => True
+    end.
+
+  #[local] Instance state_unit_instance : Unit state := Private ∅.
+
+  Lemma state_ra_mixin : RAMixin state.
+  Proof.
+  split.
+  - solve_proper.
+  - naive_solver.
+  - solve_proper.
+  - intros [] [] [];
+    rewrite /op /state_op_instance;
+    repeat case_bool_decide;
+    try (f_equiv; set_solver);
+    try (exfalso; set_solver).
+  - intros [] [];
+    rewrite /op /state_op_instance;
+    repeat case_bool_decide; simplify_eq;
+    f_equiv; set_solver.
+  - intros [] ? [= <-];
+    rewrite /op /state_op_instance;
+    repeat case_bool_decide; simplify_eq;
+    f_equiv; set_solver.
+  - by move=> [] [].
+  - rewrite /pcore /state_pcore_instance.
+    move=> ? ? ? ? H.
+    apply Some_inj in H as ->; eauto.
+  - by move=> [] [].
+  Qed.
+
+  Lemma state_ucmra_mixin : UcmraMixin state.
+  Proof.
+  split=> //.
+  intros s.
+  change (ε ⋅ s) with (state_op_instance ε s).
+  case: s => [ts|t|] //=.
+  + f_equiv; set_solver.
+  + case_bool_decide=> //; last set_solver.
+  Qed.
+
+  Canonical Structure stateR := discreteR state state_ra_mixin.
+  Canonical Structure stateUR := Ucmra state state_ucmra_mixin.
+
+End cmra.
+
+Section view_rel.
+
+  Context {SI : sidx}.
+
+  #[local] Definition state_view_rel_holds (n : SI) (auth : stateO) (frag : stateUR) : Prop :=
+    match auth, frag with
+    | Private tsa, Private tsf => tsf ⊆ tsa
+    | Public ta, Private tsf => tsf ⊆ {[ ta ]}
+    | Public ta, Public tf => ta = tf
+    | _, _ => False
+    end.
+
+  #[local] Lemma state_view_rel_mono n1 n2 auth1 auth2 frag1 frag2 :
+    state_view_rel_holds n1 auth1 frag1 →
+    auth1 ≡{n2}≡ auth2 →
+    frag2 ≼{n2} frag1 →
+    (n2 ≤ n1)%sidx →
+    state_view_rel_holds n2 auth2 frag2.
+  Proof.
+  move=> Hrel Hauth Hfrag _.
+  rewrite -discrete_iff in Hauth. rewrite <- Hauth. clear Hauth.
+  case: Hfrag => [frag3 Hfrag].
+  rewrite -discrete_iff in Hfrag. rewrite Hfrag in Hrel. clear Hfrag.
+  change (frag2 ⋅ frag3) with (state_op_instance frag2 frag3) in Hrel.
+  destruct auth1; destruct frag2; destruct frag3.
+  all: simpl in Hrel; try case_bool_decide; set_solver.
+  Qed.
+
+  #[local] Lemma state_view_rel_validN n auth frag :
+    state_view_rel_holds n auth frag → ✓{n} frag.
+  Proof. by case: auth; case: frag; simpl in *. Qed.
+
+  #[local] Lemma state_view_rel_unit n :
+    ∃ a, state_view_rel_holds n a ε.
+  Proof. exists (Private ∅). set_solver. Qed.
+
+  #[local] Lemma state_view_rel_exists n frag :
+  (∃ auth, state_view_rel_holds n auth frag) ↔ ✓{n} frag.
+  Proof.
+  split.
+  - move=> [auth Hrel]. move: Hrel. apply state_view_rel_validN.
+  - move=> Hfrag; exists frag; destruct frag; simpl; eauto.
+  Qed.
+
+  Canonical Structure state_view_rel : view_rel stateO stateUR :=
+    ViewRel state_view_rel_holds state_view_rel_mono
+            state_view_rel_validN state_view_rel_unit.
+
+  #[global] Instance state_view_rel_discrete : ViewRelDiscrete state_view_rel.
+  Proof. by move=> ?. Qed.
+
+End view_rel.
+
+#[local] Existing Instance state_view_rel_discrete.
+
+Notation state_view := (view state_view_rel_holds).
+Definition state_viewR : cmra := viewR state_view_rel.
+
+Section definitions.
+
+  Definition state_view_auth : dfrac → state → state_view := view_auth.
+  Definition state_view_frag : state → state_view := view_frag.
+
+End definitions.
+
+Notation "●SV dq st" := (state_view_auth dq st)
+  (at level 20, dq custom dfrac at level 1, format "●SV dq  st").
+Notation "◯SV st" := (state_view_frag st) (at level 20).
+
+Section lemmas.
+
+  Context {SI : sidx}.
+
+  Lemma state_update_grow ts t :
+    ●SV (Private ts) ~~> ●SV (Private (ts ∪ {[ t ]})) ⋅ ◯SV (Private {[ t ]}).
+  Proof.
+  apply view_update_alloc=> n frag Hrel.
+  destruct frag; simpl in *; set_solver.
+  Qed.
+
+  Lemma state_update_lock t :
+    ●SV (Private {[ t ]}) ~~> ●SV (Public t) ⋅ ◯SV (Public t).
+  Proof.
+  apply view_update_alloc=> n frag Hrel.
+  change (Public t ⋅ frag) with (state_op_instance (Public t) frag).
+  destruct frag; simpl in *; try case_bool_decide; done.
+  Qed.
+
+End lemmas.
+
 Class public_relGpreS Σ := Public_relGpreS {
-  #[local] public_relGpreS_bij :: gset_bijG Σ term term;
+  #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term state_viewR));
   #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
   #[local] public_relGpreS_prop :: savedPropG Σ;
 }.
 
 Class public_relGS Σ := Public_relGS {
-  #[global] public_relGS_bij :: gset_bijG Σ term term;
+  #[global] public_relGS_maps :: inG Σ (authUR (gmapUR term state_viewR));
   #[global] public_rel_term_meta :: term_metaGS Σ;
   #[global] public_rel_term_meta_spec :: term_meta_specGS Σ;
   #[global] public_relGS_prop :: savedPropG Σ;
-  public_rel_name  : gname;
+  public_rel_map_l : gname;
+  public_rel_map_r : gname;
 }.
 
 Definition public_relΣ : gFunctors :=
-  #[gset_bijΣ term term;
+  #[GFunctor (authUR (gmapUR term state_viewR));
     term_metaΣ;
     savedPropΣ].
 
@@ -39,11 +203,10 @@ Context `{!relocG Σ, !public_relGS Σ}.
 
 Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
-Notation lrelO := (term -d> term -d> iPropO).
 
 Implicit Types t : term.
-Implicit Types pub : gset (term * term).
-Implicit Types P : lrelO.
+Implicit Types pub_l pub_r : gmap term state.
+Implicit Types P : term -> term -> iProp.
 
 Definition public_rel_auth pub : iProp :=
   gset_bij_own_auth public_rel_name (DfracOwn 1) pub.
