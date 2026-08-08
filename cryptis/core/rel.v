@@ -1,5 +1,6 @@
 From stdpp Require Import sets.
-From iris.algebra Require Import cmra ofe view gmap.
+From iris.algebra Require Import auth cmra ofe view gmap.
+From iris.base_logic.lib Require Import own.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import saved_prop.
@@ -22,6 +23,9 @@ Section cmra.
   Context {SI : sidx}.
 
   Canonical Structure stateO := leibnizO state.
+
+  #[global] Instance stateO_discrete : OfeDiscrete state.
+  Proof. apply _. Qed.
 
   #[local] Instance state_op_instance : Op state := λ s1 s2,
     match s1, s2 with
@@ -82,6 +86,11 @@ Section cmra.
   Canonical Structure stateR := discreteR state state_ra_mixin.
   Canonical Structure stateUR := Ucmra state state_ucmra_mixin.
 
+  #[global] Instance stateR_discrete : CmraDiscrete stateR.
+  Proof. by split; first apply _. Qed.
+
+  #[global] Instance state_core_id (s : state) : CoreId s.
+  Proof. by constructor. Qed.
 End cmra.
 
 Section view_rel.
@@ -137,10 +146,11 @@ Section view_rel.
 
 End view_rel.
 
-#[local] Existing Instance state_view_rel_discrete.
-
 Notation state_view := (view state_view_rel_holds).
 Definition state_viewR : cmra := viewR state_view_rel.
+
+#[global] Instance state_viewR_discrete : CmraDiscrete state_viewR.
+Proof. apply _. Qed.
 
 Section definitions.
 
@@ -170,6 +180,12 @@ Section lemmas.
   apply view_update_alloc=> n frag Hrel.
   change (Public t ⋅ frag) with (state_op_instance (Public t) frag).
   destruct frag; simpl in *; try case_bool_decide; done.
+  Qed.
+
+  Lemma state_view_both_valid st : st ≠ Invalid → ✓ (●SV st ⋅ ◯SV st).
+  Proof.
+  rewrite /state_view_auth /state_view_frag view_both_valid.
+  case: st=> * //. set_solver.
   Qed.
 
 End lemmas.
@@ -208,20 +224,71 @@ Implicit Types t : term.
 Implicit Types pub_l pub_r : gmap term state.
 Implicit Types P : term -> term -> iProp.
 
-Definition public_rel_auth pub : iProp :=
-  gset_bij_own_auth public_rel_name (DfracOwn 1) pub.
+Definition public_rel_map_l_auth pub_l : iProp :=
+    own public_rel_map_l (● (@fmap (gmap term) _ _ _ (λ st, ●SV st ⋅ ◯SV st) pub_l)) ∗
+    ([∗ map] t1 ↦ st ∈ pub_l, match st with
+                              | Private _ => own public_rel_map_l (◯ {[ t1 := ●SV{#1/2} st ]})
+                              | _ => emp
+                              end).
 
-Definition public_rel_elem t1 t2 : iProp :=
-  gset_bij_own_elem public_rel_name t1 t2.
+Definition public_rel_map_r_auth pub_r : iProp :=
+  own public_rel_map_r (● (@fmap (gmap term) _ _ _ (λ st, ●SV st ⋅ ◯SV st) pub_r)) ∗
+  ([∗ map] t2 ↦ st ∈ pub_r, match st with
+                            | Private _ => own public_rel_map_r (◯ {[ t2 := ●SV{#1/2} st ]})
+                            | _ => emp
+                            end).
 
-Definition public_rel_inv pub : iProp :=
-  public_rel_auth pub ∗
-  ([∗ set] p ∈ pub,
-    term_meta p.1 (cryptisN.@"public_rel") () ∗
-    term_meta_spec p.2 (cryptisN.@"public_rel") ()).
+Definition public_rel_map_l_elem (t1 t2 : term) : iProp :=
+  own public_rel_map_l (◯ {[ t1 := ◯SV (Private {[ t2 ]}) ]}).
+
+#[global] Instance public_rel_map_l_elem_persistent t1 t2 : Persistent (public_rel_map_l_elem t1 t2).
+Proof. apply _. Qed.
+
+Definition public_rel_map_l_locked (t1 t2 : term) : iProp :=
+  own public_rel_map_l (◯ {[ t1 := ◯SV (Public t2) ]}).
+
+#[global] Instance public_rel_map_l_locked_persistent t1 t2 : Persistent (public_rel_map_l_locked t1 t2).
+Proof. apply _. Qed.
+
+Definition private_rel_elem_l (t1 t2 : term) : iProp :=
+  public_rel_map_l_elem t1 t2 ∨ public_rel_map_l_locked t1 t2.
+
+Definition public_rel_map_r_elem (t1 t2 : term) : iProp :=
+  own public_rel_map_r (◯ {[ t2 := ◯SV (Private {[ t1 ]}) ]}).
+
+#[global] Instance public_rel_map_r_elem_persistent t1 t2 : Persistent (public_rel_map_r_elem t1 t2).
+Proof. apply _. Qed.
+
+Definition public_rel_map_r_locked (t1 t2 : term) : iProp :=
+  own public_rel_map_r (◯ {[ t2 := ◯SV (Public t1) ]}).
+
+#[global] Instance public_rel_map_r_locked_persistent t1 t2 : Persistent (public_rel_map_r_locked t1 t2).
+Proof. apply _. Qed.
+
+Definition private_rel_elem_r (t1 t2 : term) : iProp :=
+  public_rel_map_r_elem t1 t2 ∨ public_rel_map_r_locked t1 t2.
+
+Definition private_rel_elem (t1 t2 : term) : iProp :=
+  private_rel_elem_l t1 t2 ∧ private_rel_elem_r t1 t2.
+
+#[global] Instance private_rel_elem_persistent t1 t2 : Persistent (private_rel_elem t1 t2).
+Proof. apply _. Qed.
+
+Definition public_rel_elem (t1 t2 : term) : iProp :=
+  public_rel_map_l_locked t1 t2 ∧ public_rel_map_r_locked t1 t2.
+
+#[global] Instance public_rel_elem_persistent t1 t2 : Persistent (public_rel_elem t1 t2).
+Proof. apply _. Qed.
+
+Definition public_rel_inv pub_l pub_r : iProp :=
+  public_rel_map_l_auth pub_l ∗
+  public_rel_map_r_auth pub_r ∗
+  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel") ()) ∗
+  ([∗ set] t ∈ dom pub_r, term_meta_spec t (cryptisN.@"public_rel") ()) ∗
+  ∀ t1 t2, public_rel_map_l_locked t1 t2 ↔ public_rel_map_r_locked t1 t2.
 
 Definition public_rel_ctx : iProp :=
-  inv (cryptisN.@"public_rel") (∃ pub, public_rel_inv pub).
+  inv (cryptisN.@"public_rel") (∃ pub_l pub_r, public_rel_inv pub_l pub_r).
 
 Definition cryptis_rel_ctx : iProp :=
   term_meta_ctx ∗ term_meta_spec_ctx ∗ public_rel_ctx.
@@ -232,36 +299,81 @@ Proof. split; last apply _. by iIntros "#[H _]". Qed.
 #[global] Instance cryptis_rel_ctx_has_term_meta_spec_ctx : HasTermMetaSpecCtx cryptis_rel_ctx.
 Proof. split; last apply _. by iIntros "#[_ [H _]]". Qed.
 
-Lemma public_rel_extend E t t' :
+Lemma public_rel_map_l_extend E t t' :
   ↑cryptisN.@"public_rel" ⊆ E →
   cryptis_rel_ctx -∗
   term_token t (↑cryptisN.@"public_rel") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel") -∗
-  |={E}=> public_rel_elem t t'.
+  |={E}=> private_rel_elem_l t t' ∗
+          own public_rel_map_l (◯ {[ t := ●SV{#1/2} (Private {[ t' ]}) ]}).
 Proof.
-  iIntros (HE) "#(_ & _ & Hinv) Htt Htts".
-  iInv "Hinv" as "(%pub & (>Hauth & Htoken))".
-  iAssert (▷ ⌜∀ t', (t, t') ∉ pub⌝)%I as "#>%Htnpub".
-  { iModIntro. iIntros (t'' Ht'').
-    rewrite big_sepS_forall.
-    iSpecialize ("Htoken" $! (t, t'') with "[//]").
-    iDestruct "Htoken" as "[Htoken _]".
-    iDestruct (term_meta_token with "Htt Htoken") as "[]"=> //. }
-  iAssert (▷ ⌜∀ t, (t, t') ∉ pub⌝)%I as "#>%Ht'npub".
-  { iModIntro. iIntros (t'' Ht'').
-    rewrite big_sepS_forall.
-    iSpecialize ("Htoken" $! (t'', t') with "[//]").
-    iDestruct "Htoken" as "[_ Htokens]".
-    iDestruct (term_meta_spec_token with "Htts Htokens") as "[]"=> //. }
-  iMod (gset_bij_own_extend with "Hauth") as "[Hauth #Hfrag]"; eauto.
-  iMod (term_meta_set (cryptisN.@"public_rel") () with "Htt") as "#Htt"=> //.
-  iMod (term_meta_spec_set (cryptisN.@"public_rel") () with "Htts") as "#Htts"=> //.
-  iModIntro.
+iIntros (HE) "#(_ & _ & Hinv) Htt".
+iInv "Hinv" as ">(%pub_l & %pub_r & [Hauth_l Hauth_l_frag] & Hauth_r &
+                  #Hmeta_l & #Hmeta_r & Hlock)".
+iAssert (⌜pub_l !! t = None⌝)%I as "%Hfresh".
+{ destruct (pub_l !! t) eqn:Heq; last eauto.
+  iDestruct (big_sepS_elem_of _ _ t with "Hmeta_l") as "Hmeta"; first by apply elem_of_dom.
+  iDestruct (term_meta_token with "Htt Hmeta") as "[]"=> //. }
+iMod (own_update with "Hauth_l") as "[Hauth_l Hfrag_t]".
+{ apply auth_update_alloc.
+  apply (alloc_singleton_local_update _ t (●SV{#1} (Private {[ t' ]}) ⋅ ◯SV (Private {[ t' ]})));
+    last by apply state_view_both_valid.
+  rewrite lookup_fmap Hfresh //. }
+iDestruct "Hfrag_t" as "[[Hauth_t_frag Hauth_t_frag'] Hfrag_t]".
+iMod (term_meta_set (cryptisN.@"public_rel") () with "Htt") as "#Hmeta_t"=> //.
+iModIntro. iSplitR "Hfrag_t Hauth_t_frag'"; last by iFrame. iModIntro.
+iExists (<[t := Private {[ t' ]}]> pub_l), pub_r.
+iFrame. iFrame "#".
+iSplitL.
+- rewrite /public_rel_map_l_auth fmap_insert.
+  rewrite big_sepM_insert=> //.
   iFrame.
-  rewrite big_sepS_union_pers big_sepS_singleton.
-  iFrame.
-  by iFrame "#".
+- rewrite dom_insert_L.
+  rewrite big_sepS_insert; last by apply not_elem_of_dom.
+  iFrame "#".
 Qed.
+
+Lemma public_rel_map_r_extend E t t' :
+  ↑cryptisN.@"public_rel" ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token_spec t' (↑cryptisN.@"public_rel") -∗
+  |={E}=> private_rel_elem_r t t' ∗
+          own public_rel_map_r (◯ {[ t' := ●SV{#1/2} (Private {[ t ]}) ]}).
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) Htts".
+iInv "Hinv" as ">(%pub_l & %pub_r & Hauth_l & [Hauth_r Hauth_r_frag] &
+                  #Hmeta_l & #Hmeta_r & Hlock)".
+iAssert (⌜pub_r !! t' = None⌝)%I as "%Hfresh".
+{ destruct (pub_r !! t') eqn:Heq; last eauto.
+  iDestruct (big_sepS_elem_of _ _ t' with "Hmeta_r") as "Hmeta"; first by apply elem_of_dom.
+  iDestruct (term_meta_spec_token with "Htts Hmeta") as "[]"=> //. }
+iMod (own_update with "Hauth_r") as "[Hauth_r Hfrag_t']".
+{ apply auth_update_alloc.
+  apply (alloc_singleton_local_update _ t' (●SV{#1} (Private {[ t ]}) ⋅ ◯SV (Private {[ t ]})));
+    last by apply state_view_both_valid.
+  rewrite lookup_fmap Hfresh //. }
+iDestruct "Hfrag_t'" as "[[Hauth_t'_frag Hauth_t'_frag'] Hfrag_t']".
+iMod (term_meta_spec_set (cryptisN.@"public_rel") () with "Htts") as "#Hmeta_t'"=> //.
+iModIntro. iSplitR "Hfrag_t' Hauth_t'_frag'"; last by iFrame. iModIntro.
+iExists pub_l, (<[t' := Private {[ t ]}]> pub_r).
+iFrame. iFrame "#".
+iSplitL.
+- rewrite /public_rel_map_r_auth fmap_insert.
+  rewrite big_sepM_insert=> //.
+  iFrame.
+- rewrite dom_insert_L.
+  rewrite big_sepS_insert; last by apply not_elem_of_dom.
+  iFrame "#".
+Qed.
+
+Lemma public_rel_extend E t1 t2 :
+  ↑cryptisN.@"public_rel" ⊆ E →
+  cryptis_rel_ctx -∗
+  private_rel_elem t1 t2 -∗
+  own public_rel_map_l (◯ {[ t1 := ●SV{#1/2} (Private {[ t2 ]}) ]}) -∗
+  own public_rel_map_r (◯ {[ t2 := ●SV{#1/2} (Private {[ t1 ]}) ]}) -∗
+  |={E}=> public_rel_elem t1 t2.
+Proof.
+Admitted.
 
 Definition pnonce_rel t1 t2 : iProp :=
   □ term_prop t1 (cryptisN.@"public_rel".@"pnonce") ∧
