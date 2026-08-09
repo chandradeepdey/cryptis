@@ -523,206 +523,148 @@ iIntros (HE) "#(_ & _ & Hinv) #[[Hl|Hl] [Hr|Hr]] Hl_frac Hr_frac".
 - by iFrame "#".
 Admitted.
 
-Definition pnonce_rel t1 t2 : iProp :=
-  □ term_prop t1 (cryptisN.@"public_rel".@"pnonce") ∧
-  □ term_prop_spec t2 (cryptisN.@"public_rel".@"pnonce").
+Fixpoint variable t :=
+  match t with
+  | TNonFree _ _ _ => false
+  | TInt _ => false
+  | TPair t1 t2 => variable t1 || variable t2
+  | TNonce _ => true
+  | TKey kt t1 => variable t1
+  | TSeal k t1 => variable k || variable t1
+  | THash t1 => variable t1
+  end.
 
-#[global] Instance Persistent_pnonce_rel t1 t2 : Persistent (pnonce_rel t1 t2).
-Proof. apply _. Qed.
+(* WIP TNonFree is unsupported atm *)
+Fixpoint privately_related t t' : iProp :=
+  match t, t' with
+  | _, TNonFree _ _ _ | TNonFree _ _ _, _ => False
+  | TInt _, TInt _ => True
+  | TInt _, TPair (TNonFree _ _ _) _ | TInt _, TPair _ (TNonFree _ _ _) => False
+  | TInt _, TPair t1' t2' =>
+      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
+      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2')
+  | TInt _, _ => private_rel_elem_r t t'
+  | TPair t1 t2, TInt _ =>
+      (⌜variable t1⌝ -∗ private_rel_elem_r t1 t') ∧
+      (⌜variable t2⌝ -∗ private_rel_elem_r t2 t')
+  | TPair t1 t2, TPair t1' t2' => privately_related t1 t1' ∧ privately_related t2 t2'
+  | TPair (TNonFree _ _ _) _, _ | TPair _ (TNonFree _ _ _), _ => False
+  | TPair t1 t2, _ =>
+      (⌜variable t1⌝ -∗ private_rel_elem_r t1 t') ∧
+      (⌜variable t2⌝ -∗ private_rel_elem_r t2 t') ∧
+      private_rel_elem_r t t'
+  | TNonce _, TInt _ => private_rel_elem_l t t'
+  | TNonce _, TPair (TNonFree _ _ _) _ | TNonce _, TPair _ (TNonFree _ _ _) => False
+  | TNonce _, TPair t1' t2' =>
+      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
+      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
+      private_rel_elem_l t t'
+  | TNonce _, _ => private_rel_elem t t'
+  | TKey _ _, TInt _ => private_rel_elem_l t t'
+  | TKey _ _, TPair (TNonFree _ _ _) _ | TKey _ _, TPair _ (TNonFree _ _ _) => False
+  | TKey _ _, TPair t1' t2' =>
+      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
+      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
+      private_rel_elem_l t t'
+  | TKey _ _, _ => private_rel_elem t t'
+  | TSeal _ _, TInt _ => private_rel_elem_l t t'
+  | TSeal _ _, TPair (TNonFree _ _ _) _ | TSeal _ _, TPair _ (TNonFree _ _ _) => False
+  | TSeal _ _, TPair t1' t2' =>
+      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
+      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
+      private_rel_elem_l t t'
+  | TSeal _ _, _ => private_rel_elem t t'
+  | THash _, TInt _ => private_rel_elem_l t t'
+  | THash _, TPair (TNonFree _ _ _) _ | THash _, TPair _ (TNonFree _ _ _) => False
+  | THash _, TPair t1' t2' =>
+      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
+      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
+      private_rel_elem_l t t'
+  | THash _, _ => private_rel_elem t t'
+  end.
 
-Lemma pnonce_rel_alloc t1 t2 E (P : iProp) :
-  ↑cryptisN.@"public_rel".@"pnonce" ⊆ E →
-    term_token t1 E ∗ term_token_spec t2 E ==∗
-  □ (pnonce_rel t1 t2 ↔ ▷ □ P) ∗
-    term_token t1 (E ∖ ↑cryptisN.@"public_rel".@"pnonce") ∗
-    term_token_spec t2 (E ∖ ↑cryptisN.@"public_rel".@"pnonce").
-Proof.
-  iIntros (?) "[token token_spec]".
-  iMod (term_prop_alloc (nroot.@"cryptis".@"public_rel".@"pnonce") P with "token")
-    as "[#H1 $]" => //.
-  iMod (term_prop_spec_alloc (nroot.@"cryptis".@"public_rel".@"pnonce") P with "token_spec")
-    as "[#H2 $]" => //.
-  iIntros "!> !>"; iSplit; iIntros "#H3".
-  - by iDestruct "H3" as "#[H3 _]"; iSpecialize ("H1" with "H3"); eauto.
-  - rewrite /pnonce_rel; iSplit; iIntros "!>".
-    + iApply "H1"; eauto.
-    + iApply "H2"; eauto.
-Qed.
-
-Definition publicly_related_later_pre P : lrelO := λ t1 t2,
-  (□ (∀ t2', ▷ P t1 t2' -∗ ▷ ⌜t2 = t2'⌝) ∧
-  □ (∀ t1', ▷ P t1' t2 -∗ ▷ ⌜t1 = t1'⌝))%I.
-
-#[local] Instance publicly_related_later_pre_persistent P t1 t2 : Persistent (publicly_related_later_pre P t1 t2).
-Proof. apply _. Qed.
-
-Definition publicly_related_pre P : lrelO :=
-  fix publicly_related_pre t1 t2 {struct t1} : iProp :=
-  (minted t1 ∧ minted_spec t2 ∧
-  match t1, t2 with
-  | TInt n1, TInt n2 => ⌜n1 = n2⌝
-  | TPair t11 t12, TPair t21 t22 =>
-      publicly_related_pre t11 t21 ∧ publicly_related_pre t12 t22
-  | TNonce l1, TNonce l2 => public_rel_elem t1 t2 ∧ ◇ pnonce_rel t1 t2
-  | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
-    match kt1 with
-    | AEnc => publicly_related_pre t1' t2' ∨
-              (public_rel_elem t1 t2 ∧ publicly_related_later_pre P t1' t2')
-    | ADec => publicly_related_pre t1' t2'
-    | Sign => publicly_related_pre t1' t2'
-    | Verify => publicly_related_pre t1' t2' ∨
-                (public_rel_elem t1 t2 ∧ publicly_related_later_pre P t1' t2')
-    | SEnc => publicly_related_pre t1' t2'
+Fixpoint publicly_related t t' : iProp :=
+  (minted t ∧ minted_spec t' ∧
+  match t, t' with
+  | _, TNonFree _ _ _ => False
+  | TNonFree _ _ _, _ => False
+  | TInt n, TInt n' => ⌜n = n'⌝
+  | TInt _, _ => False
+  | TPair t1 t2, TPair t1' t2' => publicly_related t1 t1' ∧ publicly_related t2 t2'
+  | TPair _ _, _ => False
+  | TNonce a, TNonce a' => public_rel_elem t t'
+  | TNonce a, TSeal k' t1' => public_rel_elem t t' ∧
+      match k' with
+      | TKey kt' k1' =>
+        match kt' with
+        | ADec | Verify | Sign => False
+        | _ => (private_rel_elem_r t k' ∨ private_rel_elem_r t t1') ∧
+                private_rel_elem_r t k1'
+        end
+      | _ => False
+      end
+  | TNonce a, THash t1' => public_rel_elem t t' ∧ private_rel_elem_r t t1'
+  | TNonce a, _ => False
+  | TKey kt t1, TKey kt' t1' => ⌜kt = kt'⌝ ∧
+    match kt with
+    | AEnc | Verify => publicly_related t1 t1' ∨
+                        (public_rel_elem t t' ∧ private_rel_elem t1 t1')
+    | ADec | Sign | SEnc => publicly_related t1 t1'
     end
-  | TSeal k1 t1', TSeal k2 t2' =>
-    (publicly_related_pre k1 k2 ∧ publicly_related_pre t1' t2') ∨
-    (public_rel_elem t1 t2 ∧ publicly_related_later_pre P k1 k2 ∧ publicly_related_later_pre P t1' t2' ∧
-    □ (match k1, k2 with
-      | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
-        match kt1 with
+  | TKey _ _, _ => False
+  | TSeal k t1, TSeal k' t1' =>
+    (publicly_related k k' ∧ publicly_related t1 t1') ∨
+    (public_rel_elem t t' ∧ private_rel_elem k k' ∧ privately_related t1 t1' ∧
+      match k, k' with
+      | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
+        match kt with
         | ADec | Verify => False
-        | Sign => publicly_related_pre t1' t2'
-        | AEnc | SEnc => publicly_related_pre k1 k2 → publicly_related_pre t1' t2'
+        | Sign => publicly_related t1 t1'
+        | _ => publicly_related k1 k1' -∗ publicly_related t1 t1'
         end
       | _, _ => False
-      end))
-  | THash t1', THash t2' =>
-    publicly_related_pre t1' t2' ∨
-    (public_rel_elem t1 t2 ∧ publicly_related_later_pre P t1' t2')
-  | _, _ =>
-      False (* WIP *)
+      end)
+  | TSeal k t1, TNonce a' => public_rel_elem t t' ∧
+      match k with
+      | TKey kt k1 =>
+        match kt with
+        | ADec | Verify | Sign => False
+        | _ => (private_rel_elem_l k t' ∨ private_rel_elem_l t1 t') ∧
+                private_rel_elem_l k1 t'
+        end
+      | _ => False
+      end
+  | TSeal k t1, THash t1' => public_rel_elem t t' ∧ private_rel_elem_r t t1' ∧
+      match k with
+      | TKey kt k1 =>
+        match kt with
+        | ADec | Verify | Sign => False
+        | _ => (private_rel_elem_l k t' ∨ private_rel_elem_l t1 t') ∧
+                private_rel_elem_l k1 t'
+        end
+      | _ => False
+      end
+  | TSeal _ _, _ => False
+  | THash t1, THash t1' => publicly_related t1 t1' ∨
+                            (public_rel_elem t t' ∧ privately_related t1 t1')
+  | THash t1, TNonce a' => public_rel_elem t t' ∧ private_rel_elem_l t1 t'
+  | THash t1, TSeal k' t1' => public_rel_elem t t' ∧ private_rel_elem_l t1 t' ∧
+    match k' with
+    | TKey kt' k1' =>
+      match kt' with
+      | ADec | Verify | Sign => False
+      | _ => (private_rel_elem_r t k' ∨ private_rel_elem_r t t1') ∧
+              private_rel_elem_r t k1'
+      end
+    | _ => False
+    end
+  | THash _, _ => False
   end)%I.
 
-#[local] Instance publicly_related_pre_persistent P t1 t2 : Persistent (publicly_related_pre P t1 t2).
-Proof.
-elim/term_lt_ind: t1 t2 => // -[] //=.
-- move=> ? ? [] *; apply _.
-- move=> t11 t12 IH []; try apply _.
-  move=> t21 t22.
-  have IH1: Persistent (publicly_related_pre P t11 t21).
-  { apply IH. rewrite /tsize /=. lia. }
-  have IH2: Persistent (publicly_related_pre P t12 t22).
-  { apply IH. rewrite /tsize /=. lia. }
-  apply _.
-- move=> ? ? [] *; apply _.
-- move=> k1 t1' IH []; try apply _.
-  move=> k2 t2'.
-  have {}IH: Persistent (publicly_related_pre P t1' t2').
-  { apply IH. rewrite /tsize /=. lia. }
-  apply _.
-- move=> k1 t1' IH []; try apply _.
-  move=> k2 t2'.
-  have IH1: Persistent (publicly_related_pre P k1 k2).
-  { apply IH. rewrite /tsize /=. lia. }
-  have IH2: Persistent (publicly_related_pre P t1' t2').
-  { apply IH. rewrite /tsize /=. lia. }
-  apply _.
-- move=> t1' IH []; try apply _.
-  move=> t2'.
-  have {}IH: Persistent (publicly_related_pre P t1' t2').
-  { apply IH. rewrite /tsize /=. lia. }
-  apply _.
-all: apply _.
-Qed.
-
-#[local] Instance publicly_related_pre_contractive : Contractive publicly_related_pre.
-Proof.
-  move=> n P P' HP t1 t2.
-  elim/term_lt_ind: t1 t2 => // -[] //=.
-  - move=> t11 t12 IH [] //= t21 t22.
-    rewrite /tsize in IH.
-    f_equiv; f_equiv; f_equiv; apply: IH; rewrite /=; lia.
-  - move=> kt1 t1' IH [] //= kt2 t2'.
-    rewrite /tsize in IH.
-    f_equiv; f_equiv; f_equiv.
-    have {}IH: ∀ t2, publicly_related_pre P t1' t2 ≡{n}≡ publicly_related_pre P' t1' t2.
-    { apply: IH. simpl. lia. }
-    case: kt1 => //=.
-    + f_equiv; first done.
-      f_equiv; solve_contractive.
-    + f_equiv; first done.
-      f_equiv; solve_contractive.
-  - move=> k1 t1' IH [] //= k2 t2'.
-    rewrite /tsize in IH; f_equiv; f_equiv; f_equiv.
-    + f_equiv; apply: IH; rewrite /=; lia.
-    + f_equiv.
-      f_equiv. solve_contractive.
-      f_equiv. solve_contractive.
-      f_equiv.
-      case: k1 => //= kt1 k1 in IH*.
-      case: k2 => //= kt2 k2.
-      f_equiv.
-      have IH1: publicly_related_pre P t1' t2' ≡{n}≡ publicly_related_pre P' t1' t2'.
-      { apply: IH. rewrite /=. lia. }
-      have IH2: publicly_related_pre P k1 k2 ≡{n}≡ publicly_related_pre P' k1 k2.
-      { apply: IH. rewrite /=. lia. }
-      case: kt1 => //=; by f_equiv.
-  - move=> t1' IH [] //= t2'.
-    rewrite /tsize in IH.
-    have {}IH: publicly_related_pre P t1' t2' ≡{n}≡ publicly_related_pre P' t1' t2'.
-    { apply IH. simpl. lia. }
-    f_equiv; f_equiv; f_equiv. solve_contractive.
-    f_equiv. solve_contractive.
-Qed.
-
-#[local] Definition publicly_related_def : lrelO :=
-  fixpoint (publicly_related_pre).
-#[local] Definition publicly_related_aux : seal publicly_related_def. Proof. by eexists. Qed.
-Definition publicly_related := publicly_related_aux.(unseal).
-#[local] Lemma publicly_related_unseal : publicly_related = publicly_related_def.
-Proof. rewrite -publicly_related_aux.(seal_eq) //. Qed.
-
-Definition publicly_related_later := publicly_related_later_pre publicly_related.
-
-#[local] Notation "PUB▷⟨ a , b ⟩" := (publicly_related_later a b)
-  (at level 70, no associativity, format "PUB▷⟨ a , b ⟩").
+#[local] Notation "PRIV⟨ a , b ⟩" := (privately_related a b)
+  (at level 70, no associativity, format "PRIV⟨ a , b ⟩").
 #[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
   (at level 70, no associativity, format "PUB⟨ a , b ⟩").
-
-Lemma publicly_related_unfold :
-  ∀ t1 t2, PUB⟨t1, t2⟩ ⊣⊢
-  minted t1 ∧ minted_spec t2 ∧
-  match t1, t2 with
-  | TInt n1, TInt n2 => ⌜n1 = n2⌝
-  | TPair t11 t12, TPair t21 t22 => PUB⟨t11, t21⟩ ∧ PUB⟨t12, t22⟩
-  | TNonce l1, TNonce l2 => public_rel_elem t1 t2 ∧ ◇ pnonce_rel t1 t2
-  | TKey kt1 t1', TKey kt2 t2' => ⌜kt1 = kt2⌝ ∧
-    match kt1 with
-    | AEnc => PUB⟨t1', t2'⟩ ∨ (public_rel_elem t1 t2 ∧ PUB▷⟨t1', t2'⟩)
-    | ADec => PUB⟨t1', t2'⟩
-    | Sign => PUB⟨t1', t2'⟩
-    | Verify => PUB⟨t1', t2'⟩ ∨ (public_rel_elem t1 t2 ∧ PUB▷⟨t1', t2'⟩)
-    | SEnc => PUB⟨t1', t2'⟩
-    end
-  | TSeal k1 t1', TSeal k2 t2' =>
-    (PUB⟨k1, k2⟩ ∧ PUB⟨t1', t2'⟩) ∨
-    (public_rel_elem t1 t2 ∧ PUB▷⟨k1, k2⟩ ∧ PUB▷⟨t1', t2'⟩ ∧
-    □ (match k1, k2 with
-      | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
-        match kt1 with
-        | ADec | Verify => False
-        | Sign => PUB⟨t1', t2'⟩
-        | _ => PUB⟨k1, k2⟩ → PUB⟨t1', t2'⟩
-        end
-      | _, _ => False
-      end))
-  | THash t1', THash t2' => PUB⟨t1', t2'⟩ ∨ (public_rel_elem t1 t2 ∧ PUB▷⟨t1', t2'⟩)
-  | _, _ => False (* WIP *)
-  end.
-Proof.
-  rewrite /publicly_related_later publicly_related_unseal /publicly_related_def => t1 t2.
-  rewrite (fixpoint_unfold publicly_related_pre t1 t2).
-  case: t1 => //= [t11 t12|kt1 t1'|k1 t1'|t1'].
-  1: case: t2 => //= t21 t22.
-  2: case: t2 => //= kt2 t2'.
-  3: case: t2 => //= k2 t2'.
-  4: case: t2 => //= t2'.
-  all: repeat f_equiv.
-  by rewrite (fixpoint_unfold publicly_related_pre t11 t21).
-  by rewrite (fixpoint_unfold publicly_related_pre t12 t22).
-  all: try by rewrite (fixpoint_unfold publicly_related_pre t1' t2').
-  all: try by rewrite (fixpoint_unfold publicly_related_pre k1 k2).
-Qed.
 
 #[global] Instance publicly_related_persistent t1 t2 : Persistent (PUB⟨t1, t2⟩).
 Proof.
