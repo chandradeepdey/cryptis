@@ -208,6 +208,14 @@ Section lemmas.
       by repeat case_bool_decide.
   Qed.
 
+  Lemma state_code_id_local_update st :
+    (●SV st ⋅ ◯SV st, ●SV st) ~l~>
+    (●SV st ⋅ ◯SV st, ●SV st ⋅ ◯SV st).
+  Proof.
+  apply core_id_local_update; first apply _.
+  by rewrite view_frag_included.
+  Qed.
+
   Lemma state_view_both_valid st : st ≠ Invalid → ✓ (●SV st ⋅ ◯SV st).
   Proof.
   rewrite /state_view_auth /state_view_frag view_both_valid.
@@ -477,50 +485,35 @@ Qed.
 Lemma public_rel_extend E t t' :
   ↑cryptisN.@"public_rel" ⊆ E →
   cryptis_rel_ctx -∗
-  private_rel_elem t t' -∗
   own public_rel_map_l (◯ {[ t := ●SV{#1/2} (Private {[ t' ]}) ]}) -∗
   own public_rel_map_r (◯ {[ t' := ●SV{#1/2} (Private {[ t ]}) ]}) -∗
   |={E}=> public_rel_elem t t'.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) #[[Hl|Hl] [Hr|Hr]] Hl_frac Hr_frac".
-- iInv "Hinv" as ">(%pub_l & %pub_r & [Hauth_l Hauth_l_frag] & [Hauth_r Hauth_r_frag] & #Hmeta_l & #Hmeta_r & %Hlock)".
-  rewrite /public_rel_map_l_elem /public_rel_map_r_elem.
-  iPoseProof (public_rel_map_l_t_st with "Hauth_l Hl_frac") as "%Hltt'".
-  iPoseProof (public_rel_map_r_t'_st with "Hauth_r Hr_frac") as "%Hrtt'".
-  iDestruct (big_sepM_delete _ _ t _ Hltt' with "Hauth_l_frag") as "[Hl_frac2 Hauth_l_frag]".
-  iDestruct (big_sepM_delete _ _ t' _ Hrtt' with "Hauth_r_frag") as "[Hr_frac2 Hauth_r_frag]".
-  iCombine "Hl_frac Hl_frac2" as "Hl_t"; iCombine "Hl_t Hl" as "Hl_t".
-  iCombine "Hr_frac Hr_frac2" as "Hr_t"; iCombine "Hr_t Hr" as "Hr_t".
-  iMod (own_update_2 with "Hauth_l Hl_t") as "[Hauth_l Hl_t]".
-  { apply auth_update.
-    eapply (singleton_local_update _ _ _ _ (●SV (Public t') ⋅ ◯SV (Public t'))
-      (●SV (Public t') ⋅ ◯SV (Public t'))); first by rewrite lookup_fmap Hltt' /=.
-    apply state_local_update_lock. }
-  iMod (own_update_2 with "Hauth_r Hr_t") as "[Hauth_r Hr_t]".
-  { apply auth_update.
-    eapply (singleton_local_update _ _ _ _ (●SV (Public t) ⋅ ◯SV (Public t))
-      (●SV (Public t) ⋅ ◯SV (Public t))); first by rewrite lookup_fmap Hrtt' /=.
-    apply state_local_update_lock. }
-  iClear "Hl Hr". iDestruct "Hl_t" as "[Hl_t #Hl]". iDestruct "Hr_t" as "[Hr_t #Hr]".
-  iModIntro. iSplitL; last by iFrame "#".
-  admit.
-- iCombine "Hr Hr_frac" gives "%H".
-  exfalso.
-  rewrite auth_frag_op_valid in H.
-  rewrite singleton_op in H.
-  apply singleton_valid in H.
-  rewrite comm in H.
-  apply view_both_dfrac_valid in H as [_ H].
-  by specialize (H 0).
-- iCombine "Hl Hl_frac" gives "%H".
-  exfalso.
-  rewrite auth_frag_op_valid in H.
-  rewrite singleton_op in H.
-  apply singleton_valid in H.
-  rewrite comm in H.
-  apply view_both_dfrac_valid in H as [_ H].
-  by specialize (H 0).
-- by iFrame "#".
+iIntros (HE) "#(_ & _ & Hinv) Hl_frac Hr_frac".
+iInv "Hinv" as ">(%pub_l & %pub_r & [Hauth_l Hauth_l_frag] & [Hauth_r Hauth_r_frag] & #Hmeta_l & #Hmeta_r & %Hlock)".
+rewrite /public_rel_map_l_elem /public_rel_map_r_elem.
+iPoseProof (public_rel_map_l_t_st with "Hauth_l Hl_frac") as "%Hltt'".
+iPoseProof (public_rel_map_r_t'_st with "Hauth_r Hr_frac") as "%Hrtt'".
+iDestruct (big_sepM_delete _ _ t _ Hltt' with "Hauth_l_frag") as "[Hl_frac2 Hauth_l_frag]".
+iDestruct (big_sepM_delete _ _ t' _ Hrtt' with "Hauth_r_frag") as "[Hr_frac2 Hauth_r_frag]".
+iCombine "Hl_frac Hl_frac2" as "Hl".
+iCombine "Hr_frac Hr_frac2" as "Hr".
+iMod (own_update_2 with "Hauth_l Hl") as "[Hauth_l Hl]".
+{ apply auth_update.
+  eapply (singleton_local_update _ _ _ _ (●SV (Public t') ⋅ ◯SV (Public t'))
+    (●SV (Public t') ⋅ ◯SV (Public t'))); first by rewrite lookup_fmap Hltt' /=.
+  etransitivity.
+  apply state_code_id_local_update.
+  apply state_local_update_lock. }
+iMod (own_update_2 with "Hauth_r Hr") as "[Hauth_r Hr]".
+{ apply auth_update.
+  eapply (singleton_local_update _ _ _ _ (●SV (Public t) ⋅ ◯SV (Public t))
+    (●SV (Public t) ⋅ ◯SV (Public t))); first by rewrite lookup_fmap Hrtt' /=.
+  etransitivity.
+  apply state_code_id_local_update.
+  apply state_local_update_lock. }
+iDestruct "Hl" as "[Hl_t #Hl]". iDestruct "Hr" as "[Hr_t #Hr]".
+iModIntro. iSplitL; last by iFrame "#".
 Admitted.
 
 Fixpoint variable t :=
