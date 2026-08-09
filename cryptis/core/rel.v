@@ -522,60 +522,80 @@ Fixpoint variable t :=
   | TInt _ => false
   | TPair t1 t2 => variable t1 || variable t2
   | TNonce _ => true
-  | TKey kt t1 => variable t1
-  | TSeal k t1 => variable k || variable t1
+  | TKey kt t1 => true
+  | TSeal k t1 => true
   | THash t1 => variable t1
   end.
 
-(* WIP TNonFree is unsupported atm *)
-Fixpoint privately_related t t' : iProp :=
-  match t, t' with
-  | _, TNonFree _ _ _ | TNonFree _ _ _, _ => False
-  | TInt _, TInt _ => True
-  | TInt _, TPair (TNonFree _ _ _) _ | TInt _, TPair _ (TNonFree _ _ _) => False
-  | TInt _, TPair t1' t2' =>
-      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
-      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2')
-  | TInt _, _ => private_rel_elem_r t t'
-  | TPair t1 t2, TInt _ =>
-      (⌜variable t1⌝ -∗ private_rel_elem_r t1 t') ∧
-      (⌜variable t2⌝ -∗ private_rel_elem_r t2 t')
-  | TPair t1 t2, TPair t1' t2' => privately_related t1 t1' ∧ privately_related t2 t2'
-  | TPair (TNonFree _ _ _) _, _ | TPair _ (TNonFree _ _ _), _ => False
-  | TPair t1 t2, _ =>
-      (⌜variable t1⌝ -∗ private_rel_elem_r t1 t') ∧
-      (⌜variable t2⌝ -∗ private_rel_elem_r t2 t') ∧
-      private_rel_elem_r t t'
-  | TNonce _, TInt _ => private_rel_elem_l t t'
-  | TNonce _, TPair (TNonFree _ _ _) _ | TNonce _, TPair _ (TNonFree _ _ _) => False
-  | TNonce _, TPair t1' t2' =>
-      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
-      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
-      private_rel_elem_l t t'
-  | TNonce _, _ => private_rel_elem t t'
-  | TKey _ _, TInt _ => private_rel_elem_l t t'
-  | TKey _ _, TPair (TNonFree _ _ _) _ | TKey _ _, TPair _ (TNonFree _ _ _) => False
-  | TKey _ _, TPair t1' t2' =>
-      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
-      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
-      private_rel_elem_l t t'
-  | TKey _ _, _ => private_rel_elem t t'
-  | TSeal _ _, TInt _ => private_rel_elem_l t t'
-  | TSeal _ _, TPair (TNonFree _ _ _) _ | TSeal _ _, TPair _ (TNonFree _ _ _) => False
-  | TSeal _ _, TPair t1' t2' =>
-      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
-      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
-      private_rel_elem_l t t'
-  | TSeal _ _, _ => private_rel_elem t t'
-  | THash _, TInt _ => private_rel_elem_l t t'
-  | THash _, TPair (TNonFree _ _ _) _ | THash _, TPair _ (TNonFree _ _ _) => False
-  | THash _, TPair t1' t2' =>
-      (⌜variable t1'⌝ -∗ private_rel_elem_r t t1') ∧
-      (⌜variable t2'⌝ -∗ private_rel_elem_r t t2') ∧
-      private_rel_elem_l t t'
-  | THash _, _ => private_rel_elem t t'
+Fixpoint privately_related_aux fuel t t' : iProp :=
+  match fuel with
+  | 0 => False
+  | S fuel =>
+    match t, t' with
+    | _, TNonFree _ _ _ | TNonFree _ _ _, _ => False
+    | TInt _, TInt _ => True
+    | TInt _, TPair t1' t2' =>
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t t1' ∧
+        privately_related_aux fuel t t2'
+    | TInt _, _ => ⌜variable t'⌝ -∗ private_rel_elem_r t t'
+    | TPair t1 t2, TInt _ =>
+        (⌜variable t⌝ -∗ private_rel_elem_l t t') ∧
+        privately_related_aux fuel t1 t' ∧
+        privately_related_aux fuel t2 t'
+    | TPair t1 t2, TPair t1' t2' =>
+        (⌜variable t⌝ -∗ private_rel_elem_l t t') ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t1 t1' ∧
+        privately_related_aux fuel t2 t2'
+    | TPair t1 t2, _ =>
+        (⌜variable t⌝ -∗ private_rel_elem_l t t') ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t1 t' ∧
+        privately_related_aux fuel t2 t'
+    | TNonce _, TInt _ => private_rel_elem_l t t'
+    | TNonce _, TPair t1' t2' =>
+        private_rel_elem_l t t' ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t t1' ∧
+        privately_related_aux fuel t t2'
+    | TNonce _, _ =>
+        private_rel_elem_l t t' ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t')
+    | TKey _ _, TInt _ => private_rel_elem_l t t'
+    | TKey _ _, TPair t1' t2' =>
+        private_rel_elem_l t t' ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t t1' ∧
+        privately_related_aux fuel t t2'
+    | TKey _ _, _ =>
+        private_rel_elem_l t t' ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t')
+    | TSeal _ _, TInt _ => private_rel_elem_l t t'
+    | TSeal _ _, TPair t1' t2' =>
+        private_rel_elem_l t t' ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t t1' ∧
+        privately_related_aux fuel t t2'
+    | TSeal _ _, _ =>
+        private_rel_elem_l t t' ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t')
+    | THash _, TInt _ => ⌜variable t⌝ -∗ private_rel_elem_l t t'
+    | THash _, TPair t1' t2' =>
+        (⌜variable t⌝ -∗ private_rel_elem_l t t') ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t') ∧
+        privately_related_aux fuel t t1' ∧
+        privately_related_aux fuel t t2'
+    | THash _, _ =>
+        (⌜variable t⌝ -∗ private_rel_elem_l t t') ∧
+        (⌜variable t'⌝ -∗ private_rel_elem_r t t')
+    end
   end.
 
+Definition privately_related (t t' : term) : iProp :=
+  privately_related_aux (tsize t + tsize t') t t'.
+
+(* WIP TNonFree is unsupported atm *)
 Fixpoint publicly_related t t' : iProp :=
   (minted t ∧ minted_spec t' ∧
   match t, t' with
