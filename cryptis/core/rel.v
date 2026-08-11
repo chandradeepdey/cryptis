@@ -80,7 +80,7 @@ Section cmra.
   change (ε ⋅ s) with (state_op_instance ε s).
   case: s => [ts|t|] //=.
   + f_equiv; set_solver.
-  + case_bool_decide=> //; last set_solver.
+  + case_bool_decide=> //; set_solver.
   Qed.
 
   Canonical Structure stateR := discreteR state state_ra_mixin.
@@ -208,7 +208,7 @@ Section lemmas.
       by repeat case_bool_decide.
   Qed.
 
-  Lemma state_code_id_local_update st :
+  Lemma state_core_id_local_update st :
     (●SV st ⋅ ◯SV st, ●SV st) ~l~>
     (●SV st ⋅ ◯SV st, ●SV st ⋅ ◯SV st).
   Proof.
@@ -503,20 +503,30 @@ iMod (own_update_2 with "Hauth_l Hl") as "[Hauth_l Hl]".
   eapply (singleton_local_update _ _ _ _ (●SV (Public t') ⋅ ◯SV (Public t'))
     (●SV (Public t') ⋅ ◯SV (Public t'))); first by rewrite lookup_fmap Hltt' /=.
   etransitivity.
-  apply state_code_id_local_update.
+  apply state_core_id_local_update.
   apply state_local_update_lock. }
 iMod (own_update_2 with "Hauth_r Hr") as "[Hauth_r Hr]".
 { apply auth_update.
   eapply (singleton_local_update _ _ _ _ (●SV (Public t) ⋅ ◯SV (Public t))
     (●SV (Public t) ⋅ ◯SV (Public t))); first by rewrite lookup_fmap Hrtt' /=.
   etransitivity.
-  apply state_code_id_local_update.
+  apply state_core_id_local_update.
   apply state_local_update_lock. }
-iDestruct "Hl" as "[Hl_t #Hl]". iDestruct "Hr" as "[Hr_t #Hr]".
+iDestruct "Hl" as "[_ #Hl]". iDestruct "Hr" as "[_ #Hr]".
 iModIntro. iSplitL; last by iFrame "#".
-Admitted.
+iModIntro.
+iExists (<[t := Public t']> pub_l), (<[t' := Public t]> pub_r).
+rewrite /public_rel_inv /public_rel_map_l_auth /public_rel_map_r_auth.
+rewrite !fmap_insert !big_sepM_insert_delete.
+rewrite !dom_insert_lookup_L=> //.
+iFrame. iFrame "#".
+iPureIntro.
+intros t1 t1'.
+destruct (decide (t = t1)) as [->|?];
+  destruct (decide (t' = t1')) as [->|?];
+  rewrite ?lookup_insert_eq ?lookup_insert_ne; naive_solver.
+Qed.
 
-Fixpoint variable t :=
   match t with
   | TNonFree _ _ _ => false
   | TInt _ => false
