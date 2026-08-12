@@ -182,6 +182,28 @@ Section lemmas.
   destruct frag; simpl in *; try case_bool_decide; done.
   Qed.
 
+  Lemma state_local_update_grow ts t :
+  (●SV Private ts ⋅ ◯SV Private ts, ●SV Private ts ⋅ ◯SV Private ts) ~l~>
+  (●SV Private (ts ∪ {[ t ]}) ⋅ ◯SV Private (ts ∪ {[ t ]}), ●SV Private (ts ∪ {[ t ]}) ⋅ ◯SV Private (ts ∪ {[ t ]})).
+  Proof.
+  apply local_update_discrete.
+  move=> mz Hval Heq; split; first by rewrite view_both_valid; set_solver.
+  case: mz Hval Heq=> [[[[? ?]|] mz_frag]|] //= Hval Heq.
+  - rewrite Heq in Hval.
+    destruct Hval as [Hdq _].
+    by apply dfrac_valid_own_l in Hdq.
+  - rewrite Heq -assoc -view_frag_op in Hval.
+    rewrite -assoc -view_frag_op.
+    rewrite view_both_valid in Hval.
+    specialize (Hval 0).
+    destruct mz_frag as [st|t'|]=> //; simpl in Hval.
+    + change (Private (ts ∪ {[ t ]}) ⋅ Private st) with (state_op_instance (Private (ts ∪ {[ t ]})) (Private st))=> /=.
+      f_equiv; f_equiv; f_equiv. set_solver.
+    + change (Private ts ⋅ Public t') with (state_op_instance (Private ts) (Public t')) in Hval.
+      simpl in Hval.
+      by case_bool_decide.
+  Qed.
+
   Lemma state_local_update_lock t :
     (●SV Private {[ t ]} ⋅ ◯SV Private {[ t ]}, ●SV Private {[ t ]} ⋅ ◯SV Private {[ t ]}) ~l~>
     (●SV Public t ⋅ ◯SV Public t, ●SV Public t ⋅ ◯SV Public t).
@@ -197,15 +219,12 @@ Section lemmas.
     rewrite view_both_valid in Hval.
     specialize (Hval 0).
     destruct mz_frag as [st|t'|]=> //; simpl in Hval.
-    + assert (Public t ⋅ Private st ≡ Public t) as ->; last done.
-      change (Public t ⋅ Private st) with (if bool_decide (st ⊆ {[ t ]}) then Public t else Invalid).
+    + change (Public t ⋅ Private st) with (state_op_instance (Public t) (Private st))=> /=.
       case_bool_decide; first done.
       set_solver.
-    + assert (Public t ⋅ Public t' ≡ Public t) as ->; last done.
-      change (Private {[t]} ⋅ Public t') with (state_op_instance (Private {[t]}) (Public t')) in Hval.
+    + change (Private {[t]} ⋅ Public t') with (state_op_instance (Private {[t]}) (Public t')) in Hval.
       simpl in Hval.
-      change (Public t ⋅ Public t') with (if bool_decide (t = t') then Public t else Invalid).
-      by repeat case_bool_decide.
+      by case_bool_decide.
   Qed.
 
   Lemma state_core_id_local_update st :
@@ -482,6 +501,100 @@ rewrite /private_rel_elem.
 by iFrame.
 Qed.
 
+Lemma public_rel_map_l_grow E t ts t' :
+  ↑cryptisN.@"public_rel" ⊆ E →
+  cryptis_rel_ctx -∗
+  own public_rel_map_l (◯ {[ t := ●SV{#1/2} (Private ts) ]}) -∗
+  |={E}=> private_rel_elem_l t t' ∗
+          own public_rel_map_l (◯ {[ t := ●SV{#1/2} (Private (ts ∪ {[ t' ]})) ]}).
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) Hl_frac".
+iInv "Hinv" as ">(%pub_l & %pub_r & [Hauth_l Hauth_l_frag] & Hauth_r & #Hmeta_l & #Hmeta_r & %Hlock)".
+iPoseProof (public_rel_map_l_t_st with "Hauth_l Hl_frac") as "%Hltt'".
+iDestruct (big_sepM_delete _ _ t _ Hltt' with "Hauth_l_frag") as "[Hl_frac2 Hauth_l_frag]".
+iCombine "Hl_frac Hl_frac2" as "Hl".
+iMod (own_update_2 with "Hauth_l Hl") as "[Hauth_l Hl]".
+{ apply auth_update.
+  eapply (singleton_local_update _ _ _ _ (●SV Private (ts ∪ {[ t' ]}) ⋅ ◯SV Private (ts ∪ {[ t' ]}))
+    (●SV Private (ts ∪ {[ t' ]}) ⋅ ◯SV Private (ts ∪ {[ t' ]})));
+    first by rewrite lookup_fmap Hltt' /=.
+  etransitivity.
+  apply state_core_id_local_update.
+  apply state_local_update_grow. }
+iDestruct "Hl" as "[[Hl_frac Hl_frac2] #Hl']".
+iAssert (own public_rel_map_l (◯ {[ t := ◯SV Private {[ t' ]} ]})) as "Hl".
+{ assert (Private (ts ∪ {[t']}) = Private ts ⋅ Private {[t']}) as -> by done.
+  by iDestruct "Hl'" as "[_ Hl']". }
+iModIntro. iSplitR "Hl_frac2"; last by iFrame; iFrame "#".
+iModIntro.
+iExists (<[t := Private (ts ∪ {[ t' ]})]> pub_l), pub_r.
+rewrite /public_rel_inv /public_rel_map_l_auth.
+iAssert ([∗ map] k ↦ y ∈ {[ t := Private (ts ∪ {[ t' ]})]}, match y with
+    | Private _ => own public_rel_map_l (◯ {[ k := ●SV{#1 / 2} y]})
+    | _ => emp
+    end)%I with "[Hl_frac]" as "Hl_frac".
+{ by rewrite big_sepM_singleton. }
+iCombine "Hauth_l_frag Hl_frac" as "Hauth_l_frag".
+rewrite -big_sepM_union; last by apply map_disjoint_singleton_r, lookup_delete_eq.
+rewrite -insert_union_singleton_r; last by apply lookup_delete_eq.
+rewrite insert_delete_eq.
+rewrite fmap_insert.
+rewrite dom_insert_lookup_L=> //.
+iFrame. iFrame "#".
+iPureIntro.
+intros t1 t1'.
+destruct (decide (t = t1)) as [->|?];
+  destruct (decide (t' = t1')) as [->|?];
+  rewrite ?lookup_insert_eq ?lookup_insert_ne; naive_solver.
+Qed.
+
+Lemma public_rel_map_r_grow E t ts t' :
+  ↑cryptisN.@"public_rel" ⊆ E →
+  cryptis_rel_ctx -∗
+  own public_rel_map_r (◯ {[ t' := ●SV{#1/2} (Private ts) ]}) -∗
+  |={E}=> private_rel_elem_r t t' ∗
+          own public_rel_map_r (◯ {[ t' := ●SV{#1/2} (Private (ts ∪ {[ t ]})) ]}).
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) Hr_frac".
+iInv "Hinv" as ">(%pub_l & %pub_r & Hauth_l & [Hauth_r Hauth_r_frag] & #Hmeta_l & #Hmeta_r & %Hlock)".
+iPoseProof (public_rel_map_r_t'_st with "Hauth_r Hr_frac") as "%Hrtt'".
+iDestruct (big_sepM_delete _ _ t' _ Hrtt' with "Hauth_r_frag") as "[Hr_frac2 Hauth_r_frag]".
+iCombine "Hr_frac Hr_frac2" as "Hr".
+iMod (own_update_2 with "Hauth_r Hr") as "[Hauth_r Hr]".
+{ apply auth_update.
+  eapply (singleton_local_update _ _ _ _ (●SV Private (ts ∪ {[ t ]}) ⋅ ◯SV Private (ts ∪ {[ t ]}))
+    (●SV Private (ts ∪ {[ t ]}) ⋅ ◯SV Private (ts ∪ {[ t ]})));
+    first by rewrite lookup_fmap Hrtt' /=.
+  etransitivity.
+  apply state_core_id_local_update.
+  apply state_local_update_grow. }
+iDestruct "Hr" as "[[Hr_frac Hr_frac2] #Hr']".
+iAssert (own public_rel_map_r (◯ {[ t' := ◯SV Private {[ t ]} ]})) as "Hl".
+{ assert (Private (ts ∪ {[t]}) = Private ts ⋅ Private {[t]}) as -> by done.
+  by iDestruct "Hr'" as "[_ Hr']". }
+iModIntro. iSplitR "Hr_frac2"; last by iFrame; iFrame "#".
+iModIntro.
+iExists pub_l, (<[t' := Private (ts ∪ {[ t ]})]> pub_r).
+rewrite /public_rel_inv /public_rel_map_r_auth.
+iAssert ([∗ map] k ↦ y ∈ {[ t' := Private (ts ∪ {[ t ]})]}, match y with
+    | Private _ => own public_rel_map_r (◯ {[ k := ●SV{#1 / 2} y]})
+    | _ => emp
+    end)%I with "[Hr_frac]" as "Hr_frac".
+{ by rewrite big_sepM_singleton. }
+iCombine "Hauth_r_frag Hr_frac" as "Hauth_r_frag".
+rewrite -big_sepM_union; last by apply map_disjoint_singleton_r, lookup_delete_eq.
+rewrite -insert_union_singleton_r; last by apply lookup_delete_eq.
+rewrite insert_delete_eq.
+rewrite fmap_insert.
+rewrite dom_insert_lookup_L=> //.
+iFrame. iFrame "#".
+iPureIntro.
+intros t1 t1'.
+destruct (decide (t = t1)) as [->|?];
+  destruct (decide (t' = t1')) as [->|?];
+  rewrite ?lookup_insert_eq ?lookup_insert_ne; naive_solver.
+Qed.
+
 Lemma public_rel_extend E t t' :
   ↑cryptisN.@"public_rel" ⊆ E →
   cryptis_rel_ctx -∗
@@ -491,7 +604,6 @@ Lemma public_rel_extend E t t' :
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hl_frac Hr_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & [Hauth_l Hauth_l_frag] & [Hauth_r Hauth_r_frag] & #Hmeta_l & #Hmeta_r & %Hlock)".
-rewrite /public_rel_map_l_elem /public_rel_map_r_elem.
 iPoseProof (public_rel_map_l_t_st with "Hauth_l Hl_frac") as "%Hltt'".
 iPoseProof (public_rel_map_r_t'_st with "Hauth_r Hr_frac") as "%Hrtt'".
 iDestruct (big_sepM_delete _ _ t _ Hltt' with "Hauth_l_frag") as "[Hl_frac2 Hauth_l_frag]".
@@ -527,6 +639,7 @@ destruct (decide (t = t1)) as [->|?];
   rewrite ?lookup_insert_eq ?lookup_insert_ne; naive_solver.
 Qed.
 
+Fixpoint variable_l t : iProp :=
   match t with
   | TNonFree _ _ _ => false
   | TInt _ => false
