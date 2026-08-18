@@ -1,6 +1,6 @@
 From stdpp Require Import sets.
 From iris.algebra Require Import auth cmra ofe view gmap local_updates.
-From iris.base_logic.lib Require Import own.
+From iris.base_logic.lib Require Import own ghost_map.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import saved_prop.
@@ -249,21 +249,26 @@ End lemmas.
 
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term state_viewR));
+  #[local] public_relGpreS_flow :: ghost_mapG Σ term (gset term);
   #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
   #[local] public_relGpreS_prop :: savedPropG Σ;
 }.
 
 Class public_relGS Σ := Public_relGS {
-  #[global] public_relGS_maps :: inG Σ (authUR (gmapUR term state_viewR));
-  #[global] public_rel_term_meta :: term_metaGS Σ;
-  #[global] public_rel_term_meta_spec :: term_meta_specGS Σ;
-  #[global] public_relGS_prop :: savedPropG Σ;
+  #[global] maps_inG :: inG Σ (authUR (gmapUR term state_viewR));
+  #[global] flow_inG :: ghost_mapG Σ term (gset term);
+  #[global] term_meta_inG :: term_metaGS Σ;
+  #[global] term_meta_spec_inG :: term_meta_specGS Σ;
+  #[global] prop_inG :: savedPropG Σ;
   public_rel_map_l : gname;
   public_rel_map_r : gname;
+  public_rel_flow_l : gname;
+  public_rel_flow_r : gname;
 }.
 
 Definition public_relΣ : gFunctors :=
   #[GFunctor (authUR (gmapUR term state_viewR));
+    ghost_mapΣ term (gset term);
     term_metaΣ;
     savedPropΣ].
 
@@ -279,21 +284,22 @@ Notation iPropO := (iPropO Σ).
 
 Implicit Types t : term.
 Implicit Types pub_l pub_r : gmap term state.
+Implicit Types flow_l flow_r : gmap term (gset term).
 Implicit Types P : term -> term -> iProp.
 
 Definition public_rel_map_l_auth pub_l : iProp :=
     own public_rel_map_l (● (@fmap (gmap term) _ _ _ (λ st, ●SV st ⋅ ◯SV st) pub_l)) ∗
-    ([∗ map] t ↦ st ∈ pub_l, match st with
+    [∗ map] t ↦ st ∈ pub_l, match st with
                               | Private _ => own public_rel_map_l (◯ {[ t := ●SV{#1/2} st ]})
                               | _ => emp
-                              end).
+                              end.
 
 Definition public_rel_map_r_auth pub_r : iProp :=
   own public_rel_map_r (● (@fmap (gmap term) _ _ _ (λ st, ●SV st ⋅ ◯SV st) pub_r)) ∗
-  ([∗ map] t' ↦ st ∈ pub_r, match st with
+  [∗ map] t' ↦ st ∈ pub_r, match st with
                             | Private _ => own public_rel_map_r (◯ {[ t' := ●SV{#1/2} st ]})
                             | _ => emp
-                            end).
+                            end.
 
 Definition public_rel_map_l_elem t t': iProp :=
   own public_rel_map_l (◯ {[ t := ◯SV (Private {[ t' ]}) ]}).
@@ -346,6 +352,28 @@ Qed.
 #[global] Instance public_rel_elem_persistent t t' : Persistent (public_rel_elem t t').
 Proof. apply _. Qed.
 
+Inductive is_immediate_subterm : term → term → Prop :=
+  | SubtermPairL t1 t2 : is_immediate_subterm t1 (TPair t1 t2)
+  | SubtermPairR t1 t2 : is_immediate_subterm t2 (TPair t1 t2)
+  | SubtermKey kt t1 : is_immediate_subterm t1 (TKey kt t1)
+  | SubtermSealKey k t1 : is_immediate_subterm k (TSeal k t1)
+  | SubtermSealBody k t1 : is_immediate_subterm t1 (TSeal k t1)
+  | SubtermHash t1 : is_immediate_subterm t1 (THash t1).
+
+Definition public_rel_flow_l_auth flow_l : iProp :=
+  ghost_map_auth public_rel_flow_l 1 flow_l ∗
+  [∗ map] t ↦ ts ∈ flow_l,
+    t ↪[public_rel_flow_l]{#1/2} ts ∗
+    ([∗ set] t1 ∈ ts, ⌜is_immediate_subterm t t1⌝) ∗
+    ⌜ts ≠ ∅ → (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
+
+Definition public_rel_flow_r_auth flow_r : iProp :=
+  ghost_map_auth public_rel_flow_r 1 flow_r ∗
+  [∗ map] t' ↦ ts ∈ flow_r,
+    t' ↪[public_rel_flow_r]{#1/2} ts ∗
+    ([∗ set] t1' ∈ ts, ⌜is_immediate_subterm t' t1'⌝) ∗
+    ⌜ts ≠ ∅ → (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝.
+
 Lemma public_rel_map_l_t_st pub_l t st :
   own public_rel_map_l (● ((λ st : state, ●SV st ⋅ ◯SV st) <$> pub_l)) -∗
   own public_rel_map_l (◯ {[ t := ●SV{#1/2} st ]}) -∗
@@ -384,15 +412,57 @@ destruct (pub_r !! t') as [st'|] eqn:Heq.
   by apply is_Some_None in Hincl.
 Qed.
 
-Definition public_rel_inv pub_l pub_r : iProp :=
+Fixpoint publicly_related t t' : iProp :=
+  match t, t' with
+  | TInt n, TInt n' => ⌜n = n'⌝
+  | TPair t1 t2, TPair t1' t2' =>
+      publicly_related t1 t1' ∧ publicly_related t2 t2'
+  | TNonce a, TNonce a' => public_rel_elem t t'
+  | TKey kt t1, TKey kt' t1' => ⌜kt = kt'⌝ ∧
+    match kt with
+    | AEnc => publicly_related t1 t1' ∨
+              (public_rel_elem t t' ∧ private_rel_elem t1 t1')
+    | ADec => publicly_related t1 t1'
+    | Sign => publicly_related t1 t1'
+    | Verify => publicly_related t1 t1' ∨
+                (public_rel_elem t t' ∧ private_rel_elem t1 t1')
+    | SEnc => publicly_related t1 t1'
+    end
+  | TSeal k t1, TSeal k' t1' =>
+    (publicly_related k k' ∧ publicly_related t1 t1') ∨
+    (public_rel_elem t t' ∧ private_rel_elem k k' ∧ private_rel_elem t1 t1' ∧
+    □ (match k, k' with
+      | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
+        match kt with
+        | ADec | Verify => False
+        | Sign => publicly_related t1 t1'
+        | AEnc | SEnc => publicly_related k1 k1' → publicly_related t1 t1'
+        end
+      | _, _ => False
+      end))
+  | THash t1, THash t1' =>
+    publicly_related t1 t1' ∨
+    (public_rel_elem t t' ∧ private_rel_elem t1 t1')
+  | _, _ =>
+      False (* WIP *)
+  end.
+
+#[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
+  (at level 20, no associativity, format "PUB⟨ a , b ⟩").
+
+Definition public_rel_inv pub_l pub_r flow_l flow_r : iProp :=
   public_rel_map_l_auth pub_l ∗
   public_rel_map_r_auth pub_r ∗
-  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel") ()) ∗
-  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel") ()) ∗
+  public_rel_flow_l_auth flow_l ∗
+  public_rel_flow_r_auth flow_r ∗
+  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) ∗
+  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()) ∗
+  ([∗ set] t ∈ dom flow_l, term_meta t (cryptisN.@"public_rel".@"flow") ()) ∗
+  ([∗ set] t' ∈ dom flow_r, term_meta_spec t' (cryptisN.@"public_rel".@"flow") ()) ∗
   ⌜∀ t t', pub_l !! t = Some (Public t') ↔ pub_r !! t' = Some (Public t)⌝.
 
 Definition public_rel_ctx : iProp :=
-  inv cryptisN (∃ pub_l pub_r, public_rel_inv pub_l pub_r).
+  inv cryptisN (∃ pub_l pub_r flow_l flow_r, public_rel_inv pub_l pub_r flow_l flow_r).
 
 Definition cryptis_rel_ctx : iProp :=
   term_meta_ctx ∗ term_meta_spec_ctx ∗ public_rel_ctx.
@@ -406,7 +476,7 @@ Proof. split; last apply _. by iIntros "#[_ [H _]]". Qed.
 Lemma public_rel_map_l_extend E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel") -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> private_rel_elem_l t t' ∗
           own public_rel_map_l (◯ {[ t := ●SV{#1/2} (Private {[ t' ]}) ]}).
 Proof.
@@ -423,7 +493,7 @@ iMod (own_update with "Hauth_l") as "[Hauth_l Hfrag_t]".
     last by apply state_view_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hfrag_t" as "[[Hauth_t_frag Hauth_t_frag'] Hfrag_t]".
-iMod (term_meta_set (cryptisN.@"public_rel") () with "Htt") as "#Hmeta_t"=> //.
+iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_t"=> //.
 iModIntro. iSplitR "Hfrag_t Hauth_t_frag'"; last by iFrame. iModIntro.
 iExists (<[t := Private {[ t' ]}]> pub_l), pub_r.
 iFrame. iFrame "#".
@@ -447,7 +517,7 @@ Qed.
 Lemma public_rel_map_r_extend E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec t' (↑cryptisN.@"public_rel") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> private_rel_elem_r t t' ∗
           own public_rel_map_r (◯ {[ t' := ●SV{#1/2} (Private {[ t ]}) ]}).
 Proof.
@@ -464,7 +534,7 @@ iMod (own_update with "Hauth_r") as "[Hauth_r Hfrag_t']".
     last by apply state_view_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hfrag_t'" as "[[Hauth_t'_frag Hauth_t'_frag'] Hfrag_t']".
-iMod (term_meta_spec_set (cryptisN.@"public_rel") () with "Htts") as "#Hmeta_t'"=> //.
+iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_t'"=> //.
 iModIntro. iSplitR "Hfrag_t' Hauth_t'_frag'"; last by iFrame. iModIntro.
 iExists pub_l, (<[t' := Private {[ t ]}]> pub_r).
 iFrame. iFrame "#".
@@ -488,8 +558,8 @@ Qed.
 Lemma private_rel_extend E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel") -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> private_rel_elem t t' ∗
           own public_rel_map_l (◯ {[ t := ●SV{#1/2} (Private {[ t' ]}) ]}) ∗
           own public_rel_map_r (◯ {[ t' := ●SV{#1/2} (Private {[ t ]}) ]}).
@@ -642,8 +712,8 @@ Qed.
 Lemma public_rel_extend_2 E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel") -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> public_rel_elem t t'.
 Proof.
 iIntros (HE) "#Hctx Htt Htts".
