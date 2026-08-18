@@ -365,7 +365,7 @@ Definition public_rel_flow_l_auth flow_l : iProp :=
   [∗ map] t ↦ ts ∈ flow_l,
     t ↪[public_rel_flow_l]{#1/2} ts ∗
     ([∗ set] t1 ∈ ts, ⌜is_immediate_subterm t t1⌝) ∗
-    ⌜ts ≠ ∅ → (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
+    ⌜(∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
 
 Definition public_rel_flow_r_auth flow_r : iProp :=
   ghost_map_auth public_rel_flow_r 1 flow_r ∗
@@ -459,7 +459,12 @@ Definition public_rel_inv pub_l pub_r flow_l flow_r : iProp :=
   ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()) ∗
   ([∗ set] t ∈ dom flow_l, term_meta t (cryptisN.@"public_rel".@"flow") ()) ∗
   ([∗ set] t' ∈ dom flow_r, term_meta_spec t' (cryptisN.@"public_rel".@"flow") ()) ∗
-  ⌜∀ t t', pub_l !! t = Some (Public t') ↔ pub_r !! t' = Some (Public t)⌝.
+  ⌜∀ t t', pub_l !! t = Some (Public t') ↔ pub_r !! t' = Some (Public t)⌝ ∗
+  (∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → publicly_related t t') ∗
+  ⌜∀ t ts, pub_l !! t = Some (Private ts) → (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝ ∗
+  ⌜∀ t' ts, pub_r !! t' = Some (Private ts) → (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝ ∗
+  ⌜∀ t ts, flow_l !! t = Some ts → (pub_l !! t = None) ∨ (∃ ts1, pub_l !! t = Some (Private ts1))⌝ ∗
+  ⌜∀ t' ts, flow_r !! t' = Some ts → (pub_r !! t' = None) ∨ (∃ ts1, pub_r !! t' = Some (Private ts1))⌝.
 
 Definition public_rel_ctx : iProp :=
   inv cryptisN (∃ pub_l pub_r flow_l flow_r, public_rel_inv pub_l pub_r flow_l flow_r).
