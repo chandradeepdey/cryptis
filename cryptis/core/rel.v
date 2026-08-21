@@ -1,6 +1,5 @@
-From stdpp Require Import sets.
-From iris.algebra Require Import auth cmra ofe gmap local_updates.
-From iris.base_logic.lib Require Import own ghost_map.
+From iris.algebra Require Import auth cmra ofe gmap gset local_updates.
+From iris.base_logic.lib Require Import own.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import saved_prop.
@@ -141,14 +140,14 @@ End lemmas.
 
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term (authUR stateUR)));
-  #[local] public_relGpreS_flow :: ghost_mapG Σ term (gset term);
+  #[local] public_relGpreS_flow :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
   #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
   #[local] public_relGpreS_prop :: savedPropG Σ;
 }.
 
 Class public_relGS Σ := Public_relGS {
   #[global] maps_inG :: inG Σ (authUR (gmapUR term (authUR stateUR)));
-  #[global] flow_inG :: ghost_mapG Σ term (gset term);
+  #[global] flow_inG :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
   #[global] term_meta_inG :: term_metaGS Σ;
   #[global] term_meta_spec_inG :: term_meta_specGS Σ;
   #[global] prop_inG :: savedPropG Σ;
@@ -160,7 +159,7 @@ Class public_relGS Σ := Public_relGS {
 
 Definition public_relΣ : gFunctors :=
   #[GFunctor (authUR (gmapUR term (authUR stateUR)));
-    ghost_mapΣ term (gset term);
+    GFunctor (authUR (gmapUR term (authUR (gset_disjUR term))));
     term_metaΣ;
     savedPropΣ].
 
@@ -192,6 +191,12 @@ Definition public_rel_map_r_auth pub_r : iProp :=
                             | Private _ => own public_rel_map_r (◯ {[ t' := ●{#1/2} st ]})
                             | _ => emp
                             end.
+
+Definition public_rel_map_inv pub_l pub_r : iProp :=
+  public_rel_map_l_auth pub_l ∗
+  public_rel_map_r_auth pub_r ∗
+  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) ∗
+  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()).
 
 Definition public_rel_map_l_elem t t': iProp :=
   own public_rel_map_l (◯ {[ t := ◯ (Private {[ t' ]}) ]}).
@@ -243,28 +248,6 @@ Qed.
 
 #[global] Instance public_rel_elem_persistent t t' : Persistent (public_rel_elem t t').
 Proof. apply _. Qed.
-
-Inductive is_immediate_subterm : term → term → Prop :=
-  | SubtermPairL t1 t2 : is_immediate_subterm t1 (TPair t1 t2)
-  | SubtermPairR t1 t2 : is_immediate_subterm t2 (TPair t1 t2)
-  | SubtermKey kt t1 : is_immediate_subterm t1 (TKey kt t1)
-  | SubtermSealKey k t1 : is_immediate_subterm k (TSeal k t1)
-  | SubtermSealBody k t1 : is_immediate_subterm t1 (TSeal k t1)
-  | SubtermHash t1 : is_immediate_subterm t1 (THash t1).
-
-Definition public_rel_flow_l_auth flow_l : iProp :=
-  ghost_map_auth public_rel_flow_l 1 flow_l ∗
-  [∗ map] t ↦ ts ∈ flow_l,
-    t ↪[public_rel_flow_l]{#1/2} ts ∗
-    ([∗ set] t1 ∈ ts, ⌜is_immediate_subterm t t1⌝) ∗
-    ⌜(∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
-
-Definition public_rel_flow_r_auth flow_r : iProp :=
-  ghost_map_auth public_rel_flow_r 1 flow_r ∗
-  [∗ map] t' ↦ ts ∈ flow_r,
-    t' ↪[public_rel_flow_r]{#1/2} ts ∗
-    ([∗ set] t1' ∈ ts, ⌜is_immediate_subterm t' t1'⌝) ∗
-    ⌜ts ≠ ∅ → (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝.
 
 Lemma public_rel_map_l_t_st pub_l t (st : state) :
   own public_rel_map_l (● ((λ st : state, ● st ⋅ ◯ st) <$> pub_l)) -∗
@@ -342,21 +325,80 @@ Fixpoint publicly_related t t' : iProp :=
 #[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
   (at level 20, no associativity, format "PUB⟨ a , b ⟩").
 
-Definition public_rel_inv pub_l pub_r flow_l flow_r : iProp :=
-  public_rel_map_l_auth pub_l ∗
-  public_rel_map_r_auth pub_r ∗
+Definition public_rel_Public_consistent pub_l pub_r : iProp :=
+  ⌜∀ t t', pub_l !! t = Some (Public t') ↔ pub_r !! t' = Some (Public t)⌝ ∗
+  (∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → publicly_related t t').
+
+Inductive is_immediate_subterm : term → term → Prop :=
+  | SubtermPairL t1 t2 : is_immediate_subterm t1 (TPair t1 t2)
+  | SubtermPairR t1 t2 : is_immediate_subterm t2 (TPair t1 t2)
+  | SubtermKey kt t1 : is_immediate_subterm t1 (TKey kt t1)
+  | SubtermSealKey k t1 : is_immediate_subterm k (TSeal k t1)
+  | SubtermSealBody k t1 : is_immediate_subterm t1 (TSeal k t1)
+  | SubtermHash t1 : is_immediate_subterm t1 (THash t1).
+
+Definition public_rel_flow_l_auth flow_l : iProp :=
+  own public_rel_flow_l (● (@fmap (gmap term) _ _ _ (λ ts, ● GSet ts ⋅ ◯ GSet ts) flow_l)) ∗
+  [∗ map] t ↦ ts ∈ flow_l,
+    own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}) ∗
+    ([∗ set] t1 ∈ ts, ⌜is_immediate_subterm t t1⌝) ∗
+    ⌜(∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
+
+Definition public_rel_flow_r_auth flow_r : iProp :=
+  own public_rel_flow_r (● (@fmap (gmap term) _ _ _ (λ ts, ● GSet ts ⋅ ◯ GSet ts) flow_r)) ∗
+  [∗ map] t' ↦ ts ∈ flow_r,
+    own public_rel_flow_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}) ∗
+    ([∗ set] t1' ∈ ts, ⌜is_immediate_subterm t' t1'⌝) ∗
+    ⌜(∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝.
+
+Definition public_rel_flow_inv flow_l flow_r : iProp :=
   public_rel_flow_l_auth flow_l ∗
   public_rel_flow_r_auth flow_r ∗
-  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) ∗
-  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()) ∗
   ([∗ set] t ∈ dom flow_l, term_meta t (cryptisN.@"public_rel".@"flow") ()) ∗
-  ([∗ set] t' ∈ dom flow_r, term_meta_spec t' (cryptisN.@"public_rel".@"flow") ()) ∗
-  ⌜∀ t t', pub_l !! t = Some (Public t') ↔ pub_r !! t' = Some (Public t)⌝ ∗
-  (∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → publicly_related t t') ∗
-  ⌜∀ t ts, pub_l !! t = Some (Private ts) → (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝ ∗
-  ⌜∀ t' ts, pub_r !! t' = Some (Private ts) → (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝ ∗
-  ⌜∀ t ts, flow_l !! t = Some ts → (pub_l !! t = None) ∨ (∃ ts1, pub_l !! t = Some (Private ts1))⌝ ∗
-  ⌜∀ t' ts, flow_r !! t' = Some ts → (pub_r !! t' = None) ∨ (∃ ts1, pub_r !! t' = Some (Private ts1))⌝.
+  ([∗ set] t' ∈ dom flow_r, term_meta_spec t' (cryptisN.@"public_rel".@"flow") ()).
+
+Definition protects_superterms t ts : iProp :=
+  own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
+
+Definition protected_by_subterm t t1 : iProp :=
+  own public_rel_flow_l (◯ {[ t := ◯ (GSet {[ t1 ]}) ]}).
+
+Definition public_rel_Private_l_protected pub_l flow_l : Prop :=
+  ∀ t ts, pub_l !! t = Some (Private ts) →
+    (∃ a, t = TNonce a) ∨
+    (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1).
+
+Definition public_rel_Private_r_protected pub_r flow_r : Prop :=
+  ∀ t' ts, pub_r !! t' = Some (Private ts) →
+    (∃ a', t' = TNonce a') ∨
+    (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1).
+
+Definition public_rel_Private_protected pub_l pub_r flow_l flow_r : iProp :=
+  ⌜public_rel_Private_l_protected pub_l flow_l⌝ ∗
+  ⌜public_rel_Private_l_protected pub_r flow_r⌝.
+
+Definition public_rel_flow_l_consistent pub_l flow_l : Prop :=
+  ∀ t ts, flow_l !! t = Some ts →
+    (pub_l !! t = None) ∨
+    (∃ ts1, pub_l !! t = Some (Private ts1)) ∨
+    (ts = ∅ ∧ ∃ t', pub_l !! t = Some (Public t')).
+
+Definition public_rel_flow_r_consistent pub_r flow_r : Prop :=
+  ∀ t' ts, flow_r !! t' = Some ts →
+    (pub_r !! t' = None) ∨
+    (∃ ts1, pub_r !! t' = Some (Private ts1)) ∨
+    (ts = ∅ ∧ ∃ t, pub_r !! t' = Some (Public t)).
+
+Definition public_rel_flow_consistent pub_l pub_r flow_l flow_r : iProp :=
+  ⌜public_rel_flow_l_consistent pub_l flow_l⌝ ∗
+  ⌜public_rel_flow_l_consistent pub_r flow_r⌝.
+
+Definition public_rel_inv pub_l pub_r flow_l flow_r : iProp :=
+  public_rel_map_inv pub_l pub_r ∗
+  public_rel_flow_inv flow_l flow_r ∗
+  public_rel_Public_consistent pub_l pub_r ∗
+  public_rel_Private_protected pub_l pub_r flow_l flow_r ∗
+  public_rel_flow_consistent pub_l pub_r flow_l flow_r.
 
 Definition public_rel_ctx : iProp :=
   inv cryptisN (∃ pub_l pub_r flow_l flow_r, public_rel_inv pub_l pub_r flow_l flow_r).
