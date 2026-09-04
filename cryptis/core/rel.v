@@ -336,6 +336,26 @@ apply auth_frag_included in Hincl.
 apply gset_disj_included in Hincl. set_solver.
 Qed.
 
+Lemma public_rel_flow_l_lookup_2 flow_l t ts :
+  own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) -∗
+  protects_superterms_l t ts -∗
+  ⌜flow_l !! t = Some ts⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (flow_l !! t) as [ts'|]; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+assert (●{#1 / 2} (GSet ts) ≼ ● (GSet ts') ⋅ ◯ (GSet ts')) as H.
+{ by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+apply auth_auth_dfrac_included in H as [_ Heq].
+by injection Heq as ->.
+Qed.
+
 Lemma public_rel_flow_r_lookup flow_r t' t1 :
   own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) -∗
   protected_by_subterm_r t1 t' -∗
@@ -355,6 +375,26 @@ apply Some_included in Hincl as [Heq | Hincl];
   first by inversion Heq as [H _]; inversion H.
 apply auth_frag_included in Hincl.
 apply gset_disj_included in Hincl. set_solver.
+Qed.
+
+Lemma public_rel_flow_r_lookup_2 flow_r t' ts :
+  own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) -∗
+  protects_superterms_r t' ts -∗
+  ⌜flow_r !! t' = Some ts⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (flow_r !! t') as [ts'|]; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+assert (●{#1 / 2} (GSet ts) ≼ ● (GSet ts') ⋅ ◯ (GSet ts')) as H.
+{ by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+apply auth_auth_dfrac_included in H as [_ Heq].
+by injection Heq as ->.
 Qed.
 
 Fixpoint publicly_related t t' : iProp :=
@@ -407,7 +447,7 @@ Lemma publicly_related_TMul_l :
   ∀ t t', is_mul t → (PUB⟨t, t'⟩ = False)%I.
 Proof. by case. Qed.
 
-Global Instance publicly_related_timeless t t' : Timeless (PUB⟨t, t'⟩).
+#[global] Instance publicly_related_timeless t t' : Timeless (PUB⟨t, t'⟩).
 Proof.
 elim: t t'=> /=; try apply _.
 - move=> t IH Hmul Hinv t'.
@@ -439,29 +479,23 @@ Definition public_rel_flow_inv flow_l flow_r : iProp :=
 
 Definition public_rel_Private_l_protected pub_l flow_l : Prop :=
   ∀ t ts, pub_l !! t = Some (Private ts) →
-    (∃ a, t = TNonce a) ∨
-    (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1).
+    (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1).
 
 Definition public_rel_Private_r_protected pub_r flow_r : Prop :=
   ∀ t' ts, pub_r !! t' = Some (Private ts) →
-    (∃ a', t' = TNonce a') ∨
-    (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1).
+    (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1).
 
 Definition public_rel_Private_protected pub_l pub_r flow_l flow_r : iProp :=
   ⌜public_rel_Private_l_protected pub_l flow_l⌝ ∗
   ⌜public_rel_Private_l_protected pub_r flow_r⌝.
 
 Definition public_rel_flow_l_consistent pub_l flow_l : Prop :=
-  ∀ t ts, flow_l !! t = Some ts →
-    (pub_l !! t = None) ∨
-    (∃ ts1, pub_l !! t = Some (Private ts1)) ∨
-    (ts = ∅ ∧ ∃ t', pub_l !! t = Some (Public t')).
+  ∀ t ts, flow_l !! t = Some ts → ts ≠ ∅ →
+    (pub_l !! t = None) ∨ (∃ ts1, pub_l !! t = Some (Private ts1)).
 
 Definition public_rel_flow_r_consistent pub_r flow_r : Prop :=
-  ∀ t' ts, flow_r !! t' = Some ts →
-    (pub_r !! t' = None) ∨
-    (∃ ts1, pub_r !! t' = Some (Private ts1)) ∨
-    (ts = ∅ ∧ ∃ t, pub_r !! t' = Some (Public t)).
+  ∀ t' ts, flow_r !! t' = Some ts → ts ≠ ∅ →
+    (pub_r !! t' = None) ∨ (∃ ts1, pub_r !! t' = Some (Private ts1)).
 
 Definition public_rel_flow_consistent pub_l pub_r flow_l flow_r : iProp :=
   ⌜public_rel_flow_l_consistent pub_l flow_l⌝ ∗
@@ -512,8 +546,8 @@ iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
 iDestruct "Hmap_frag_t" as "[[Hmap_t_frag Hmap_t_frag'] Hmap_frag_t]".
 iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_map_t"=> //.
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot") as "%Hprot".
-iModIntro. iSplitR "Hprot Hmap_frag_t Hmap_t_frag'"; last by iFrame. iModIntro.
-iExists (<[t := Private {[ t' ]}]> pub_l), pub_r.
+iModIntro. iSplitR "Hprot Hmap_frag_t Hmap_t_frag'"; last by iFrame.
+iModIntro. iExists (<[t := Private {[ t' ]}]> pub_l), pub_r.
 iFrame. iFrame "#".
 iSplitL "Hmap_l Hmap_l_frag Hmap_t_frag".
 { iSplitL.
@@ -523,27 +557,23 @@ iSplitL "Hmap_l Hmap_l_frag Hmap_t_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iClear "Hmeta_map_l Hmeta_map_t".
 iSplitL "Hpub_consistent".
 { iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
   iSplit; last first.
   { iIntros (??) "%Hpub".
-    rewrite lookup_insert in Hpub; case_decide; subst; first done.
+    rewrite lookup_insert in Hpub; case_decide; first naive_solver.
     by iApply "Hpub_rel". }
-  iPureIntro. intros ??.
-  rewrite lookup_insert; case_decide; subst; last done.
-  - split; first done.
-    intros Hpub. apply Hpub_eq in Hpub. by rewrite Hfresh in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "HPriv_prot".
 { iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
   iSplitL; last done.
-  iPureIntro. intros ??. rewrite lookup_insert; case_decide; subst.
-  - intros [= <-]. eauto.
-  - intros Hpub. by apply HPriv_l in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
 iSplit; last done.
-iPureIntro. intros ???.
-rewrite lookup_insert; case_decide; subst; eauto.
+iPureIntro. move=> ???.
+rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
 Lemma public_rel_map_l_extend_2 E a t' :
@@ -569,37 +599,34 @@ iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hmap_frag_t" as "[[Hmap_t_frag Hmap_t_frag'] Hmap_frag_t]".
 iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_map_t"=> //.
-iModIntro. iSplitR "Hmap_frag_t Hmap_t_frag'"; last by iFrame. iModIntro.
-iExists (<[TNonce a := Private {[ t' ]}]> pub_l), pub_r, flow_l, flow_r.
+iModIntro. iSplitR "Hmap_frag_t Hmap_t_frag'"; last by iFrame.
+iModIntro. iExists (<[TNonce a := Private {[ t' ]}]> pub_l), pub_r, flow_l, flow_r.
 iFrame. iFrame "#".
 iSplitL "Hmap_l Hmap_l_frag Hmap_t_frag".
-{ rewrite /public_rel_map_l_auth fmap_insert.
-  rewrite big_sepM_insert=> //.
-  iFrame.
-  rewrite dom_insert_L.
-  rewrite big_sepS_insert; last by apply not_elem_of_dom.
-  iFrame "#". }
-iClear "Hmeta_map_l Hmeta_map_t".
+{ iSplitL.
+  - rewrite /public_rel_map_l_auth fmap_insert.
+    rewrite big_sepM_insert=> //.
+    iFrame.
+  - rewrite dom_insert_L.
+    rewrite big_sepS_insert; last by apply not_elem_of_dom.
+    iFrame "#". }
 iSplitL "Hpub_consistent".
 { iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
-  iSplit; last first.
-  { iIntros (??) "%Hpub".
-    rewrite lookup_insert in Hpub; case_decide; subst; first done.
+  iSplit.
+  - iPureIntro. move=> ??.
+    rewrite lookup_insert; case_decide; naive_solver.
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; first naive_solver.
     by iApply "Hpub_rel". }
-  iPureIntro. intros ??.
-  rewrite lookup_insert; case_decide; subst; last done.
-  - split; first done.
-    intros Hpub. apply Hpub_eq in Hpub. by rewrite Hfresh in Hpub. }
 iSplitL "HPriv_prot".
 { iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
   iSplitL; last done.
-  iPureIntro. intros ??. rewrite lookup_insert; case_decide; subst.
-  - intros [= <-]. eauto.
-  - intros Hpub. by apply HPriv_l in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
 iSplit; last done.
-iPureIntro. intros ???.
-rewrite lookup_insert; case_decide; subst; eauto.
+iPureIntro. move=> ???.
+rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
 Lemma public_rel_map_r_extend E t t' t'sub :
@@ -628,8 +655,8 @@ iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
 iDestruct "Hmap_frag_t'" as "[[Hmap_t'_frag Hmap_t'_frag'] Hmap_frag_t']".
 iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_map_t'"=> //.
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot") as "%Hprot".
-iModIntro. iSplitR "Hprot Hmap_frag_t' Hmap_t'_frag'"; last by iFrame. iModIntro.
-iExists pub_l, (<[t' := Private {[ t ]}]> pub_r).
+iModIntro. iSplitR "Hprot Hmap_frag_t' Hmap_t'_frag'"; last by iFrame.
+iModIntro. iExists pub_l, (<[t' := Private {[ t ]}]> pub_r).
 iFrame. iFrame "#".
 iSplitL "Hmap_r Hmap_r_frag Hmap_t'_frag".
 { iSplitL.
@@ -639,24 +666,20 @@ iSplitL "Hmap_r Hmap_r_frag Hmap_t'_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iClear "Hmeta_map_r Hmeta_map_t'".
 iSplitL "Hpub_consistent".
 { iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
   iSplit; last by iIntros (??) "%Hpub"; iApply "Hpub_rel".
-  iPureIntro. intros ??.
-  rewrite lookup_insert; case_decide; subst; last done.
-  - split; last done.
-    intros Hpub. apply Hpub_eq in Hpub. by rewrite Hfresh in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "HPriv_prot".
 { iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
   iSplitL; first done.
-  iPureIntro. intros ??. rewrite lookup_insert; case_decide; subst.
-  - intros [= <-]. eauto.
-  - intros Hpub. by apply HPriv_r in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
 iSplit; first done.
-iPureIntro. intros ???.
-rewrite lookup_insert; case_decide; subst; eauto.
+iPureIntro. move=> ???.
+rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
 Lemma public_rel_map_r_extend_2 E t a' :
@@ -682,8 +705,8 @@ iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hmap_frag_t'" as "[[Hmap_t'_frag Hmap_t'_frag'] Hmap_frag_t']".
 iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_map_t'"=> //.
-iModIntro. iSplitR "Hmap_frag_t' Hmap_t'_frag'"; last by iFrame. iModIntro.
-iExists pub_l, (<[TNonce a' := Private {[ t ]}]> pub_r), flow_l, flow_r.
+iModIntro. iSplitR "Hmap_frag_t' Hmap_t'_frag'"; last by iFrame.
+iModIntro. iExists pub_l, (<[TNonce a' := Private {[ t ]}]> pub_r), flow_l, flow_r.
 iFrame. iFrame "#".
 iSplitL "Hmap_r Hmap_r_frag Hmap_t'_frag".
 { iSplitL.
@@ -693,24 +716,20 @@ iSplitL "Hmap_r Hmap_r_frag Hmap_t'_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iClear "Hmeta_map_r Hmeta_map_t'".
 iSplitL "Hpub_consistent".
 { iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
   iSplit; last by iIntros (??) "%Hpub"; iApply "Hpub_rel".
-  iPureIntro. intros ??.
-  rewrite lookup_insert; case_decide; subst; last done.
-  - split; last done.
-    intros Hpub. apply Hpub_eq in Hpub. by rewrite Hfresh in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "HPriv_prot".
 { iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
   iSplitL; first done.
-  iPureIntro. intros ??. rewrite lookup_insert; case_decide; subst.
-  - intros [= <-]. eauto.
-  - intros Hpub. by apply HPriv_r in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
 iSplit; first done.
-iPureIntro. intros ???.
-rewrite lookup_insert; case_decide; subst; eauto.
+iPureIntro. move=> ???.
+rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
 Lemma private_rel_extend E t t' tsub t'sub :
@@ -812,8 +831,7 @@ iAssert (own public_rel_map_l (◯ {[ t := ◯ Private {[ t' ]} ]})) as "Hl".
 { assert (Private (ts ∪ {[t']}) = Private ts ⋅ Private {[t']}) as -> by done.
   by iDestruct "Hl'" as "[_ Hl']". }
 iModIntro. iSplitR "Hl_frac2"; last by iFrame; iFrame "#".
-iModIntro.
-iExists (<[t := Private (ts ∪ {[ t' ]})]> pub_l), pub_r, flow_l, flow_r.
+iModIntro. iExists (<[t := Private (ts ∪ {[ t' ]})]> pub_l), pub_r, flow_l, flow_r.
 rewrite /public_rel_inv /public_rel_map_l_auth.
 iAssert ([∗ map] k ↦ y ∈ {[ t := Private (ts ∪ {[ t' ]})]}, match y with
     | Private _ => own public_rel_map_l (◯ {[ k := ●{#1/2} y]})
@@ -824,34 +842,27 @@ iCombine "Hmap_l_frag Hl_frac" as "Hmap_l_frag".
 rewrite -big_sepM_union; last by apply map_disjoint_singleton_r, lookup_delete_eq.
 rewrite -insert_union_singleton_r; last by apply lookup_delete_eq.
 rewrite insert_delete_eq.
-iSplitL "Hmap_l Hmap_l_frag Hmap_r".
-{ iSplitL "Hmap_l Hmap_l_frag".
-  - rewrite /public_rel_map_l_auth fmap_insert.
-    iFrame.
-  - rewrite dom_insert_lookup_L=> //.
-    iFrame. iFrame "#". }
-iClear "Hmeta_map_l".
-iSplitL "Hflow"; first done.
+iFrame. iFrame "#".
+iSplitL "Hmap_l".
+{ rewrite fmap_insert dom_insert_lookup_L=> //.
+  iFrame. iFrame "#". }
 iSplitL "Hpub_consistent".
 { iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
-  iSplit; last first.
-  { iIntros (??) "%Hpub".
-    rewrite lookup_insert in Hpub; case_decide; subst; first done.
+  iSplit.
+  - iPureIntro. move=> ??.
+    rewrite lookup_insert; case_decide; naive_solver.
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; first naive_solver.
     by iApply "Hpub_rel". }
-  iPureIntro. intros ??.
-  rewrite lookup_insert; case_decide; subst; last done.
-  - split; first done.
-    intros Hpub. apply Hpub_eq in Hpub. by rewrite Hltt' in Hpub. }
 iSplitL "HPriv_prot".
 { iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
   iSplitL; last done.
-  iPureIntro. intros ??. rewrite lookup_insert; case_decide; subst.
-  - intros [= <-]. eauto.
-  - intros Hpub. by apply HPriv_l in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
 iSplit; last done.
-iPureIntro. intros ???.
-rewrite lookup_insert; case_decide; subst; eauto.
+iPureIntro. move=> ???.
+rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
 Lemma public_rel_map_r_grow E t ts t' :
@@ -882,8 +893,7 @@ iAssert (own public_rel_map_r (◯ {[ t' := ◯ Private {[ t ]} ]})) as "Hl".
 { assert (Private (ts ∪ {[t]}) = Private ts ⋅ Private {[t]}) as -> by done.
   by iDestruct "Hr'" as "[_ Hr']". }
 iModIntro. iSplitR "Hr_frac2"; last by iFrame; iFrame "#".
-iModIntro.
-iExists pub_l, (<[t' := Private (ts ∪ {[ t ]})]> pub_r), flow_l, flow_r.
+iModIntro. iExists pub_l, (<[t' := Private (ts ∪ {[ t ]})]> pub_r), flow_l, flow_r.
 rewrite /public_rel_inv /public_rel_map_r_auth.
 iAssert ([∗ map] k ↦ y ∈ {[ t' := Private (ts ∪ {[ t ]})]}, match y with
     | Private _ => own public_rel_map_r (◯ {[ k := ●{#1/2} y]})
@@ -894,55 +904,80 @@ iCombine "Hmap_r_frag Hr_frac" as "Hmap_r_frag".
 rewrite -big_sepM_union; last by apply map_disjoint_singleton_r, lookup_delete_eq.
 rewrite -insert_union_singleton_r; last by apply lookup_delete_eq.
 rewrite insert_delete_eq.
-iSplitL "Hmap_l Hmap_r Hmap_r_frag".
-{ iSplitL "Hmap_l"; first done.
-  rewrite /public_rel_map_r_auth fmap_insert.
-  rewrite dom_insert_lookup_L=> //.
+iFrame. iFrame "#".
+iSplitL "Hmap_r".
+{ rewrite fmap_insert dom_insert_lookup_L=> //.
   iFrame. iFrame "#". }
-iClear "Hmeta_map_l".
-iSplitL "Hflow"; first done.
 iSplitL "Hpub_consistent".
 { iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
   iSplit; last by iIntros (??) "%Hpub"; iApply "Hpub_rel".
-  iPureIntro. intros ??.
-  rewrite lookup_insert; case_decide; subst; last done.
-  - split; last done.
-    intros Hpub. apply Hpub_eq in Hpub. by rewrite Hrtt' in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "HPriv_prot".
 { iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
   iSplitL; first done.
-  iPureIntro. intros ??. rewrite lookup_insert; case_decide; subst.
-  - intros [= <-]. eauto.
-  - intros Hpub. by apply HPriv_r in Hpub. }
+  iPureIntro. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
 iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
 iSplit; first done.
-iPureIntro. intros ???.
-rewrite lookup_insert; case_decide; subst; eauto.
+iPureIntro. move=> ???.
+rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
+(*
+You will probably need a custom version of this lemma tailored to the
+declassification you want to attempt.
+
+Example:
+Say you have (nonce, msg_0) ↦ Private {[ nonce', msg_0' ]}, where
+PUB⟨msg_0, msg_0'⟩. flow_l !! nonce = {[ (nonce, msg_0) ]},
+flow_r !! nonce' = {[ (nonce', msg_0') ]}.
+
+When trying to change to (nonce, msg_0) ↦
+Public (nonce', msg_0'), the PUB⟨(nonce, msg_0), (nonce', msg_0')⟩
+precondition will require that you have public_rel_elem nonce nonce'
+in the recursive case.
+
+But to get that, you will need to show that flow_l !! nonce = ∅ and
+flow_r !! nonce' = ∅. If you try to remove the entries from flow_l
+and flow_r with the flow related lemmas in this file, you will need
+to transition the superterms, which will be circular.
+
+To get around this, you should open the invariant and do all of the
+transitions at once. This depends on the structure of the terms you
+are trying to declassify and the nature of the recursive flow chain,
+so you need to come up with your own custom lemma. Feel free to use
+these lemmas as templates.
+*)
 Lemma public_rel_extend E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
+  (public_rel_elem t t' -∗ PUB⟨t, t'⟩) -∗
+  protects_superterms_l t ∅ -∗
+  protects_superterms_r t' ∅ -∗
   own public_rel_map_l (◯ {[ t := ●{#1/2} (Private {[ t' ]}) ]}) -∗
   own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private {[ t ]}) ]}) -∗
   |={E}=> public_rel_elem t t'.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) Hl_frac Hr_frac".
-iInv "Hinv" as ">(%pub_l & %pub_r & [Hauth_l Hauth_l_frag] & [Hauth_r Hauth_r_frag] & #Hmeta_l & #Hmeta_r & %Hlock)".
-iPoseProof (public_rel_map_l_lookup with "Hauth_l Hl_frac") as "%Hltt'".
-iPoseProof (public_rel_map_r_lookup with "Hauth_r Hr_frac") as "%Hrtt'".
-iDestruct (big_sepM_delete _ _ t _ Hltt' with "Hauth_l_frag") as "[Hl_frac2 Hauth_l_frag]".
-iDestruct (big_sepM_delete _ _ t' _ Hrtt' with "Hauth_r_frag") as "[Hr_frac2 Hauth_r_frag]".
+iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot' Hl_frac Hr_frac".
+iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
+                  ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  Hpub_consistent & HPriv_prot & Hflow_consistent)".
+iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hltt'".
+iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hrtt'".
+iDestruct (big_sepM_delete _ _ t _ Hltt' with "Hmap_l_frag") as "[Hl_frac2 Hmap_l_frag]".
+iDestruct (big_sepM_delete _ _ t' _ Hrtt' with "Hmap_r_frag") as "[Hr_frac2 Hmap_r_frag]".
 iCombine "Hl_frac Hl_frac2" as "Hl".
 iCombine "Hr_frac Hr_frac2" as "Hr".
-iMod (own_update_2 with "Hauth_l Hl") as "[Hauth_l Hl]".
+iMod (own_update_2 with "Hmap_l Hl") as "[Hmap_l Hl]".
 { apply auth_update.
   eapply (singleton_local_update _ _ _ _ (● (Public t') ⋅ ◯ (Public t'))
     (● (Public t') ⋅ ◯ (Public t'))); first by rewrite lookup_fmap Hltt' /=.
   etransitivity.
   apply state_core_id_local_update.
   apply state_local_update_lock. }
-iMod (own_update_2 with "Hauth_r Hr") as "[Hauth_r Hr]".
+iMod (own_update_2 with "Hmap_r Hr") as "[Hmap_r Hr]".
 { apply auth_update.
   eapply (singleton_local_update _ _ _ _ (● (Public t) ⋅ ◯ (Public t))
     (● (Public t) ⋅ ◯ (Public t))); first by rewrite lookup_fmap Hrtt' /=.
@@ -950,18 +985,44 @@ iMod (own_update_2 with "Hauth_r Hr") as "[Hauth_r Hr]".
   apply state_core_id_local_update.
   apply state_local_update_lock. }
 iDestruct "Hl" as "[_ #Hl]". iDestruct "Hr" as "[_ #Hr]".
+iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hflow_t".
+iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hprot'") as "%Hflow_t'".
 iModIntro. iSplitL; last by iFrame "#".
-iModIntro.
-iExists (<[t := Public t']> pub_l), (<[t' := Public t]> pub_r).
+iModIntro. iExists (<[t := Public t']> pub_l), (<[t' := Public t]> pub_r), flow_l, flow_r.
 rewrite /public_rel_inv /public_rel_map_l_auth /public_rel_map_r_auth.
-rewrite !fmap_insert !big_sepM_insert_delete.
-rewrite !dom_insert_lookup_L=> //.
 iFrame. iFrame "#".
-iPureIntro.
-intros t1 t1'.
-destruct (decide (t = t1)) as [->|?];
-  destruct (decide (t' = t1')) as [->|?];
-  rewrite ?lookup_insert_eq ?lookup_insert_ne; naive_solver.
+iSplitL "Hmap_l Hmap_l_frag Hmap_r Hmap_r_frag".
+{ iSplitL "Hmap_l Hmap_l_frag"; last iSplitL "Hmap_r Hmap_r_frag".
+  - rewrite /public_rel_map_l_auth.
+    rewrite fmap_insert big_sepM_insert_delete.
+    iFrame.
+  - rewrite /public_rel_map_r_auth.
+    rewrite fmap_insert big_sepM_insert_delete.
+    iFrame.
+  - rewrite !dom_insert_lookup_L=> //.
+    iFrame "#". }
+iSplitL "Hrel Hpub_consistent".
+{ iDestruct "Hpub_consistent" as "[%Hpub_eq Hpub_rel]".
+  iSplitR.
+  - iPureIntro. move=> ??.
+    rewrite !lookup_insert; repeat case_decide; naive_solver.
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + injection Hpub as <-. iApply "Hrel". iFrame "#".
+    + by iApply "Hpub_rel". }
+iSplitL "HPriv_prot".
+{ iDestruct "HPriv_prot" as "[%HPriv_l %HPriv_r]".
+  iSplit.
+  - iPureIntro. move=> ??.
+    rewrite lookup_insert; case_decide; naive_solver.
+  - iPureIntro. move=> ??.
+    rewrite lookup_insert; case_decide; naive_solver. }
+iDestruct "Hflow_consistent" as "[%Hflow_l_cons %Hflow_r_cons]".
+iSplit.
+- iPureIntro. move=> ???.
+  rewrite lookup_insert; case_decide; naive_solver.
+- iPureIntro. move=> ???.
+  rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
 Lemma public_rel_extend_2 E t t' :
