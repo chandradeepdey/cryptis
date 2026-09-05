@@ -294,14 +294,14 @@ Definition public_rel_flow_l_auth flow_l : iProp :=
   [∗ map] t ↦ ts ∈ flow_l,
     own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}) ∗
     ([∗ set] t1 ∈ ts, ⌜is_immediate_subterm t t1⌝) ∗
-    ⌜(∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
+    ⌜ts ≠ ∅ → (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
 
 Definition public_rel_flow_r_auth flow_r : iProp :=
   own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) ∗
   [∗ map] t' ↦ ts ∈ flow_r,
     own public_rel_flow_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}) ∗
     ([∗ set] t1' ∈ ts, ⌜is_immediate_subterm t' t1'⌝) ∗
-    ⌜(∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝.
+    ⌜ts ≠ ∅ → (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝.
 
 Definition protects_superterms_l t ts : iProp :=
   own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
