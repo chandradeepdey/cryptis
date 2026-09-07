@@ -534,6 +534,346 @@ Proof. split; last apply _. by iIntros "#[H _]". Qed.
 #[global] Instance cryptis_rel_ctx_has_term_meta_spec_ctx : HasTermMetaSpecCtx cryptis_rel_ctx.
 Proof. split; last apply _. by iIntros "#[_ [H _]]". Qed.
 
+Lemma public_rel_flow_l_extend E t :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token t (↑cryptisN.@"public_rel".@"flow") -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t ∅ ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_extend_2 E t ts :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token t (↑cryptisN.@"public_rel".@"flow") -∗
+  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}) -∗
+  |={E}=> protects_superterms_l t ∅ ∗
+          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_extend E t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"flow") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' ∅ ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_extend_2 E t' ts :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"flow") -∗
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}) -∗
+  |={E}=> protects_superterms_r t' ∅ ∗
+          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}).
+Admitted.
+
+Lemma public_rel_flow_l_grow E t ts tsup :
+  ↑cryptisN ⊆ E →
+  ts ≠ ∅ →
+  is_immediate_subterm t tsup →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t (ts ∪ {[ tsup ]}) ∗
+          protected_by_subterm_l tsup t ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_grow_2 E a tsup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm (TNonce a) tsup →
+  cryptis_rel_ctx -∗
+  protects_superterms_l (TNonce a) ∅ -∗
+  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l (TNonce a) {[ tsup ]} ∗
+          protected_by_subterm_l tsup (TNonce a) ∗
+          term_token (TNonce a) (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_grow_3 E t tsub tsup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm t tsup →
+  cryptis_rel_ctx -∗
+  protected_by_subterm_l t tsub -∗
+  protects_superterms_l t ∅ -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t {[ tsup ]} ∗
+          protected_by_subterm_l tsup t ∗
+          protected_by_subterm_l t tsub ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_grow_4 E t ts1 ts tsup :
+  ↑cryptisN ⊆ E →
+  ts ≠ ∅ →
+  is_immediate_subterm t tsup →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_l t (ts ∪ {[ tsup ]}) ∗
+          protected_by_subterm_l tsup t ∗
+          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_l_grow_5 E a ts tsup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm (TNonce a) tsup →
+  cryptis_rel_ctx -∗
+  protects_superterms_l (TNonce a) ∅ -∗
+  own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private ts) ]}) -∗
+  |={E}=> protects_superterms_l (TNonce a) {[ tsup ]} ∗
+          protected_by_subterm_l tsup (TNonce a) ∗
+          own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private ts) ]}).
+Admitted.
+
+Lemma public_rel_flow_l_grow_6 E t ts tsub tsup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm t tsup →
+  cryptis_rel_ctx -∗
+  protected_by_subterm_l t tsub -∗
+  protects_superterms_l t ∅ -∗
+  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}) -∗
+  |={E}=> protects_superterms_l t {[ tsup ]} ∗
+          protected_by_subterm_l tsup t ∗
+          protected_by_subterm_l t tsub ∗
+          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_grow E t' ts t'sup :
+  ↑cryptisN ⊆ E →
+  ts ≠ ∅ →
+  is_immediate_subterm t' t'sup →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' (ts ∪ {[ t'sup ]}) ∗
+          protected_by_subterm_r t'sup t' ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_grow_2 E a' t'sup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm (TNonce a') t'sup →
+  cryptis_rel_ctx -∗
+  protects_superterms_r (TNonce a') ∅ -∗
+  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r (TNonce a') {[ t'sup ]} ∗
+          protected_by_subterm_r t'sup (TNonce a') ∗
+          term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_grow_3 E t' t'sub t'sup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm t' t'sup →
+  cryptis_rel_ctx -∗
+  protected_by_subterm_r t' t'sub -∗
+  protects_superterms_r t' ∅ -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
+          protected_by_subterm_r t'sup t' ∗
+          protected_by_subterm_r t' t'sub ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_grow_4 E t' ts1 ts t'sup :
+  ↑cryptisN ⊆ E →
+  ts ≠ ∅ →
+  is_immediate_subterm t' t'sup →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_r t' (ts ∪ {[ t'sup ]}) ∗
+          protected_by_subterm_r t'sup t' ∗
+          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_grow_5 E a' ts t'sup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm (TNonce a') t'sup →
+  cryptis_rel_ctx -∗
+  protects_superterms_r (TNonce a') ∅ -∗
+  own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private ts) ]}) -∗
+  |={E}=> protects_superterms_r (TNonce a') {[ t'sup ]} ∗
+          protected_by_subterm_r t'sup (TNonce a') ∗
+          own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private ts) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_grow_6 E t' ts t'sub t'sup :
+  ↑cryptisN ⊆ E →
+  is_immediate_subterm t' t'sup →
+  cryptis_rel_ctx -∗
+  protected_by_subterm_r t' t'sub -∗
+  protects_superterms_r t' ∅ -∗
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}) -∗
+  |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
+          protected_by_subterm_r t'sup t' ∗
+          protected_by_subterm_r t' t'sub ∗
+          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}).
+Admitted.
+
+Lemma public_rel_flow_l_shrink E t ts tsup t1 :
+  ↑cryptisN ⊆ E →
+  tsup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  protected_by_subterm_l tsup t -∗
+  protected_by_subterm_l tsup t1 -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
+          protected_by_subterm_l tsup t1 ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_shrink_2 E t ts1 ts tsup t1 :
+  ↑cryptisN ⊆ E →
+  tsup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  protected_by_subterm_l tsup t -∗
+  protected_by_subterm_l tsup t1 -∗
+  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
+          protected_by_subterm_l tsup t1 ∗
+          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_l_shrink_3 E t ts tsup :
+  ↑cryptisN ⊆ E →
+  tsup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  protected_by_subterm_l tsup t -∗
+  protects_superterms_l tsup ∅ -∗
+  term_token tsup (↑cryptisN.@"public_rel".@"map") -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
+          protects_superterms_l tsup ∅ ∗
+          term_token tsup (↑cryptisN.@"public_rel".@"map") ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_shrink_4 E t ts1 ts tsup :
+  ↑cryptisN ⊆ E →
+  tsup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  protected_by_subterm_l tsup t -∗
+  protects_superterms_l tsup ∅ -∗
+  term_token tsup (↑cryptisN.@"public_rel".@"map") -∗
+  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
+          protects_superterms_l tsup ∅ ∗
+          term_token tsup (↑cryptisN.@"public_rel".@"map") ∗
+          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_l_shrink_5 E t ts tsup t' :
+  ↑cryptisN ⊆ E →
+  tsup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  protected_by_subterm_l tsup t -∗
+  public_rel_elem tsup t' -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_l_shrink_6 E t ts1 ts tsup t' :
+  ↑cryptisN ⊆ E →
+  tsup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_l t ts -∗
+  protected_by_subterm_l tsup t -∗
+  public_rel_elem tsup t' -∗
+  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
+          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_shrink E t' ts t'sup t1 :
+  ↑cryptisN ⊆ E →
+  t'sup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  protected_by_subterm_r t'sup t' -∗
+  protected_by_subterm_r t'sup t1 -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
+          protected_by_subterm_r t'sup t1 ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_shrink_2 E t' ts1 ts t'sup t1 :
+  ↑cryptisN ⊆ E →
+  t'sup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  protected_by_subterm_r t'sup t' -∗
+  protected_by_subterm_r t'sup t1 -∗
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
+          protected_by_subterm_r t'sup t1 ∗
+          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_shrink_3 E t' ts t'sup :
+  ↑cryptisN ⊆ E →
+  t'sup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  protected_by_subterm_r t'sup t' -∗
+  protects_superterms_r t'sup ∅ -∗
+  term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
+          protects_superterms_r t'sup ∅ ∗
+          term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_shrink_4 E t' ts1 ts t'sup :
+  ↑cryptisN ⊆ E →
+  t'sup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  protected_by_subterm_r t'sup t' -∗
+  protects_superterms_r t'sup ∅ -∗
+  term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") -∗
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
+          protects_superterms_r t'sup ∅ ∗
+          term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") ∗
+          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
+Lemma public_rel_flow_r_shrink_5 E t' ts t'sup t :
+  ↑cryptisN ⊆ E →
+  t'sup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  protected_by_subterm_r t'sup t' -∗
+  public_rel_elem t t'sup -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+Admitted.
+
+Lemma public_rel_flow_r_shrink_6 E t' ts1 ts t'sup t :
+  ↑cryptisN ⊆ E →
+  t'sup ∈ ts →
+  cryptis_rel_ctx -∗
+  protects_superterms_r t' ts -∗
+  protected_by_subterm_r t'sup t' -∗
+  public_rel_elem t t'sup -∗
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
+          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+Admitted.
+
 Lemma public_rel_map_l_extend E t t' tsub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
