@@ -293,15 +293,15 @@ Definition public_rel_flow_l_auth flow_l : iProp :=
   own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) ∗
   [∗ map] t ↦ ts ∈ flow_l,
     own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}) ∗
-    ([∗ set] t1 ∈ ts, ⌜is_immediate_subterm t t1⌝) ∗
-    ⌜ts ≠ ∅ → (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1)⌝.
+    ([∗ set] tsup ∈ ts, ⌜is_immediate_subterm t tsup⌝) ∗
+    ⌜ts ≠ ∅ → (∃ a, t = TNonce a) ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1)⌝.
 
 Definition public_rel_flow_r_auth flow_r : iProp :=
   own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) ∗
   [∗ map] t' ↦ ts ∈ flow_r,
     own public_rel_flow_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}) ∗
-    ([∗ set] t1' ∈ ts, ⌜is_immediate_subterm t' t1'⌝) ∗
-    ⌜ts ≠ ∅ → (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1)⌝.
+    ([∗ set] t'sup ∈ ts, ⌜is_immediate_subterm t' t'sup⌝) ∗
+    ⌜ts ≠ ∅ → (∃ a', t' = TNonce a') ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1)⌝.
 
 Definition protects_superterms_l t ts : iProp :=
   own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
@@ -315,10 +315,10 @@ Definition protects_superterms_r t' ts : iProp :=
 Definition protected_by_subterm_r t' tsub : iProp :=
   own public_rel_flow_r (◯ {[ tsub := ◯ (GSet {[ t' ]}) ]}).
 
-Lemma public_rel_flow_l_lookup flow_l t t1 :
+Lemma public_rel_flow_l_lookup flow_l t tsub :
   own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) -∗
-  protected_by_subterm_l t1 t -∗
-  ⌜∃ ts, flow_l !! t = Some ts ∧ t1 ∈ ts⌝.
+  protected_by_subterm_l t tsub -∗
+  ⌜∃ ts, flow_l !! tsub = Some ts ∧ t ∈ ts⌝.
 Proof.
 iIntros "H1 H2".
 iCombine "H1 H2" gives "%H".
@@ -326,7 +326,7 @@ iPureIntro.
 apply auth_both_valid_discrete in H as [Hincl _].
 apply singleton_included_l in Hincl as (y & <- & Hincl).
 rewrite lookup_fmap in Hincl.
-destruct (flow_l !! t) as [ts|]; last first.
+destruct (flow_l !! tsub) as [ts|]; last first.
 { apply Some_included_is_Some in Hincl.
   by apply is_Some_None in Hincl. }
 exists ts. split; first done.
@@ -356,10 +356,10 @@ apply auth_auth_dfrac_included in H as [_ Heq].
 by injection Heq as ->.
 Qed.
 
-Lemma public_rel_flow_r_lookup flow_r t' t1 :
+Lemma public_rel_flow_r_lookup flow_r t' t'sub :
   own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) -∗
-  protected_by_subterm_r t1 t' -∗
-  ⌜∃ ts, flow_r !! t' = Some ts ∧ t1 ∈ ts⌝.
+  protected_by_subterm_r t' t'sub -∗
+  ⌜∃ ts, flow_r !! t'sub = Some ts ∧ t' ∈ ts⌝.
 Proof.
 iIntros "H1 H2".
 iCombine "H1 H2" gives "%H".
@@ -367,7 +367,7 @@ iPureIntro.
 apply auth_both_valid_discrete in H as [Hincl _].
 apply singleton_included_l in Hincl as (y & <- & Hincl).
 rewrite lookup_fmap in Hincl.
-destruct (flow_r !! t') as [ts|]; last first.
+destruct (flow_r !! t'sub) as [ts|]; last first.
 { apply Some_included_is_Some in Hincl.
   by apply is_Some_None in Hincl. }
 exists ts. split; first done.
@@ -493,11 +493,11 @@ Definition public_rel_flow_inv flow_l flow_r : iProp :=
 
 Definition public_rel_Private_l_protected pub_l flow_l : Prop :=
   ∀ t ts, pub_l !! t = Some (Private ts) →
-    (∃ a, t = TNonce a) ∨ (∃ t1 ts1, flow_l !! t1 = Some ts1 ∧ t ∈ ts1).
+    (∃ a, t = TNonce a) ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1).
 
 Definition public_rel_Private_r_protected pub_r flow_r : Prop :=
   ∀ t' ts, pub_r !! t' = Some (Private ts) →
-    (∃ a', t' = TNonce a') ∨ (∃ t1' ts1, flow_r !! t1' = Some ts1 ∧ t' ∈ ts1).
+    (∃ a', t' = TNonce a') ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1).
 
 Definition public_rel_Private_protected pub_l pub_r flow_l flow_r : iProp :=
   ⌜public_rel_Private_l_protected pub_l flow_l⌝ ∗
@@ -943,25 +943,33 @@ You will probably need a custom version of this lemma tailored to the
 declassification you want to attempt.
 
 Example:
-Say you have (nonce, msg_0) ↦ Private {[ nonce', msg_0' ]}, where
-PUB⟨msg_0, msg_0'⟩. flow_l !! nonce = {[ (nonce, msg_0) ]},
-flow_r !! nonce' = {[ (nonce', msg_0') ]}.
+Say you have (nonce, msg) ↦ Private {[ nonce', msg' ]}, where
+PUB⟨msg, msg'⟩. flow_l !! nonce = {[ (nonce, msg) ]},
+flow_r !! nonce' = {[ (nonce', msg') ]}.
 
-When trying to change to (nonce, msg_0) ↦
-Public (nonce', msg_0'), the PUB⟨(nonce, msg_0), (nonce', msg_0')⟩
-precondition will require that you have public_rel_elem nonce nonce'
-in the recursive case.
+When trying to change it to (nonce, msg) ↦ Public (nonce', msg'),
+proving the public_rel_elem (nonce, msg) (nonce', msg') -∗
+PUB⟨(nonce, msg), (nonce', msg')⟩ precondition will require that
+you have public_rel_elem nonce nonce' in the recursive case.
 
 But to get that, you will need to show that flow_l !! nonce = ∅ and
-flow_r !! nonce' = ∅. If you try to remove the entries from flow_l
-and flow_r with the flow related lemmas in this file, you will need
-to transition the superterms, which will be circular.
+flow_r !! nonce' = ∅. Since (nonce, msg) and (nonce', msg') can
+have no other protectors, you will need to transition them to Public,
+which will require you to prove PUB⟨(nonce, msg), (nonce', msg')⟩.
+This is circular.
 
 To get around this, you should open the invariant and do all of the
 transitions at once. This depends on the structure of the terms you
 are trying to declassify and the nature of the recursive flow chain,
 so you need to come up with your own custom lemma. Feel free to use
 these lemmas as templates.
+
+PS: If the declassification is deterministic, you can directly
+construct t ↦ Public t' from the tokens instead of going through
+t ↦ Private {[ t' ]} first (public_rel_extend_4).
+
+Since public_rel_elem t t' → private_rel_elem t t', you can use it to
+prove PUB.
 *)
 Lemma public_rel_extend E t t' :
   ↑cryptisN ⊆ E →
