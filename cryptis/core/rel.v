@@ -87,7 +87,7 @@ Section cmra.
   #[global] Instance stateR_discrete : CmraDiscrete stateR.
   Proof. by split; first apply _. Qed.
 
-  #[global] Instance state_core_id (s : state) : CoreId s.
+  #[global] Instance state_core_id (st : state) : CoreId st.
   Proof. by constructor. Qed.
 
 End cmra.
@@ -173,6 +173,7 @@ Notation iProp := (iProp Σ).
 Notation iPropO := (iPropO Σ).
 
 Implicit Types t : term.
+Implicit Types st : state.
 Implicit Types pub_l pub_r : gmap term state.
 Implicit Types flow_l flow_r : gmap term (gset term).
 Implicit Types P : term -> term -> iProp.
@@ -190,6 +191,12 @@ Definition public_rel_map_r_auth pub_r : iProp :=
                             | Private _ => own public_rel_map_r (◯ {[ t' := ●{#1/2} st ]})
                             | _ => emp
                             end.
+
+Definition public_rel_map_l_frag t st : iProp :=
+  own public_rel_map_l (◯ {[ t := ●{#1/2} st ]}).
+
+Definition public_rel_map_r_frag t' st : iProp :=
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} st ]}).
 
 Definition public_rel_map_l_elem t t': iProp :=
   own public_rel_map_l (◯ {[ t := ◯ (Private {[ t' ]}) ]}).
@@ -242,9 +249,9 @@ Qed.
 #[global] Instance public_rel_elem_persistent t t' : Persistent (public_rel_elem t t').
 Proof. apply _. Qed.
 
-Lemma public_rel_map_l_lookup pub_l t (st : state) :
-  own public_rel_map_l (● ((λ st : state, ● st ⋅ ◯ st) <$> pub_l)) -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} st ]}) -∗
+Lemma public_rel_map_l_lookup pub_l t st :
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
+  public_rel_map_l_frag t st -∗
   ⌜pub_l !! t = Some st⌝.
 Proof.
 iIntros "H1 H2".
@@ -261,9 +268,9 @@ destruct (pub_l !! t) as [st'|] eqn:Heq.
   by apply is_Some_None in Hincl.
 Qed.
 
-Lemma public_rel_map_r_lookup pub_r t' (st : state) :
-  own public_rel_map_r (● ((λ st : state, ● st ⋅ ◯ st) <$> pub_r)) -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} st ]}) -∗
+Lemma public_rel_map_r_lookup pub_r t' st :
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  public_rel_map_r_frag t' st -∗
   ⌜pub_r !! t' = Some st⌝.
 Proof.
 iIntros "H1 H2".
@@ -592,9 +599,9 @@ Lemma public_rel_flow_l_extend_2 E t ts :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   term_token t (↑cryptisN.@"public_rel".@"flow") -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_l_frag t (Private ts) -∗
   |={E}=> protects_superterms_l t ∅ ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}).
+          public_rel_map_l_frag t (Private ts).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf Httm".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -702,9 +709,9 @@ Lemma public_rel_flow_r_extend_2 E t' ts :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   term_token_spec t' (↑cryptisN.@"public_rel".@"flow") -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_r_frag t' (Private ts) -∗
   |={E}=> protects_superterms_r t' ∅ ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}).
+          public_rel_map_r_frag t' (Private ts).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf Httm".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -922,10 +929,10 @@ Lemma public_rel_flow_l_grow_4 E t ts1 ts tsup :
   is_immediate_subterm t tsup →
   cryptis_rel_ctx -∗
   protects_superterms_l t ts -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_l_frag t (Private ts1) -∗
   |={E}=> protects_superterms_l t (ts ∪ {[ tsup ]}) ∗
           protected_by_subterm_l tsup t ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_l_frag t (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_l_grow_5 E a ts tsup :
@@ -933,10 +940,10 @@ Lemma public_rel_flow_l_grow_5 E a ts tsup :
   is_immediate_subterm (TNonce a) tsup →
   cryptis_rel_ctx -∗
   protects_superterms_l (TNonce a) ∅ -∗
-  own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_l_frag (TNonce a) (Private ts) -∗
   |={E}=> protects_superterms_l (TNonce a) {[ tsup ]} ∗
           protected_by_subterm_l tsup (TNonce a) ∗
-          own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private ts) ]}).
+          public_rel_map_l_frag (TNonce a) (Private ts).
 Admitted.
 
 Lemma public_rel_flow_l_grow_6 E t ts tsub tsup :
@@ -945,11 +952,11 @@ Lemma public_rel_flow_l_grow_6 E t ts tsub tsup :
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
   protects_superterms_l t ∅ -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_l_frag t (Private ts) -∗
   |={E}=> protects_superterms_l t {[ tsup ]} ∗
           protected_by_subterm_l tsup t ∗
           protected_by_subterm_l t tsub ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}).
+          public_rel_map_l_frag t (Private ts).
 Admitted.
 
 Lemma public_rel_flow_r_grow E t' ts t'sup :
@@ -994,10 +1001,10 @@ Lemma public_rel_flow_r_grow_4 E t' ts1 ts t'sup :
   is_immediate_subterm t' t'sup →
   cryptis_rel_ctx -∗
   protects_superterms_r t' ts -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_r_frag t' (Private ts1) -∗
   |={E}=> protects_superterms_r t' (ts ∪ {[ t'sup ]}) ∗
           protected_by_subterm_r t'sup t' ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_r_frag t' (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_r_grow_5 E a' ts t'sup :
@@ -1005,10 +1012,10 @@ Lemma public_rel_flow_r_grow_5 E a' ts t'sup :
   is_immediate_subterm (TNonce a') t'sup →
   cryptis_rel_ctx -∗
   protects_superterms_r (TNonce a') ∅ -∗
-  own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_r_frag (TNonce a') (Private ts) -∗
   |={E}=> protects_superterms_r (TNonce a') {[ t'sup ]} ∗
           protected_by_subterm_r t'sup (TNonce a') ∗
-          own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private ts) ]}).
+          public_rel_map_r_frag (TNonce a') (Private ts).
 Admitted.
 
 Lemma public_rel_flow_r_grow_6 E t' ts t'sub t'sup :
@@ -1017,11 +1024,11 @@ Lemma public_rel_flow_r_grow_6 E t' ts t'sub t'sup :
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
   protects_superterms_r t' ∅ -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_r_frag t' (Private ts) -∗
   |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
           protected_by_subterm_r t'sup t' ∗
           protected_by_subterm_r t' t'sub ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}).
+          public_rel_map_r_frag t' (Private ts).
 Admitted.
 
 Lemma public_rel_flow_l_shrink E t ts tsup t1 :
@@ -1044,10 +1051,10 @@ Lemma public_rel_flow_l_shrink_2 E t ts1 ts tsup t1 :
   protects_superterms_l t ts -∗
   protected_by_subterm_l tsup t -∗
   protected_by_subterm_l tsup t1 -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_l_frag t (Private ts1) -∗
   |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
           protected_by_subterm_l tsup t1 ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_l_frag t (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_l_shrink_3 E t ts tsup :
@@ -1073,11 +1080,11 @@ Lemma public_rel_flow_l_shrink_4 E t ts1 ts tsup :
   protected_by_subterm_l tsup t -∗
   protects_superterms_l tsup ∅ -∗
   term_token tsup (↑cryptisN.@"public_rel".@"map") -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_l_frag t (Private ts1) -∗
   |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
           protects_superterms_l tsup ∅ ∗
           term_token tsup (↑cryptisN.@"public_rel".@"map") ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_l_frag t (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_l_shrink_5 E t ts tsup t' :
@@ -1099,9 +1106,9 @@ Lemma public_rel_flow_l_shrink_6 E t ts1 ts tsup t' :
   protects_superterms_l t ts -∗
   protected_by_subterm_l tsup t -∗
   public_rel_elem tsup t' -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_l_frag t (Private ts1) -∗
   |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_l_frag t (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_r_shrink E t' ts t'sup t1 :
@@ -1124,10 +1131,10 @@ Lemma public_rel_flow_r_shrink_2 E t' ts1 ts t'sup t1 :
   protects_superterms_r t' ts -∗
   protected_by_subterm_r t'sup t' -∗
   protected_by_subterm_r t'sup t1 -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_r_frag t' (Private ts1) -∗
   |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
           protected_by_subterm_r t'sup t1 ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_r_frag t' (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_r_shrink_3 E t' ts t'sup :
@@ -1153,11 +1160,11 @@ Lemma public_rel_flow_r_shrink_4 E t' ts1 ts t'sup :
   protected_by_subterm_r t'sup t' -∗
   protects_superterms_r t'sup ∅ -∗
   term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_r_frag t' (Private ts1) -∗
   |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
           protects_superterms_r t'sup ∅ ∗
           term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_r_frag t' (Private ts1).
 Admitted.
 
 Lemma public_rel_flow_r_shrink_5 E t' ts t'sup t :
@@ -1179,9 +1186,9 @@ Lemma public_rel_flow_r_shrink_6 E t' ts1 ts t'sup t :
   protects_superterms_r t' ts -∗
   protected_by_subterm_r t'sup t' -∗
   public_rel_elem t t'sup -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}) -∗
+  public_rel_map_r_frag t' (Private ts1) -∗
   |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts1) ]}).
+          public_rel_map_r_frag t' (Private ts1).
 Admitted.
 
 Lemma public_rel_map_l_extend E t t' tsub :
@@ -1191,7 +1198,7 @@ Lemma public_rel_map_l_extend E t t' tsub :
   term_token t (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_l t tsub ∗
           private_rel_elem_l t t' ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private {[ t' ]}) ]}).
+          public_rel_map_l_frag t (Private {[ t' ]}).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hprot Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1245,7 +1252,7 @@ Lemma public_rel_map_l_extend_2 E a t' :
   cryptis_rel_ctx -∗
   term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> private_rel_elem_l (TNonce a) t' ∗
-          own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private {[ t' ]}) ]}).
+          public_rel_map_l_frag (TNonce a) (Private {[ t' ]}).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1300,7 +1307,7 @@ Lemma public_rel_map_r_extend E t t' t'sub :
   term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_r t' t'sub ∗
           private_rel_elem_r t t' ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private {[ t ]}) ]}).
+          public_rel_map_r_frag t' (Private {[ t ]}).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hprot Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1351,7 +1358,7 @@ Lemma public_rel_map_r_extend_2 E t a' :
   cryptis_rel_ctx -∗
   term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> private_rel_elem_r t (TNonce a') ∗
-          own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private {[ t ]}) ]}).
+          public_rel_map_r_frag (TNonce a') (Private {[ t ]}).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1405,8 +1412,8 @@ Lemma private_rel_extend E t t' tsub t'sub :
   term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_l t tsub ∗ protected_by_subterm_r t' t'sub ∗
           private_rel_elem t t' ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private {[ t' ]}) ]}) ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private {[ t ]}) ]}).
+          public_rel_map_l_frag t (Private {[ t' ]}) ∗
+          public_rel_map_r_frag t' (Private {[ t ]}).
 Proof.
 iIntros (HE) "#Hctx Hprot Hprot' Htt Htts".
 iPoseProof (public_rel_map_l_extend t t' with "Hctx Hprot Htt") as ">[? [??]]"=> //.
@@ -1423,8 +1430,8 @@ Lemma private_rel_extend_2 E a t' t'sub :
   term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_r t' t'sub ∗
           private_rel_elem (TNonce a) t' ∗
-          own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private {[ t' ]}) ]}) ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private {[ TNonce a ]}) ]}).
+          public_rel_map_l_frag (TNonce a) (Private {[ t' ]}) ∗
+          public_rel_map_r_frag t' (Private {[ TNonce a ]}).
 Proof.
 iIntros (HE) "#Hctx Hprot' Htt Htts".
 iPoseProof (public_rel_map_l_extend_2 a t' with "Hctx Htt") as ">[? ?]"=> //.
@@ -1441,8 +1448,8 @@ Lemma private_rel_extend_3 E t a' tsub :
   term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_l t tsub ∗
           private_rel_elem t (TNonce a') ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private {[ TNonce a' ]}) ]}) ∗
-          own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private {[ t ]}) ]}).
+          public_rel_map_l_frag t (Private {[ TNonce a' ]}) ∗
+          public_rel_map_r_frag (TNonce a') (Private {[ t ]}).
 Proof.
 iIntros (HE) "#Hctx Hprot Htt Htts".
 iPoseProof (public_rel_map_l_extend t (TNonce a') with "Hctx Hprot Htt") as ">[? [??]]"=> //.
@@ -1457,8 +1464,8 @@ Lemma private_rel_extend_4 E a a' :
   term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
   term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> private_rel_elem (TNonce a) (TNonce a') ∗
-          own public_rel_map_l (◯ {[ TNonce a := ●{#1/2} (Private {[ TNonce a' ]}) ]}) ∗
-          own public_rel_map_r (◯ {[ TNonce a' := ●{#1/2} (Private {[ TNonce a ]}) ]}).
+          public_rel_map_l_frag (TNonce a) (Private {[ TNonce a' ]}) ∗
+          public_rel_map_r_frag (TNonce a') (Private {[ TNonce a ]}).
 Proof.
 iIntros (HE) "#Hctx Htt Htts".
 iPoseProof (public_rel_map_l_extend_2 a a' with "Hctx Htt") as ">[? ?]"=> //.
@@ -1470,9 +1477,9 @@ Qed.
 Lemma public_rel_map_l_grow E t ts t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_l_frag t (Private ts) -∗
   |={E}=> private_rel_elem_l t t' ∗
-          own public_rel_map_l (◯ {[ t := ●{#1/2} (Private (ts ∪ {[ t' ]})) ]}).
+          public_rel_map_l_frag t (Private (ts ∪ {[ t' ]})).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1532,9 +1539,9 @@ Qed.
 Lemma public_rel_map_r_grow E t ts t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private ts) ]}) -∗
+  public_rel_map_r_frag t' (Private ts) -∗
   |={E}=> private_rel_elem_r t t' ∗
-          own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private (ts ∪ {[ t ]})) ]}).
+          public_rel_map_r_frag t' (Private (ts ∪ {[ t ]})).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1627,8 +1634,8 @@ Lemma public_rel_extend E t t' :
   (public_rel_elem t t' -∗ PUB⟨t, t'⟩) -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private {[ t' ]}) ]}) -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private {[ t ]}) ]}) -∗
+  public_rel_map_l_frag t (Private {[ t' ]}) -∗
+  public_rel_map_r_frag t' (Private {[ t ]}) -∗
   |={E}=> public_rel_elem t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot' Hl_frac Hr_frac".
@@ -1703,7 +1710,7 @@ Lemma public_rel_extend_2 E t t' :
   (public_rel_elem t t' -∗ PUB⟨t, t'⟩) -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
-  own public_rel_map_l (◯ {[ t := ●{#1/2} (Private {[ t' ]}) ]}) -∗
+  public_rel_map_l_frag t (Private {[ t' ]}) -∗
   term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> public_rel_elem t t'.
 Proof.
@@ -1783,7 +1790,7 @@ Lemma public_rel_extend_3 E t t' :
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
   term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  own public_rel_map_r (◯ {[ t' := ●{#1/2} (Private {[ t ]}) ]}) -∗
+  public_rel_map_r_frag t' (Private {[ t ]}) -∗
   |={E}=> public_rel_elem t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot' Htt Hr_frac".
