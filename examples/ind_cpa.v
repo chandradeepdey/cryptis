@@ -92,14 +92,11 @@ rel_apply_r rel_aenc'_r.
 rel_values. iApply "post".
 rewrite publicly_related_aenc.
 iRight.
-rewrite minted_of_list minted_spec_of_list=> /=.
-iFrame "#".
 iClear "mint_sk mint_spec_sk' mint_m mint_spec_m' mint_nonce mint_spec_nonce'".
 rewrite (term_token_difference _ (↑cryptisN.@"public_rel"))=> //.
 iDestruct "tt_nonce" as "[tt_nonce _]".
 rewrite (term_token_spec_difference _ (↑cryptisN.@"public_rel"))=> //.
 iDestruct "tt_spec_nonce'" as "[tt_spec_nonce' _]".
-iMod (public_rel_extend with "[//] [tt_nonce] [tt_spec_nonce']")=>//.
 Admitted.
 
 Lemma rel_alice c c' (b: bool) :
@@ -141,9 +138,10 @@ rel_apply_r (rel_nondet_bool_r _ _ (negb choice)); rel_pures_r.
 rel_bind_l (if: _ then _ else _)%E.
 rel_bind_r (if: _ then _ else _)%E.
 iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'⌝ ∧ minted m ∧ minted_spec m')%I).
-{ rewrite (publicly_related_minted msg_0) (publicly_related_minted msg_1).
-  iDestruct "Hmsg_0" as "[? ?]".
-  iDestruct "Hmsg_1" as "[? ?]".
+{ iMod (publicly_related_minted (E:=⊤) msg_0 msg_0' ltac:(solve_ndisj)
+          with "Hctx Hmsg_0") as "#[? ?]".
+  iMod (publicly_related_minted (E:=⊤) msg_1 msg_1' ltac:(solve_ndisj)
+          with "Hctx Hmsg_1") as "#[? ?]".
   case: choice; rel_pures_l; rel_pures_r; rel_values.
   iExists msg_0, msg_1'; iFrame "#"; eauto.
   iExists msg_1, msg_0'; iFrame "#"; eauto. }
@@ -152,7 +150,6 @@ rel_pures_l. rel_pures_r.
 rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
 iApply refines_bind'. iApply rel_aenc'=> //=.
 by rewrite minted_pkey. by rewrite minted_spec_pkey.
-rewrite (publicly_related_minted msg_0).
 iIntros (c_msg c_msg') "#Hcmsg".
 rel_bind_l (send _ _). rel_bind_r (send _ _).
 iApply refines_bind; first by iApply rel_send.
@@ -166,9 +163,10 @@ rel_bind_l (eq_term _ _). rel_bind_r (eq_term _ _).
 iApply refines_bind'. iApply rel_eq_term=> /=.
 rel_pures_l. rel_pures_r.
 rel_values.
-iAssert (▷ ⌜TInt 1 = guess ↔ TInt 1 = guess'⌝)%I as ">%H".
-{ iApply publicly_related_part_bij'=> //.
-  by rewrite publicly_related_TInt. }
+iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
+        ltac:(solve_ndisj)
+        with "Hctx [] Hguess") as %H.
+{ by rewrite publicly_related_TInt. }
 iPureIntro.
 eexists _, _, _, _. repeat split; eauto.
 destruct choice=> /=; congruence.
