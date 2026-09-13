@@ -65,7 +65,7 @@ Qed.
 Lemma minted_spec_THash t : minted_spec (THash t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_term_unseal /=. Qed.
 
-Lemma minted_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
+Lemma minted_spec_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
 
 Lemma minted_spec_TExpN t ts :
