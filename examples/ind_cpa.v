@@ -109,10 +109,25 @@ Lemma rel_alice c c' (b: bool) :
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice.
 rel_pures_l. rel_pures_r.
-rel_apply_l (rel_mk_aenc_key_l with "[//]").
-iIntros (skA) "#mint_skA token_skA".
-rel_apply_r (rel_mk_aenc_key_r with "[//]").
-iIntros "%skA' #mint_spec_skA' token_spec_skA'".
+have Hdisj : ∀ sk : aenc_key,
+    seed_of_aenc_key sk ∉ ({[sk : term]} : gset term) ∧
+    seed_of_aenc_key sk ∉ ({[Spec.pkey sk]} : gset term) ∧
+    ({[sk : term]} : gset term) ## ({[Spec.pkey sk]} : gset term).
+{ move=> sk. rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
+  have Hne : ∀ kt (t : term), t ≠ TKey kt t.
+  { move=> kt t H. have := f_equal tsize H.
+    rewrite (tsize_eq (TKey kt t)). lia. }
+  set_solver. }
+rel_apply_l (rel_mk_aenc_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]").
+{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+iIntros (skA) "#mint_skA token_a token_skA token_pkA".
+rewrite !big_sepS_singleton.
+rel_apply_r (rel_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]").
+{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+iIntros "%skA' #mint_spec_skA' token_spec_a token_spec_skA' token_spec_pkA'".
+rewrite !big_sepS_singleton.
 rel_pures_l. rel_pures_r.
 rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
 rel_pures_l. rel_pures_r.
