@@ -527,6 +527,7 @@ set_solver.
 Qed.
 
 Fixpoint publicly_related t t' : iProp :=
+  minted t ∧ minted_spec t' ∧
   match t, t' with
   | TInt n, TInt n' => ⌜n = n'⌝
   | TPair t1 t2, TPair t1' t2' =>
@@ -564,45 +565,11 @@ Fixpoint publicly_related t t' : iProp :=
 #[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
   (at level 20, no associativity, format "PUB⟨ a , b ⟩").
 
-Lemma publicly_related_TInv_l :
-  ∀ t t', is_inv t → (PUB⟨t, t'⟩ = False)%I.
-Proof. by case. Qed.
-
-Lemma publicly_related_TExp_l :
-  ∀ t t', is_exp t → (PUB⟨t, t'⟩ = False)%I.
-Proof. by case. Qed.
-
-Lemma publicly_related_TMul_l :
-  ∀ t t', is_mul t → (PUB⟨t, t'⟩ = False)%I.
-Proof. by case. Qed.
-
 #[global] Instance publicly_related_persistent t t' : Persistent (PUB⟨t, t'⟩).
-Proof.
-elim: t t'=> /=; try apply _.
-- move=> t IH Hmul Hinv t'.
-  rewrite publicly_related_TInv_l ?is_inv_TInv //.
-  apply _.
-- move=> t IH Hexp ts IHts Hatom Htsne Htssort Htsninv t'.
-  rewrite publicly_related_TExp_l ?is_exp_TExpN //; last by case_bool_decide.
-  apply _.
-- move=> ts IHts Hatom Htssort Htsninv Htsne t'.
-  rewrite publicly_related_TMul_l; first by apply _.
-  by apply is_mul_TMulN.
-Qed.
+Proof. elim/term_ind': t t' => /=; apply _. Qed.
 
 #[global] Instance publicly_related_timeless t t' : Timeless (PUB⟨t, t'⟩).
-Proof.
-elim: t t'=> /=; try apply _.
-- move=> t IH Hmul Hinv t'.
-  rewrite publicly_related_TInv_l ?is_inv_TInv //.
-  apply _.
-- move=> t IH Hexp ts IHts Hatom Htsne Htssort Htsninv t'.
-  rewrite publicly_related_TExp_l ?is_exp_TExpN //; last by case_bool_decide.
-  apply _.
-- move=> ts IHts Hatom Htssort Htsninv Htsne t'.
-  rewrite publicly_related_TMul_l; first by apply _.
-  by apply is_mul_TMulN.
-Qed.
+Proof. elim/term_ind': t t' => /=; apply _. Qed.
 
 Definition public_rel_map_inv pub_l pub_r : iProp :=
   public_rel_map_l_auth pub_l ∗
@@ -3418,75 +3385,52 @@ iSplit.
   rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
-Notation public_rel_map_l_own pub_l :=
-  (own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l))).
-Notation public_rel_map_r_own pub_r :=
-  (own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r))).
-
-(* Non-free terms (inverses, exponentials, products) are never publicly
-   related, on either side. *)
-
-#[local] Lemma publicly_related_nonfree_l t t' :
-  is_inv t ∨ is_exp t ∨ is_mul t → PUB⟨t, t'⟩ -∗ False.
+Lemma publicly_related_minted t t' :
+  PUB⟨t, t'⟩ ⊢ minted t ∗ minted_spec t'.
 Proof.
-case: t => /= [n|a b|a|kt s|k b|s|pt wf nf] H; try by case: H => [[]|[[]|[]]].
-by iIntros "[]".
+case: t => /= *; iIntros "(#? & #? & _)"; by iFrame "#".
 Qed.
-
-#[local] Lemma publicly_related_nonfree_r t t' :
-  is_inv t' ∨ is_exp t' ∨ is_mul t' → PUB⟨t, t'⟩ -∗ False.
-Proof.
-case: t' => /= [n|a b|a|kt s|k b|s|pt wf nf] H; try by case: H => [[]|[[]|[]]].
-by case: t => /= *; iIntros "[]".
-Qed.
-
-#[local] Lemma nonfree_TInv t :
-  negb (is_mul t) → negb (is_inv t) →
-  is_inv (TInv t) ∨ is_exp (TInv t) ∨ is_mul (TInv t).
-Proof. move=> Hmul Hinv. left. by rewrite is_inv_TInv. Qed.
-
-#[local] Lemma nonfree_TExpN t ts :
-  negb (is_exp t) → atomic ts → ts ≠ [] → invs_canceled ts →
-  is_inv (TExpN t ts) ∨ is_exp (TExpN t ts) ∨ is_mul (TExpN t ts).
-Proof.
-move=> ????. right; left. rewrite is_exp_TExpN //. by case_bool_decide.
-Qed.
-
-#[local] Lemma nonfree_TMulN ts :
-  wf_mul_list ts →
-  is_inv (TMulN ts) ∨ is_exp (TMulN ts) ∨ is_mul (TMulN ts).
-Proof. move=> ?. right; right. by apply is_mul_TMulN. Qed.
 
 (* Constructor lemmas. *)
 
 Lemma publicly_related_TInt n1 n2 :
   PUB⟨TInt n1, TInt n2⟩ ⊣⊢ ⌜n1 = n2⌝.
-Proof. done. Qed.
+Proof.
+rewrite /= minted_TInt minted_spec_TInt.
+by rewrite !left_id.
+Qed.
 
 Lemma publicly_related_TInt_term n (t2 : term) :
   PUB⟨TInt n, t2⟩ -∗ ⌜t2 = TInt n⌝.
 Proof.
-case: t2 => /= *; try by iIntros "[]".
-by iIntros (->).
+case: t2 => /= *; try by iIntros "(_ & _ & [])".
+by iIntros "(_ & _ & ->)".
 Qed.
 
 Lemma publicly_related_term_TInt (t1 : term) n :
   PUB⟨t1, TInt n⟩ -∗ ⌜t1 = TInt n⌝.
 Proof.
-case: t1 => /= *; try by iIntros "[]".
-by iIntros (->).
+case: t1 => /= *; try by iIntros "(_ & _ & [])".
+by iIntros "(_ & _ & ->)".
 Qed.
 
 Lemma publicly_related_TPair t11 t12 t21 t22 :
   PUB⟨TPair t11 t12, TPair t21 t22⟩ ⊣⊢
   PUB⟨t11, t21⟩ ∧ PUB⟨t12, t22⟩.
-Proof. done. Qed.
+Proof.
+rewrite /= minted_TPair minted_spec_TPair. iSplit.
+- by iIntros "(_ & _ & ?)".
+- iIntros "#[H1 H2]".
+  iPoseProof (publicly_related_minted with "H1") as "[? ?]".
+  iPoseProof (publicly_related_minted with "H2") as "[? ?]".
+  iSplit; first by iSplit. iSplit; first by iSplit. by iSplit.
+Qed.
 
 Lemma publicly_related_TPair_term t11 t12 (t2 : term) :
   PUB⟨TPair t11 t12, t2⟩ -∗
   ∃ t21 t22, ⌜t2 = TPair t21 t22⌝.
 Proof.
-case: t2 => /= *; try by iIntros "[]".
+case: t2 => /= *; try by iIntros "(_ & _ & [])".
 iIntros "_". by eauto.
 Qed.
 
@@ -3494,12 +3438,13 @@ Lemma publicly_related_term_TPair (t1 : term) t21 t22 :
   PUB⟨t1, TPair t21 t22⟩ -∗
   ∃ t11 t12, ⌜t1 = TPair t11 t12⌝.
 Proof.
-case: t1 => /= *; try by iIntros "[]".
+case: t1 => /= *; try by iIntros "(_ & _ & [])".
 iIntros "_". by eauto.
 Qed.
 
 Lemma publicly_related_TNonce a1 a2 :
   PUB⟨TNonce a1, TNonce a2⟩ ⊣⊢
+  minted (TNonce a1) ∧ minted_spec (TNonce a2) ∧
   public_rel_elem (TNonce a1) (TNonce a2).
 Proof. done. Qed.
 
@@ -3508,19 +3453,34 @@ Lemma publicly_related_TKey kt1 kt2 t1 t2 :
   ⌜kt1 = kt2⌝ ∧
   match kt1 with
   | AEnc => PUB⟨t1, t2⟩ ∨
-            (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ private_rel_elem t1 t2)
+            (minted t1 ∧ minted_spec t2 ∧
+             public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ private_rel_elem t1 t2)
   | ADec => PUB⟨t1, t2⟩
   | Sign => PUB⟨t1, t2⟩
   | Verify => PUB⟨t1, t2⟩ ∨
-              (public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ private_rel_elem t1 t2)
+              (minted t1 ∧ minted_spec t2 ∧
+               public_rel_elem (TKey kt1 t1) (TKey kt2 t2) ∧ private_rel_elem t1 t2)
   | SEnc => PUB⟨t1, t2⟩
   end.
-Proof. done. Qed.
+Proof.
+rewrite /= minted_TKey minted_spec_TKey. iSplit.
+- iIntros "#(? & ? & -> & H)". iSplit; first done.
+  case: kt2 => /=; try (by iExact "H");
+    (iDestruct "H" as "[H|(? & ?)]"; [by iLeft | iRight; by do 3 (iSplit; first done)]).
+- iIntros "#(-> & H)".
+  case: kt2 => /=.
+  1,4: iDestruct "H" as "[H|(? & ? & ? & ?)]";
+       [ iPoseProof (publicly_related_minted with "H") as "[? ?]";
+         do 3 (iSplit; first done); by iLeft
+       | do 3 (iSplit; first done); iRight; by iSplit ].
+  all: iPoseProof (publicly_related_minted with "H") as "[? ?]"; by do 3 (iSplit; first done).
+Qed.
 
 Lemma publicly_related_TSeal k1 k2 t1 t2 :
   PUB⟨TSeal k1 t1, TSeal k2 t2⟩ ⊣⊢
   (PUB⟨k1, k2⟩ ∧ PUB⟨t1, t2⟩) ∨
-  (public_rel_elem (TSeal k1 t1) (TSeal k2 t2) ∧
+  (minted (TSeal k1 t1) ∧ minted_spec (TSeal k2 t2) ∧
+   public_rel_elem (TSeal k1 t1) (TSeal k2 t2) ∧
    private_rel_elem k1 k2 ∧ private_rel_elem t1 t2 ∧
    □ (match k1, k2 with
       | TKey kt1 k1, TKey kt2 k2 => ⌜kt1 = kt2⌝ ∧
@@ -3531,92 +3491,29 @@ Lemma publicly_related_TSeal k1 k2 t1 t2 :
         end
       | _, _ => False
       end)).
-Proof. done. Qed.
+Proof.
+rewrite /=. iSplit.
+- iIntros "#(? & ? & [?|(? & ? & ? & ?)])"; [by iLeft | iRight; by do 5 (iSplit; first done)].
+- iIntros "#[[H1 H2]|(? & ? & ? & ? & ? & ?)]";
+    last by (do 2 (iSplit; first done); iRight; do 3 (iSplit; first done)).
+  iPoseProof (publicly_related_minted with "H1") as "[? ?]".
+  iPoseProof (publicly_related_minted with "H2") as "[? ?]".
+  rewrite minted_TSeal minted_spec_TSeal.
+  iSplit; first by iSplit. iSplit; first by iSplit. iLeft. by iSplit.
+Qed.
 
 Lemma publicly_related_THash t1 t2 :
   PUB⟨THash t1, THash t2⟩ ⊣⊢
   PUB⟨t1, t2⟩ ∨
-  (public_rel_elem (THash t1) (THash t2) ∧ private_rel_elem t1 t2).
-Proof. done. Qed.
-
-(* Minted-ness. Every ghost fragment recorded in the invariant comes with a
-   term_meta, which implies minted; structural cases recurse. *)
-
-#[local] Lemma public_rel_elem_minted pub_l pub_r t t' :
-  public_rel_map_l_own pub_l -∗
-  public_rel_map_r_own pub_r -∗
-  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) -∗
-  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()) -∗
-  public_rel_elem t t' -∗
-  minted t ∗ minted_spec t'.
+  (minted t1 ∧ minted_spec t2 ∧
+   public_rel_elem (THash t1) (THash t2) ∧ private_rel_elem t1 t2).
 Proof.
-iIntros "Hl Hr #Hmeta_l #Hmeta_r [Hlock_l Hlock_r]".
-iDestruct (public_rel_map_l_lookup_locked with "Hl Hlock_l") as %Hl.
-iDestruct (public_rel_map_r_lookup_locked with "Hr Hlock_r") as %Hr.
-iSplit.
-- iApply (term_meta_minted _ (cryptisN.@"public_rel".@"map") ()).
-  iApply (big_sepS_elem_of _ _ t with "Hmeta_l"). by apply elem_of_dom.
-- iApply (term_meta_spec_minted_spec _ (cryptisN.@"public_rel".@"map") ()).
-  iApply (big_sepS_elem_of _ _ t' with "Hmeta_r"). by apply elem_of_dom.
-Qed.
-
-#[local] Lemma publicly_related_minted_aux pub_l pub_r t :
-  public_rel_map_l_own pub_l -∗
-  public_rel_map_r_own pub_r -∗
-  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) -∗
-  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()) -∗
-  ∀ t', PUB⟨t, t'⟩ -∗ minted t ∗ minted_spec t'.
-Proof.
-elim: t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
-           |t _ Hmul Hinv|t _ Hexp ts _ Hatom Htsne Htssort Htsninv
-           |ts _ Hatom Htssort Htsninv Htsne];
-  iIntros "Hl Hr #Hmeta_l #Hmeta_r" (t') "#Hpub".
-- iDestruct (publicly_related_TInt_term with "Hpub") as %->.
-  by rewrite minted_TInt minted_spec_TInt.
-- iDestruct (publicly_related_TPair_term with "Hpub") as %(a' & b' & ->).
-  rewrite publicly_related_TPair. iDestruct "Hpub" as "[Ha Hb]".
-  iPoseProof (IHa with "Hl Hr Hmeta_l Hmeta_r Ha") as "#[??]".
-  iPoseProof (IHb with "Hl Hr Hmeta_l Hmeta_r Hb") as "#[??]".
-  rewrite minted_TPair minted_spec_TPair. by iSplit; iSplit.
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
-  by iApply (public_rel_elem_minted with "Hl Hr Hmeta_l Hmeta_r Hpub").
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[<- Hpub]".
-  destruct kt;
-    try (iDestruct "Hpub" as "[Hpub|[Hpub _]]";
-         last by iApply (public_rel_elem_minted with "Hl Hr Hmeta_l Hmeta_r Hpub"));
-    iPoseProof (IH with "Hl Hr Hmeta_l Hmeta_r Hpub") as "#[??]";
-    rewrite minted_TKey minted_spec_TKey; by iSplit.
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[[Hk Hb]|(Hpub & _)]";
-    last by iApply (public_rel_elem_minted with "Hl Hr Hmeta_l Hmeta_r Hpub").
-  iPoseProof (IHk with "Hl Hr Hmeta_l Hmeta_r Hk") as "#[??]".
-  iPoseProof (IHb with "Hl Hr Hmeta_l Hmeta_r Hb") as "#[??]".
-  rewrite minted_TSeal minted_spec_TSeal. by iSplit; iSplit.
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[Hpub|[Hpub _]]";
-    last by iApply (public_rel_elem_minted with "Hl Hr Hmeta_l Hmeta_r Hpub").
-  iPoseProof (IH with "Hl Hr Hmeta_l Hmeta_r Hpub") as "#[??]".
-  rewrite minted_THash minted_spec_THash. by iSplit.
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TInv Hmul Hinv) with "Hpub") as "[]".
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TExpN Hexp Hatom Htsne Htsninv) with "Hpub") as "[]".
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TMulN (conj Hatom (conj Htssort (conj Htsninv Htsne)))) with "Hpub") as "[]".
-Qed.
-
-Lemma publicly_related_minted E t t' :
-  ↑cryptisN ⊆ E →
-  cryptis_rel_ctx -∗
-  PUB⟨t, t'⟩ -∗
-  |={E}=> minted t ∗ minted_spec t'.
-Proof.
-iIntros (HE) "#(_ & _ & Hinv) #Hpub".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  Hflow & Hpub_consistent & HPriv_prot & Hflow_consistent)".
-iPoseProof (publicly_related_minted_aux
-             with "Hmap_l Hmap_r Hmeta_map_l Hmeta_map_r Hpub") as "#[??]".
-iModIntro. iSplitL; last by iModIntro; iSplit.
-iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame. by iFrame "#".
+rewrite /= minted_THash minted_spec_THash. iSplit.
+- iIntros "#(? & ? & [?|(? & ?)])"; [by iLeft | iRight; by do 3 (iSplit; first done)].
+- iIntros "#[H|(? & ? & ? & ?)]";
+    last by (do 2 (iSplit; first done); iRight; iSplit).
+  iPoseProof (publicly_related_minted with "H") as "[? ?]".
+  do 2 (iSplit; first done). by iLeft.
 Qed.
 
 (* Opening sealed terms. *)
@@ -3634,7 +3531,7 @@ case: t2 => // k_t2 t2.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k1 [<-].
 case: decide => // k_t_k2 [<-].
-iIntros "#Hk #[[_ Ht]|(_ & _ & _ & #Hrest)]"; first done.
+iIntros "#Hk #[[_ Ht]|(_ & _ & _ & _ & _ & #Hrest)]"; first done.
 case: k_t1 k_t2 => // kt1 k1' [] // kt2 k2' in k_t_k1 k_t_k2 *.
 iDestruct "Hrest" as "[<- Hrest]".
 case: kt1 k_t_k1 k_t_k2 => // - [<-] [<-] //.
@@ -3710,9 +3607,10 @@ Lemma publicly_related_adec_key' (k1 k2 : aenc_key) :
   PUB⟨k1, k2⟩ ⊣⊢
   PUB⟨seed_of_aenc_key k1, seed_of_aenc_key k2⟩.
 Proof.
-rewrite [term_of_aenc_key]unlock /=.
-iSplit; first by iIntros "[_ ?]".
-by iIntros "?"; iSplit.
+rewrite [term_of_aenc_key]unlock /= minted_TKey minted_spec_TKey.
+iSplit; first by iIntros "(_ & _ & _ & ?)".
+iIntros "#H". iPoseProof (publicly_related_minted with "H") as "[? ?]".
+by do 3 (iSplit; first done).
 Qed.
 
 Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
@@ -3720,8 +3618,8 @@ Lemma publicly_related_aenc_key_term (k1 : aenc_key) (k2 : term) :
   ∃ (k2' : aenc_key), ⌜k2 = k2'⌝.
 Proof.
 rewrite [term_of_aenc_key]unlock /=.
-case: k2 => /= [n2|a2 b2|a2|kt2 s2|k2 b2|s2|pt wf nf]; try by iIntros "[]".
-iIntros "[<- _]". by iExists (AEncKey s2).
+case: k2 => /= [n2|a2 b2|a2|kt2 s2|k2 b2|s2|pt wf nf]; try by iIntros "(_ & _ & [])".
+iIntros "(_ & _ & <- & _)". by iExists (AEncKey s2).
 Qed.
 
 Lemma publicly_related_term_aenc_key (k1 : term) (k2 : aenc_key) :
@@ -3729,20 +3627,25 @@ Lemma publicly_related_term_aenc_key (k1 : term) (k2 : aenc_key) :
   ∃ (k1' : aenc_key), ⌜k1 = k1'⌝.
 Proof.
 rewrite [term_of_aenc_key]unlock /=.
-case: k1 => /= [n1|a1 b1|a1|kt1 s1|k1 b1|s1|pt wf nf]; try by iIntros "[]".
-iIntros "[-> _]". by iExists (AEncKey s1).
+case: k1 => /= [n1|a1 b1|a1|kt1 s1|k1 b1|s1|pt wf nf]; try by iIntros "(_ & _ & [])".
+iIntros "(_ & _ & -> & _)". by iExists (AEncKey s1).
 Qed.
 
 Lemma publicly_related_aenc_key (k1 k2 : aenc_key) :
   PUB⟨Spec.pkey k1, Spec.pkey k2⟩ ⊣⊢
   PUB⟨k1, k2⟩ ∨
-  (public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧
+  (minted k1 ∧ minted_spec k2 ∧
+   public_rel_elem (Spec.pkey k1) (Spec.pkey k2) ∧
    private_rel_elem (seed_of_aenc_key k1) (seed_of_aenc_key k2)).
 Proof.
 rewrite publicly_related_adec_key'.
-rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
-iSplit; first by iIntros "[_ ?]".
-by iIntros "?"; iSplit.
+rewrite /Spec.pkey [term_of_aenc_key]unlock /= !minted_TKey !minted_spec_TKey.
+iSplit.
+- iIntros "#(? & ? & _ & [?|(? & ?)])"; [by iLeft | iRight; by do 3 (iSplit; first done)].
+- iIntros "#[H|(? & ? & ? & ?)]";
+    last by (do 3 (iSplit; first done); iRight; iSplit).
+  iPoseProof (publicly_related_minted with "H") as "[? ?]".
+  do 3 (iSplit; first done). by iLeft.
 Qed.
 
 Lemma publicly_related_aenc_key_pkey_term (sk1 : aenc_key) (k2 : term) :
@@ -3750,8 +3653,8 @@ Lemma publicly_related_aenc_key_pkey_term (sk1 : aenc_key) (k2 : term) :
   ∃ (sk2' : aenc_key), ⌜k2 = Spec.pkey sk2'⌝.
 Proof.
 rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
-case: k2 => /= [n2|a2 b2|a2|kt2 s2|k2 b2|s2|pt wf nf]; try by iIntros "[]".
-iIntros "[<- _]". by iExists (AEncKey s2).
+case: k2 => /= [n2|a2 b2|a2|kt2 s2|k2 b2|s2|pt wf nf]; try by iIntros "(_ & _ & [])".
+iIntros "(_ & _ & <- & _)". by iExists (AEncKey s2).
 Qed.
 
 Lemma publicly_related_term_aenc_key_pkey (k1 : term) (sk2 : aenc_key) :
@@ -3759,29 +3662,36 @@ Lemma publicly_related_term_aenc_key_pkey (k1 : term) (sk2 : aenc_key) :
   ∃ (sk1' : aenc_key), ⌜k1 = Spec.pkey sk1'⌝.
 Proof.
 rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
-case: k1 => /= [n1|a1 b1|a1|kt1 s1|k1 b1|s1|pt wf nf]; try by iIntros "[]".
-iIntros "[-> _]". by iExists (AEncKey s1).
+case: k1 => /= [n1|a1 b1|a1|kt1 s1|k1 b1|s1|pt wf nf]; try by iIntros "(_ & _ & [])".
+iIntros "(_ & _ & -> & _)". by iExists (AEncKey s1).
 Qed.
 
 Lemma publicly_related_aenc (sk1 sk2 : aenc_key) N (t1 t2 : term) :
   PUB⟨Spec.enc (Spec.pkey sk1) (Tag N) t1,
       Spec.enc (Spec.pkey sk2) (Tag N) t2⟩ ⊣⊢
   (PUB⟨Spec.pkey sk1, Spec.pkey sk2⟩ ∧ PUB⟨t1, t2⟩) ∨
-  (public_rel_elem (Spec.enc (Spec.pkey sk1) (Tag N) t1)
+  (minted (Spec.pkey sk1) ∧ minted t1 ∧
+   minted_spec (Spec.pkey sk2) ∧ minted_spec t2 ∧
+   public_rel_elem (Spec.enc (Spec.pkey sk1) (Tag N) t1)
                    (Spec.enc (Spec.pkey sk2) (Tag N) t2) ∧
    private_rel_elem (Spec.pkey sk1) (Spec.pkey sk2) ∧
    private_rel_elem (Spec.tag (Tag N) t1) (Spec.tag (Tag N) t2) ∧
    □ (PUB⟨sk1, sk2⟩ → PUB⟨t1, t2⟩)).
 Proof.
 rewrite publicly_related_adec_key'.
-rewrite /Spec.enc /Spec.pkey [term_of_aenc_key]unlock /= publicly_related_tag.
+rewrite /Spec.enc publicly_related_TSeal.
+rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
+rewrite /Spec.pkey [term_of_aenc_key]unlock /= publicly_related_tag.
 iSplit.
-- iIntros "#[[Hk [_ Ht]]|(Hel & Hpk & Hpt & #Hrest)]"; first by iLeft; iSplit.
-  iRight. do 3 (iSplit; first done).
+- iIntros "#[[Hk [_ Ht]]|([Hmk Hmt] & [Hmk' Hmt'] & Hel & Hpk & Hpt & #Hrest)]";
+    first by iLeft; iSplit.
+  iRight. do 7 (iSplit; first done).
   iIntros "!> #Hs". iDestruct "Hrest" as "[_ Hrest]".
   by iDestruct ("Hrest" with "Hs") as "[_ ?]".
-- iIntros "#[[Hk Ht]|(Hel & Hpk & Hpt & #Hrest)]"; first by iLeft; iSplit; last iSplit.
-  iRight. do 3 (iSplit; first done).
+- iIntros "#[[Hk Ht]|(Hmk & Hmt & Hmk' & Hmt' & Hel & Hpk & Hpt & #Hrest)]";
+    first by iLeft; iSplit; last iSplit.
+  iRight. iSplit; first by iSplit. iSplit; first by iSplit.
+  do 3 (iSplit; first done).
   iIntros "!>". iSplit; first done.
   iIntros "#Hs". iSplit; first done. by iApply "Hrest".
 Qed.
@@ -3834,8 +3744,60 @@ iIntros "[_ H1] [_ H2]".
 by iApply (public_rel_map_r_locked_agree with "H1 H2").
 Qed.
 
+#[local] Lemma public_rel_map_l_locked_lookup pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
+  public_rel_map_l_locked t t' -∗
+  ⌜pub_l !! t = Some (Public t')⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl Hval].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (pub_l !! t) as [st|] eqn:Heq.
+- assert (◯ (Public t') ≼ ● st ⋅ ◯ st) as H.
+  { by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+  apply auth_frag_included in H as [st' ->].
+  specialize (Hval t).
+  rewrite lookup_fmap Heq /= in Hval.
+  apply auth_both_valid_discrete in Hval as [_ Hval].
+  change (Public t' ⋅ st') with (state_op_instance (Public t') st') in Hval.
+  change (Public t' ⋅ st') with (state_op_instance (Public t') st').
+  f_equal. destruct st' as [?|?|]; simpl in *;
+    repeat case_bool_decide; try done; try destruct Hval.
+- apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl.
+Qed.
+
+#[local] Lemma public_rel_map_r_locked_lookup pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  public_rel_map_r_locked t t' -∗
+  ⌜pub_r !! t' = Some (Public t)⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl Hval].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (pub_r !! t') as [st|] eqn:Heq.
+- assert (◯ (Public t) ≼ ● st ⋅ ◯ st) as H.
+  { by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+  apply auth_frag_included in H as [st' ->].
+  specialize (Hval t').
+  rewrite lookup_fmap Heq /= in Hval.
+  apply auth_both_valid_discrete in Hval as [_ Hval].
+  change (Public t ⋅ st') with (state_op_instance (Public t) st') in Hval.
+  change (Public t ⋅ st') with (state_op_instance (Public t) st').
+  f_equal. destruct st' as [?|?|]; simpl in *;
+    repeat case_bool_decide; try done; try destruct Hval.
+- apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl.
+Qed.
+
 #[local] Lemma public_rel_map_l_lookup_elem pub_l t t' :
-  public_rel_map_l_own pub_l -∗
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
   public_rel_map_l_elem t t' -∗
   ⌜(∃ ts, pub_l !! t = Some (Private ts) ∧ t' ∈ ts) ∨
    pub_l !! t = Some (Public t')⌝.
@@ -3865,7 +3827,7 @@ destruct z as [ts|t2|]; simpl in *; repeat case_bool_decide; simpl in *;
 Qed.
 
 #[local] Lemma public_rel_map_r_lookup_elem pub_r t t' :
-  public_rel_map_r_own pub_r -∗
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
   public_rel_map_r_elem t t' -∗
   ⌜(∃ ts, pub_r !! t' = Some (Private ts) ∧ t ∈ ts) ∨
    pub_r !! t' = Some (Public t)⌝.
@@ -3893,26 +3855,6 @@ destruct z as [ts|t2|]; simpl in *; repeat case_bool_decide; simpl in *;
 - left. exists ({[ t ]} ∪ ts). split; first done. set_solver.
 - right. by have ->: t2 = t by set_solver.
 Qed.
-
-#[local] Lemma is_immediate_subterm_TInt tsub n :
-  ¬ is_immediate_subterm tsub (TInt n).
-Proof. by inversion 1. Qed.
-
-#[local] Lemma is_immediate_subterm_TPair tsub t1 t2 :
-  is_immediate_subterm tsub (TPair t1 t2) → tsub = t1 ∨ tsub = t2.
-Proof. inversion 1; eauto. Qed.
-
-#[local] Lemma is_immediate_subterm_TKey tsub kt t :
-  is_immediate_subterm tsub (TKey kt t) → tsub = t.
-Proof. by inversion 1. Qed.
-
-#[local] Lemma is_immediate_subterm_TSeal tsub k t :
-  is_immediate_subterm tsub (TSeal k t) → tsub = k ∨ tsub = t.
-Proof. inversion 1; eauto. Qed.
-
-#[local] Lemma is_immediate_subterm_THash tsub t :
-  is_immediate_subterm tsub (THash t) → tsub = t.
-Proof. by inversion 1. Qed.
 
 (** The pure facts recorded by the invariant about one side ([pub], [flow]
     stand for either [pub_l], [flow_l] or [pub_r], [flow_r]). *)
@@ -3990,135 +3932,127 @@ Qed.
 #[local] Lemma publicly_related_protected_l pub_l flow_l t :
   public_rel_facts pub_l flow_l →
   (∃ ts, pub_l !! t = Some (Private ts)) ∨ (∃ ts, flow_l !! t = Some ts ∧ ts ≠ ∅) →
-  public_rel_map_l_own pub_l -∗
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
   ∀ t', PUB⟨t, t'⟩ -∗ False.
 Proof.
 move=> Hfacts.
-elim: t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
-           |t _ Hmul Hinv|t _ Hexp ts _ Hatom Htsne Htssort Htsninv
-           |ts _ Hatom Htssort Htsninv Htsne] Hprot;
+elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   iIntros "Hauth" (t') "#Hpub".
 - case: (public_rel_protected_inv Hfacts Hprot) => _ [[a Ha]|[tsub [ts [_ [_ Hsub]]]]] //.
-  by case: (is_immediate_subterm_TInt Hsub).
+  by inversion Hsub.
 - iDestruct (publicly_related_TPair_term with "Hpub") as %(a' & b' & ->).
   rewrite publicly_related_TPair. iDestruct "Hpub" as "[Ha Hb]".
   case: (public_rel_protected_inv Hfacts Hprot) => _ [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_l !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  case: (is_immediate_subterm_TPair Hsub) => ?; subst tsub.
+  inversion Hsub; subst.
   + iApply (IHa (or_intror Hprot') with "Hauth Ha").
   + iApply (IHb (or_intror Hprot') with "Hauth Hb").
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[Hl _]".
-  iDestruct (public_rel_map_l_lookup_locked with "Hauth Hl") as %Hlookup.
+- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+  iDestruct "Hpub" as "(_ & _ & Hel)".
+  iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub _.
   by case: (HnotPub _ Hlookup).
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[<- Hpub]".
+- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+  iDestruct "Hpub" as "(_ & _ & <- & Hpub)".
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_l !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  move: (is_immediate_subterm_TKey Hsub) => ?; subst tsub.
+  inversion Hsub; subst.
   destruct kt;
     try (by iApply (IH (or_intror Hprot') with "Hauth Hpub"));
-    (iDestruct "Hpub" as "[Hpub|[[Hl _] _]]";
+    (iDestruct "Hpub" as "[Hpub|[Hel _]]";
      [ by iApply (IH (or_intror Hprot') with "Hauth Hpub")
-     | iDestruct (public_rel_map_l_lookup_locked with "Hauth Hl") as %Hlookup;
+     | iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
+- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_l !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  iDestruct "Hpub" as "[[Hk Hb]|[[Hl _] _]]"; last first.
-  { iDestruct (public_rel_map_l_lookup_locked with "Hauth Hl") as %Hlookup.
+  iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
+  { iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
-  case: (is_immediate_subterm_TSeal Hsub) => ?; subst tsub.
+  inversion Hsub; subst.
   + iApply (IHk (or_intror Hprot') with "Hauth Hk").
   + iApply (IHb (or_intror Hprot') with "Hauth Hb").
-- case: t' => /= *; try by iDestruct "Hpub" as "[]".
+- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_l !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  move: (is_immediate_subterm_THash Hsub) => ?; subst tsub.
-  iDestruct "Hpub" as "[Hpub|[[Hl _] _]]";
+  inversion Hsub; subst.
+  iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
     first by iApply (IH (or_intror Hprot') with "Hauth Hpub").
-  iDestruct (public_rel_map_l_lookup_locked with "Hauth Hl") as %Hlookup.
+  iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TInv Hmul Hinv) with "Hpub") as "[]".
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TExpN Hexp Hatom Htsne Htsninv) with "Hpub") as "[]".
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TMulN (conj Hatom (conj Htssort (conj Htsninv Htsne)))) with "Hpub") as "[]".
+- by iDestruct "Hpub" as "(_ & _ & [])".
 Qed.
 
 #[local] Lemma publicly_related_protected_r pub_r flow_r t' :
   public_rel_facts pub_r flow_r →
   (∃ ts, pub_r !! t' = Some (Private ts)) ∨ (∃ ts, flow_r !! t' = Some ts ∧ ts ≠ ∅) →
-  public_rel_map_r_own pub_r -∗
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
   ∀ t, PUB⟨t, t'⟩ -∗ False.
 Proof.
 move=> Hfacts.
-elim: t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
-            |u _ Hmul Hinv|u _ Hexp ts _ Hatom Htsne Htssort Htsninv
-            |ts _ Hatom Htssort Htsninv Htsne] Hprot;
+elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   iIntros "Hauth" (t) "#Hpub".
 - case: (public_rel_protected_inv Hfacts Hprot) => _ [[a Ha]|[tsub [ts [_ [_ Hsub]]]]] //.
-  by case: (is_immediate_subterm_TInt Hsub).
+  by inversion Hsub.
 - iDestruct (publicly_related_term_TPair with "Hpub") as %(a' & b' & ->).
   rewrite publicly_related_TPair. iDestruct "Hpub" as "[Ha Hb]".
   case: (public_rel_protected_inv Hfacts Hprot) => _ [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_r !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  case: (is_immediate_subterm_TPair Hsub) => ?; subst tsub.
+  inversion Hsub; subst.
   + iApply (IHa (or_intror Hprot') with "Hauth Ha").
   + iApply (IHb (or_intror Hprot') with "Hauth Hb").
-- case: t => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[_ Hr]".
-  iDestruct (public_rel_map_r_lookup_locked with "Hauth Hr") as %Hlookup.
+- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+  iDestruct "Hpub" as "(_ & _ & Hel)".
+  iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub _.
   by case: (HnotPub _ Hlookup).
-- case: t => /= *; try by iDestruct "Hpub" as "[]".
-  iDestruct "Hpub" as "[-> Hpub]".
+- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+  iDestruct "Hpub" as "(_ & _ & -> & Hpub)".
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_r !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  move: (is_immediate_subterm_TKey Hsub) => ?; subst tsub.
+  inversion Hsub; subst.
   destruct kt;
     try (by iApply (IH (or_intror Hprot') with "Hauth Hpub"));
-    (iDestruct "Hpub" as "[Hpub|[[_ Hr] _]]";
+    (iDestruct "Hpub" as "[Hpub|[Hel _]]";
      [ by iApply (IH (or_intror Hprot') with "Hauth Hpub")
-     | iDestruct (public_rel_map_r_lookup_locked with "Hauth Hr") as %Hlookup;
+     | iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
-- case: t => /= *; try by iDestruct "Hpub" as "[]".
+- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_r !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  iDestruct "Hpub" as "[[Hk Hb]|[[_ Hr] _]]"; last first.
-  { iDestruct (public_rel_map_r_lookup_locked with "Hauth Hr") as %Hlookup.
+  iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
+  { iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
-  case: (is_immediate_subterm_TSeal Hsub) => ?; subst tsub.
+  inversion Hsub; subst.
   + iApply (IHk (or_intror Hprot') with "Hauth Hk").
   + iApply (IHb (or_intror Hprot') with "Hauth Hb").
-- case: t => /= *; try by iDestruct "Hpub" as "[]".
+- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   case: (public_rel_protected_inv Hfacts Hprot) => HnotPub [[? ?]|[tsub [ts [Hts [Hin Hsub]]]]] //.
   have Hprot' : ∃ ts', flow_r !! tsub = Some ts' ∧ ts' ≠ ∅.
   { exists ts. split=> //. set_solver. }
-  move: (is_immediate_subterm_THash Hsub) => ?; subst tsub.
-  iDestruct "Hpub" as "[Hpub|[[_ Hr] _]]";
+  inversion Hsub; subst.
+  iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
     first by iApply (IH (or_intror Hprot') with "Hauth Hpub").
-  iDestruct (public_rel_map_r_lookup_locked with "Hauth Hr") as %Hlookup.
+  iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
-- by iDestruct (publicly_related_nonfree_r _ (nonfree_TInv Hmul Hinv) with "Hpub") as "[]".
-- by iDestruct (publicly_related_nonfree_r _ (nonfree_TExpN Hexp Hatom Htsne Htsninv) with "Hpub") as "[]".
-- by iDestruct (publicly_related_nonfree_r _ (nonfree_TMulN (conj Hatom (conj Htssort (conj Htsninv Htsne)))) with "Hpub") as "[]".
+- by case: t => /= *; iDestruct "Hpub" as "(_ & _ & [])".
 Qed.
 
 (** If [t] is publicly related to [t2] and privately related to [t2'], then
     [t2 = t2'] (given injectivity for [t] itself). *)
 #[local] Lemma publicly_related_private_rel_elem_l pub_l flow_l t :
   public_rel_facts pub_l flow_l →
-  (public_rel_map_l_own pub_l -∗
+  (own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
    □ (∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → PUB⟨t, t'⟩) -∗
    ∀ t2 t2', PUB⟨t, t2⟩ -∗ PUB⟨t, t2'⟩ -∗ ⌜t2 = t2'⌝) →
-  public_rel_map_l_own pub_l -∗
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
   □ (∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → PUB⟨t, t'⟩) -∗
   ∀ t2 t2', PUB⟨t, t2⟩ -∗ private_rel_elem_l t t2' -∗ ⌜t2 = t2'⌝.
 Proof.
@@ -4128,17 +4062,17 @@ move=> Hfacts IH. iIntros "Hauth #Hrel" (t2 t2') "#H1 #[H2|H2]".
                     with "Hauth H1") as "[]".
   + iPoseProof ("Hrel" $! t t2' with "[//]") as "H2'".
     by iApply (IH with "Hauth Hrel H1 H2'").
-- iDestruct (public_rel_map_l_lookup_locked with "Hauth H2") as %Hpub.
+- iDestruct (public_rel_map_l_locked_lookup with "Hauth H2") as %Hpub.
   iPoseProof ("Hrel" $! t t2' with "[//]") as "H2'".
   by iApply (IH with "Hauth Hrel H1 H2'").
 Qed.
 
 #[local] Lemma publicly_related_private_rel_elem_r pub_r flow_r t' :
   public_rel_facts pub_r flow_r →
-  (public_rel_map_r_own pub_r -∗
+  (own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
    □ (∀ t t', ⌜pub_r !! t' = Some (Public t)⌝ → PUB⟨t, t'⟩) -∗
    ∀ t1 t1', PUB⟨t1, t'⟩ -∗ PUB⟨t1', t'⟩ -∗ ⌜t1 = t1'⌝) →
-  public_rel_map_r_own pub_r -∗
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
   □ (∀ t t', ⌜pub_r !! t' = Some (Public t)⌝ → PUB⟨t, t'⟩) -∗
   ∀ t1 t1', PUB⟨t1, t'⟩ -∗ private_rel_elem_r t1' t' -∗ ⌜t1 = t1'⌝.
 Proof.
@@ -4148,21 +4082,19 @@ move=> Hfacts IH. iIntros "Hauth #Hrel" (t1 t1') "#H1 #[H2|H2]".
                     with "Hauth H1") as "[]".
   + iPoseProof ("Hrel" $! t1' t' with "[//]") as "H2'".
     by iApply (IH with "Hauth Hrel H1 H2'").
-- iDestruct (public_rel_map_r_lookup_locked with "Hauth H2") as %Hpub.
+- iDestruct (public_rel_map_r_locked_lookup with "Hauth H2") as %Hpub.
   iPoseProof ("Hrel" $! t1' t' with "[//]") as "H2'".
   by iApply (IH with "Hauth Hrel H1 H2'").
 Qed.
 
 #[local] Lemma publicly_related_part_bij_l pub_l flow_l t1 :
   public_rel_facts pub_l flow_l →
-  public_rel_map_l_own pub_l -∗
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
   □ (∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → PUB⟨t, t'⟩) -∗
   ∀ t2 t2', PUB⟨t1, t2⟩ -∗ PUB⟨t1, t2'⟩ -∗ ⌜t2 = t2'⌝.
 Proof.
 move=> Hfacts.
-elim: t1 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
-            |t _ Hmul Hinv|t _ Hexp ts _ Hatom Htsne Htssort Htsninv
-            |ts _ Hatom Htssort Htsninv Htsne];
+elim/term_ind': t1 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf];
   iIntros "Hauth #Hrel" (t2 t2') "#H1 #H2".
 - iDestruct (publicly_related_TInt_term with "H1") as %->.
   by iDestruct (publicly_related_TInt_term with "H2") as %->.
@@ -4172,13 +4104,14 @@ elim: t1 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
   iDestruct "H1" as "[Ha Hb]". iDestruct "H2" as "[Ha' Hb']".
   iDestruct (IHa with "Hauth Hrel Ha Ha'") as %->.
   by iDestruct (IHb with "Hauth Hrel Hb Hb'") as %->.
-- case: t2 => /= *; try by iDestruct "H1" as "[]".
-  case: t2' => /= *; try by iDestruct "H2" as "[]".
+- case: t2 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & H1)". iDestruct "H2" as "(_ & _ & H2)".
   by iApply (public_rel_elem_agree_l with "H1 H2").
 - have IH' := publicly_related_private_rel_elem_l Hfacts IH.
-  case: t2 => /= *; try by iDestruct "H1" as "[]".
-  case: t2' => /= *; try by iDestruct "H2" as "[]".
-  iDestruct "H1" as "[<- H1]". iDestruct "H2" as "[<- H2]".
+  case: t2 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & <- & H1)". iDestruct "H2" as "(_ & _ & <- & H2)".
   destruct kt;
     try (by iDestruct (IH with "Hauth Hrel H1 H2") as %->);
     iDestruct "H1" as "[H1|[Hel1 [Hpriv1 _]]]";
@@ -4191,10 +4124,10 @@ elim: t1 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
             injection Heq as ->) ].
 - have IHk' := publicly_related_private_rel_elem_l Hfacts IHk.
   have IHb' := publicly_related_private_rel_elem_l Hfacts IHb.
-  case: t2 => /= *; try by iDestruct "H1" as "[]".
-  case: t2' => /= *; try by iDestruct "H2" as "[]".
-  iDestruct "H1" as "[[Hk1 Hb1]|(Hel1 & [Hpk1 _] & [Hpb1 _] & _)]";
-  iDestruct "H2" as "[[Hk2 Hb2]|(Hel2 & [Hpk2 _] & [Hpb2 _] & _)]".
+  case: t2 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [Hpk1 _] & [Hpb1 _] & _)])";
+  iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [Hpk2 _] & [Hpb2 _] & _)])".
   + iDestruct (IHk with "Hauth Hrel Hk1 Hk2") as %->.
     by iDestruct (IHb with "Hauth Hrel Hb1 Hb2") as %->.
   + iDestruct (IHk' with "Hauth Hrel Hk1 Hpk2") as %->.
@@ -4204,30 +4137,26 @@ elim: t1 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
   + iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %Heq.
     by injection Heq as -> ->.
 - have IH' := publicly_related_private_rel_elem_l Hfacts IH.
-  case: t2 => /= *; try by iDestruct "H1" as "[]".
-  case: t2' => /= *; try by iDestruct "H2" as "[]".
-  iDestruct "H1" as "[H1|[Hel1 [Hpriv1 _]]]";
-  iDestruct "H2" as "[H2|[Hel2 [Hpriv2 _]]]".
+  case: t2 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & [H1|[Hel1 [Hpriv1 _]]])";
+  iDestruct "H2" as "(_ & _ & [H2|[Hel2 [Hpriv2 _]]])".
   + by iDestruct (IH with "Hauth Hrel H1 H2") as %->.
   + by iDestruct (IH' with "Hauth Hrel H1 Hpriv2") as %->.
   + by iDestruct (IH' with "Hauth Hrel H2 Hpriv1") as %->.
   + iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %Heq.
     by injection Heq as ->.
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TInv Hmul Hinv) with "H1") as "[]".
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TExpN Hexp Hatom Htsne Htsninv) with "H1") as "[]".
-- by iDestruct (publicly_related_nonfree_l _ (nonfree_TMulN (conj Hatom (conj Htssort (conj Htsninv Htsne)))) with "H1") as "[]".
+- by iDestruct "H1" as "(_ & _ & [])".
 Qed.
 
 #[local] Lemma publicly_related_part_bij_r pub_r flow_r t2 :
   public_rel_facts pub_r flow_r →
-  public_rel_map_r_own pub_r -∗
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
   □ (∀ t t', ⌜pub_r !! t' = Some (Public t)⌝ → PUB⟨t, t'⟩) -∗
   ∀ t1 t1', PUB⟨t1, t2⟩ -∗ PUB⟨t1', t2⟩ -∗ ⌜t1 = t1'⌝.
 Proof.
 move=> Hfacts.
-elim: t2 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
-            |t _ Hmul Hinv|t _ Hexp ts _ Hatom Htsne Htssort Htsninv
-            |ts _ Hatom Htssort Htsninv Htsne];
+elim/term_ind': t2 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf];
   iIntros "Hauth #Hrel" (t1 t1') "#H1 #H2".
 - iDestruct (publicly_related_term_TInt with "H1") as %->.
   by iDestruct (publicly_related_term_TInt with "H2") as %->.
@@ -4237,13 +4166,14 @@ elim: t2 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
   iDestruct "H1" as "[Ha Hb]". iDestruct "H2" as "[Ha' Hb']".
   iDestruct (IHa with "Hauth Hrel Ha Ha'") as %->.
   by iDestruct (IHb with "Hauth Hrel Hb Hb'") as %->.
-- case: t1 => /= *; try by iDestruct "H1" as "[]".
-  case: t1' => /= *; try by iDestruct "H2" as "[]".
+- case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t1' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & H1)". iDestruct "H2" as "(_ & _ & H2)".
   by iApply (public_rel_elem_agree_r with "H1 H2").
 - have IH' := publicly_related_private_rel_elem_r Hfacts IH.
-  case: t1 => /= *; try by iDestruct "H1" as "[]".
-  case: t1' => /= *; try by iDestruct "H2" as "[]".
-  iDestruct "H1" as "[-> H1]". iDestruct "H2" as "[-> H2]".
+  case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t1' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & -> & H1)". iDestruct "H2" as "(_ & _ & -> & H2)".
   destruct kt;
     try (by iDestruct (IH with "Hauth Hrel H1 H2") as %->);
     iDestruct "H1" as "[H1|[Hel1 [_ Hpriv1]]]";
@@ -4256,10 +4186,10 @@ elim: t2 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
             injection Heq as ->) ].
 - have IHk' := publicly_related_private_rel_elem_r Hfacts IHk.
   have IHb' := publicly_related_private_rel_elem_r Hfacts IHb.
-  case: t1 => /= *; try by iDestruct "H1" as "[]".
-  case: t1' => /= *; try by iDestruct "H2" as "[]".
-  iDestruct "H1" as "[[Hk1 Hb1]|(Hel1 & [_ Hpk1] & [_ Hpb1] & _)]";
-  iDestruct "H2" as "[[Hk2 Hb2]|(Hel2 & [_ Hpk2] & [_ Hpb2] & _)]".
+  case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t1' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [_ Hpk1] & [_ Hpb1] & _)])";
+  iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [_ Hpk2] & [_ Hpb2] & _)])".
   + iDestruct (IHk with "Hauth Hrel Hk1 Hk2") as %->.
     by iDestruct (IHb with "Hauth Hrel Hb1 Hb2") as %->.
   + iDestruct (IHk' with "Hauth Hrel Hk1 Hpk2") as %->.
@@ -4269,18 +4199,16 @@ elim: t2 => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH
   + iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %Heq.
     by injection Heq as -> ->.
 - have IH' := publicly_related_private_rel_elem_r Hfacts IH.
-  case: t1 => /= *; try by iDestruct "H1" as "[]".
-  case: t1' => /= *; try by iDestruct "H2" as "[]".
-  iDestruct "H1" as "[H1|[Hel1 [_ Hpriv1]]]";
-  iDestruct "H2" as "[H2|[Hel2 [_ Hpriv2]]]".
+  case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  case: t1' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  iDestruct "H1" as "(_ & _ & [H1|[Hel1 [_ Hpriv1]]])";
+  iDestruct "H2" as "(_ & _ & [H2|[Hel2 [_ Hpriv2]]])".
   + by iDestruct (IH with "Hauth Hrel H1 H2") as %->.
   + by iDestruct (IH' with "Hauth Hrel H1 Hpriv2") as %->.
   + by iDestruct (IH' with "Hauth Hrel H2 Hpriv1") as %->.
   + iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %Heq.
     by injection Heq as ->.
-- by iDestruct (publicly_related_nonfree_r _ (nonfree_TInv Hmul Hinv) with "H1") as "[]".
-- by iDestruct (publicly_related_nonfree_r _ (nonfree_TExpN Hexp Hatom Htsne Htsninv) with "H1") as "[]".
-- by iDestruct (publicly_related_nonfree_r _ (nonfree_TMulN (conj Hatom (conj Htssort (conj Htsninv Htsne)))) with "H1") as "[]".
+- by case: t1 => /= *; iDestruct "H1" as "(_ & _ & [])".
 Qed.
 
 Lemma publicly_related_part_bij_1 E t1 t2 t2' :

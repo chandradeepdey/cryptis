@@ -138,10 +138,9 @@ rel_apply_r (rel_nondet_bool_r _ _ (negb choice)); rel_pures_r.
 rel_bind_l (if: _ then _ else _)%E.
 rel_bind_r (if: _ then _ else _)%E.
 iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'⌝ ∧ minted m ∧ minted_spec m')%I).
-{ iMod (publicly_related_minted (E:=⊤) msg_0 msg_0' ltac:(solve_ndisj)
-          with "Hctx Hmsg_0") as "#[? ?]".
-  iMod (publicly_related_minted (E:=⊤) msg_1 msg_1' ltac:(solve_ndisj)
-          with "Hctx Hmsg_1") as "#[? ?]".
+{ rewrite (publicly_related_minted msg_0) (publicly_related_minted msg_1).
+  iDestruct "Hmsg_0" as "[? ?]".
+  iDestruct "Hmsg_1" as "[? ?]".
   case: choice; rel_pures_l; rel_pures_r; rel_values.
   iExists msg_0, msg_1'; iFrame "#"; eauto.
   iExists msg_1, msg_0'; iFrame "#"; eauto. }
@@ -150,6 +149,7 @@ rel_pures_l. rel_pures_r.
 rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
 iApply refines_bind'. iApply rel_aenc'=> //=.
 by rewrite minted_pkey. by rewrite minted_spec_pkey.
+rewrite (publicly_related_minted msg_0).
 iIntros (c_msg c_msg') "#Hcmsg".
 rel_bind_l (send _ _). rel_bind_r (send _ _).
 iApply refines_bind; first by iApply rel_send.
