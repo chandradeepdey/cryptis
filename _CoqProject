@@ -43,6 +43,8 @@ cryptis/cryptis.v
 
 cryptis/core/minted_spec.v
 cryptis/core/term_meta_spec.v
+cryptis/core/rel_state.v
+cryptis/core/rel_inv.v
 cryptis/core/rel.v
 
 cryptis/primitives/notations.v
