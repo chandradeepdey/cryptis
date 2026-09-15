@@ -193,12 +193,12 @@ destruct (pub_r !! t') as [st'|] eqn:Heq.
   by apply is_Some_None in Hincl.
 Qed.
 
-Lemma public_rel_map_l_lookup_locked pub_l t t' :
+Lemma public_rel_map_l_lookup_locked_frag pub_l t t' :
   own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
-  public_rel_elem t t' -∗
+  public_rel_map_l_locked t t' -∗
   ⌜pub_l !! t = Some (Public t')⌝.
 Proof.
-iIntros "H1 [H2 _]".
+iIntros "H1 H2".
 iCombine "H1 H2" gives "%H".
 iPureIntro.
 apply auth_both_valid_discrete in H as [Hincl Hval].
@@ -219,12 +219,21 @@ destruct (pub_l !! t) as [st|] eqn:Heq.
   by apply is_Some_None in Hincl.
 Qed.
 
-Lemma public_rel_map_r_lookup_locked pub_r t t' :
-  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+Lemma public_rel_map_l_lookup_locked pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
   public_rel_elem t t' -∗
+  ⌜pub_l !! t = Some (Public t')⌝.
+Proof.
+iIntros "H1 [H2 _]".
+by iApply (public_rel_map_l_lookup_locked_frag with "H1 H2").
+Qed.
+
+Lemma public_rel_map_r_lookup_locked_frag pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  public_rel_map_r_locked t t' -∗
   ⌜pub_r !! t' = Some (Public t)⌝.
 Proof.
-iIntros "H1 [_ H2]".
+iIntros "H1 H2".
 iCombine "H1 H2" gives "%H".
 iPureIntro.
 apply auth_both_valid_discrete in H as [Hincl Hval].
@@ -243,6 +252,119 @@ destruct (pub_r !! t') as [st|] eqn:Heq.
     repeat case_bool_decide; try done; try destruct Hval.
 - apply Some_included_is_Some in Hincl.
   by apply is_Some_None in Hincl.
+Qed.
+
+Lemma public_rel_map_r_lookup_locked pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  public_rel_elem t t' -∗
+  ⌜pub_r !! t' = Some (Public t)⌝.
+Proof.
+iIntros "H1 [_ H2]".
+by iApply (public_rel_map_r_lookup_locked_frag with "H1 H2").
+Qed.
+
+Lemma public_rel_map_l_lookup_elem pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
+  public_rel_map_l_elem t t' -∗
+  ⌜(∃ ts, pub_l !! t = Some (Private ts) ∧ t' ∈ ts) ∨
+   pub_l !! t = Some (Public t')⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl Hval].
+apply singleton_included_l in Hincl as (? & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+specialize (Hval t). rewrite lookup_fmap in Hval.
+destruct (pub_l !! t) as [st|] eqn:Heq; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+apply Some_included in Hincl as [Heq' | Hincl];
+  first by inversion Heq' as [H _]; inversion H.
+apply auth_frag_included in Hincl.
+apply auth_both_valid_discrete in Hval as [_ Hval].
+destruct Hincl as [z Hz].
+apply leibniz_equiv in Hz. subst st.
+have Hop : Private {[ t' ]} ⋅ z = state_op_instance (Private {[ t' ]}) z by [].
+rewrite Hop in Heq Hval *.
+destruct z as [ts|t2|]; simpl in *; repeat case_bool_decide; simpl in *;
+  try solve [ destruct Hval ].
+- left. exists ({[ t' ]} ∪ ts). split; first done. set_solver.
+- right. by have ->: t2 = t' by set_solver.
+Qed.
+
+Lemma public_rel_map_r_lookup_elem pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  public_rel_map_r_elem t t' -∗
+  ⌜(∃ ts, pub_r !! t' = Some (Private ts) ∧ t ∈ ts) ∨
+   pub_r !! t' = Some (Public t)⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl Hval].
+apply singleton_included_l in Hincl as (? & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+specialize (Hval t'). rewrite lookup_fmap in Hval.
+destruct (pub_r !! t') as [st|] eqn:Heq; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+apply Some_included in Hincl as [Heq' | Hincl];
+  first by inversion Heq' as [H _]; inversion H.
+apply auth_frag_included in Hincl.
+apply auth_both_valid_discrete in Hval as [_ Hval].
+destruct Hincl as [z Hz].
+apply leibniz_equiv in Hz. subst st.
+have Hop : Private {[ t ]} ⋅ z = state_op_instance (Private {[ t ]}) z by [].
+rewrite Hop in Heq Hval *.
+destruct z as [ts|t2|]; simpl in *; repeat case_bool_decide; simpl in *;
+  try solve [ destruct Hval ].
+- left. exists ({[ t ]} ∪ ts). split; first done. set_solver.
+- right. by have ->: t2 = t by set_solver.
+Qed.
+
+Lemma public_rel_map_l_locked_agree t t1 t2 :
+  public_rel_map_l_locked t t1 -∗
+  public_rel_map_l_locked t t2 -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro.
+move: H. rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid.
+have -> : Public t1 ⋅ Public t2 = state_op_instance (Public t1) (Public t2) by [].
+rewrite /state_op_instance. case: bool_decide_reflect => // _ [].
+Qed.
+
+Lemma public_rel_map_r_locked_agree t' t1 t2 :
+  public_rel_map_r_locked t1 t' -∗
+  public_rel_map_r_locked t2 t' -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro.
+move: H. rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid.
+have -> : Public t1 ⋅ Public t2 = state_op_instance (Public t1) (Public t2) by [].
+rewrite /state_op_instance. case: bool_decide_reflect => // _ [].
+Qed.
+
+Lemma public_rel_elem_agree_l t t1 t2 :
+  public_rel_elem t t1 -∗
+  public_rel_elem t t2 -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "[H1 _] [H2 _]".
+by iApply (public_rel_map_l_locked_agree with "H1 H2").
+Qed.
+
+Lemma public_rel_elem_agree_r t1 t2 t' :
+  public_rel_elem t1 t' -∗
+  public_rel_elem t2 t' -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "[_ H1] [_ H2]".
+by iApply (public_rel_map_r_locked_agree with "H1 H2").
 Qed.
 
 End Map.
