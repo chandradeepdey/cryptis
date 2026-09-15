@@ -954,26 +954,26 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
 destruct (Hflow_r_cons _ _ Hfrt'ts Hts) as (Hsubs & Hchain & Hpub).
 iPureIntro. split; last split; [|done|].
 - split; first done.
-  move=> t1 ? Hpub1.
-  destruct (HPriv_r _ _ Hpub1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
-  right. destruct (decide (t1sub = t')) as [->|?].
+  move=> t1' ? Hpub1.
+  destruct (HPriv_r _ _ Hpub1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists t1sub, ts1. by rewrite lookup_insert_ne.
+  + exists t1'sub, ts1. by rewrite lookup_insert_ne.
 - split; first done.
-  move=> t1 ts1 Hflow Hts1.
+  move=> t1' ts1 Hflow Hts1.
   rewrite lookup_insert in Hflow; case_decide as Heq; last first.
-  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1sub & ts2 & ? & ?)] & ?);
+  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1'sub & ts2 & ? & ?)] & ?);
       first naive_solver.
-    do 2 (split=> //). right. destruct (decide (t1sub = t')) as [->|?].
+    do 2 (split=> //). right. destruct (decide (t1'sub = t')) as [->|?].
     - exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-    - exists t1sub, ts2. by rewrite lookup_insert_ne. }
-  injection Hflow as <-. subst t1.
+    - exists t1'sub, ts2. by rewrite lookup_insert_ne. }
+  injection Hflow as <-. subst t1'.
   split; first by (apply set_Forall_union; [done|by apply set_Forall_singleton]).
   split; last done.
-  destruct Hchain as [?|(tsub & ts2 & ? & ?)]; first by left.
-  right. destruct (decide (tsub = t')) as [->|?].
+  destruct Hchain as [?|(t'sub & ts2 & ? & ?)]; first by left.
+  right. destruct (decide (t'sub = t')) as [->|?].
   + exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists tsub, ts2. by rewrite lookup_insert_ne.
+  + exists t'sub, ts2. by rewrite lookup_insert_ne.
 Qed.
 
 Lemma public_rel_flow_l_grow_2 E a tsup :
@@ -1077,20 +1077,20 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   iFrame. }
 iPureIntro. split; last split; [|done|].
 - split; first done.
-  move=> t1 ? Hpub1.
-  destruct (HPriv_r _ _ Hpub1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
-  right. destruct (decide (t1sub = TNonce a')) as [->|?].
+  move=> t1' ? Hpub1.
+  destruct (HPriv_r _ _ Hpub1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  right. destruct (decide (t1'sub = TNonce a')) as [->|?].
   + exists (TNonce a'), ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists t1sub, ts1. by rewrite lookup_insert_ne.
+  + exists t1'sub, ts1. by rewrite lookup_insert_ne.
 - split; first done.
-  move=> t1 ts1 Hflow Hts1.
+  move=> t1' ts1 Hflow Hts1.
   rewrite lookup_insert in Hflow; case_decide as Heq; last first.
-  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1sub & ts2 & ? & ?)] & ?);
+  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1'sub & ts2 & ? & ?)] & ?);
       first naive_solver.
-    do 2 (split=> //). right. destruct (decide (t1sub = TNonce a')) as [->|?].
+    do 2 (split=> //). right. destruct (decide (t1'sub = TNonce a')) as [->|?].
     - exists (TNonce a'), ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-    - exists t1sub, ts2. by rewrite lookup_insert_ne. }
-  injection Hflow as <-. subst t1.
+    - exists t1'sub, ts2. by rewrite lookup_insert_ne. }
+  injection Hflow as <-. subst t1'.
   split; first by apply set_Forall_singleton.
   split; first by left; eauto.
   by left.
@@ -1206,20 +1206,20 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   iFrame. }
 iPureIntro. split; last split; [|done|].
 - split; first done.
-  move=> t1 ? Hpub1.
-  destruct (HPriv_r _ _ Hpub1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
-  right. destruct (decide (t1sub = t')) as [->|?].
+  move=> t1' ? Hpub1.
+  destruct (HPriv_r _ _ Hpub1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists t1sub, ts1. by rewrite lookup_insert_ne.
+  + exists t1'sub, ts1. by rewrite lookup_insert_ne.
 - split; first done.
-  move=> t1 ts1 Hflow Hts1.
+  move=> t1' ts1 Hflow Hts1.
   rewrite lookup_insert in Hflow; case_decide as Heq; last first.
-  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1sub & ts2 & ? & ?)] & ?);
+  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1'sub & ts2 & ? & ?)] & ?);
       first naive_solver.
-    do 2 (split=> //). right. destruct (decide (t1sub = t')) as [->|?].
+    do 2 (split=> //). right. destruct (decide (t1'sub = t')) as [->|?].
     - exists t', ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-    - exists t1sub, ts2. by rewrite lookup_insert_ne. }
-  injection Hflow as <-. subst t1.
+    - exists t1'sub, ts2. by rewrite lookup_insert_ne. }
+  injection Hflow as <-. subst t1'.
   split; first by apply set_Forall_singleton.
   split; last by left.
   destruct Hprot as (ts2 & ? & ?).
@@ -1336,26 +1336,26 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
 destruct (Hflow_r_cons _ _ Hfrt'ts Hts) as (Hsubs & Hchain & Hpub).
 iPureIntro. split; last split; [|done|].
 - split; first done.
-  move=> t1 ? Hpub1.
-  destruct (HPriv_r _ _ Hpub1) as [? | (t1sub & ts2 & ? & ?)]; first eauto.
-  right. destruct (decide (t1sub = t')) as [->|?].
+  move=> t1' ? Hpub1.
+  destruct (HPriv_r _ _ Hpub1) as [? | (t1'sub & ts2 & ? & ?)]; first eauto.
+  right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists t1sub, ts2. by rewrite lookup_insert_ne.
+  + exists t1'sub, ts2. by rewrite lookup_insert_ne.
 - split; first done.
-  move=> t1 ts2 Hflow Hts2.
+  move=> t1' ts2 Hflow Hts2.
   rewrite lookup_insert in Hflow; case_decide as Heq; last first.
-  { destruct (Hflow_r_cons _ _ Hflow Hts2) as (? & [?|(t1sub & ts3 & ? & ?)] & ?);
+  { destruct (Hflow_r_cons _ _ Hflow Hts2) as (? & [?|(t1'sub & ts3 & ? & ?)] & ?);
       first naive_solver.
-    do 2 (split=> //). right. destruct (decide (t1sub = t')) as [->|?].
+    do 2 (split=> //). right. destruct (decide (t1'sub = t')) as [->|?].
     - exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-    - exists t1sub, ts3. by rewrite lookup_insert_ne. }
-  injection Hflow as <-. subst t1.
+    - exists t1'sub, ts3. by rewrite lookup_insert_ne. }
+  injection Hflow as <-. subst t1'.
   split; first by (apply set_Forall_union; [done|by apply set_Forall_singleton]).
   split; last done.
-  destruct Hchain as [?|(tsub & ts3 & ? & ?)]; first by left.
-  right. destruct (decide (tsub = t')) as [->|?].
+  destruct Hchain as [?|(t'sub & ts3 & ? & ?)]; first by left.
+  right. destruct (decide (t'sub = t')) as [->|?].
   + exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists tsub, ts3. by rewrite lookup_insert_ne.
+  + exists t'sub, ts3. by rewrite lookup_insert_ne.
 Qed.
 
 Lemma public_rel_flow_l_grow_5 E a ts tsup :
@@ -1463,20 +1463,20 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   iFrame. }
 iPureIntro. split; last split; [|done|].
 - split; first done.
-  move=> t1 ? Hpub1.
-  destruct (HPriv_r _ _ Hpub1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
-  right. destruct (decide (t1sub = TNonce a')) as [->|?].
+  move=> t1' ? Hpub1.
+  destruct (HPriv_r _ _ Hpub1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  right. destruct (decide (t1'sub = TNonce a')) as [->|?].
   + exists (TNonce a'), ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists t1sub, ts1. by rewrite lookup_insert_ne.
+  + exists t1'sub, ts1. by rewrite lookup_insert_ne.
 - split; first done.
-  move=> t1 ts1 Hflow Hts1.
+  move=> t1' ts1 Hflow Hts1.
   rewrite lookup_insert in Hflow; case_decide as Heq; last first.
-  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1sub & ts2 & ? & ?)] & ?);
+  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1'sub & ts2 & ? & ?)] & ?);
       first naive_solver.
-    do 2 (split=> //). right. destruct (decide (t1sub = TNonce a')) as [->|?].
+    do 2 (split=> //). right. destruct (decide (t1'sub = TNonce a')) as [->|?].
     - exists (TNonce a'), ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-    - exists t1sub, ts2. by rewrite lookup_insert_ne. }
-  injection Hflow as <-. subst t1.
+    - exists t1'sub, ts2. by rewrite lookup_insert_ne. }
+  injection Hflow as <-. subst t1'.
   split; first by apply set_Forall_singleton.
   split; first by left; eauto.
   right. by exists ts.
@@ -1596,20 +1596,20 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   iFrame. }
 iPureIntro. split; last split; [|done|].
 - split; first done.
-  move=> t1 ? Hpub1.
-  destruct (HPriv_r _ _ Hpub1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
-  right. destruct (decide (t1sub = t')) as [->|?].
+  move=> t1' ? Hpub1.
+  destruct (HPriv_r _ _ Hpub1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-  + exists t1sub, ts1. by rewrite lookup_insert_ne.
+  + exists t1'sub, ts1. by rewrite lookup_insert_ne.
 - split; first done.
-  move=> t1 ts1 Hflow Hts1.
+  move=> t1' ts1 Hflow Hts1.
   rewrite lookup_insert in Hflow; case_decide as Heq; last first.
-  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1sub & ts2 & ? & ?)] & ?);
+  { destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & [?|(t1'sub & ts2 & ? & ?)] & ?);
       first naive_solver.
-    do 2 (split=> //). right. destruct (decide (t1sub = t')) as [->|?].
+    do 2 (split=> //). right. destruct (decide (t1'sub = t')) as [->|?].
     - exists t', ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
-    - exists t1sub, ts2. by rewrite lookup_insert_ne. }
-  injection Hflow as <-. subst t1.
+    - exists t1'sub, ts2. by rewrite lookup_insert_ne. }
+  injection Hflow as <-. subst t1'.
   split; first by apply set_Forall_singleton.
   split; last by right; exists ts.
   destruct Hprot as (ts2 & ? & ?).
