@@ -1,5 +1,6 @@
 From reloc Require Import reloc.
-From cryptis.lib Require Import repr list.
+From stdpp Require Import sorting list lexico.
+From cryptis.lib Require Import repr list list_sort.
 
 Section ListLemmas.
 
@@ -231,48 +232,49 @@ End ListLemmas.
 
 Section ListLemmasEq.
 
-#[warnings="-ambiguous-paths"]
-Import ssrbool seq boot.eqtype.
-Variable (A : eqType).
-Context `{!Repr A, !relocG Σ}.
+Context `{!EqDecision A, !Repr A, !relocG Σ}.
 
-Lemma tp_mem_list E j (eqImpl : heap_lang.val) (v : A) (l : list A) :
+Implicit Types (v x : A) (l : list A).
+
+Lemma tp_mem_list E j (eqImpl : val) v l :
   ↑specN ⊆ E →
-  (∀ j (x y : A), refines_right j (eqImpl (repr x) (repr y)) ={E}=∗
-    refines_right j #(eq_op x y)) →
+  (∀ j x y, refines_right j (eqImpl (repr x) (repr y)) ={E}=∗
+    refines_right j #(bool_decide (x = y))) →
   refines_right j (mem_list eqImpl (repr v) (repr l)) ={E}=∗
-    refines_right j #(v \in l).
+    refines_right j #(bool_decide (v ∈ l)).
 Proof.
 move=> HE.
 iIntros "%tp_eqImpl Hj".
 tp_lam j; tp_pures j.
 tp_bind j (find_list _ _).
 rewrite refines_right_bind.
-iPoseProof (tp_find_list with "Hj") as ">Hj"=> //.
+iPoseProof (tp_find_list _ _ (λ x, bool_decide (v = x)) with "Hj") as ">Hj"=> //.
   iIntros "%j' %x Hj'"; tp_pures j'.
   iPoseProof (tp_eqImpl with "Hj'") as ">Hj'"=> //.
 rewrite -refines_right_bind => /=.
 rewrite find_if_in.
-case (List.find (eq_op v) l) => *; by tp_pures j.
+case: (List.find (λ x, bool_decide (v = x)) l) => *; by tp_pures j.
 Qed.
 
-Lemma tp_rem_list E j (eqImpl : heap_lang.val) (v : A) (l : list A) :
+Lemma tp_rem_list E j (eqImpl : val) v l :
   ↑specN ⊆ E →
-  (∀ j (x y : A), refines_right j (eqImpl (repr x) (repr y)) ={E}=∗
-    refines_right j #(eq_op x y)) →
+  (∀ j x y, refines_right j (eqImpl (repr x) (repr y)) ={E}=∗
+    refines_right j #(bool_decide (x = y))) →
   refines_right j (rem_list eqImpl (repr v) (repr l)) ={E}=∗
-    refines_right j (repr (seq.rem v l)).
+    refines_right j (repr (rem v l)).
 Proof.
 move=> HE.
 rewrite repr_list_unseal /=.
 iIntros "%tp_eqImpl Hj".
-iStopProof; elim: l j => [| h l' IH] j /=; iIntros "Hj"; tp_rec j; tp_pures j.
+iStopProof; elim: l j => [|x l IH] j /=; iIntros "Hj"; tp_rec j; tp_pures j.
   by iApply "Hj".
 tp_bind j (eqImpl _ _).
 rewrite refines_right_bind.
 iPoseProof (tp_eqImpl with "Hj") as ">Hj"=> //.
 rewrite -refines_right_bind=> /=.
-case: (h == v) => /=; tp_pures j; first by iApply "Hj".
+rewrite (_ : bool_decide (v = x) = bool_decide (x = v)); last first.
+  by apply: bool_decide_ext; split; congruence.
+case: (bool_decide (x = v)) => /=; tp_pures j; first by iApply "Hj".
 tp_bind j (rem_list _ _ _).
 rewrite refines_right_bind.
 iPoseProof (IH with "Hj") as ">Hj".
@@ -323,99 +325,108 @@ End DoUntil.
 
 Section Ordered.
 
-#[warnings="-ambiguous-paths"]
-Import ssrbool seq all_order path.
-Variable (d : Order.disp_t) (A : orderType d).
+Context {A : Type}.
+Context (R : relation A)
+  `{!RelDecision R, !Transitive R, !Total R, !AntiSymm (=@{A}) R}.
 Context `{!Repr A, !relocG Σ}.
-Import Order Order.POrderTheory Order.TotalTheory.
-Implicit Types (x y z : A) (s : seqlexi_with d A).
 
-Lemma tp_insert_sorted E j (f : val) (x : A) (l : list A) :
+Implicit Types (x y z : A) (l : list A).
+
+Lemma tp_insert_sorted E j (f : val) x l :
   ↑specN ⊆ E →
-  is_true (sorted le l) →
-  (∀ j (y z : A),
-      refines_right j (f (repr y) (repr z)) ={E}=∗
-        refines_right j #(le y z)) →
+  StronglySorted R l →
+  (∀ j y z, refines_right j (f (repr y) (repr z)) ={E}=∗
+    refines_right j #(bool_decide (R y z))) →
   refines_right j (insert_sorted f (repr x) (repr l)) ={E}=∗
-    refines_right j (repr (sort le (x :: l))).
+    ∃ l', ⌜StronglySorted R l'⌝ ∗ ⌜l' ≡ₚ x :: l⌝ ∗ refines_right j (repr l').
 Proof.
 move=> HE.
-rewrite repr_list_unseal => sorted_l Hf.
-elim: l sorted_l j => //= [|y l IH] path_l j; iIntros "Hj";
-tp_rec j => /=; tp_pures j => //;
-move/(_ (path_sorted path_l)) in IH.
+rewrite repr_list_unseal => sorted_l tp_f.
+elim: l sorted_l j => [|y l IH] sorted_l j /=; iIntros "Hj"; tp_rec j; tp_pures j.
+  iModIntro. iExists [x]. iSplitR "Hj"; last iSplitR "Hj"; last by iApply "Hj".
+    by iPureIntro; repeat constructor.
+  by iPureIntro.
+move: (sorted_l) => /StronglySorted_cons [Ry_l sorted_l'].
+move/(_ sorted_l') in IH.
 tp_bind j (f _ _).
 rewrite refines_right_bind.
-iPoseProof (Hf with "Hj") as ">Hj".
+iPoseProof (tp_f with "Hj") as ">Hj".
 rewrite -refines_right_bind /=.
-have [le_xy|le_yx] := boolP (x <= y)%O; tp_pures j.
-  by rewrite sort_le_id //= ?le_xy.
-move: le_yx; rewrite -ltNge => /ltW le_yx.
+case: (bool_decide_reflect (R x y)) => [Rxy|nRxy]; tp_pures j.
+  iModIntro. iExists (x :: y :: l). iSplitR "Hj"; last iSplitR "Hj"; last by iApply "Hj".
+    iPureIntro. apply/StronglySorted_cons; split; last exact: sorted_l.
+    constructor; first exact: Rxy.
+    apply: (Forall_impl _ _ _ Ry_l) => z Ryz; exact: (transitivity Rxy Ryz).
+  by iPureIntro.
 tp_bind j (insert_sorted _ _ _).
 rewrite refines_right_bind.
-iPoseProof (IH with "Hj") as ">Hj".
+iPoseProof (IH with "Hj") as ">(%l' & %ss' & %perm' & Hj)".
 rewrite -refines_right_bind /=.
 tp_pures j.
-suff -> : sort le [:: x, y & l] = y :: sort le (x :: l) by tp_pures j.
-rewrite -[RHS]sort_le_id /=.
-  apply/perm_sort_leP/perm_consP.
-  exists 1, (l ++ [:: x])%SEQ.
-  by rewrite /= perm_catC perm_sym /= perm_sort; split.
-rewrite path_min_sorted ?sort_le_sorted // all_sort /= le_yx /=.
-apply: order_path_min => //; apply: le_trans.
+iModIntro. iExists (y :: l'). iSplitR "Hj"; last iSplitR "Hj"; last by iApply "Hj".
+  iPureIntro. apply/StronglySorted_cons; split; last exact: ss'.
+  apply/Forall_forall => z; rewrite perm' elem_of_cons => - [->|z_l].
+    exact: (total_not _ _ nRxy).
+  by move/Forall_forall: Ry_l; apply.
+iPureIntro. by rewrite perm'; exact: Permutation_swap.
 Qed.
 
-Lemma tp_insertion_sort E j (f : val) (l : list A) :
+Lemma tp_insertion_sort E j (f : val) l :
   ↑specN ⊆ E →
-  (∀ j (x y : A), refines_right j (f (repr x) (repr y)) ={E}=∗
-    refines_right j #(le x y)) →
+  (∀ j x y, refines_right j (f (repr x) (repr y)) ={E}=∗
+    refines_right j #(bool_decide (R x y))) →
   refines_right j (insertion_sort f (repr l)) ={E}=∗
-    refines_right j (repr (sort le l)).
+    refines_right j (repr (merge_sort R l)).
 Proof.
 move=> HE.
 rewrite repr_list_unseal => tp_f; iIntros "Hj"; iStopProof.
-elim: l j => [| y l' IH] j; iIntros "Hj"; tp_rec j; tp_pures j.
-  iApply "Hj".
+elim: l j => [|y l IH] j; iIntros "Hj"; tp_rec j; tp_pures j.
+  by iApply "Hj".
 tp_bind j (insertion_sort _ _).
 rewrite refines_right_bind.
 iPoseProof (IH with "Hj") as ">Hj".
 rewrite -refines_right_bind => /=.
 rewrite -repr_list_unseal.
-iPoseProof (tp_insert_sorted with "Hj") as ">Hj" => //.
-suff ->: sort <=%O (y :: sort <=%O l') = sort <=%O (y :: l') by [].
-apply /perm_sort_leP; rewrite perm_cons.
-apply /permPl /perm_sort.
-Qed.
-
-Lemma tp_leq_list E j (feq : val) (fle : val) s1 s2 :
-  ↑specN ⊆ E →
-  (∀ j x1 x2,
-      refines_right j (feq (repr x1) (repr x2)) ={E}=∗
-        refines_right j #(eqtype.eq_op x1 x2)) →
-  (∀ j x1 x2,
-      is_true (x1 \in s1) →
-        refines_right j (fle (repr x1) (repr x2)) ={E}=∗
-        refines_right j #(le x1 x2)) →
-  refines_right j (leq_list feq fle (repr s1) (repr s2)) ={E}=∗
-    refines_right j #(le s1 s2).
-Proof.
-move=> HE.
-move=> feqP.
-rewrite /= repr_list_unseal.
-elim: s1 s2 => [|x1 s1 IH] [|x2 s2] fleP; iIntros "Hj";
-  tp_rec j => /=; tp_pures j => //.
-rewrite lexi_cons; tp_bind j (feq _ _).
-rewrite refines_right_bind => /=.
-iPoseProof (feqP with "Hj") as ">Hj".
-case: (ltgtP x1 x2) => [l_x1x2|l_x2x1|<-] /=; tp_pures j.
-all: simpl; set ctx := IfCtx _ _;
-     rewrite -(refines_right_bind j [ctx] #_) => /=; tp_pures j.
-- iPoseProof (fleP with "Hj") as ">Hj";
-  rewrite ?inE ?eqtype.eqxx // ltW //.
-- iPoseProof (fleP with "Hj") as ">Hj";
-  rewrite ?inE ?eqtype.eqxx // leNgt l_x2x1 //.
-- iPoseProof (IH with "Hj") as ">Hj"=> // j' x1' ? x1'_in;
-  apply fleP; rewrite inE x1'_in orbT //.
+iPoseProof (tp_insert_sorted _ _ _ _ _ HE (merge_sort_sorted R l) tp_f with "Hj")
+  as ">(%l' & %ss' & %perm' & Hj)".
+have -> : merge_sort R (y :: l) = l'.
+  apply: (StronglySorted_unique R); [exact: merge_sort_sorted|exact: ss'|].
+  by rewrite merge_sort_Permutation perm' merge_sort_Permutation.
+by iApply "Hj".
 Qed.
 
 End Ordered.
+
+Section Lexicographic.
+
+Context `{!EqDecision A, !Lexico A,
+          !StrictOrder (@lexico A _), !TrichotomyT (@lexico A _),
+          !Repr A, !relocG Σ}.
+
+Implicit Types (x : A) (l : list A).
+
+Lemma tp_leq_list E j (feq fle : val) l1 l2 :
+  ↑specN ⊆ E →
+  (∀ j x1 x2, refines_right j (feq (repr x1) (repr x2)) ={E}=∗
+    refines_right j #(bool_decide (x1 = x2))) →
+  (∀ j x1 x2, x1 ∈ l1 →
+    refines_right j (fle (repr x1) (repr x2)) ={E}=∗
+    refines_right j #(bool_decide (x1 = x2 ∨ lexico x1 x2))) →
+  refines_right j (leq_list feq fle (repr l1) (repr l2)) ={E}=∗
+    refines_right j #(bool_decide (l1 = l2 ∨ lexico l1 l2)).
+Proof.
+move=> HE feqP.
+rewrite /= repr_list_unseal.
+elim: l1 l2 j => [|x1 l1 IH] [|x2 l2] j fleP; iIntros "Hj";
+  tp_rec j; tp_pures j; rewrite bool_decide_lexico_le; try by iApply "Hj".
+tp_bind j (feq _ _).
+rewrite refines_right_bind.
+iPoseProof (feqP with "Hj") as ">Hj".
+rewrite -refines_right_bind /=.
+case: (bool_decide_reflect (x1 = x2)) => [ex|ne]; tp_pures j.
+- iApply (IH with "Hj") => j' x1' x2' x1'_in; apply: fleP.
+  by apply: list_elem_of_further.
+- by iApply (fleP _ _ _ (list_elem_of_here x1 l1) with "Hj").
+Qed.
+
+End Lexicographic.

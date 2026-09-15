@@ -26,12 +26,10 @@ last by move=> ?; iIntros "_"; iApply twp_eq_pre_term => //.
 rewrite andb_True; split; apply val_of_pre_term_pure.
 Qed.
 
-Import all_order.
-
 Lemma tp_leq_pre_term E j pt1 pt2 :
   ↑specN ⊆ E →
   refines_right j (leq_term (repr pt1) (repr pt2)) -∗
-  |={E}=> refines_right j #(pt1 <= pt2)%O.
+  |={E}=> refines_right j #(bool_decide (pt_order pt1 pt2)).
 Proof.
 move=> HE.
 iApply pure_twp_tp => //=;

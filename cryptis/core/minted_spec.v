@@ -69,20 +69,19 @@ Lemma minted_spec_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
 
 Lemma minted_spec_TExpN t ts :
-  ~ is_exp t -> atomic ts -> invs_canceled ts ->
+  negb (is_exp t) -> invs_canceled ts ->
   minted_spec (TExpN t ts) ⊣⊢ minted_spec t ∧ [∗ list] t' ∈ ts, minted_spec t'.
 Proof.
-move => /negb_True nx atom ic.
-rewrite unlock (nonces_of_term_TExpN nx atom).
-rewrite (cancel_invs_canceled atom ic) big_sepS_union_pers.
+move => nx ic.
+rewrite unlock (nonces_of_term_TExpN nx ic) big_sepS_union_pers.
 by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma minted_spec_base_exps t :
   minted_spec t ⊣⊢ minted_spec (base t) ∧ [∗ list] t' ∈ exps t, minted_spec t'.
 Proof.
-rewrite -{1}[t]base_expsK minted_spec_TExpN //; last exact: invs_canceled_exps.
-exact: atom_exps.
+by rewrite -{1}[t]base_expsK
+  (minted_spec_TExpN (base_Nexp t) (invs_canceled_factors (expo t))).
 Qed.
 
 Lemma all_minted_spec_TExpN t ts :
@@ -90,7 +89,7 @@ Lemma all_minted_spec_TExpN t ts :
 Proof.
 rewrite unlock !big_sepS_forall.
 iIntros "[Ht Hts]" (l) "%l_in".
-have /elem_of_subseteq in_nonces := nonces_of_term_TExpN_subseteq t ts.
+have /elem_of_subseteq in_nonces := @nonces_of_term_TExpN_subseteq t ts.
 move: l_in => /(in_nonces l). rewrite elem_of_union elem_of_union_list.
 case => [?|]; first by iApply "Ht".
 case => _ [] /list_elem_of_fmap [] t' [] -> ??.
@@ -98,30 +97,29 @@ rewrite big_sepL_elem_of // big_sepS_forall.
 by iApply "Hts".
 Qed.
 
-Lemma minted_spec_tfactors t :
-  minted_spec t ⊣⊢ [∗ list] t' ∈ tfactors t, minted_spec t'.
+Lemma minted_spec_factors t :
+  minted_spec t ⊣⊢ [∗ list] t' ∈ factors t, minted_spec t'.
 Proof.
-rewrite unlock (nonces_of_term_tfactors t).
+rewrite unlock (nonces_of_term_factors t).
 by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma minted_spec_TExp t1 t2 :
-  ~ is_exp t1 ->
+  negb (is_exp t1) ->
   minted_spec (TExp t1 t2) ⊣⊢ minted_spec t1 ∧ minted_spec t2.
 Proof.
 move => nx.
-have -> : TExp t1 t2 = TExpN t1 (tfactors t2) by rewrite /TExpN tfactorsK.
-rewrite (minted_spec_TExpN nx (atom_tfactors t2)
-           (invs_canceled_tfactors t2)).
-by rewrite -minted_spec_tfactors.
+have -> : TExp t1 t2 = TExpN t1 (factors t2) by rewrite /TExpN factorsK.
+rewrite (minted_spec_TExpN nx (invs_canceled_factors t2)).
+by rewrite -minted_spec_factors.
 Qed.
 
 Lemma all_minted_spec_TExp t1 t2 :
   minted_spec t1 ∧ minted_spec t2 ⊢ minted_spec (TExp t1 t2).
 Proof.
-have -> : TExp t1 t2 = TExpN t1 (tfactors t2) by rewrite /TExpN tfactorsK.
-rewrite (minted_spec_tfactors t2).
-exact: (all_minted_spec_TExpN t1 (tfactors t2)).
+have -> : TExp t1 t2 = TExpN t1 (factors t2) by rewrite /TExpN factorsK.
+rewrite (minted_spec_factors t2).
+exact: (all_minted_spec_TExpN t1 (factors t2)).
 Qed.
 
 Lemma minted_spec_nonces_of_term t :
