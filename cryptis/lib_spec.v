@@ -2,7 +2,7 @@ From iris.heap_lang.lib Require Import nondet_bool.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require adequacy.
-From cryptis.lib Require Export list_spec list_match_spec.
+From cryptis.lib Require Export refines list_spec list_match_spec.
 
 (* THIS IS A VERY GROSS HACK *)
 Lemma heapGS_heapGpreS Σ `{!heapGS Σ} : heapGpreS Σ.
@@ -15,27 +15,6 @@ Proof.
   { by case: Hgen_heap. }
   { by case: Hinv_heap. }
   { by case: Hproph_map. }
-Qed.
-
-#[deprecated(note = "remove after translating everything to REL")]
-Lemma pure_twp_tp Σ E j e (v: val) :
-  pure_expr e →
-  (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
-  ∀ `{!relocG Σ},
-  ↑specN ⊆ E →
-  refines_right j e ={E}=∗
-  refines_right j v.
-Proof.
-  move=> Hpure Hinv HE.
-  have H := adequacy.heap_twp_pure_exec _ _ _ Hpure Hinv.
-  have heapGpreS0: heapGpreS Σ by apply heapGS_heapGpreS; apply _.
-  apply H in heapGpreS0 as (v' & Hev' & ->).
-  clear Hinv H.
-  move=> ?.
-  rewrite /refines_right.
-  apply rtc_nsteps in Hev' as (n & Hev').
-  have H2: PureExec True n e v by rewrite /PureExec //.
-  iApply step_pure=> //.
 Qed.
 
 Lemma pure_twp_rel_l Σ E K e t A (v: val) :

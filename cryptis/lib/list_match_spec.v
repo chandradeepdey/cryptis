@@ -1,5 +1,10 @@
 From reloc Require Import reloc.
-From cryptis.lib Require Import repr list_match.
+From cryptis.lib Require Import repr list_match refines.
+
+(** Relational counterparts of [wp_list_match] in [lib/list_match.v].  The
+    [tp_*] helpers below are only used to derive [rel_list_match_r]: they
+    step the specification thread through [list_match], and are kept local
+    since all clients should go through the [rel_*] lemmas. *)
 
 Section ListLemmas.
 
@@ -7,7 +12,7 @@ Context `{!Repr A, !Repr B, !relocG Σ}.
 
 Implicit Types (x : A) (xs : list A).
 
-Lemma tp_list_match_aux E j (vs : list A) evs vars k :
+#[local] Lemma tp_list_match_aux E j (vs : list A) evs vars k :
   ↑specN ⊆ E →
   elements (free_vars k) ## vars →
   refines_right j (list_match_aux vars evs k) -∗
@@ -50,7 +55,7 @@ tp_bind j (Fst _). rewrite refines_right_bind.
 set j' := RefId _ _. tp_pures j'. by rewrite /j' -refines_right_bind /=.
 Qed.
 
-Lemma tp_close_vars E j vars vs k :
+#[local] Lemma tp_close_vars E j vars vs k :
   ↑specN ⊆ E →
   length vars = length vs →
   refines_right j (fill (napp vars vs) (close_vars vars k)) ={E}=∗
@@ -75,7 +80,7 @@ rewrite subst_close_vars //.
 by apply IH.
 Qed.
 
-Lemma tp_list_match E j vars (vs : list A) k :
+#[local] Lemma tp_list_match E j vars (vs : list A) k :
   ↑specN ⊆ E →
   refines_right j (list_match vars (repr vs) k) ={E}=∗
   let v := if decide (length vars = length vs) then
@@ -92,6 +97,36 @@ iPoseProof (tp_list_match_aux _ _ _ _ _ _ HE disj with "Hj []") as ">Hj".
 case: decide => ? //.
 iApply (tp_close_vars with "Hj") => //.
 by rewrite length_map.
+Qed.
+
+Lemma rel_list_match_l E K e vars (vs : list A) k Ψ :
+  (if decide (length vars = length vs) then
+     REL fill K (nsubst vars (map repr vs) k) << e @ E : Ψ
+   else REL fill K (NONEV : expr) << e @ E : Ψ) -∗
+  REL fill K (list_match vars (repr vs) k) << e @ E : Ψ.
+Proof.
+iIntros "post". case: decide => Hlen.
+- iApply (refines_wp_l_gen with "post") => Φ. iIntros "H".
+  iApply wp_list_match. by rewrite decide_True.
+- iApply (refines_wp_l_gen with "post") => Φ.
+  rewrite wp_value_fupd'. iIntros "H".
+  iApply wp_fupd. iApply wp_list_match. by rewrite decide_False.
+Qed.
+
+Lemma rel_list_match_r E K e vars (vs : list A) k Ψ :
+  ↑specN ⊆ E →
+  (if decide (length vars = length vs) then
+     REL e << fill K (nsubst vars (map repr vs) k) @ E : Ψ
+   else REL e << fill K (NONEV : expr) @ E : Ψ) -∗
+  REL e << fill K (list_match vars (repr vs) k) @ E : Ψ.
+Proof.
+move=> HE; iIntros "post". case: decide => Hlen.
+- iApply (refines_step_r_gen with "[] post"). iIntros (j) "Hj".
+  iMod (tp_list_match _ _ _ _ _ HE with "Hj") as "Hj".
+  by rewrite /= decide_True.
+- iApply (refines_step_r_gen with "[] post"). iIntros (j) "Hj".
+  iMod (tp_list_match _ _ _ _ _ HE with "Hj") as "Hj".
+  by rewrite /= decide_False.
 Qed.
 
 End ListLemmas.

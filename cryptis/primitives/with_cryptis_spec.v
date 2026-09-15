@@ -2,22 +2,12 @@ From reloc Require Import reloc.
 From cryptis Require Import cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
 From cryptis.core Require Import minted_spec term_meta_spec rel.
+From cryptis Require Import lib_spec.
 From cryptis.primitives Require Import simple_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-(* TODO: this should be in ReLoC *)
-Lemma refines_bind' `{!relocG Σ} K K' E A (e e' : expr) :
-  (REL e << e' @ E : λ v v',
-              (REL fill K (of_val v) << fill K' (of_val v') : A)) -∗
-  REL fill K e << fill K' e' @ E : A.
-Proof.
-iIntros "H".
-iApply (refines_bind with "H").
-eauto.
-Qed.
 
 #[local] Definition sender : val :=
   rec: "loop" "l" "t" :=
@@ -340,6 +330,198 @@ iIntros (t) "%Hnonce #Hmint Htts".
 rel_pures_r. rel_apply_r rel_derive_senc_key_r.
 rewrite big_sepS_singleton.
 iApply "mint"=> //. by iApply minted_spec_senc.
+Qed.
+
+(** Key-type tests.  These mirror [twp_is_*_key] in [primitives/with_cryptis.v]:
+    the [_l] versions need [minted] and the [_r] versions [minted_spec]. *)
+
+Lemma rel_is_aenc_key_l E K e (pk : term) Ψ :
+  minted pk -∗
+  (∀ sk : aenc_key, ⌜pk = Spec.pkey sk⌝ -∗ minted sk -∗
+     REL fill K (#true : expr) << e @ E : Ψ) ∧
+  (REL fill K (#false : expr) << e @ E : Ψ) -∗
+  REL fill K (is_aenc_key pk) << e @ E : Ψ.
+Proof.
+iIntros "#m_pk post".
+iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type AEnc pk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type AEnc).
+- case: pk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (AEncKey t)) => //;
+  rewrite [term_of_aenc_key]unlock // !minted_TKey.
+Qed.
+
+Lemma rel_is_aenc_key_r E K e (pk : term) Ψ :
+  ↑specN ⊆ E →
+  minted_spec pk -∗
+  (∀ sk : aenc_key, ⌜pk = Spec.pkey sk⌝ -∗ minted_spec sk -∗
+     REL e << fill K (#true : expr) @ E : Ψ) ∧
+  (REL e << fill K (#false : expr) @ E : Ψ) -∗
+  REL e << fill K (is_aenc_key pk) @ E : Ψ.
+Proof.
+iIntros (?) "#m_pk post".
+iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type AEnc pk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type AEnc).
+- case: pk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (AEncKey t)) => //;
+  rewrite [term_of_aenc_key]unlock // !minted_spec_TKey.
+Qed.
+
+Lemma rel_is_adec_key_l E K e (sk : term) Ψ :
+  minted sk -∗
+  (∀ sk' : aenc_key, ⌜sk = sk'⌝ -∗ REL fill K (#true : expr) << e @ E : Ψ) ∧
+  (REL fill K (#false : expr) << e @ E : Ψ) -∗
+  REL fill K (is_adec_key sk) << e @ E : Ψ.
+Proof.
+iIntros "#m_sk post".
+iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type ADec sk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type ADec).
+- case: sk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (AEncKey t)) => //;
+  rewrite [term_of_aenc_key]unlock.
+Qed.
+
+Lemma rel_is_adec_key_r E K e (sk : term) Ψ :
+  ↑specN ⊆ E →
+  minted_spec sk -∗
+  (∀ sk' : aenc_key, ⌜sk = sk'⌝ -∗ REL e << fill K (#true : expr) @ E : Ψ) ∧
+  (REL e << fill K (#false : expr) @ E : Ψ) -∗
+  REL e << fill K (is_adec_key sk) @ E : Ψ.
+Proof.
+iIntros (?) "#m_sk post".
+iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type ADec sk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type ADec).
+- case: sk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (AEncKey t)) => //;
+  rewrite [term_of_aenc_key]unlock.
+Qed.
+
+Lemma rel_is_senc_key_l E K e (k : term) Ψ :
+  minted k -∗
+  (∀ k' : senc_key, ⌜k = k'⌝ -∗ REL fill K (#true : expr) << e @ E : Ψ) ∧
+  (REL fill K (#false : expr) << e @ E : Ψ) -∗
+  REL fill K (is_senc_key k) << e @ E : Ψ.
+Proof.
+iIntros "#m_k post".
+iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type SEnc k)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type SEnc).
+- case: k => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (SEncKey t)) => //;
+  rewrite [term_of_senc_key]unlock.
+Qed.
+
+Lemma rel_is_senc_key_r E K e (k : term) Ψ :
+  ↑specN ⊆ E →
+  minted_spec k -∗
+  (∀ k' : senc_key, ⌜k = k'⌝ -∗ REL e << fill K (#true : expr) @ E : Ψ) ∧
+  (REL e << fill K (#false : expr) @ E : Ψ) -∗
+  REL e << fill K (is_senc_key k) @ E : Ψ.
+Proof.
+iIntros (?) "#m_k post".
+iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type SEnc k)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type SEnc).
+- case: k => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (SEncKey t)) => //;
+  rewrite [term_of_senc_key]unlock.
+Qed.
+
+Lemma rel_is_verify_key_l E K e (pk : term) Ψ :
+  minted pk -∗
+  (∀ sk : sign_key, ⌜pk = Spec.pkey sk⌝ -∗ minted sk -∗
+     REL fill K (#true : expr) << e @ E : Ψ) ∧
+  (REL fill K (#false : expr) << e @ E : Ψ) -∗
+  REL fill K (is_verify_key pk) << e @ E : Ψ.
+Proof.
+iIntros "#m_pk post".
+iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type Verify pk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type Verify).
+- case: pk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (SignKey t)) => //;
+  rewrite [term_of_sign_key]unlock // !minted_TKey.
+Qed.
+
+Lemma rel_is_verify_key_r E K e (pk : term) Ψ :
+  ↑specN ⊆ E →
+  minted_spec pk -∗
+  (∀ sk : sign_key, ⌜pk = Spec.pkey sk⌝ -∗ minted_spec sk -∗
+     REL e << fill K (#true : expr) @ E : Ψ) ∧
+  (REL e << fill K (#false : expr) @ E : Ψ) -∗
+  REL e << fill K (is_verify_key pk) @ E : Ψ.
+Proof.
+iIntros (?) "#m_pk post".
+iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type Verify pk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type Verify).
+- case: pk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (SignKey t)) => //;
+  rewrite [term_of_sign_key]unlock // !minted_spec_TKey.
+Qed.
+
+Lemma rel_is_sign_key_l E K e (sk : term) Ψ :
+  minted sk -∗
+  (∀ sk' : sign_key, ⌜sk = sk'⌝ -∗ REL fill K (#true : expr) << e @ E : Ψ) ∧
+  (REL fill K (#false : expr) << e @ E : Ψ) -∗
+  REL fill K (is_sign_key sk) << e @ E : Ψ.
+Proof.
+iIntros "#m_sk post".
+iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type Sign sk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type Sign).
+- case: sk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (SignKey t)) => //;
+  rewrite [term_of_sign_key]unlock.
+Qed.
+
+Lemma rel_is_sign_key_r E K e (sk : term) Ψ :
+  ↑specN ⊆ E →
+  minted_spec sk -∗
+  (∀ sk' : sign_key, ⌜sk = sk'⌝ -∗ REL e << fill K (#true : expr) @ E : Ψ) ∧
+  (REL e << fill K (#false : expr) @ E : Ψ) -∗
+  REL e << fill K (is_sign_key sk) @ E : Ψ.
+Proof.
+iIntros (?) "#m_sk post".
+iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type Sign sk)
+          with "[post]") => //=.
+- apply: term_pure.
+- move=> ?; iIntros "_". wp_lam. by wp_apply (twp_has_key_type Sign).
+- case: sk => [| | |kt t| | |]; try by move=> *; iDestruct "post" as "[_ post]".
+  case: kt; try by iDestruct "post" as "[_ post]".
+  iDestruct "post" as "[post _]".
+  by iApply ("post" $! (SignKey t)) => //;
+  rewrite [term_of_sign_key]unlock.
 Qed.
 
 End Proofs.
