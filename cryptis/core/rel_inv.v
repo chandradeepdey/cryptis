@@ -572,6 +572,24 @@ Fixpoint publicly_related t t' : iProp :=
   | THash t1, THash t1' =>
     publicly_related t1 t1' ∨
     (public_rel_elem t t' ∧ private_rel_elem t1 t1')
+  | TNonce a, TSeal k' t1' => public_rel_elem t t' ∧ private_rel_elem_r t t1' ∧
+    □ (match k' with
+      | TKey kt' k1' =>
+        match kt' with
+        | ADec | Sign | Verify => False
+        | AEnc | SEnc => private_rel_elem_r t k1'
+        end
+      | _ => False
+      end)
+  | TSeal k t1, TNonce a' => public_rel_elem t t' ∧ private_rel_elem_l t1 t' ∧
+    □ (match k with
+      | TKey kt k1 =>
+        match kt with
+        | ADec |Sign | Verify => False
+        | AEnc | SEnc => private_rel_elem_l k1 t'
+        end
+      | _ => False
+      end)
   | _, _ =>
       False (* WIP *)
   end.
