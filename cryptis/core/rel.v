@@ -89,6 +89,22 @@ Lemma publicly_related_TNonce a a' :
   public_rel_elem (TNonce a) (TNonce a').
 Proof. done. Qed.
 
+Lemma publicly_related_TNonce_term a (t' : term) :
+  PUB⟨TNonce a, t'⟩ -∗ public_rel_elem (TNonce a) t'.
+Proof.
+case: t' => /= *; try by iIntros "(_ & _ & [])".
+- by iIntros "(_ & _ & ?)".
+- by iIntros "(_ & _ & ? & _)".
+Qed.
+
+Lemma publicly_related_term_TNonce (t : term) a' :
+  PUB⟨t, TNonce a'⟩ -∗ public_rel_elem t (TNonce a').
+Proof.
+case: t => /= *; try by iIntros "(_ & _ & [])".
+- by iIntros "(_ & _ & ?)".
+- by iIntros "(_ & _ & ? & _)".
+Qed.
+
 Lemma publicly_related_TKey kt kt' t t' :
   PUB⟨TKey kt t, TKey kt' t'⟩ ⊣⊢
   ⌜kt = kt'⌝ ∧
@@ -403,8 +419,7 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   inversion Hsub; subst.
   + iApply (IHa Hprot' with "Hauth Ha").
   + iApply (IHb Hprot' with "Hauth Hb").
-- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
-  iDestruct "Hpub" as "(_ & _ & Hel)".
+- iDestruct (publicly_related_TNonce_term with "Hpub") as "Hel".
   iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
 - case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
@@ -418,6 +433,9 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
      | iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
 - case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+  { iDestruct "Hpub" as "(_ & _ & Hel & _)".
+    iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
+    by case: (HnotPub _ Hlookup). }
   case: Hsub => [[? ?]|[tsub [Hsub Hprot']]] //.
   iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
   { iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
@@ -453,8 +471,7 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   inversion Hsub; subst.
   + iApply (IHa Hprot' with "Hauth Ha").
   + iApply (IHb Hprot' with "Hauth Hb").
-- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
-  iDestruct "Hpub" as "(_ & _ & Hel)".
+- iDestruct (publicly_related_term_TNonce with "Hpub") as "Hel".
   iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
 - case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
@@ -468,6 +485,9 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
      | iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
 - case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+  { iDestruct "Hpub" as "(_ & _ & Hel & _)".
+    iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
+    by case: (HnotPub _ Hlookup). }
   case: Hsub => [[? ?]|[t'sub [Hsub Hprot']]] //.
   iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
   { iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
@@ -518,6 +538,44 @@ move=> HPriv Hcons Hbij. iIntros "Hauth Hrel" (t1 t2 t') "#H1 #[H2|H2]".
   by iApply (public_rel_Public_consistent_r Hbij Hpub with "Hrel").
 Qed.
 
+(* A ciphertext that is publicly tied to a nonce on the other side has a
+   Private body: the "locked" alternative of private_rel_elem_l would make the
+   body and the whole ciphertext both public counterparts of the same nonce,
+   contradicting the bijection. *)
+#[local] Lemma publicly_related_TSeal_TNonce_l pub_l pub_r {k b a'} :
+  public_rel_Public_bijection pub_l pub_r →
+  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
+  PUB⟨TSeal k b, TNonce a'⟩ -∗
+  ⌜∃ ts, pub_l !! b = Some (Private ts)⌝.
+Proof.
+move=> Hbij. iIntros "Hauth #(_ & _ & Hel & Hb & _)".
+iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hseal.
+iAssert ⌜pub_l !! b ≠ Some (Public (TNonce a'))⌝%I as %Hne.
+{ iPureIntro => Hb.
+  have := proj1 (Hbij _ _) Hseal. rewrite (proj1 (Hbij _ _) Hb) => - [Heq].
+  have := f_equal tsize Heq. rewrite (tsize_eq (TSeal k b)). lia. }
+iDestruct "Hb" as "[Hb|Hb]".
+- iDestruct (public_rel_map_l_lookup_elem with "Hauth Hb") as %[(ts & Hpriv & _)|Hpub]; eauto.
+- by iDestruct (public_rel_map_l_lookup_locked_frag with "Hauth Hb") as %Hpub.
+Qed.
+
+#[local] Lemma publicly_related_TNonce_TSeal_r pub_l pub_r {a k' b'} :
+  public_rel_Public_bijection pub_l pub_r →
+  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  PUB⟨TNonce a, TSeal k' b'⟩ -∗
+  ⌜∃ ts, pub_r !! b' = Some (Private ts)⌝.
+Proof.
+move=> Hbij. iIntros "Hauth #(_ & _ & Hel & Hb & _)".
+iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hseal.
+iAssert ⌜pub_r !! b' ≠ Some (Public (TNonce a))⌝%I as %Hne.
+{ iPureIntro => Hb.
+  have := proj2 (Hbij _ _) Hseal. rewrite (proj2 (Hbij _ _) Hb) => - [Heq].
+  have := f_equal tsize Heq. rewrite (tsize_eq (TSeal k' b')). lia. }
+iDestruct "Hb" as "[Hb|Hb]".
+- iDestruct (public_rel_map_r_lookup_elem with "Hauth Hb") as %[(ts & Hpriv & _)|Hpub]; eauto.
+- by iDestruct (public_rel_map_r_lookup_locked_frag with "Hauth Hb") as %Hpub.
+Qed.
+
 Lemma publicly_related_part_bij_1 E t t1' t2' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
@@ -543,10 +601,9 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
   iDestruct "H1" as "[Ha Hb]". iDestruct "H2" as "[Ha' Hb']".
   iDestruct ("IH" with "Hmap_l Hpub_consistent Ha Ha'") as %->.
   by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb Hb'") as %->.
-- case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  iDestruct "H1" as "(_ & _ & H1)". iDestruct "H2" as "(_ & _ & H2)".
-  by iApply (public_rel_elem_agree_l with "H1 H2").
+- iDestruct (publicly_related_TNonce_term with "H1") as "Hel1".
+  iDestruct (publicly_related_TNonce_term with "H2") as "Hel2".
+  by iApply (public_rel_elem_agree_l with "Hel1 Hel2").
 - case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
   case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
   iDestruct "H1" as "(_ & _ & <- & H1)". iDestruct "H2" as "(_ & _ & <- & H2)".
@@ -565,7 +622,22 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
       | by (iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %Heq;
             injection Heq as ->) ].
 - case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  { iDestruct (publicly_related_TSeal_TNonce_l Hbij with "Hmap_l H1") as %(ts & Hb).
+    case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+    - iDestruct "H1" as "(_ & _ & Hel1 & _)". iDestruct "H2" as "(_ & _ & Hel2 & _)".
+      by iApply (public_rel_elem_agree_l with "Hel1 Hel2").
+    - iDestruct "H2" as "(_ & _ & [[_ Hb2]|(Hel2 & _)])".
+      + by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
+                        (or_introl (ex_intro _ ts Hb)) with "Hmap_l Hb2") as "[]".
+      + iDestruct "H1" as "(_ & _ & Hel1 & _)".
+        by iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %[=]. }
   case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  { iDestruct (publicly_related_TSeal_TNonce_l Hbij with "Hmap_l H2") as %(ts & Hb).
+    iDestruct "H1" as "(_ & _ & [[_ Hb1]|(Hel1 & _)])".
+    + by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
+                      (or_introl (ex_intro _ ts Hb)) with "Hmap_l Hb1") as "[]".
+    + iDestruct "H2" as "(_ & _ & Hel2 & _)".
+      by iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %[=]. }
   iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [Hpk1 _] & [Hpb1 _] & _)])";
   iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [Hpk2 _] & [Hpb2 _] & _)])".
   + iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
@@ -625,10 +697,9 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
   iDestruct "H1" as "[Ha Hb]". iDestruct "H2" as "[Ha' Hb']".
   iDestruct ("IH" with "Hmap_r Hpub_consistent Ha Ha'") as %->.
   by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb Hb'") as %->.
-- case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  iDestruct "H1" as "(_ & _ & H1)". iDestruct "H2" as "(_ & _ & H2)".
-  by iApply (public_rel_elem_agree_r with "H1 H2").
+- iDestruct (publicly_related_term_TNonce with "H1") as "Hel1".
+  iDestruct (publicly_related_term_TNonce with "H2") as "Hel2".
+  by iApply (public_rel_elem_agree_r with "Hel1 Hel2").
 - case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
   case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
   iDestruct "H1" as "(_ & _ & -> & H1)". iDestruct "H2" as "(_ & _ & -> & H2)".
@@ -647,7 +718,22 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
       | by (iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %Heq;
             injection Heq as ->) ].
 - case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
+  { iDestruct (publicly_related_TNonce_TSeal_r Hbij with "Hmap_r H1") as %(ts & Hb).
+    case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+    - iDestruct "H1" as "(_ & _ & Hel1 & _)". iDestruct "H2" as "(_ & _ & Hel2 & _)".
+      by iApply (public_rel_elem_agree_r with "Hel1 Hel2").
+    - iDestruct "H2" as "(_ & _ & [[_ Hb2]|(Hel2 & _)])".
+      + by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
+                        (or_introl (ex_intro _ ts Hb)) with "Hmap_r Hb2") as "[]".
+      + iDestruct "H1" as "(_ & _ & Hel1 & _)".
+        by iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %[=]. }
   case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
+  { iDestruct (publicly_related_TNonce_TSeal_r Hbij with "Hmap_r H2") as %(ts & Hb).
+    iDestruct "H1" as "(_ & _ & [[_ Hb1]|(Hel1 & _)])".
+    + by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
+                      (or_introl (ex_intro _ ts Hb)) with "Hmap_r Hb1") as "[]".
+    + iDestruct "H2" as "(_ & _ & Hel2 & _)".
+      by iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %[=]. }
   iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [_ Hpk1] & [_ Hpb1] & _)])";
   iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [_ Hpk2] & [_ Hpb2] & _)])".
   + iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
