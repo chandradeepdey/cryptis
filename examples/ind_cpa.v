@@ -10,7 +10,7 @@ From cryptis.primitives Require Import attacker.
 
 From reloc Require Import reloc.
 From cryptis Require Import lib_spec.
-From cryptis.core Require Import minted_spec term_meta_spec rel.
+From cryptis.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec.
 
 Set Implicit Arguments.

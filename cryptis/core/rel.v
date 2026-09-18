@@ -7,11 +7,796 @@ From cryptis.core Require Import term minted.
 From cryptis Require Import cryptis.
 From cryptis.core Require Import minted_spec.
 From cryptis.core Require Import term_meta_spec.
-From cryptis.core Require Export rel_state rel_inv.
+From cryptis.core Require Export rel_state.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
+Class public_relGpreS Σ := Public_relGpreS {
+  #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
+  #[local] public_relGpreS_flow :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
+  #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
+  #[local] public_relGpreS_prop :: savedPropG Σ;
+}.
+
+Class public_relGS Σ := Public_relGS {
+  #[global] maps_inG :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
+  #[global] flow_inG :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
+  #[global] term_meta_inG :: term_metaGS Σ;
+  #[global] term_meta_spec_inG :: term_meta_specGS Σ;
+  #[global] prop_inG :: savedPropG Σ;
+  public_rel_map_l : gname;
+  public_rel_map_r : gname;
+  public_rel_flow_l : gname;
+  public_rel_flow_r : gname;
+}.
+
+Definition public_relΣ : gFunctors :=
+  #[GFunctor (authUR (gmapUR term (authUR (optionUR stateR))));
+    GFunctor (authUR (gmapUR term (authUR (gset_disjUR term))));
+    term_metaΣ;
+    savedPropΣ].
+
+#[global] Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
+Proof. solve_inG. Qed.
+
+Section PublicRel.
+
+Context `{!relocG Σ, !public_relGS Σ}.
+
+Notation iProp := (iProp Σ).
+Notation iPropO := (iPropO Σ).
+
+Implicit Types t : term.
+Implicit Types st : state.
+Implicit Types pub_l pub_r : gmap term state.
+Implicit Types flow_l flow_r : gmap term (gset term).
+Implicit Types P : term -> term -> iProp.
+
+Section Map.
+
+Definition public_rel_map_l_auth pub_l : iProp :=
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) ∗
+  [∗ map] t ↦ st ∈ pub_l, match st with
+                            | Private _ => own public_rel_map_l (◯ {[ t := ●{#1/2} Some st ]})
+                            | _ => emp
+                            end.
+
+Definition public_rel_map_r_auth pub_r : iProp :=
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) ∗
+  [∗ map] t' ↦ st ∈ pub_r, match st with
+                            | Private _ => own public_rel_map_r (◯ {[ t' := ●{#1/2} Some st ]})
+                            | _ => emp
+                            end.
+
+Definition public_rel_map_inv pub_l pub_r : iProp :=
+  public_rel_map_l_auth pub_l ∗
+  public_rel_map_r_auth pub_r ∗
+  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) ∗
+  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()).
+
+Definition pending_in_l t t' : iProp :=
+  own public_rel_map_l (◯ {[ t := ●{#1/2} Some (Private t') ]}).
+
+Definition pending_in_r t t' : iProp :=
+  own public_rel_map_r (◯ {[ t' := ●{#1/2} Some (Private t) ]}).
+
+Definition linked_in_l t t' : iProp :=
+  own public_rel_map_l (◯ {[ t := ◯ Some (Private t') ]}).
+
+#[global] Instance linked_in_l_persistent t t' : Persistent (linked_in_l t t').
+Proof. apply _. Qed.
+
+Definition linked_in_r t t' : iProp :=
+  own public_rel_map_r (◯ {[ t' := ◯ Some (Private t) ]}).
+
+#[global] Instance linked_in_r_persistent t t' : Persistent (linked_in_r t t').
+Proof. apply _. Qed.
+
+Definition linked t t' : iProp :=
+  linked_in_l t t' ∧ linked_in_r t t'.
+
+#[global] Instance linked_persistent t t' : Persistent (linked t t').
+Proof. apply _. Qed.
+
+Definition publicly_linked_in_l t t' : iProp :=
+  own public_rel_map_l (◯ {[ t := ◯ Some (Public t') ]}).
+
+#[global] Instance publicly_linked_in_l_persistent t t' : Persistent (publicly_linked_in_l t t').
+Proof. apply _. Qed.
+
+Definition publicly_linked_in_r t t' : iProp :=
+  own public_rel_map_r (◯ {[ t' := ◯ Some (Public t) ]}).
+
+#[global] Instance publicly_linked_in_r_persistent t t' : Persistent (publicly_linked_in_r t t').
+Proof. apply _. Qed.
+
+Definition publicly_linked t t' : iProp :=
+  publicly_linked_in_l t t' ∧ publicly_linked_in_r t t'.
+
+#[global] Instance publicly_linked_persistent t t' : Persistent (publicly_linked t t').
+Proof. apply _. Qed.
+
+Definition secret_in_l t : iProp :=
+  own public_rel_map_l (◯ {[ t := ◯ Some Secret ]}).
+
+#[global] Instance secret_in_l_persistent t : Persistent (secret_in_l t).
+Proof. apply _. Qed.
+
+Definition secret_in_r t' : iProp :=
+  own public_rel_map_r (◯ {[ t' := ◯ Some Secret ]}).
+
+#[global] Instance secret_in_r_persistent t' : Persistent (secret_in_r t').
+Proof. apply _. Qed.
+
+Lemma publicly_linked_in_l_linked_in_l t t' :
+  publicly_linked_in_l t t' -∗ linked_in_l t t'.
+Proof.
+apply bi.entails_wand, own_mono, auth_frag_mono, singleton_included_mono, auth_frag_mono,
+  Some_included_mono, Private_included_Public.
+Qed.
+
+Lemma publicly_linked_in_r_linked_in_r t t' :
+  publicly_linked_in_r t t' -∗ linked_in_r t t'.
+Proof.
+apply bi.entails_wand, own_mono, auth_frag_mono, singleton_included_mono, auth_frag_mono,
+  Some_included_mono, Private_included_Public.
+Qed.
+
+Lemma secret_in_l_linked_in_l t t' :
+  secret_in_l t -∗ linked_in_l t t'.
+Proof.
+apply bi.entails_wand, own_mono, auth_frag_mono, singleton_included_mono, auth_frag_mono,
+  Some_included_mono, Private_included_Secret.
+Qed.
+
+Lemma secret_in_r_linked_in_r t t' :
+  secret_in_r t' -∗ linked_in_r t t'.
+Proof.
+apply bi.entails_wand, own_mono, auth_frag_mono, singleton_included_mono, auth_frag_mono,
+  Some_included_mono, Private_included_Secret.
+Qed.
+
+Lemma publicly_linked_linked t t' :
+  publicly_linked t t' -∗ linked t t'.
+Proof.
+iIntros "#[H1 H2]". iSplit.
+- by iApply publicly_linked_in_l_linked_in_l.
+- by iApply publicly_linked_in_r_linked_in_r.
+Qed.
+
+Lemma public_rel_map_l_fresh pub_l t :
+  ([∗ set] t ∈ dom pub_l, term_meta t (cryptisN.@"public_rel".@"map") ()) -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  ⌜pub_l !! t = None⌝.
+Proof.
+iIntros "Hmeta Htt".
+destruct (pub_l !! t) eqn:Heq; last done.
+iDestruct (big_sepS_elem_of _ _ t with "Hmeta") as "Hmeta_t"; first by apply elem_of_dom.
+by iDestruct (term_meta_token with "Htt Hmeta_t") as "[]".
+Qed.
+
+Lemma public_rel_map_r_fresh pub_r t' :
+  ([∗ set] t' ∈ dom pub_r, term_meta_spec t' (cryptisN.@"public_rel".@"map") ()) -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  ⌜pub_r !! t' = None⌝.
+Proof.
+iIntros "Hmeta Htts".
+destruct (pub_r !! t') eqn:Heq; last done.
+iDestruct (big_sepS_elem_of _ _ t' with "Hmeta") as "Hmeta_t"; first by apply elem_of_dom.
+by iDestruct (term_meta_spec_token with "Htts Hmeta_t") as "[]".
+Qed.
+
+Lemma public_rel_map_l_lookup pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  pending_in_l t t' -∗
+  ⌜pub_l !! t = Some (Private t')⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (? & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (pub_l !! t) as [st|] eqn:Heq.
+- assert (●{#1 / 2} Some (Private t') ≼ ● Some st ⋅ ◯ Some st) as H.
+  { by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+  apply auth_auth_dfrac_included in H as [_ Heq'].
+  apply leibniz_equiv in Heq'. by simplify_eq.
+- apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl.
+Qed.
+
+Lemma public_rel_map_r_lookup pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  pending_in_r t t' -∗
+  ⌜pub_r !! t' = Some (Private t)⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (? & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (pub_r !! t') as [st|] eqn:Heq.
+- assert (●{#1 / 2} Some (Private t) ≼ ● Some st ⋅ ◯ Some st) as H.
+  { by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+  apply auth_auth_dfrac_included in H as [_ Heq'].
+  apply leibniz_equiv in Heq'. by simplify_eq.
+- apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl.
+Qed.
+
+Lemma public_rel_map_l_lookup_frag pub_l t st :
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  own public_rel_map_l (◯ {[ t := ◯ Some st ]}) -∗
+  ⌜∃ st1, pub_l !! t = Some st1 ∧ ✓ st1 ∧ st ≼ st1⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl Hval].
+apply singleton_included_l in Hincl as (? & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+specialize (Hval t). rewrite lookup_fmap in Hval.
+destruct (pub_l !! t) as [st1|] eqn:Heq; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+exists st1. split; first done.
+apply Some_included in Hincl as [Heq' | Hincl];
+  first by inversion Heq' as [H _]; inversion H.
+apply auth_frag_included in Hincl.
+apply auth_both_valid_discrete in Hval as [_ Hval].
+split; first by apply Some_valid.
+exact: (proj1 (Some_included_total _ _) Hincl).
+Qed.
+
+Lemma public_rel_map_r_lookup_frag pub_r t' st :
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  own public_rel_map_r (◯ {[ t' := ◯ Some st ]}) -∗
+  ⌜∃ st1, pub_r !! t' = Some st1 ∧ ✓ st1 ∧ st ≼ st1⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl Hval].
+apply singleton_included_l in Hincl as (? & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+specialize (Hval t'). rewrite lookup_fmap in Hval.
+destruct (pub_r !! t') as [st1|] eqn:Heq; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+exists st1. split; first done.
+apply Some_included in Hincl as [Heq' | Hincl];
+  first by inversion Heq' as [H _]; inversion H.
+apply auth_frag_included in Hincl.
+apply auth_both_valid_discrete in Hval as [_ Hval].
+split; first by apply Some_valid.
+exact: (proj1 (Some_included_total _ _) Hincl).
+Qed.
+
+Lemma linked_in_l_lookup pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  linked_in_l t t' -∗
+  ⌜pub_l !! t = Some (Private t') ∨
+   pub_l !! t = Some Secret ∨
+   pub_l !! t = Some (Public t')⌝.
+Proof.
+iIntros "H1 H2".
+iDestruct (public_rel_map_l_lookup_frag with "H1 H2") as %(st & -> & Hval & Hincl).
+iPureIntro. by case: (Private_included Hval Hincl) => [->|[->|->]]; eauto.
+Qed.
+
+Lemma linked_in_r_lookup pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  linked_in_r t t' -∗
+  ⌜pub_r !! t' = Some (Private t) ∨
+   pub_r !! t' = Some Secret ∨
+   pub_r !! t' = Some (Public t)⌝.
+Proof.
+iIntros "H1 H2".
+iDestruct (public_rel_map_r_lookup_frag with "H1 H2") as %(st & -> & Hval & Hincl).
+iPureIntro. by case: (Private_included Hval Hincl) => [->|[->|->]]; eauto.
+Qed.
+
+Lemma publicly_linked_in_l_lookup pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  publicly_linked_in_l t t' -∗
+  ⌜pub_l !! t = Some (Public t')⌝.
+Proof.
+iIntros "H1 H2".
+iDestruct (public_rel_map_l_lookup_frag with "H1 H2") as %(st & -> & Hval & Hincl).
+iPureIntro. by rewrite (Public_included Hval Hincl).
+Qed.
+
+Lemma publicly_linked_in_r_lookup pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  publicly_linked_in_r t t' -∗
+  ⌜pub_r !! t' = Some (Public t)⌝.
+Proof.
+iIntros "H1 H2".
+iDestruct (public_rel_map_r_lookup_frag with "H1 H2") as %(st & -> & Hval & Hincl).
+iPureIntro. by rewrite (Public_included Hval Hincl).
+Qed.
+
+Lemma secret_in_l_lookup pub_l t :
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  secret_in_l t -∗
+  ⌜pub_l !! t = Some Secret⌝.
+Proof.
+iIntros "H1 H2".
+iDestruct (public_rel_map_l_lookup_frag with "H1 H2") as %(st & -> & Hval & Hincl).
+iPureIntro. by rewrite (Secret_included Hval Hincl).
+Qed.
+
+Lemma secret_in_r_lookup pub_r t' :
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  secret_in_r t' -∗
+  ⌜pub_r !! t' = Some Secret⌝.
+Proof.
+iIntros "H1 H2".
+iDestruct (public_rel_map_r_lookup_frag with "H1 H2") as %(st & -> & Hval & Hincl).
+iPureIntro. by rewrite (Secret_included Hval Hincl).
+Qed.
+
+Lemma publicly_linked_lookup_l pub_l t t' :
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  publicly_linked t t' -∗
+  ⌜pub_l !! t = Some (Public t')⌝.
+Proof.
+iIntros "H1 [H2 _]".
+by iApply (publicly_linked_in_l_lookup with "H1 H2").
+Qed.
+
+Lemma publicly_linked_lookup_r pub_r t t' :
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  publicly_linked t t' -∗
+  ⌜pub_r !! t' = Some (Public t)⌝.
+Proof.
+iIntros "H1 [_ H2]".
+by iApply (publicly_linked_in_r_lookup with "H1 H2").
+Qed.
+
+Lemma publicly_linked_in_l_agree t t1 t2 :
+  publicly_linked_in_l t t1 -∗
+  publicly_linked_in_l t t2 -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro. move: H.
+rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid -Some_op Some_valid.
+exact: Public_Public_valid.
+Qed.
+
+Lemma publicly_linked_in_r_agree t' t1 t2 :
+  publicly_linked_in_r t1 t' -∗
+  publicly_linked_in_r t2 t' -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro. move: H.
+rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid -Some_op Some_valid.
+exact: Public_Public_valid.
+Qed.
+
+Lemma linked_in_l_publicly_linked_in_l t t1 t2 :
+  linked_in_l t t1 -∗
+  publicly_linked_in_l t t2 -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro. move: H.
+rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid -Some_op Some_valid.
+exact: Private_Public_valid.
+Qed.
+
+Lemma linked_in_r_publicly_linked_in_r t' t1 t2 :
+  linked_in_r t1 t' -∗
+  publicly_linked_in_r t2 t' -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro. move: H.
+rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid -Some_op Some_valid.
+exact: Private_Public_valid.
+Qed.
+
+Lemma secret_in_l_publicly_linked_in_l t t' :
+  secret_in_l t -∗
+  publicly_linked_in_l t t' -∗
+  False.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro. move: H.
+rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid -Some_op Some_valid.
+exact: Secret_Public_valid.
+Qed.
+
+Lemma secret_in_r_publicly_linked_in_r t t' :
+  secret_in_r t' -∗
+  publicly_linked_in_r t t' -∗
+  False.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H". iPureIntro. move: H.
+rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
+rewrite -auth_frag_op auth_frag_valid -Some_op Some_valid.
+exact: Secret_Public_valid.
+Qed.
+
+Lemma publicly_linked_agree_l t t1 t2 :
+  publicly_linked t t1 -∗
+  publicly_linked t t2 -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "[H1 _] [H2 _]".
+by iApply (publicly_linked_in_l_agree with "H1 H2").
+Qed.
+
+Lemma publicly_linked_agree_r t1 t2 t' :
+  publicly_linked t1 t' -∗
+  publicly_linked t2 t' -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "[_ H1] [_ H2]".
+by iApply (publicly_linked_in_r_agree with "H1 H2").
+Qed.
+
+End Map.
+
+Section Flow.
+
+Inductive is_immediate_subterm : term → term → Prop :=
+  | SubtermPairL t1 t2 : is_immediate_subterm t1 (TPair t1 t2)
+  | SubtermPairR t1 t2 : is_immediate_subterm t2 (TPair t1 t2)
+  | SubtermKey kt t1 : is_immediate_subterm t1 (TKey kt t1)
+  | SubtermSealKey k t1 : is_immediate_subterm k (TSeal k t1)
+  | SubtermSealBody k t1 : is_immediate_subterm t1 (TSeal k t1)
+  | SubtermHash t1 : is_immediate_subterm t1 (THash t1).
+
+Definition public_rel_flow_l_auth flow_l : iProp :=
+  own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) ∗
+  [∗ map] t ↦ ts ∈ flow_l,
+    own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
+
+Definition public_rel_flow_r_auth flow_r : iProp :=
+  own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) ∗
+  [∗ map] t' ↦ ts ∈ flow_r,
+    own public_rel_flow_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}).
+
+Definition public_rel_flow_inv flow_l flow_r : iProp :=
+  public_rel_flow_l_auth flow_l ∗
+  public_rel_flow_r_auth flow_r ∗
+  ([∗ set] t ∈ dom flow_l, term_meta t (cryptisN.@"public_rel".@"flow") ()) ∗
+  ([∗ set] t' ∈ dom flow_r, term_meta_spec t' (cryptisN.@"public_rel".@"flow") ()).
+
+Definition protects_superterms_l t ts : iProp :=
+  own public_rel_flow_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
+
+Definition protected_by_subterm_l t tsub : iProp :=
+  own public_rel_flow_l (◯ {[ tsub := ◯ (GSet {[ t ]}) ]}).
+
+Definition protects_superterms_r t' ts : iProp :=
+  own public_rel_flow_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}).
+
+Definition protected_by_subterm_r t' tsub : iProp :=
+  own public_rel_flow_r (◯ {[ tsub := ◯ (GSet {[ t' ]}) ]}).
+
+Lemma public_rel_flow_l_fresh flow_l t :
+  ([∗ set] t' ∈ dom flow_l, term_meta t' (cryptisN.@"public_rel".@"flow") ()) -∗
+  term_token t (↑cryptisN.@"public_rel".@"flow") -∗
+  ⌜flow_l !! t = None⌝.
+Proof.
+iIntros "Hmeta Htt".
+destruct (flow_l !! t) eqn:Heq; last done.
+iDestruct (big_sepS_elem_of _ _ t with "Hmeta") as "Hmeta_t"; first by apply elem_of_dom.
+by iDestruct (term_meta_token with "Htt Hmeta_t") as "[]".
+Qed.
+
+Lemma public_rel_flow_r_fresh flow_r t' :
+  ([∗ set] t' ∈ dom flow_r, term_meta_spec t' (cryptisN.@"public_rel".@"flow") ()) -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"flow") -∗
+  ⌜flow_r !! t' = None⌝.
+Proof.
+iIntros "Hmeta Htts".
+destruct (flow_r !! t') eqn:Heq; last done.
+iDestruct (big_sepS_elem_of _ _ t' with "Hmeta") as "Hmeta_t"; first by apply elem_of_dom.
+by iDestruct (term_meta_spec_token with "Htts Hmeta_t") as "[]".
+Qed.
+
+Lemma public_rel_flow_l_lookup flow_l t tsub :
+  own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) -∗
+  protected_by_subterm_l t tsub -∗
+  ⌜∃ ts, flow_l !! tsub = Some ts ∧ t ∈ ts⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (flow_l !! tsub) as [ts|]; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+exists ts. split; first done.
+apply Some_included in Hincl as [Heq | Hincl];
+  first by inversion Heq as [H _]; inversion H.
+apply auth_frag_included in Hincl.
+apply gset_disj_included in Hincl. set_solver.
+Qed.
+
+Lemma public_rel_flow_r_lookup flow_r t' t'sub :
+  own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) -∗
+  protected_by_subterm_r t' t'sub -∗
+  ⌜∃ ts, flow_r !! t'sub = Some ts ∧ t' ∈ ts⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (flow_r !! t'sub) as [ts|]; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+exists ts. split; first done.
+apply Some_included in Hincl as [Heq | Hincl];
+  first by inversion Heq as [H _]; inversion H.
+apply auth_frag_included in Hincl.
+apply gset_disj_included in Hincl. set_solver.
+Qed.
+
+Lemma public_rel_flow_l_lookup_2 flow_l t ts :
+  own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) -∗
+  protects_superterms_l t ts -∗
+  ⌜flow_l !! t = Some ts⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (flow_l !! t) as [ts'|]; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+assert (●{#1 / 2} (GSet ts) ≼ ● (GSet ts') ⋅ ◯ (GSet ts')) as H.
+{ by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+apply auth_auth_dfrac_included in H as [_ Heq].
+by injection Heq as ->.
+Qed.
+
+Lemma public_rel_flow_r_lookup_2 flow_r t' ts :
+  own public_rel_flow_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_r)) -∗
+  protects_superterms_r t' ts -∗
+  ⌜flow_r !! t' = Some ts⌝.
+Proof.
+iIntros "H1 H2".
+iCombine "H1 H2" gives "%H".
+iPureIntro.
+apply auth_both_valid_discrete in H as [Hincl _].
+apply singleton_included_l in Hincl as (y & <- & Hincl).
+rewrite lookup_fmap in Hincl.
+destruct (flow_r !! t') as [ts'|]; last first.
+{ apply Some_included_is_Some in Hincl.
+  by apply is_Some_None in Hincl. }
+assert (●{#1 / 2} (GSet ts) ≼ ● (GSet ts') ⋅ ◯ (GSet ts')) as H.
+{ by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
+apply auth_auth_dfrac_included in H as [_ Heq].
+by injection Heq as ->.
+Qed.
+
+Lemma public_rel_flow_l_ne t tsub tsub1 :
+  protected_by_subterm_l t tsub -∗
+  protected_by_subterm_l t tsub1 -∗
+  ⌜tsub ≠ tsub1⌝.
+Proof.
+iIntros "Hprot Hprot1".
+iIntros (->).
+iCombine "Hprot Hprot1" gives "%Hvalid". iPureIntro.
+rewrite -auth_frag_op singleton_op -auth_frag_op in Hvalid.
+rewrite auth_frag_valid singleton_valid auth_frag_valid gset_disj_valid_op in Hvalid.
+set_solver.
+Qed.
+
+Lemma public_rel_flow_r_ne t' t'sub t'sub1 :
+  protected_by_subterm_r t' t'sub -∗
+  protected_by_subterm_r t' t'sub1 -∗
+  ⌜t'sub ≠ t'sub1⌝.
+Proof.
+iIntros "Hprot Hprot1".
+iIntros (->).
+iPoseProof (own_valid_2 with "Hprot Hprot1") as "%Hvalid".
+iPureIntro.
+rewrite -auth_frag_op singleton_op -auth_frag_op in Hvalid.
+rewrite auth_frag_valid singleton_valid auth_frag_valid gset_disj_valid_op in Hvalid.
+set_solver.
+Qed.
+
+End Flow.
+
+Fixpoint publicly_related t t' : iProp :=
+  minted t ∧ minted_spec t' ∧
+  match t, t' with
+  | TInt n, TInt n' => ⌜n = n'⌝
+  | TPair t1 t2, TPair t1' t2' =>
+      publicly_related t1 t1' ∧ publicly_related t2 t2'
+  | TNonce a, TNonce a' => publicly_linked t t'
+  | TKey kt t1, TKey kt' t1' => ⌜kt = kt'⌝ ∧
+    match kt with
+    | AEnc => publicly_related t1 t1' ∨
+              (publicly_linked t t' ∧ linked t1 t1')
+    | ADec => publicly_related t1 t1'
+    | Sign => publicly_related t1 t1'
+    | Verify => publicly_related t1 t1' ∨
+                (publicly_linked t t' ∧ linked t1 t1')
+    | SEnc => publicly_related t1 t1'
+    end
+  | TSeal k t1, TSeal k' t1' =>
+    (publicly_related k k' ∧ publicly_related t1 t1') ∨
+    (publicly_linked t t' ∧ linked k k' ∧ linked t1 t1' ∧
+    □ (match k, k' with
+      | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
+        match kt with
+        | ADec | Verify => False
+        | Sign => publicly_related t1 t1'
+        | AEnc | SEnc => publicly_related k1 k1' → publicly_related t1 t1'
+        end
+      | _, _ => False
+      end))
+  | THash t1, THash t1' =>
+    publicly_related t1 t1' ∨
+    (publicly_linked t t' ∧ linked t1 t1')
+  | TNonce a, TSeal k' t1' => publicly_linked t t' ∧ secret_in_r t1' ∧
+    □ (match k' with
+      | TKey kt' k1' =>
+        match kt' with
+        | ADec | Sign | Verify => False
+        | AEnc | SEnc => secret_in_r k1'
+        end
+      | _ => False
+      end)
+  | TSeal k t1, TNonce a' => publicly_linked t t' ∧ secret_in_l t1 ∧
+    □ (match k with
+      | TKey kt k1 =>
+        match kt with
+        | ADec |Sign | Verify => False
+        | AEnc | SEnc => secret_in_l k1
+        end
+      | _ => False
+      end)
+  | _, _ =>
+      False (* WIP *)
+  end.
+
+#[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
+  (at level 20, no associativity, format "PUB⟨ a , b ⟩").
+
+#[global] Instance publicly_related_persistent t t' : Persistent (PUB⟨t, t'⟩).
+Proof. elim/term_ind': t t' => /=; apply _. Qed.
+
+#[global] Instance publicly_related_timeless t t' : Timeless (PUB⟨t, t'⟩).
+Proof. elim/term_ind': t t' => /=; apply _. Qed.
+
+Section Invariant.
+
+Definition not_Public st : Prop :=
+  match st with
+  | Public _ => False
+  | _ => True
+  end.
+
+Definition public_rel_Private_l_protected pub_l flow_l : Prop :=
+  ∀ t st, pub_l !! t = Some st → not_Public st →
+    is_nonce t ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1).
+
+Definition public_rel_Private_r_protected pub_r flow_r : Prop :=
+  ∀ t' st, pub_r !! t' = Some st → not_Public st →
+    is_nonce t' ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1).
+
+Definition public_rel_Private_protected pub_l pub_r flow_l flow_r : Prop :=
+  public_rel_Private_l_protected pub_l flow_l ∧
+  public_rel_Private_r_protected pub_r flow_r.
+
+Definition public_rel_Public_bijection pub_l pub_r : Prop :=
+  ∀ t t', pub_l !! t = Some (Public t') ↔ pub_r !! t' = Some (Public t).
+
+Definition public_rel_Public_consistent pub_l : iProp :=
+  ∀ t t', ⌜pub_l !! t = Some (Public t')⌝ → publicly_related t t'.
+
+Definition public_rel_flow_l_consistent pub_l flow_l : Prop :=
+  ∀ t ts, flow_l !! t = Some ts → ts ≠ ∅ →
+    set_Forall (is_immediate_subterm t) ts ∧
+    (is_nonce t ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1)) ∧
+    ((pub_l !! t = None) ∨ (∃ st, pub_l !! t = Some st ∧ not_Public st)).
+
+Definition public_rel_flow_r_consistent pub_r flow_r : Prop :=
+  ∀ t' ts, flow_r !! t' = Some ts → ts ≠ ∅ →
+    set_Forall (is_immediate_subterm t') ts ∧
+    (is_nonce t' ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1)) ∧
+    ((pub_r !! t' = None) ∨ (∃ st, pub_r !! t' = Some st ∧ not_Public st)).
+
+Definition public_rel_flow_consistent pub_l pub_r flow_l flow_r : Prop :=
+  public_rel_flow_l_consistent pub_l flow_l ∧
+  public_rel_flow_r_consistent pub_r flow_r.
+
+Definition public_rel_inv pub_l pub_r flow_l flow_r : iProp :=
+  public_rel_map_inv pub_l pub_r ∗
+  public_rel_flow_inv flow_l flow_r ∗
+  ⌜public_rel_Private_protected pub_l pub_r flow_l flow_r⌝ ∗
+  ⌜public_rel_Public_bijection pub_l pub_r⌝ ∗
+  public_rel_Public_consistent pub_l ∗
+  ⌜public_rel_flow_consistent pub_l pub_r flow_l flow_r⌝.
+
+Definition public_rel_ctx : iProp :=
+  inv cryptisN (∃ pub_l pub_r flow_l flow_r, public_rel_inv pub_l pub_r flow_l flow_r).
+
+Definition cryptis_rel_ctx : iProp :=
+  term_meta_ctx ∗ term_meta_spec_ctx ∗ public_rel_ctx.
+
+#[global] Instance cryptis_rel_ctx_has_term_meta_ctx : HasTermMetaCtx cryptis_rel_ctx.
+Proof. split; last apply _. by iIntros "#[H _]". Qed.
+
+#[global] Instance cryptis_rel_ctx_has_term_meta_spec_ctx : HasTermMetaSpecCtx cryptis_rel_ctx.
+Proof. split; last apply _. by iIntros "#[_ [H _]]". Qed.
+
+Lemma public_rel_Public_consistent_r pub_l pub_r t t' :
+  public_rel_Public_bijection pub_l pub_r →
+  pub_r !! t' = Some (Public t) →
+  public_rel_Public_consistent pub_l -∗
+  publicly_related t t'.
+Proof.
+move=> Hbij Ht'. iIntros "Hcons". iApply "Hcons". iPureIntro. by apply Hbij.
+Qed.
+
+End Invariant.
+
+End PublicRel.
+
+Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
+  (at level 20, no associativity, format "PUB⟨ a , b ⟩").
+
+Lemma public_relGS_alloc `{!relocG Σ} E :
+  public_relGpreS Σ →
+  ⊢ |={E}=> ∃ (H : public_relGS Σ),
+              public_rel_ctx.
+Proof.
+move=> ?; iStartProof.
+iMod term_metaGS_alloc as "[% #?]".
+iMod term_meta_specGS_alloc as "[% #?]".
+iMod (own_alloc (● (∅ : gmapUR term (authUR (optionUR stateR)))))
+  as "[%public_rel_map_l Hmap_l]"; first by apply auth_auth_valid.
+iMod (own_alloc (● (∅ : gmapUR term (authUR (optionUR stateR)))))
+  as "[%public_rel_map_r Hmap_r]"; first by apply auth_auth_valid.
+iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
+  as "[%public_rel_flow_l Hflow_l]"; first by apply auth_auth_valid.
+iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
+  as "[%public_rel_flow_r Hflow_r]"; first by apply auth_auth_valid.
+pose (Hpub := Public_relGS _ _ _ _ _
+                public_rel_map_l public_rel_map_r
+                public_rel_flow_l public_rel_flow_r).
+iExists Hpub.
+iMod (inv_alloc cryptisN _
+        (∃ pub_l pub_r flow_l flow_r, public_rel_inv pub_l pub_r flow_l flow_r)%I
+        with "[Hmap_l Hmap_r Hflow_l Hflow_r]") as "#Hinv"; last by iFrame "#".
+iModIntro. iExists ∅, ∅, ∅, ∅.
+rewrite /public_rel_inv /public_rel_map_inv /public_rel_flow_inv
+        /public_rel_map_l_auth /public_rel_map_r_auth
+        /public_rel_flow_l_auth /public_rel_flow_r_auth
+        !fmap_empty !dom_empty_L !big_sepM_empty !big_sepS_empty.
+iFrame. rewrite !left_id.
+iSplit; [|iSplit; [|iSplit]].
+- iPureIntro. split; move=> t ts; by rewrite lookup_empty => ?.
+- iPureIntro. move=> t t'. rewrite !lookup_empty. by split=> ?.
+- iIntros (t t') "%Hcontra". by rewrite lookup_empty in Hcontra.
+- iPureIntro. split; move=> t ts; by rewrite lookup_empty => ?.
+Qed.
 
 Section Rel.
 
