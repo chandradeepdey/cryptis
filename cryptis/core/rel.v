@@ -666,8 +666,30 @@ Fixpoint publicly_related t t' : iProp :=
     □ (match k with
       | TKey kt k1 =>
         match kt with
-        | ADec |Sign | Verify => False
+        | ADec | Sign | Verify => False
         | AEnc | SEnc => secret_in_l k1
+        end
+      | _ => False
+      end)
+  | TNonce a, THash t1' => publicly_linked t t' ∧ secret_in_r t1'
+  | THash t1, TNonce a' => publicly_linked t t' ∧ secret_in_l t1
+  | TSeal k t1, THash t1' =>
+    publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
+    □ (match k with
+      | TKey kt k1 =>
+        match kt with
+        | ADec | Sign | Verify => False
+        | AEnc | SEnc => secret_in_l k1
+        end
+      | _ => False
+      end)
+  | THash t1, TSeal k' t1' =>
+    publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
+    □ (match k' with
+      | TKey kt' k1' =>
+        match kt' with
+        | ADec | Sign | Verify => False
+        | AEnc | SEnc => secret_in_r k1'
         end
       | _ => False
       end)
