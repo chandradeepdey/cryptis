@@ -105,6 +105,19 @@ case: t => /= *; try by iIntros "(_ & _ & [])".
 - by iIntros "(_ & _ & ? & _)".
 Qed.
 
+Lemma publicly_related_nonce t t' :
+  is_nonce t → is_nonce t' →
+  PUB⟨t, t'⟩ ⊣⊢ minted t ∧ minted_spec t' ∧ publicly_linked t t'.
+Proof. by move=> /is_nonceP [a ->] /is_nonceP [a' ->]. Qed.
+
+Lemma publicly_related_nonce_term t t' :
+  is_nonce t → PUB⟨t, t'⟩ -∗ publicly_linked t t'.
+Proof. move=> /is_nonceP [a ->]. exact: publicly_related_TNonce_term. Qed.
+
+Lemma publicly_related_term_nonce t t' :
+  is_nonce t' → PUB⟨t, t'⟩ -∗ publicly_linked t t'.
+Proof. move=> /is_nonceP [a' ->]. exact: publicly_related_term_TNonce. Qed.
+
 Lemma publicly_related_TKey kt kt' t t' :
   PUB⟨TKey kt t, TKey kt' t'⟩ ⊣⊢
   ⌜kt = kt'⌝ ∧
@@ -356,7 +369,7 @@ Section PartBij.
   public_rel_flow_l_consistent pub_l flow_l →
   (∃ st, pub_l !! t = Some st ∧ not_Public st) ∨ (∃ ts, flow_l !! t = Some ts ∧ ts ≠ ∅) →
   (∀ t', pub_l !! t ≠ Some (Public t')) ∧
-  ((∃ a, t = TNonce a) ∨
+  (is_nonce t ∨
    ∃ tsub, is_immediate_subterm tsub t ∧
      ((∃ st, pub_l !! tsub = Some st ∧ not_Public st) ∨
       (∃ ts, flow_l !! tsub = Some ts ∧ ts ≠ ∅))).
@@ -382,7 +395,7 @@ Qed.
   public_rel_flow_r_consistent pub_r flow_r →
   (∃ st, pub_r !! t' = Some st ∧ not_Public st) ∨ (∃ ts, flow_r !! t' = Some ts ∧ ts ≠ ∅) →
   (∀ t, pub_r !! t' ≠ Some (Public t)) ∧
-  ((∃ a', t' = TNonce a') ∨
+  (is_nonce t' ∨
    ∃ t'sub, is_immediate_subterm t'sub t' ∧
      ((∃ st, pub_r !! t'sub = Some st ∧ not_Public st) ∨
       (∃ ts, flow_r !! t'sub = Some ts ∧ ts ≠ ∅))).
@@ -414,10 +427,10 @@ move=> HPriv Hcons.
 elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   iIntros "Hauth" (t') "#Hpub";
   case: (public_rel_protected_inv_l HPriv Hcons Hprot) => HnotPub Hsub.
-- case: Hsub => [[? ?]|[tsub [Hsub _]]] //. by inversion Hsub.
+- case: Hsub => [[]|[tsub [Hsub _]]] //. by inversion Hsub.
 - iDestruct (publicly_related_TPair_term with "Hpub") as %(a' & b' & ->).
   rewrite publicly_related_TPair. iDestruct "Hpub" as "[Ha Hb]".
-  case: Hsub => [[? ?]|[tsub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[tsub [Hsub Hprot']]] //.
   inversion Hsub; subst.
   + iApply (IHa Hprot' with "Hauth Ha").
   + iApply (IHb Hprot' with "Hauth Hb").
@@ -426,7 +439,7 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   by case: (HnotPub _ Hlookup).
 - case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   iDestruct "Hpub" as "(_ & _ & <- & Hpub)".
-  case: Hsub => [[? ?]|[tsub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[tsub [Hsub Hprot']]] //.
   inversion Hsub; subst.
   destruct kt;
     try (by iApply (IH Hprot' with "Hauth Hpub"));
@@ -438,7 +451,7 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   { iDestruct "Hpub" as "(_ & _ & Hel & _)".
     iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
-  case: Hsub => [[? ?]|[tsub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[tsub [Hsub Hprot']]] //.
   iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
   { iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
@@ -446,7 +459,7 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   + iApply (IHk Hprot' with "Hauth Hk").
   + iApply (IHb Hprot' with "Hauth Hb").
 - case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
-  case: Hsub => [[? ?]|[tsub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[tsub [Hsub Hprot']]] //.
   inversion Hsub; subst.
   iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
     first by iApply (IH Hprot' with "Hauth Hpub").
@@ -466,10 +479,10 @@ move=> HPriv Hcons.
 elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   iIntros "Hauth" (t) "#Hpub";
   case: (public_rel_protected_inv_r HPriv Hcons Hprot) => HnotPub Hsub.
-- case: Hsub => [[? ?]|[t'sub [Hsub _]]] //. by inversion Hsub.
+- case: Hsub => [[]|[t'sub [Hsub _]]] //. by inversion Hsub.
 - iDestruct (publicly_related_term_TPair with "Hpub") as %(a' & b' & ->).
   rewrite publicly_related_TPair. iDestruct "Hpub" as "[Ha Hb]".
-  case: Hsub => [[? ?]|[t'sub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[t'sub [Hsub Hprot']]] //.
   inversion Hsub; subst.
   + iApply (IHa Hprot' with "Hauth Ha").
   + iApply (IHb Hprot' with "Hauth Hb").
@@ -478,7 +491,7 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   by case: (HnotPub _ Hlookup).
 - case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   iDestruct "Hpub" as "(_ & _ & -> & Hpub)".
-  case: Hsub => [[? ?]|[t'sub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[t'sub [Hsub Hprot']]] //.
   inversion Hsub; subst.
   destruct kt;
     try (by iApply (IH Hprot' with "Hauth Hpub"));
@@ -490,7 +503,7 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   { iDestruct "Hpub" as "(_ & _ & Hel & _)".
     iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
-  case: Hsub => [[? ?]|[t'sub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[t'sub [Hsub Hprot']]] //.
   iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
   { iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
@@ -498,7 +511,7 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   + iApply (IHk Hprot' with "Hauth Hk").
   + iApply (IHb Hprot' with "Hauth Hb").
 - case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
-  case: Hsub => [[? ?]|[t'sub [Hsub Hprot']]] //.
+  case: Hsub => [[]|[t'sub [Hsub Hprot']]] //.
   inversion Hsub; subst.
   iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
     first by iApply (IH Hprot' with "Hauth Hpub").

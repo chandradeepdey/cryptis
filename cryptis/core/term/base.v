@@ -348,6 +348,12 @@ Definition is_mul t :=
 Lemma is_nonce_unfold t : is_nonce t = PreTerm.is_nonce (unfold_term t).
 Proof. by case: t => //= pt _ nf; move: nf; case: pt. Qed.
 
+Lemma is_nonceP t : is_nonce t ↔ ∃ a, t = TNonce a.
+Proof.
+split; last by case=> a ->.
+by case: t => [n|t1 t2|a|kt t|k t|t|pt wf nf] []; exists a.
+Qed.
+
 Lemma is_inv_unfold t : is_inv t = PreTerm.is_inv (unfold_term t).
 Proof. by case: t. Qed.
 

@@ -185,11 +185,12 @@ Lemma rel_mk_aenc_key_l K e (T_sk T_pk : term → gset term) Ψ :
   (∀ sk : aenc_key, [∗ set] t' ∈ T_sk sk, □ (minted sk ↔ minted t')) -∗
   (∀ sk : aenc_key, [∗ set] t' ∈ T_pk (Spec.pkey sk),
      □ (minted (Spec.pkey sk) ↔ minted t')) -∗
-  (∀ x, minted (AEncKey (TNonce x)) -∗
-    term_token (TNonce x) ⊤ -∗
-    ([∗ set] t' ∈ T_sk (AEncKey (TNonce x)), term_token t' ⊤) -∗
-    ([∗ set] t' ∈ T_pk (Spec.pkey (AEncKey (TNonce x))), term_token t' ⊤) -∗
-    (REL fill K (AEncKey (TNonce x) : expr) << e : Ψ)) -∗
+  (∀ sk : aenc_key, ⌜is_nonce (seed_of_aenc_key sk)⌝ -∗
+    minted sk -∗
+    term_token (seed_of_aenc_key sk) ⊤ -∗
+    ([∗ set] t' ∈ T_sk sk, term_token t' ⊤) -∗
+    ([∗ set] t' ∈ T_pk (Spec.pkey sk), term_token t' ⊤) -∗
+    (REL fill K (sk : expr) << e : Ψ)) -∗
   REL fill K (mk_aenc_key #()) << e : Ψ.
 Proof.
 iIntros (Hdisj) "#Hctx #minted_sk #minted_pk mint"; rewrite /mk_aenc_key.
@@ -209,16 +210,15 @@ rel_apply_l (rel_mk_nonce_l _ _
   - iSpecialize ("minted_pk" $! (AEncKey t)).
     by setoid_rewrite minted_pkey; setoid_rewrite minted_aenc. }
 iIntros (t) "%Hnonce #Hmint Htt".
-case: t Hnonce => [| |a| | | |] Hnonce; try by case: Hnonce.
-case: (Hdisj (AEncKey a)) => [Hseed_sk [Hseed_pk Hsk_pk]].
-have Hseed : seed_of_aenc_key (AEncKey a) = TNonce a by [].
+case: (Hdisj (AEncKey t)) => [Hseed_sk [Hseed_pk Hsk_pk]].
+have Hseed : seed_of_aenc_key (AEncKey t) = t by [].
 rewrite Hseed in Hseed_sk Hseed_pk.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htt" as "[[Htt_seed Htt_sk] Htt_pk]".
 rel_pures_l. rel_apply_l rel_derive_aenc_key_l.
-iApply ("mint" $! a with "[] Htt_seed Htt_sk Htt_pk").
+iApply ("mint" $! (AEncKey t) with "[//] [] Htt_seed Htt_sk Htt_pk").
 by iApply minted_aenc.
 Qed.
 
@@ -231,11 +231,12 @@ Lemma rel_mk_aenc_key_r K e (T_sk T_pk : term → gset term) Ψ :
   (∀ sk : aenc_key, [∗ set] t' ∈ T_sk sk, □ (minted_spec sk ↔ minted_spec t')) -∗
   (∀ sk : aenc_key, [∗ set] t' ∈ T_pk (Spec.pkey sk),
      □ (minted_spec (Spec.pkey sk) ↔ minted_spec t')) -∗
-  (∀ x, minted_spec (AEncKey (TNonce x)) -∗
-    term_token_spec (TNonce x) ⊤ -∗
-    ([∗ set] t' ∈ T_sk (AEncKey (TNonce x)), term_token_spec t' ⊤) -∗
-    ([∗ set] t' ∈ T_pk (Spec.pkey (AEncKey (TNonce x))), term_token_spec t' ⊤) -∗
-    (REL e << fill K (AEncKey (TNonce x) : expr) : Ψ)) -∗
+  (∀ sk : aenc_key, ⌜is_nonce (seed_of_aenc_key sk)⌝ -∗
+    minted_spec sk -∗
+    term_token_spec (seed_of_aenc_key sk) ⊤ -∗
+    ([∗ set] t' ∈ T_sk sk, term_token_spec t' ⊤) -∗
+    ([∗ set] t' ∈ T_pk (Spec.pkey sk), term_token_spec t' ⊤) -∗
+    (REL e << fill K (sk : expr) : Ψ)) -∗
   REL e << fill K (mk_aenc_key #()) : Ψ.
 Proof.
 iIntros (Hdisj) "#Hctx #minted_sk #minted_pk mint"; rewrite /mk_aenc_key.
@@ -255,22 +256,21 @@ rel_apply_r (rel_mk_nonce_r _ _
   - iSpecialize ("minted_pk" $! (AEncKey t)).
     by setoid_rewrite minted_spec_pkey; setoid_rewrite minted_spec_aenc. }
 iIntros (t) "%Hnonce #Hmint Htts".
-case: t Hnonce => [| |a| | | |] Hnonce; try by case: Hnonce.
-case: (Hdisj (AEncKey a)) => [Hseed_sk [Hseed_pk Hsk_pk]].
-have Hseed : seed_of_aenc_key (AEncKey a) = TNonce a by [].
+case: (Hdisj (AEncKey t)) => [Hseed_sk [Hseed_pk Hsk_pk]].
+have Hseed : seed_of_aenc_key (AEncKey t) = t by [].
 rewrite Hseed in Hseed_sk Hseed_pk.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htts" as "[[Htts_seed Htts_sk] Htts_pk]".
 rel_pures_r. rel_apply_r rel_derive_aenc_key_r.
-iApply ("mint" $! a with "[] Htts_seed Htts_sk Htts_pk").
+iApply ("mint" $! (AEncKey t) with "[//] [] Htts_seed Htts_sk Htts_pk").
 by iApply minted_spec_aenc.
 Qed.
 
 Lemma rel_mk_sign_key_l K e Ψ :
   cryptis_rel_ctx -∗
-  (∀ sk : sign_key, minted sk -∗ term_token sk ⊤ -∗
+  (∀ sk : sign_key, ⌜is_nonce (seed_of_sign_key sk)⌝ -∗ minted sk -∗ term_token sk ⊤ -∗
     (REL fill K (sk : expr) << e : Ψ)) -∗
   REL fill K (mk_sign_key #()) << e : Ψ.
 Proof.
@@ -286,7 +286,7 @@ Qed.
 
 Lemma rel_mk_sign_key_r K e Ψ :
   cryptis_rel_ctx -∗
-  (∀ sk : sign_key, minted_spec sk -∗ term_token_spec sk ⊤ -∗
+  (∀ sk : sign_key, ⌜is_nonce (seed_of_sign_key sk)⌝ -∗ minted_spec sk -∗ term_token_spec sk ⊤ -∗
     (REL e << fill K (sk : expr) : Ψ)) -∗
   REL e << fill K (mk_sign_key #()) : Ψ.
 Proof.
@@ -302,7 +302,7 @@ Qed.
 
 Lemma rel_mk_senc_key_l K e Ψ :
   cryptis_rel_ctx -∗
-  (∀ k : senc_key, minted k -∗ term_token k ⊤ -∗
+  (∀ k : senc_key, ⌜is_nonce (seed_of_senc_key k)⌝ -∗ minted k -∗ term_token k ⊤ -∗
     (REL fill K (k : expr) << e : Ψ)) -∗
   REL fill K (mk_senc_key #()) << e : Ψ.
 Proof.
@@ -318,7 +318,7 @@ Qed.
 
 Lemma rel_mk_senc_key_r K e Ψ :
   cryptis_rel_ctx -∗
-  (∀ k : senc_key, minted_spec k -∗ term_token_spec k ⊤ -∗
+  (∀ k : senc_key, ⌜is_nonce (seed_of_senc_key k)⌝ -∗ minted_spec k -∗ term_token_spec k ⊤ -∗
     (REL e << fill K (k : expr) : Ψ)) -∗
   REL e << fill K (mk_senc_key #()) : Ψ.
 Proof.

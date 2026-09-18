@@ -694,11 +694,11 @@ Definition not_Public st : Prop :=
 
 Definition public_rel_Private_l_protected pub_l flow_l : Prop :=
   ∀ t st, pub_l !! t = Some st → not_Public st →
-    (∃ a, t = TNonce a) ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1).
+    is_nonce t ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1).
 
 Definition public_rel_Private_r_protected pub_r flow_r : Prop :=
   ∀ t' st, pub_r !! t' = Some st → not_Public st →
-    (∃ a', t' = TNonce a') ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1).
+    is_nonce t' ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1).
 
 Definition public_rel_Private_protected pub_l pub_r flow_l flow_r : Prop :=
   public_rel_Private_l_protected pub_l flow_l ∧
@@ -713,13 +713,13 @@ Definition public_rel_Public_consistent pub_l : iProp :=
 Definition public_rel_flow_l_consistent pub_l flow_l : Prop :=
   ∀ t ts, flow_l !! t = Some ts → ts ≠ ∅ →
     set_Forall (is_immediate_subterm t) ts ∧
-    ((∃ a, t = TNonce a) ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1)) ∧
+    (is_nonce t ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1)) ∧
     ((pub_l !! t = None) ∨ (∃ st, pub_l !! t = Some st ∧ not_Public st)).
 
 Definition public_rel_flow_r_consistent pub_r flow_r : Prop :=
   ∀ t' ts, flow_r !! t' = Some ts → ts ≠ ∅ →
     set_Forall (is_immediate_subterm t') ts ∧
-    ((∃ a', t' = TNonce a') ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1)) ∧
+    (is_nonce t' ∨ (∃ t'sub ts1, flow_r !! t'sub = Some ts1 ∧ t' ∈ ts1)) ∧
     ((pub_r !! t' = None) ∨ (∃ st, pub_r !! t' = Some st ∧ not_Public st)).
 
 Definition public_rel_flow_consistent pub_l pub_r flow_l flow_r : Prop :=
@@ -1081,16 +1081,18 @@ iPureIntro. split; last split; [|done|].
   + exists t'sub, ts2. by rewrite lookup_insert_ne.
 Qed.
 
-Lemma public_rel_flow_l_grow_2 E a tsup :
+Lemma public_rel_flow_l_grow_2 E t tsup :
+  is_nonce t →
   ↑cryptisN ⊆ E →
-  is_immediate_subterm (TNonce a) tsup →
+  is_immediate_subterm t tsup →
   cryptis_rel_ctx -∗
-  protects_superterms_l (TNonce a) ∅ -∗
-  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> protects_superterms_l (TNonce a) {[ tsup ]} ∗
-          protected_by_subterm_l tsup (TNonce a) ∗
-          term_token (TNonce a) (↑cryptisN.@"public_rel".@"map").
+  protects_superterms_l t ∅ -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_l t {[ tsup ]} ∗
+          protected_by_subterm_l tsup t ∗
+          term_token t (↑cryptisN.@"public_rel".@"map").
 Proof.
+move=> /is_nonceP [a ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
@@ -1141,16 +1143,18 @@ iPureIntro. split; last split; [|done|].
   by left.
 Qed.
 
-Lemma public_rel_flow_r_grow_2 E a' t'sup :
+Lemma public_rel_flow_r_grow_2 E t' t'sup :
+  is_nonce t' →
   ↑cryptisN ⊆ E →
-  is_immediate_subterm (TNonce a') t'sup →
+  is_immediate_subterm t' t'sup →
   cryptis_rel_ctx -∗
-  protects_superterms_r (TNonce a') ∅ -∗
-  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> protects_superterms_r (TNonce a') {[ t'sup ]} ∗
-          protected_by_subterm_r t'sup (TNonce a') ∗
-          term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map").
+  protects_superterms_r t' ∅ -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
+          protected_by_subterm_r t'sup t' ∗
+          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
 Proof.
+move=> /is_nonceP [a' ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
@@ -1463,16 +1467,18 @@ iPureIntro. split; last split; [|done|].
   + exists t'sub, ts3. by rewrite lookup_insert_ne.
 Qed.
 
-Lemma public_rel_flow_l_grow_5 E a t1' tsup :
+Lemma public_rel_flow_l_grow_5 E t t1' tsup :
+  is_nonce t →
   ↑cryptisN ⊆ E →
-  is_immediate_subterm (TNonce a) tsup →
+  is_immediate_subterm t tsup →
   cryptis_rel_ctx -∗
-  protects_superterms_l (TNonce a) ∅ -∗
-  pending_in_l (TNonce a) t1' -∗
-  |={E}=> protects_superterms_l (TNonce a) {[ tsup ]} ∗
-          protected_by_subterm_l tsup (TNonce a) ∗
-          pending_in_l (TNonce a) t1'.
+  protects_superterms_l t ∅ -∗
+  pending_in_l t t1' -∗
+  |={E}=> protects_superterms_l t {[ tsup ]} ∗
+          protected_by_subterm_l tsup t ∗
+          pending_in_l t t1'.
 Proof.
+move=> /is_nonceP [a ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Hfrag".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
@@ -1525,16 +1531,18 @@ iPureIntro. split; last split; [|done|].
   right. by exists (Private t1').
 Qed.
 
-Lemma public_rel_flow_r_grow_5 E a' t1 t'sup :
+Lemma public_rel_flow_r_grow_5 E t' t1 t'sup :
+  is_nonce t' →
   ↑cryptisN ⊆ E →
-  is_immediate_subterm (TNonce a') t'sup →
+  is_immediate_subterm t' t'sup →
   cryptis_rel_ctx -∗
-  protects_superterms_r (TNonce a') ∅ -∗
-  pending_in_r t1 (TNonce a') -∗
-  |={E}=> protects_superterms_r (TNonce a') {[ t'sup ]} ∗
-          protected_by_subterm_r t'sup (TNonce a') ∗
-          pending_in_r t1 (TNonce a').
+  protects_superterms_r t' ∅ -∗
+  pending_in_r t1 t' -∗
+  |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
+          protected_by_subterm_r t'sup t' ∗
+          pending_in_r t1 t'.
 Proof.
+move=> /is_nonceP [a' ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Hfrag".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
@@ -2716,13 +2724,15 @@ iPureIntro. split; last split.
   do 2 (split=> //). rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
-Lemma public_rel_map_l_extend_2 E a t' :
+Lemma public_rel_map_l_extend_2 E t t' :
+  is_nonce t →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> linked_in_l (TNonce a) t' ∗
-          pending_in_l (TNonce a) t'.
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> linked_in_l t t' ∗
+          pending_in_l t t'.
 Proof.
+move=> /is_nonceP [a ->].
 iIntros (HE) "#(_ & _ & Hinv) Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
@@ -2764,13 +2774,15 @@ destruct (Hflow_l_cons _ _ Hflow Hts1) as (? & ? & ?).
 do 2 (split=> //). rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
-Lemma public_rel_map_r_extend_2 E t a' :
+Lemma public_rel_map_r_extend_2 E t t' :
+  is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> linked_in_r t (TNonce a') ∗
-          pending_in_r t (TNonce a').
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> linked_in_r t t' ∗
+          pending_in_r t t'.
 Proof.
+move=> /is_nonceP [a' ->].
 iIntros (HE) "#(_ & _ & Hinv) Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
@@ -2826,54 +2838,58 @@ rewrite /linked.
 by iFrame.
 Qed.
 
-Lemma linked_extend_2 E a t' t'sub :
+Lemma linked_extend_2 E t t' t'sub :
+  is_nonce t →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
   term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_r t' t'sub ∗
-          linked (TNonce a) t' ∗
-          pending_in_l (TNonce a) t' ∗
-          pending_in_r (TNonce a) t'.
+          linked t t' ∗
+          pending_in_l t t' ∗
+          pending_in_r t t'.
 Proof.
-iIntros (HE) "#Hctx Hprot Htt Htts".
-iPoseProof (public_rel_map_l_extend_2 a t' with "Hctx Htt") as ">[? ?]"=> //.
-iPoseProof (public_rel_map_r_extend (TNonce a) t' with "Hctx Hprot Htts") as ">[? [??]]"=> //.
+iIntros (Hnonce HE) "#Hctx Hprot Htt Htts".
+iPoseProof (public_rel_map_l_extend_2 t' Hnonce with "Hctx Htt") as ">[? ?]"=> //.
+iPoseProof (public_rel_map_r_extend t t' with "Hctx Hprot Htts") as ">[? [??]]"=> //.
 rewrite /linked.
 by iFrame.
 Qed.
 
-Lemma linked_extend_3 E t a' tsub :
+Lemma linked_extend_3 E t t' tsub :
+  is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
   term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
   |={E}=> protected_by_subterm_l t tsub ∗
-          linked t (TNonce a') ∗
-          pending_in_l t (TNonce a') ∗
-          pending_in_r t (TNonce a').
+          linked t t' ∗
+          pending_in_l t t' ∗
+          pending_in_r t t'.
 Proof.
-iIntros (HE) "#Hctx Hprot Htt Htts".
-iPoseProof (public_rel_map_l_extend t (TNonce a') with "Hctx Hprot Htt") as ">[? [??]]"=> //.
-iPoseProof (public_rel_map_r_extend_2 t a' with "Hctx Htts") as ">[? ?]"=> //.
+iIntros (Hnonce' HE) "#Hctx Hprot Htt Htts".
+iPoseProof (public_rel_map_l_extend t t' with "Hctx Hprot Htt") as ">[? [??]]"=> //.
+iPoseProof (public_rel_map_r_extend_2 t Hnonce' with "Hctx Htts") as ">[? ?]"=> //.
 rewrite /linked.
 by iFrame.
 Qed.
 
-Lemma linked_extend_4 E a a' :
+Lemma linked_extend_4 E t t' :
+  is_nonce t →
+  is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> linked (TNonce a) (TNonce a') ∗
-          pending_in_l (TNonce a) (TNonce a') ∗
-          pending_in_r (TNonce a) (TNonce a').
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> linked t t' ∗
+          pending_in_l t t' ∗
+          pending_in_r t t'.
 Proof.
-iIntros (HE) "#Hctx Htt Htts".
-iPoseProof (public_rel_map_l_extend_2 a a' with "Hctx Htt") as ">[? ?]"=> //.
-iPoseProof (public_rel_map_r_extend_2 a a' with "Hctx Htts") as ">[? ?]"=> //.
+iIntros (Hnonce Hnonce' HE) "#Hctx Htt Htts".
+iPoseProof (public_rel_map_l_extend_2 t' Hnonce with "Hctx Htt") as ">[? ?]"=> //.
+iPoseProof (public_rel_map_r_extend_2 t Hnonce' with "Hctx Htts") as ">[? ?]"=> //.
 rewrite /linked.
 by iFrame.
 Qed.
@@ -2994,25 +3010,27 @@ iMod (public_rel_lock_Secret_r with "Hctx Hpend") as "#?"=> //.
 by iFrame.
 Qed.
 
-Lemma public_rel_secret_l_2 E a :
+Lemma public_rel_secret_l_2 E t :
+  is_nonce t →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> secret_in_l (TNonce a).
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> secret_in_l t.
 Proof.
-iIntros (HE) "#Hctx Htt".
-iMod (public_rel_map_l_extend_2 a (TNonce a) with "Hctx Htt") as "[_ Hpend]"=> //.
+iIntros (Hnonce HE) "#Hctx Htt".
+iMod (public_rel_map_l_extend_2 t Hnonce with "Hctx Htt") as "[_ Hpend]"=> //.
 by iMod (public_rel_lock_Secret_l with "Hctx Hpend") as "#?".
 Qed.
 
-Lemma public_rel_secret_r_2 E a' :
+Lemma public_rel_secret_r_2 E t' :
+  is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
-  |={E}=> secret_in_r (TNonce a').
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> secret_in_r t'.
 Proof.
-iIntros (HE) "#Hctx Htts".
-iMod (public_rel_map_r_extend_2 (TNonce a') a' with "Hctx Htts") as "[_ Hpend]"=> //.
+iIntros (Hnonce' HE) "#Hctx Htts".
+iMod (public_rel_map_r_extend_2 t' Hnonce' with "Hctx Htts") as "[_ Hpend]"=> //.
 by iMod (public_rel_lock_Secret_r with "Hctx Hpend") as "#?".
 Qed.
 
