@@ -902,6 +902,7 @@ Proof.
 case: t' => /= *; try by iIntros "(_ & _ & [])".
 - by iIntros "(_ & _ & ?)".
 - by iIntros "(_ & _ & ? & _)".
+- by iIntros "(_ & _ & ? & _)".
 Qed.
 
 Lemma publicly_related_term_TNonce (t : term) a' :
@@ -909,6 +910,7 @@ Lemma publicly_related_term_TNonce (t : term) a' :
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
 - by iIntros "(_ & _ & ?)".
+- by iIntros "(_ & _ & ? & _)".
 - by iIntros "(_ & _ & ? & _)".
 Qed.
 
@@ -992,6 +994,51 @@ rewrite /= minted_THash minted_spec_THash. iSplit.
   iPoseProof (publicly_related_minted with "H") as "[? ?]".
   do 2 (iSplit; first done). by iLeft.
 Qed.
+
+Lemma publicly_related_TSeal_term k t (t' : term) :
+  PUB⟨TSeal k t, t'⟩ -∗
+  (∃ k' t1', ⌜t' = TSeal k' t1'⌝) ∨
+  (publicly_linked (TSeal k t) t' ∧ secret_in_l t).
+Proof.
+case: t' => /= *; try by iIntros "(_ & _ & [])".
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
+- iIntros "_". iLeft. by eauto.
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
+Qed.
+
+Lemma publicly_related_term_TSeal (t : term) k' t' :
+  PUB⟨t, TSeal k' t'⟩ -∗
+  (∃ k t1, ⌜t = TSeal k t1⌝) ∨
+  (publicly_linked t (TSeal k' t') ∧ secret_in_r t').
+Proof.
+case: t => /= *; try by iIntros "(_ & _ & [])".
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
+- iIntros "_". iLeft. by eauto.
+- iIntros "(_ & _ & ? & _ & ? & _)". iRight. by iSplit.
+Qed.
+
+Lemma publicly_related_THash_term t (t' : term) :
+  PUB⟨THash t, t'⟩ -∗
+  (∃ t1', ⌜t' = THash t1'⌝) ∨
+  (publicly_linked (THash t) t' ∧ secret_in_l t).
+Proof.
+case: t' => /= *; try by iIntros "(_ & _ & [])".
+- iIntros "(_ & _ & ? & ?)". iRight. by iSplit.
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
+- iIntros "_". iLeft. by eauto.
+Qed.
+
+Lemma publicly_related_term_THash (t : term) t' :
+  PUB⟨t, THash t'⟩ -∗
+  (∃ t1, ⌜t = THash t1⌝) ∨
+  (publicly_linked t (THash t') ∧ secret_in_r t').
+Proof.
+case: t => /= *; try by iIntros "(_ & _ & [])".
+- iIntros "(_ & _ & ? & ?)". iRight. by iSplit.
+- iIntros "(_ & _ & ? & _ & ? & _)". iRight. by iSplit.
+- iIntros "_". iLeft. by eauto.
+Qed.
+
 
 Lemma publicly_related_open k k' t t' t1 t1' :
   Spec.open k t = Some t1 →
@@ -1254,21 +1301,26 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
      [ by iApply (IH Hprot' with "Hauth Hpub")
      | iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
-- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
-  { iDestruct "Hpub" as "(_ & _ & Hel & _)".
-    iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
+- iDestruct (publicly_related_TSeal_term with "Hpub") as "[(%k' & %b' & ->)|[Hel _]]";
+    last first.
+  { iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   case: Hsub => [[]|[tsub [Hsub Hprot']]] //.
-  iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
+  rewrite publicly_related_TSeal.
+  iDestruct "Hpub" as "[[Hk Hb]|(_ & _ & Hel & _)]"; last first.
   { iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   inversion Hsub; subst.
   + iApply (IHk Hprot' with "Hauth Hk").
   + iApply (IHb Hprot' with "Hauth Hb").
-- case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+- iDestruct (publicly_related_THash_term with "Hpub") as "[(%s' & ->)|[Hel _]]";
+    last first.
+  { iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
+    by case: (HnotPub _ Hlookup). }
   case: Hsub => [[]|[tsub [Hsub Hprot']]] //.
   inversion Hsub; subst.
-  iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
+  rewrite publicly_related_THash.
+  iDestruct "Hpub" as "[Hpub|(_ & _ & Hel & _)]";
     first by iApply (IH Hprot' with "Hauth Hpub").
   iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
@@ -1306,21 +1358,26 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
      [ by iApply (IH Hprot' with "Hauth Hpub")
      | iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
-- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
-  { iDestruct "Hpub" as "(_ & _ & Hel & _)".
-    iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
+- iDestruct (publicly_related_term_TSeal with "Hpub") as "[(%k1 & %b1 & ->)|[Hel _]]";
+    last first.
+  { iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   case: Hsub => [[]|[t'sub [Hsub Hprot']]] //.
-  iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
+  rewrite publicly_related_TSeal.
+  iDestruct "Hpub" as "[[Hk Hb]|(_ & _ & Hel & _)]"; last first.
   { iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   inversion Hsub; subst.
   + iApply (IHk Hprot' with "Hauth Hk").
   + iApply (IHb Hprot' with "Hauth Hb").
-- case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
+- iDestruct (publicly_related_term_THash with "Hpub") as "[(%s1 & ->)|[Hel _]]";
+    last first.
+  { iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
+    by case: (HnotPub _ Hlookup). }
   case: Hsub => [[]|[t'sub [Hsub Hprot']]] //.
   inversion Hsub; subst.
-  iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
+  rewrite publicly_related_THash.
+  iDestruct "Hpub" as "[Hpub|(_ & _ & Hel & _)]";
     first by iApply (IH Hprot' with "Hauth Hpub").
   iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
@@ -1405,27 +1462,27 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
         by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->
       | by (iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %Heq;
             injection Heq as ->) ].
-- case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  { iPoseProof "H1" as "(_ & _ & _ & Hsecret & _)".
-    iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
-    case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-    - iDestruct "H1" as "(_ & _ & Hel1 & _)". iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iApply (publicly_linked_agree_l with "Hel1 Hel2").
-    - iDestruct "H2" as "(_ & _ & [[_ Hb2]|(Hel2 & _)])".
-      + by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
-                        (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb2") as "[]".
-      + iDestruct "H1" as "(_ & _ & Hel1 & _)".
-        by iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %[=]. }
-  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  { iPoseProof "H2" as "(_ & _ & _ & Hsecret & _)".
-    iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
-    iDestruct "H1" as "(_ & _ & [[_ Hb1]|(Hel1 & _)])".
-    + by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
-                      (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb1") as "[]".
-    + iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %[=]. }
-  iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [Hpk1 _] & [Hpb1 _] & _)])";
-  iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [Hpk2 _] & [Hpb2 _] & _)])".
+- iDestruct (publicly_related_TSeal_term with "H1") as "[(%k1' & %b1' & ->)|[Hel1 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
+    iDestruct (publicly_related_TSeal_term with "H2") as "[(%k2' & %b2' & ->)|[Hel2 _]]";
+      last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
+    rewrite publicly_related_TSeal.
+    iDestruct "H2" as "[[_ Hb2]|(_ & _ & Hel2 & _)]";
+      last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
+                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb2") as "[]". }
+  iDestruct (publicly_related_TSeal_term with "H2") as "[(%k2' & %b2' & ->)|[Hel2 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
+    rewrite publicly_related_TSeal.
+    iDestruct "H1" as "[[_ Hb1]|(_ & _ & Hel1 & _)]";
+      last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
+                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb1") as "[]". }
+  rewrite !publicly_related_TSeal.
+  iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & [Hpk1 _] & [Hpb1 _] & _)]";
+  iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & [Hpk2 _] & [Hpb2 _] & _)]".
   + iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
   + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
@@ -1442,10 +1499,27 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
   + iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %Heq.
     by injection Heq as -> ->.
-- case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  iDestruct "H1" as "(_ & _ & [H1|[Hel1 [Hpriv1 _]]])";
-  iDestruct "H2" as "(_ & _ & [H2|[Hel2 [Hpriv2 _]]])".
+- iDestruct (publicly_related_THash_term with "H1") as "[(%s1' & ->)|[Hel1 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hs.
+    iDestruct (publicly_related_THash_term with "H2") as "[(%s2' & ->)|[Hel2 _]]";
+      last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
+    rewrite publicly_related_THash.
+    iDestruct "H2" as "[H2|(_ & _ & Hel2 & _)]";
+      last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
+                    (or_introl (ex_intro _ _ (conj Hs I))) with "Hmap_l H2") as "[]". }
+  iDestruct (publicly_related_THash_term with "H2") as "[(%s2' & ->)|[Hel2 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hs.
+    rewrite publicly_related_THash.
+    iDestruct "H1" as "[H1|(_ & _ & Hel1 & _)]";
+      last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
+                    (or_introl (ex_intro _ _ (conj Hs I))) with "Hmap_l H1") as "[]". }
+  rewrite !publicly_related_THash.
+  iDestruct "H1" as "[H1|(_ & _ & Hel1 & [Hpriv1 _])]";
+  iDestruct "H2" as "[H2|(_ & _ & Hel2 & [Hpriv2 _])]".
   + by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->.
   + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent H1 Hpriv2") as "#H2".
@@ -1503,27 +1577,27 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
         by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->
       | by (iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %Heq;
             injection Heq as ->) ].
-- case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  { iPoseProof "H1" as "(_ & _ & _ & Hsecret & _)".
-    iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
-    case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-    - iDestruct "H1" as "(_ & _ & Hel1 & _)". iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iApply (publicly_linked_agree_r with "Hel1 Hel2").
-    - iDestruct "H2" as "(_ & _ & [[_ Hb2]|(Hel2 & _)])".
-      + by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
-                        (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb2") as "[]".
-      + iDestruct "H1" as "(_ & _ & Hel1 & _)".
-        by iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %[=]. }
-  case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  { iPoseProof "H2" as "(_ & _ & _ & Hsecret & _)".
-    iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
-    iDestruct "H1" as "(_ & _ & [[_ Hb1]|(Hel1 & _)])".
-    + by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
-                      (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb1") as "[]".
-    + iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %[=]. }
-  iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [_ Hpk1] & [_ Hpb1] & _)])";
-  iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [_ Hpk2] & [_ Hpb2] & _)])".
+- iDestruct (publicly_related_term_TSeal with "H1") as "[(%k1 & %b1 & ->)|[Hel1 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
+    iDestruct (publicly_related_term_TSeal with "H2") as "[(%k2 & %b2 & ->)|[Hel2 _]]";
+      last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
+    rewrite publicly_related_TSeal.
+    iDestruct "H2" as "[[_ Hb2]|(_ & _ & Hel2 & _)]";
+      last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
+                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb2") as "[]". }
+  iDestruct (publicly_related_term_TSeal with "H2") as "[(%k2 & %b2 & ->)|[Hel2 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
+    rewrite publicly_related_TSeal.
+    iDestruct "H1" as "[[_ Hb1]|(_ & _ & Hel1 & _)]";
+      last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
+                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb1") as "[]". }
+  rewrite !publicly_related_TSeal.
+  iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & [_ Hpk1] & [_ Hpb1] & _)]";
+  iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & [_ Hpk2] & [_ Hpb2] & _)]".
   + iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
   + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
@@ -1540,10 +1614,27 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
   + iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %Heq.
     by injection Heq as -> ->.
-- case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  iDestruct "H1" as "(_ & _ & [H1|[Hel1 [_ Hpriv1]]])";
-  iDestruct "H2" as "(_ & _ & [H2|[Hel2 [_ Hpriv2]]])".
+- iDestruct (publicly_related_term_THash with "H1") as "[(%s1 & ->)|[Hel1 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hs.
+    iDestruct (publicly_related_term_THash with "H2") as "[(%s2 & ->)|[Hel2 _]]";
+      last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
+    rewrite publicly_related_THash.
+    iDestruct "H2" as "[H2|(_ & _ & Hel2 & _)]";
+      last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
+                    (or_introl (ex_intro _ _ (conj Hs I))) with "Hmap_r H2") as "[]". }
+  iDestruct (publicly_related_term_THash with "H2") as "[(%s2 & ->)|[Hel2 Hsecret]]";
+    last first.
+  { iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hs.
+    rewrite publicly_related_THash.
+    iDestruct "H1" as "[H1|(_ & _ & Hel1 & _)]";
+      last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
+    by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
+                    (or_introl (ex_intro _ _ (conj Hs I))) with "Hmap_r H1") as "[]". }
+  rewrite !publicly_related_THash.
+  iDestruct "H1" as "[H1|(_ & _ & Hel1 & [_ Hpriv1])]";
+  iDestruct "H2" as "[H2|(_ & _ & Hel2 & [_ Hpriv2])]".
   + by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->.
   + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent H1 Hpriv2") as "#H2".
