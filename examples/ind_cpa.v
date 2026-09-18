@@ -278,10 +278,8 @@ rewrite (term_token_spec_difference (Spec.pkey (AEncKey (TNonce a')))
   last solve_ndisj.
 iDestruct "token_spec_pkA'" as "[token_spec_pkA_map _]".
 (* The seeds never become public. *)
-iMod (linked_extend_4 (E:=⊤) a a' ltac:(solve_ndisj)
-        with "Hctx token_a token_spec_a") as "(#priv_a & frag_a & frag_a')".
-iMod (public_rel_lock_Secret_l (E:=⊤) (TNonce a) (TNonce a') ltac:(solve_ndisj)
-        with "Hctx frag_a") as "#secret_a".
+iMod (public_rel_secret_l_2 (E:=⊤) a ltac:(solve_ndisj) with "Hctx token_a") as "#secret_a".
+iMod (public_rel_secret_r_2 (E:=⊤) a' ltac:(solve_ndisj) with "Hctx token_spec_a") as "#secret_a'".
 (* The public keys are publicly related. *)
 iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey (AEncKey (TNonce a))) ltac:(solve_ndisj)
         with "Hctx token_pkA_flow token_pkA_map") as "[prot_pkA token_pkA_map]".
@@ -290,7 +288,8 @@ iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey (AEncKey (TNonce a'))) ltac:(
 iAssert (□ (publicly_linked (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a'))) -∗
             PUB⟨Spec.pkey (AEncKey (TNonce a)), Spec.pkey (AEncKey (TNonce a'))⟩))%I as "#Hwand".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
-  do 3 (iSplit; first done). done. }
+  do 3 (iSplit; first done).
+  iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
 iMod (public_rel_extend (E:=⊤) (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a')))
         ltac:(solve_ndisj)
         with "Hctx Hwand prot_pkA prot_pkA' token_pkA_map token_spec_pkA_map") as "#elem_pkA".

@@ -2968,6 +2968,54 @@ destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & ? & ?).
 do 2 (split=> //). rewrite lookup_insert; case_decide; naive_solver.
 Qed.
 
+Lemma public_rel_secret_l E t tsub :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  protected_by_subterm_l t tsub -∗
+  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protected_by_subterm_l t tsub ∗ secret_in_l t.
+Proof.
+iIntros (HE) "#Hctx Hprot Htt".
+iMod (public_rel_map_l_extend t t with "Hctx Hprot Htt") as "(Hprot & _ & Hpend)"=> //.
+iMod (public_rel_lock_Secret_l with "Hctx Hpend") as "#?"=> //.
+by iFrame.
+Qed.
+
+Lemma public_rel_secret_r E t' t'sub :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  protected_by_subterm_r t' t'sub -∗
+  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> protected_by_subterm_r t' t'sub ∗ secret_in_r t'.
+Proof.
+iIntros (HE) "#Hctx Hprot Htts".
+iMod (public_rel_map_r_extend t' t' with "Hctx Hprot Htts") as "(Hprot & _ & Hpend)"=> //.
+iMod (public_rel_lock_Secret_r with "Hctx Hpend") as "#?"=> //.
+by iFrame.
+Qed.
+
+Lemma public_rel_secret_l_2 E a :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token (TNonce a) (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> secret_in_l (TNonce a).
+Proof.
+iIntros (HE) "#Hctx Htt".
+iMod (public_rel_map_l_extend_2 a (TNonce a) with "Hctx Htt") as "[_ Hpend]"=> //.
+by iMod (public_rel_lock_Secret_l with "Hctx Hpend") as "#?".
+Qed.
+
+Lemma public_rel_secret_r_2 E a' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  term_token_spec (TNonce a') (↑cryptisN.@"public_rel".@"map") -∗
+  |={E}=> secret_in_r (TNonce a').
+Proof.
+iIntros (HE) "#Hctx Htts".
+iMod (public_rel_map_r_extend_2 (TNonce a') a' with "Hctx Htts") as "[_ Hpend]"=> //.
+by iMod (public_rel_lock_Secret_r with "Hctx Hpend") as "#?".
+Qed.
+
 (*
 You will probably need a custom version of this lemma tailored to the
 declassification you want to attempt.
