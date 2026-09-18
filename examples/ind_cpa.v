@@ -56,14 +56,14 @@ Lemma rel_aenc' (a a' : nonce) (m m' : term) (Ψ : val → val → iProp) :
   cryptis_rel_ctx -∗
   minted (Spec.pkey (AEncKey (TNonce a))) -∗
   minted_spec (Spec.pkey (AEncKey (TNonce a'))) -∗
-  public_rel_elem (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a'))) -∗
-  private_rel_elem_l (TNonce a) (TInt 0) -∗
+  publicly_linked (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a'))) -∗
+  secret_in_l (TNonce a) -∗
   minted m -∗ minted_spec m' -∗
   (∀ c c', PUB⟨c, c'⟩ -∗ Ψ c c') -∗
   REL aenc' (Spec.pkey (AEncKey (TNonce a))) m
    << aenc' (Spec.pkey (AEncKey (TNonce a'))) m' : Ψ.
 Proof.
-iIntros "#Hctx #mint_pk #mint_spec_pk' #elem_pk #priv_a0 #mint_m #mint_spec_m' post".
+iIntros "#Hctx #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
 rewrite /aenc'.
 rel_pures_l. rel_pures_r.
 rel_apply_l (rel_mk_nonce_l _ _
@@ -191,42 +191,29 @@ iMod (public_rel_flow_r_extend (E:=⊤) pl' ltac:(solve_ndisj)
         with "Hctx tts_pl_flow tts_pl_map") as "[prot_pl' tts_pl_map]".
 iMod (public_rel_flow_r_grow_3 (E:=⊤) (TNonce an') ltac:(solve_ndisj) Hsub_tg'
         with "Hctx protby_pl' prot_pl' tts_pl_map") as "(prot_pl' & protby_tg' & protby_pl' & tts_pl_map)".
-iMod (private_rel_extend (E:=⊤) tg tg' pl pl' ltac:(solve_ndisj)
+iMod (linked_extend (E:=⊤) tg tg' pl pl' ltac:(solve_ndisj)
         with "Hctx protby_tg protby_tg' tt_tg_map tts_tg_map") as "(_ & _ & #priv_tg & _ & _)".
 (* The secret keys can never become publicly related. *)
 iAssert (□ (PUB⟨AEncKey (TNonce a), AEncKey (TNonce a')⟩ → PUB⟨pl, pl'⟩))%I as "#Hbox".
 { iIntros "!> #Hsk". iExFalso.
   rewrite publicly_related_adec_key' publicly_related_TNonce.
   iDestruct "Hsk" as "(_ & _ & [Hl _])".
-  iDestruct "priv_a0" as "[Hp|Hp]".
-  - iCombine "Hl Hp" gives %H. iPureIntro. move: H.
-    rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
-    rewrite -auth_frag_op auth_frag_valid.
-    have -> : Public (TNonce a') ⋅ Private {[TInt 0]} =
-              state_op_instance (Public (TNonce a')) (Private {[TInt 0]}) by [].
-    rewrite /state_op_instance. case: bool_decide_reflect => [Hsub _|_ []].
-    set_solver.
-  - iCombine "Hl Hp" gives %H. iPureIntro. move: H.
-    rewrite -auth_frag_op auth_frag_valid singleton_op singleton_valid.
-    rewrite -auth_frag_op auth_frag_valid.
-    have -> : Public (TNonce a') ⋅ Public (TInt 0) =
-              state_op_instance (Public (TNonce a')) (Public (TInt 0)) by [].
-    rewrite /state_op_instance. by case: bool_decide_reflect => [//|_ []]. }
+  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_a Hl") as "[]". }
 (* The ciphertexts are publicly related. *)
 iAssert (minted pl) as "#mint_pl".
 { rewrite /pl minted_of_list /=. by iFrame "#". }
 iAssert (minted_spec pl') as "#mint_spec_pl'".
 { rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
-iAssert (□ (public_rel_elem c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
+iAssert (□ (publicly_linked c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
 { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
   do 5 (iSplit; first done).
-  iSplit; first by iApply public_rel_elem_private_rel_elem.
+  iSplit; first by iApply publicly_linked_linked.
   by iSplit. }
 iMod (public_rel_flow_l_extend (E:=⊤) c ltac:(solve_ndisj)
         with "Hctx tt_c_flow tt_c_map") as "[prot_c tt_c_map]".
 iMod (public_rel_flow_r_extend (E:=⊤) c' ltac:(solve_ndisj)
         with "Hctx tts_c_flow tts_c_map") as "[prot_c' tts_c_map]".
-iMod (public_rel_extend_4 (E:=⊤) c c' ltac:(solve_ndisj)
+iMod (public_rel_extend (E:=⊤) c c' ltac:(solve_ndisj)
         with "Hctx Hwand prot_c prot_c' tt_c_map tts_c_map") as "#elem_c".
 (* Run the program. *)
 rel_pures_l. rel_pures_r.
@@ -290,22 +277,21 @@ rewrite (term_token_spec_difference (Spec.pkey (AEncKey (TNonce a')))
            (↑cryptisN.@"public_rel".@"map") (⊤ ∖ ↑cryptisN.@"public_rel".@"flow"));
   last solve_ndisj.
 iDestruct "token_spec_pkA'" as "[token_spec_pkA_map _]".
-(* The seeds are private; TInt 0 in their sets witnesses that they never
-   become public. *)
-iMod (private_rel_extend_4 (E:=⊤) a a' ltac:(solve_ndisj)
+(* The seeds never become public. *)
+iMod (linked_extend_4 (E:=⊤) a a' ltac:(solve_ndisj)
         with "Hctx token_a token_spec_a") as "(#priv_a & frag_a & frag_a')".
-iMod (public_rel_map_l_grow (E:=⊤) (TNonce a) {[TNonce a']} (TInt 0) ltac:(solve_ndisj)
-        with "Hctx frag_a") as "[#priv_a0 frag_a]".
+iMod (public_rel_lock_Secret_l (E:=⊤) (TNonce a) (TNonce a') ltac:(solve_ndisj)
+        with "Hctx frag_a") as "#secret_a".
 (* The public keys are publicly related. *)
 iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey (AEncKey (TNonce a))) ltac:(solve_ndisj)
         with "Hctx token_pkA_flow token_pkA_map") as "[prot_pkA token_pkA_map]".
 iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey (AEncKey (TNonce a'))) ltac:(solve_ndisj)
         with "Hctx token_spec_pkA_flow token_spec_pkA_map") as "[prot_pkA' token_spec_pkA_map]".
-iAssert (□ (public_rel_elem (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a'))) -∗
+iAssert (□ (publicly_linked (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a'))) -∗
             PUB⟨Spec.pkey (AEncKey (TNonce a)), Spec.pkey (AEncKey (TNonce a'))⟩))%I as "#Hwand".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
   do 3 (iSplit; first done). done. }
-iMod (public_rel_extend_4 (E:=⊤) (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a')))
+iMod (public_rel_extend (E:=⊤) (Spec.pkey (AEncKey (TNonce a))) (Spec.pkey (AEncKey (TNonce a')))
         ltac:(solve_ndisj)
         with "Hctx Hwand prot_pkA prot_pkA' token_pkA_map token_spec_pkA_map") as "#elem_pkA".
 iPoseProof ("Hwand" with "elem_pkA") as "#Hpub".

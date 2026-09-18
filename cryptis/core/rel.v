@@ -86,11 +86,11 @@ Qed.
 Lemma publicly_related_TNonce a a' :
   PUB⟨TNonce a, TNonce a'⟩ ⊣⊢
   minted (TNonce a) ∧ minted_spec (TNonce a') ∧
-  public_rel_elem (TNonce a) (TNonce a').
+  publicly_linked (TNonce a) (TNonce a').
 Proof. done. Qed.
 
 Lemma publicly_related_TNonce_term a (t' : term) :
-  PUB⟨TNonce a, t'⟩ -∗ public_rel_elem (TNonce a) t'.
+  PUB⟨TNonce a, t'⟩ -∗ publicly_linked (TNonce a) t'.
 Proof.
 case: t' => /= *; try by iIntros "(_ & _ & [])".
 - by iIntros "(_ & _ & ?)".
@@ -98,7 +98,7 @@ case: t' => /= *; try by iIntros "(_ & _ & [])".
 Qed.
 
 Lemma publicly_related_term_TNonce (t : term) a' :
-  PUB⟨t, TNonce a'⟩ -∗ public_rel_elem t (TNonce a').
+  PUB⟨t, TNonce a'⟩ -∗ publicly_linked t (TNonce a').
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
 - by iIntros "(_ & _ & ?)".
@@ -111,12 +111,12 @@ Lemma publicly_related_TKey kt kt' t t' :
   match kt with
   | AEnc => PUB⟨t, t'⟩ ∨
             (minted t ∧ minted_spec t' ∧
-             public_rel_elem (TKey kt t) (TKey kt' t') ∧ private_rel_elem t t')
+             publicly_linked (TKey kt t) (TKey kt' t') ∧ linked t t')
   | ADec => PUB⟨t, t'⟩
   | Sign => PUB⟨t, t'⟩
   | Verify => PUB⟨t, t'⟩ ∨
               (minted t ∧ minted_spec t' ∧
-               public_rel_elem (TKey kt t) (TKey kt' t') ∧ private_rel_elem t t')
+               publicly_linked (TKey kt t) (TKey kt' t') ∧ linked t t')
   | SEnc => PUB⟨t, t'⟩
   end.
 Proof.
@@ -137,8 +137,8 @@ Lemma publicly_related_TSeal k k' t t' :
   PUB⟨TSeal k t, TSeal k' t'⟩ ⊣⊢
   (PUB⟨k, k'⟩ ∧ PUB⟨t, t'⟩) ∨
   (minted (TSeal k t) ∧ minted_spec (TSeal k' t') ∧
-   public_rel_elem (TSeal k t) (TSeal k' t') ∧
-   private_rel_elem k k' ∧ private_rel_elem t t' ∧
+   publicly_linked (TSeal k t) (TSeal k' t') ∧
+   linked k k' ∧ linked t t' ∧
    □ (match k, k' with
       | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
         match kt with
@@ -163,7 +163,7 @@ Lemma publicly_related_THash t t' :
   PUB⟨THash t, THash t'⟩ ⊣⊢
   PUB⟨t, t'⟩ ∨
   (minted t ∧ minted_spec t' ∧
-   public_rel_elem (THash t) (THash t') ∧ private_rel_elem t t').
+   publicly_linked (THash t) (THash t') ∧ linked t t').
 Proof.
 rewrite /= minted_THash minted_spec_THash. iSplit.
 - iIntros "#(? & ? & [?|(? & ?)])"; [by iLeft | iRight; by do 3 (iSplit; first done)].
@@ -286,8 +286,8 @@ Lemma publicly_related_aenc_key (k k' : aenc_key) :
   PUB⟨Spec.pkey k, Spec.pkey k'⟩ ⊣⊢
   PUB⟨k, k'⟩ ∨
   (minted k ∧ minted_spec k' ∧
-   public_rel_elem (Spec.pkey k) (Spec.pkey k') ∧
-   private_rel_elem (seed_of_aenc_key k) (seed_of_aenc_key k')).
+   publicly_linked (Spec.pkey k) (Spec.pkey k') ∧
+   linked (seed_of_aenc_key k) (seed_of_aenc_key k')).
 Proof.
 rewrite publicly_related_adec_key'.
 rewrite /Spec.pkey [term_of_aenc_key]unlock /= !minted_TKey !minted_spec_TKey.
@@ -323,10 +323,10 @@ Lemma publicly_related_aenc (sk sk' : aenc_key) N (t t' : term) :
   (PUB⟨Spec.pkey sk, Spec.pkey sk'⟩ ∧ PUB⟨t, t'⟩) ∨
   (minted (Spec.pkey sk) ∧ minted t ∧
    minted_spec (Spec.pkey sk') ∧ minted_spec t' ∧
-   public_rel_elem (Spec.enc (Spec.pkey sk) (Tag N) t)
+   publicly_linked (Spec.enc (Spec.pkey sk) (Tag N) t)
                    (Spec.enc (Spec.pkey sk') (Tag N) t') ∧
-   private_rel_elem (Spec.pkey sk) (Spec.pkey sk') ∧
-   private_rel_elem (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') ∧
+   linked (Spec.pkey sk) (Spec.pkey sk') ∧
+   linked (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') ∧
    □ (PUB⟨sk, sk'⟩ → PUB⟨t, t'⟩)).
 Proof.
 rewrite publicly_related_adec_key'.
@@ -354,22 +354,23 @@ Section PartBij.
 #[local] Lemma public_rel_protected_inv_l pub_l flow_l t :
   public_rel_Private_l_protected pub_l flow_l →
   public_rel_flow_l_consistent pub_l flow_l →
-  (∃ ts, pub_l !! t = Some (Private ts)) ∨ (∃ ts, flow_l !! t = Some ts ∧ ts ≠ ∅) →
+  (∃ st, pub_l !! t = Some st ∧ not_Public st) ∨ (∃ ts, flow_l !! t = Some ts ∧ ts ≠ ∅) →
   (∀ t', pub_l !! t ≠ Some (Public t')) ∧
   ((∃ a, t = TNonce a) ∨
    ∃ tsub, is_immediate_subterm tsub t ∧
-     ((∃ ts, pub_l !! tsub = Some (Private ts)) ∨
+     ((∃ st, pub_l !! tsub = Some st ∧ not_Public st) ∨
       (∃ ts, flow_l !! tsub = Some ts ∧ ts ≠ ∅))).
 Proof.
-move=> HPriv Hcons [[ts Hpub]|[ts [Hflow Hts]]].
-- split; first by move=> t' Ht'; rewrite Hpub in Ht'.
-  case: (HPriv _ _ Hpub) => [Ha|[tsub [ts1 [Hflow Hin]]]]; first by left.
+move=> HPriv Hcons [[st [Hpub Hst]]|[ts [Hflow Hts]]].
+- split; first by move=> t' Ht'; rewrite Hpub in Ht'; case: Ht' Hst => -> [].
+  case: (HPriv _ _ Hpub Hst) => [Ha|[tsub [ts1 [Hflow Hin]]]]; first by left.
   have Hts1 : ts1 ≠ ∅ by set_solver.
   case: (Hcons _ _ Hflow Hts1) => [Hsubs _].
   right. exists tsub. split; first by apply Hsubs. right. by exists ts1.
 - case: (Hcons _ _ Hflow Hts) => [Hsubs [Hchain Hpub]].
   split.
-  + move=> t' Ht'. case: Hpub => [H|[? H]]; rewrite H in Ht'; congruence.
+  + move=> t' Ht'. case: Hpub => [H|[st [H Hst]]]; rewrite H in Ht'; first congruence.
+    by case: Ht' Hst => -> [].
   + case: Hchain => [Ha|[tsub [ts1 [Hflow1 Hin]]]]; first by left.
     have Hts1 : ts1 ≠ ∅ by set_solver.
     case: (Hcons _ _ Hflow1 Hts1) => [Hsubs1 _].
@@ -379,22 +380,23 @@ Qed.
 #[local] Lemma public_rel_protected_inv_r pub_r flow_r t' :
   public_rel_Private_r_protected pub_r flow_r →
   public_rel_flow_r_consistent pub_r flow_r →
-  (∃ ts, pub_r !! t' = Some (Private ts)) ∨ (∃ ts, flow_r !! t' = Some ts ∧ ts ≠ ∅) →
+  (∃ st, pub_r !! t' = Some st ∧ not_Public st) ∨ (∃ ts, flow_r !! t' = Some ts ∧ ts ≠ ∅) →
   (∀ t, pub_r !! t' ≠ Some (Public t)) ∧
   ((∃ a', t' = TNonce a') ∨
    ∃ t'sub, is_immediate_subterm t'sub t' ∧
-     ((∃ ts, pub_r !! t'sub = Some (Private ts)) ∨
+     ((∃ st, pub_r !! t'sub = Some st ∧ not_Public st) ∨
       (∃ ts, flow_r !! t'sub = Some ts ∧ ts ≠ ∅))).
 Proof.
-move=> HPriv Hcons [[ts Hpub]|[ts [Hflow Hts]]].
-- split; first by move=> t Ht; rewrite Hpub in Ht.
-  case: (HPriv _ _ Hpub) => [Ha|[t'sub [ts1 [Hflow Hin]]]]; first by left.
+move=> HPriv Hcons [[st [Hpub Hst]]|[ts [Hflow Hts]]].
+- split; first by move=> t Ht; rewrite Hpub in Ht; case: Ht Hst => -> [].
+  case: (HPriv _ _ Hpub Hst) => [Ha|[t'sub [ts1 [Hflow Hin]]]]; first by left.
   have Hts1 : ts1 ≠ ∅ by set_solver.
   case: (Hcons _ _ Hflow Hts1) => [Hsubs _].
   right. exists t'sub. split; first by apply Hsubs. right. by exists ts1.
 - case: (Hcons _ _ Hflow Hts) => [Hsubs [Hchain Hpub]].
   split.
-  + move=> t Ht. case: Hpub => [H|[? H]]; rewrite H in Ht; congruence.
+  + move=> t Ht. case: Hpub => [H|[st [H Hst]]]; rewrite H in Ht; first congruence.
+    by case: Ht Hst => -> [].
   + case: Hchain => [Ha|[t'sub [ts1 [Hflow1 Hin]]]]; first by left.
     have Hts1 : ts1 ≠ ∅ by set_solver.
     case: (Hcons _ _ Hflow1 Hts1) => [Hsubs1 _].
@@ -404,8 +406,8 @@ Qed.
 #[local] Lemma publicly_related_protected_l pub_l flow_l t :
   public_rel_Private_l_protected pub_l flow_l →
   public_rel_flow_l_consistent pub_l flow_l →
-  (∃ ts, pub_l !! t = Some (Private ts)) ∨ (∃ ts, flow_l !! t = Some ts ∧ ts ≠ ∅) →
-  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
+  (∃ st, pub_l !! t = Some st ∧ not_Public st) ∨ (∃ ts, flow_l !! t = Some ts ∧ ts ≠ ∅) →
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
   ∀ t', PUB⟨t, t'⟩ -∗ False.
 Proof.
 move=> HPriv Hcons.
@@ -420,7 +422,7 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   + iApply (IHa Hprot' with "Hauth Ha").
   + iApply (IHb Hprot' with "Hauth Hb").
 - iDestruct (publicly_related_TNonce_term with "Hpub") as "Hel".
-  iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
+  iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
 - case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   iDestruct "Hpub" as "(_ & _ & <- & Hpub)".
@@ -430,15 +432,15 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
     try (by iApply (IH Hprot' with "Hauth Hpub"));
     (iDestruct "Hpub" as "[Hpub|[Hel _]]";
      [ by iApply (IH Hprot' with "Hauth Hpub")
-     | iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup;
+     | iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
 - case: t' => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   { iDestruct "Hpub" as "(_ & _ & Hel & _)".
-    iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
+    iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   case: Hsub => [[? ?]|[tsub [Hsub Hprot']]] //.
   iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
-  { iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
+  { iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   inversion Hsub; subst.
   + iApply (IHk Hprot' with "Hauth Hk").
@@ -448,7 +450,7 @@ elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   inversion Hsub; subst.
   iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
     first by iApply (IH Hprot' with "Hauth Hpub").
-  iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hlookup.
+  iDestruct (publicly_linked_lookup_l with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
 - by iDestruct "Hpub" as "(_ & _ & [])".
 Qed.
@@ -456,8 +458,8 @@ Qed.
 #[local] Lemma publicly_related_protected_r pub_r flow_r t' :
   public_rel_Private_r_protected pub_r flow_r →
   public_rel_flow_r_consistent pub_r flow_r →
-  (∃ ts, pub_r !! t' = Some (Private ts)) ∨ (∃ ts, flow_r !! t' = Some ts ∧ ts ≠ ∅) →
-  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  (∃ st, pub_r !! t' = Some st ∧ not_Public st) ∨ (∃ ts, flow_r !! t' = Some ts ∧ ts ≠ ∅) →
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
   ∀ t, PUB⟨t, t'⟩ -∗ False.
 Proof.
 move=> HPriv Hcons.
@@ -472,7 +474,7 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   + iApply (IHa Hprot' with "Hauth Ha").
   + iApply (IHb Hprot' with "Hauth Hb").
 - iDestruct (publicly_related_term_TNonce with "Hpub") as "Hel".
-  iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
+  iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
 - case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   iDestruct "Hpub" as "(_ & _ & -> & Hpub)".
@@ -482,15 +484,15 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
     try (by iApply (IH Hprot' with "Hauth Hpub"));
     (iDestruct "Hpub" as "[Hpub|[Hel _]]";
      [ by iApply (IH Hprot' with "Hauth Hpub")
-     | iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup;
+     | iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup;
        by case: (HnotPub _ Hlookup) ]).
 - case: t => /= *; try by iDestruct "Hpub" as "(_ & _ & [])".
   { iDestruct "Hpub" as "(_ & _ & Hel & _)".
-    iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
+    iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   case: Hsub => [[? ?]|[t'sub [Hsub Hprot']]] //.
   iDestruct "Hpub" as "(_ & _ & [[Hk Hb]|[Hel _]])"; last first.
-  { iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
+  { iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
     by case: (HnotPub _ Hlookup). }
   inversion Hsub; subst.
   + iApply (IHk Hprot' with "Hauth Hk").
@@ -500,80 +502,42 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
   inversion Hsub; subst.
   iDestruct "Hpub" as "(_ & _ & [Hpub|[Hel _]])";
     first by iApply (IH Hprot' with "Hauth Hpub").
-  iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hlookup.
+  iDestruct (publicly_linked_lookup_r with "Hauth Hel") as %Hlookup.
   by case: (HnotPub _ Hlookup).
 - by case: t => /= *; iDestruct "Hpub" as "(_ & _ & [])".
 Qed.
 
-#[local] Lemma publicly_related_private_rel_elem_l pub_l flow_l :
+#[local] Lemma publicly_related_linked_in_l pub_l flow_l :
   public_rel_Private_l_protected pub_l flow_l →
   public_rel_flow_l_consistent pub_l flow_l →
-  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
   public_rel_Public_consistent pub_l -∗
-  ∀ t t1' t2', PUB⟨t, t1'⟩ -∗ private_rel_elem_l t t2' -∗ PUB⟨t, t2'⟩.
+  ∀ t t1' t2', PUB⟨t, t1'⟩ -∗ linked_in_l t t2' -∗ PUB⟨t, t2'⟩.
 Proof.
-move=> HPriv Hcons. iIntros "Hauth Hrel" (t t1' t2') "#H1 #[H2|H2]".
-- iDestruct (public_rel_map_l_lookup_elem with "Hauth H2") as %[(ts & Hpriv & _)|Hpub].
-  + by iPoseProof (publicly_related_protected_l HPriv Hcons (or_introl (ex_intro _ ts Hpriv))
-                    with "Hauth H1") as "[]".
-  + by iApply ("Hrel" with "[//]").
-- iDestruct (public_rel_map_l_lookup_locked_frag with "Hauth H2") as %Hpub.
-  by iApply ("Hrel" with "[//]").
+move=> HPriv Hcons. iIntros "Hauth Hrel" (t t1' t2') "#H1 #H2".
+iDestruct (linked_in_l_lookup with "Hauth H2") as %[Hpriv|[Hpriv|Hpub]].
+- by iPoseProof (publicly_related_protected_l HPriv Hcons (or_introl (ex_intro _ _ (conj Hpriv I)))
+                  with "Hauth H1") as "[]".
+- by iPoseProof (publicly_related_protected_l HPriv Hcons (or_introl (ex_intro _ _ (conj Hpriv I)))
+                  with "Hauth H1") as "[]".
+- by iApply ("Hrel" with "[//]").
 Qed.
 
-#[local] Lemma publicly_related_private_rel_elem_r pub_l pub_r flow_r :
+#[local] Lemma publicly_related_linked_in_r pub_l pub_r flow_r :
   public_rel_Private_r_protected pub_r flow_r →
   public_rel_flow_r_consistent pub_r flow_r →
   public_rel_Public_bijection pub_l pub_r →
-  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
   public_rel_Public_consistent pub_l -∗
-  ∀ t1 t2 t', PUB⟨t1, t'⟩ -∗ private_rel_elem_r t2 t' -∗ PUB⟨t2, t'⟩.
+  ∀ t1 t2 t', PUB⟨t1, t'⟩ -∗ linked_in_r t2 t' -∗ PUB⟨t2, t'⟩.
 Proof.
-move=> HPriv Hcons Hbij. iIntros "Hauth Hrel" (t1 t2 t') "#H1 #[H2|H2]".
-- iDestruct (public_rel_map_r_lookup_elem with "Hauth H2") as %[(ts & Hpriv & _)|Hpub].
-  + by iPoseProof (publicly_related_protected_r HPriv Hcons (or_introl (ex_intro _ ts Hpriv))
-                    with "Hauth H1") as "[]".
-  + by iApply (public_rel_Public_consistent_r Hbij Hpub with "Hrel").
-- iDestruct (public_rel_map_r_lookup_locked_frag with "Hauth H2") as %Hpub.
-  by iApply (public_rel_Public_consistent_r Hbij Hpub with "Hrel").
-Qed.
-
-(* A ciphertext that is publicly tied to a nonce on the other side has a
-   Private body: the "locked" alternative of private_rel_elem_l would make the
-   body and the whole ciphertext both public counterparts of the same nonce,
-   contradicting the bijection. *)
-#[local] Lemma publicly_related_TSeal_TNonce_l pub_l pub_r {k b a'} :
-  public_rel_Public_bijection pub_l pub_r →
-  own public_rel_map_l (● ((λ st, ● st ⋅ ◯ st) <$> pub_l)) -∗
-  PUB⟨TSeal k b, TNonce a'⟩ -∗
-  ⌜∃ ts, pub_l !! b = Some (Private ts)⌝.
-Proof.
-move=> Hbij. iIntros "Hauth #(_ & _ & Hel & Hb & _)".
-iDestruct (public_rel_map_l_lookup_locked with "Hauth Hel") as %Hseal.
-iAssert ⌜pub_l !! b ≠ Some (Public (TNonce a'))⌝%I as %Hne.
-{ iPureIntro => Hb.
-  have := proj1 (Hbij _ _) Hseal. rewrite (proj1 (Hbij _ _) Hb) => - [Heq].
-  have := f_equal tsize Heq. rewrite (tsize_eq (TSeal k b)). lia. }
-iDestruct "Hb" as "[Hb|Hb]".
-- iDestruct (public_rel_map_l_lookup_elem with "Hauth Hb") as %[(ts & Hpriv & _)|Hpub]; eauto.
-- by iDestruct (public_rel_map_l_lookup_locked_frag with "Hauth Hb") as %Hpub.
-Qed.
-
-#[local] Lemma publicly_related_TNonce_TSeal_r pub_l pub_r {a k' b'} :
-  public_rel_Public_bijection pub_l pub_r →
-  own public_rel_map_r (● ((λ st, ● st ⋅ ◯ st) <$> pub_r)) -∗
-  PUB⟨TNonce a, TSeal k' b'⟩ -∗
-  ⌜∃ ts, pub_r !! b' = Some (Private ts)⌝.
-Proof.
-move=> Hbij. iIntros "Hauth #(_ & _ & Hel & Hb & _)".
-iDestruct (public_rel_map_r_lookup_locked with "Hauth Hel") as %Hseal.
-iAssert ⌜pub_r !! b' ≠ Some (Public (TNonce a))⌝%I as %Hne.
-{ iPureIntro => Hb.
-  have := proj2 (Hbij _ _) Hseal. rewrite (proj2 (Hbij _ _) Hb) => - [Heq].
-  have := f_equal tsize Heq. rewrite (tsize_eq (TSeal k' b')). lia. }
-iDestruct "Hb" as "[Hb|Hb]".
-- iDestruct (public_rel_map_r_lookup_elem with "Hauth Hb") as %[(ts & Hpriv & _)|Hpub]; eauto.
-- by iDestruct (public_rel_map_r_lookup_locked_frag with "Hauth Hb") as %Hpub.
+move=> HPriv Hcons Hbij. iIntros "Hauth Hrel" (t1 t2 t') "#H1 #H2".
+iDestruct (linked_in_r_lookup with "Hauth H2") as %[Hpriv|[Hpriv|Hpub]].
+- by iPoseProof (publicly_related_protected_r HPriv Hcons (or_introl (ex_intro _ _ (conj Hpriv I)))
+                  with "Hauth H1") as "[]".
+- by iPoseProof (publicly_related_protected_r HPriv Hcons (or_introl (ex_intro _ _ (conj Hpriv I)))
+                  with "Hauth H1") as "[]".
+- by iApply (public_rel_Public_consistent_r Hbij Hpub with "Hrel").
 Qed.
 
 Lemma publicly_related_part_bij_1 E t t1' t2' :
@@ -603,7 +567,7 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
   by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb Hb'") as %->.
 - iDestruct (publicly_related_TNonce_term with "H1") as "Hel1".
   iDestruct (publicly_related_TNonce_term with "H2") as "Hel2".
-  by iApply (public_rel_elem_agree_l with "Hel1 Hel2").
+  by iApply (publicly_linked_agree_l with "Hel1 Hel2").
 - case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
   case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
   iDestruct "H1" as "(_ & _ & <- & H1)". iDestruct "H2" as "(_ & _ & <- & H2)".
@@ -613,61 +577,63 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
     iDestruct "H2" as "[H2|[Hel2 [Hpriv2 _]]]";
     first
       [ by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->
-      | iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+      | iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                       with "Hmap_l Hpub_consistent H1 Hpriv2") as "#H2";
         by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->
-      | iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+      | iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                       with "Hmap_l Hpub_consistent H2 Hpriv1") as "#H1";
         by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->
-      | by (iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %Heq;
+      | by (iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %Heq;
             injection Heq as ->) ].
 - case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  { iDestruct (publicly_related_TSeal_TNonce_l Hbij with "Hmap_l H1") as %(ts & Hb).
+  { iPoseProof "H1" as "(_ & _ & _ & Hsecret & _)".
+    iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
     case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
     - iDestruct "H1" as "(_ & _ & Hel1 & _)". iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iApply (public_rel_elem_agree_l with "Hel1 Hel2").
+      by iApply (publicly_linked_agree_l with "Hel1 Hel2").
     - iDestruct "H2" as "(_ & _ & [[_ Hb2]|(Hel2 & _)])".
       + by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
-                        (or_introl (ex_intro _ ts Hb)) with "Hmap_l Hb2") as "[]".
+                        (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb2") as "[]".
       + iDestruct "H1" as "(_ & _ & Hel1 & _)".
-        by iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %[=]. }
+        by iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %[=]. }
   case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  { iDestruct (publicly_related_TSeal_TNonce_l Hbij with "Hmap_l H2") as %(ts & Hb).
+  { iPoseProof "H2" as "(_ & _ & _ & Hsecret & _)".
+    iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
     iDestruct "H1" as "(_ & _ & [[_ Hb1]|(Hel1 & _)])".
     + by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
-                      (or_introl (ex_intro _ ts Hb)) with "Hmap_l Hb1") as "[]".
+                      (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb1") as "[]".
     + iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %[=]. }
+      by iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %[=]. }
   iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [Hpk1 _] & [Hpb1 _] & _)])";
   iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [Hpk2 _] & [Hpb2 _] & _)])".
   + iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+  + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hk1 Hpk2") as "#Hk2".
-    iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+    iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hb1 Hpb2") as "#Hb2".
     iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+  + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hk2 Hpk1") as "#Hk1".
-    iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+    iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hb2 Hpb1") as "#Hb1".
     iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
-  + iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %Heq.
+  + iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %Heq.
     by injection Heq as -> ->.
 - case: t1' => /= *; try by iDestruct "H1" as "(_ & _ & [])".
   case: t2' => /= *; try by iDestruct "H2" as "(_ & _ & [])".
   iDestruct "H1" as "(_ & _ & [H1|[Hel1 [Hpriv1 _]]])";
   iDestruct "H2" as "(_ & _ & [H2|[Hel2 [Hpriv2 _]]])".
   + by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+  + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent H1 Hpriv2") as "#H2".
     by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_l HPriv_l Hflow_l_cons
+  + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent H2 Hpriv1") as "#H1".
     by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->.
-  + iDestruct (public_rel_elem_agree_l with "Hel1 Hel2") as %Heq.
+  + iDestruct (publicly_linked_agree_l with "Hel1 Hel2") as %Heq.
     by injection Heq as ->.
 - by iDestruct "H1" as "(_ & _ & [])".
 Qed.
@@ -699,7 +665,7 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
   by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb Hb'") as %->.
 - iDestruct (publicly_related_term_TNonce with "H1") as "Hel1".
   iDestruct (publicly_related_term_TNonce with "H2") as "Hel2".
-  by iApply (public_rel_elem_agree_r with "Hel1 Hel2").
+  by iApply (publicly_linked_agree_r with "Hel1 Hel2").
 - case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
   case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
   iDestruct "H1" as "(_ & _ & -> & H1)". iDestruct "H2" as "(_ & _ & -> & H2)".
@@ -709,61 +675,63 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
     iDestruct "H2" as "[H2|[Hel2 [_ Hpriv2]]]";
     first
       [ by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->
-      | iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+      | iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                       with "Hmap_r Hpub_consistent H1 Hpriv2") as "#H2";
         by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->
-      | iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+      | iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                       with "Hmap_r Hpub_consistent H2 Hpriv1") as "#H1";
         by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->
-      | by (iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %Heq;
+      | by (iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %Heq;
             injection Heq as ->) ].
 - case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
-  { iDestruct (publicly_related_TNonce_TSeal_r Hbij with "Hmap_r H1") as %(ts & Hb).
+  { iPoseProof "H1" as "(_ & _ & _ & Hsecret & _)".
+    iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
     case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
     - iDestruct "H1" as "(_ & _ & Hel1 & _)". iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iApply (public_rel_elem_agree_r with "Hel1 Hel2").
+      by iApply (publicly_linked_agree_r with "Hel1 Hel2").
     - iDestruct "H2" as "(_ & _ & [[_ Hb2]|(Hel2 & _)])".
       + by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
-                        (or_introl (ex_intro _ ts Hb)) with "Hmap_r Hb2") as "[]".
+                        (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb2") as "[]".
       + iDestruct "H1" as "(_ & _ & Hel1 & _)".
-        by iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %[=]. }
+        by iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %[=]. }
   case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
-  { iDestruct (publicly_related_TNonce_TSeal_r Hbij with "Hmap_r H2") as %(ts & Hb).
+  { iPoseProof "H2" as "(_ & _ & _ & Hsecret & _)".
+    iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
     iDestruct "H1" as "(_ & _ & [[_ Hb1]|(Hel1 & _)])".
     + by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
-                      (or_introl (ex_intro _ ts Hb)) with "Hmap_r Hb1") as "[]".
+                      (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb1") as "[]".
     + iDestruct "H2" as "(_ & _ & Hel2 & _)".
-      by iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %[=]. }
+      by iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %[=]. }
   iDestruct "H1" as "(_ & _ & [[Hk1 Hb1]|(Hel1 & [_ Hpk1] & [_ Hpb1] & _)])";
   iDestruct "H2" as "(_ & _ & [[Hk2 Hb2]|(Hel2 & [_ Hpk2] & [_ Hpb2] & _)])".
   + iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+  + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hk1 Hpk2") as "#Hk2".
-    iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+    iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hb1 Hpb2") as "#Hb2".
     iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+  + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hk2 Hpk1") as "#Hk1".
-    iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+    iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hb2 Hpb1") as "#Hb1".
     iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
-  + iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %Heq.
+  + iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %Heq.
     by injection Heq as -> ->.
 - case: t1 => /= *; try by iDestruct "H1" as "(_ & _ & [])".
   case: t2 => /= *; try by iDestruct "H2" as "(_ & _ & [])".
   iDestruct "H1" as "(_ & _ & [H1|[Hel1 [_ Hpriv1]]])";
   iDestruct "H2" as "(_ & _ & [H2|[Hel2 [_ Hpriv2]]])".
   + by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+  + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent H1 Hpriv2") as "#H2".
     by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->.
-  + iPoseProof (publicly_related_private_rel_elem_r HPriv_r Hflow_r_cons Hbij
+  + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent H2 Hpriv1") as "#H1".
     by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->.
-  + iDestruct (public_rel_elem_agree_r with "Hel1 Hel2") as %Heq.
+  + iDestruct (publicly_linked_agree_r with "Hel1 Hel2") as %Heq.
     by injection Heq as ->.
 - by case: t1 => /= *; iDestruct "H1" as "(_ & _ & [])".
 Qed.
