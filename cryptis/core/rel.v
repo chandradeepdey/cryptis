@@ -708,12 +708,6 @@ Proof. elim/term_ind': t t' => /=; apply _. Qed.
 
 Section Invariant.
 
-Definition not_Public st : Prop :=
-  match st with
-  | Public _ => False
-  | _ => True
-  end.
-
 Definition public_rel_Private_l_protected pub_l flow_l : Prop :=
   ∀ t st, pub_l !! t = Some st → not_Public st →
     is_nonce t ∨ (∃ tsub ts1, flow_l !! tsub = Some ts1 ∧ t ∈ ts1).
@@ -820,7 +814,7 @@ iSplit; [|iSplit; [|iSplit]].
 - iPureIntro. split; move=> t ts; by rewrite lookup_empty => ?.
 Qed.
 
-Section Rel.
+Section RelProperties.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
@@ -832,8 +826,6 @@ Implicit Types st : state.
 Implicit Types pub_l pub_r : gmap term state.
 Implicit Types flow_l flow_r : gmap term (gset term).
 Implicit Types P : term -> term -> iProp.
-
-Section Constructors.
 
 Lemma publicly_related_minted t t' :
   PUB⟨t, t'⟩ ⊢ minted t ∗ minted_spec t'.
@@ -1213,8 +1205,6 @@ iSplit.
   iIntros "!>". iSplit; first done.
   iIntros "#Hs". iSplit; first done. by iApply "Hrest".
 Qed.
-
-End Constructors.
 
 Section PartBij.
 
@@ -1676,4 +1666,4 @@ Qed.
 
 End PartBij.
 
-End Rel.
+End RelProperties.

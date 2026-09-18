@@ -7,11 +7,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(** Relational counterparts of the specs in [primitives/comp.v] (term
-    comparison and the Diffie–Hellman group operations).  All of these are
-    pure, so [rel_f_l]/[rel_f_r] follow from the total-WP specs via
-    [pure_twp_rel_l]/[pure_twp_rel_r]. *)
-
 Section Proofs.
 
 Context `{!relocG Σ}.

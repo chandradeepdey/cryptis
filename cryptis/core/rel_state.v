@@ -11,6 +11,12 @@ Inductive state :=
   | Secret
   | Invalid.
 
+Definition not_Public st : Prop :=
+  match st with
+  | Public _ => False
+  | _ => True
+  end.
+
 Section StateCmra.
 
   Context {SI : sidx}.

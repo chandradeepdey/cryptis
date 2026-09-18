@@ -8,9 +8,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(** Relational counterparts of the pre-term comparison specs in
-    [primitives/pre_term.v]. *)
-
 Section Proofs.
 
 Context `{!relocG Σ}.

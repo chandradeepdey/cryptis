@@ -430,9 +430,6 @@ iApply ("mint" $! (SEncKey t) with "[//] [] Htts_seed Htts_k").
 by iApply minted_spec_senc.
 Qed.
 
-(** Key-type tests.  These mirror [twp_is_*_key] in [primitives/with_cryptis.v]:
-    the [_l] versions need [minted] and the [_r] versions [minted_spec]. *)
-
 Lemma rel_is_aenc_key_l E K e (pk : term) Ψ :
   minted pk -∗
   (∀ sk : aenc_key, ⌜pk = Spec.pkey sk⌝ -∗ minted sk -∗

@@ -8,16 +8,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(** Relational (ReLoC) counterparts of the [twp_*]/[wp_*] specs in
-    [primitives/simple.v].  Every HeapLang function [f] gets a [rel_f_l]
-    lemma, which reduces [f] on the left-hand side of a refinement, and a
-    [rel_f_r] lemma, which reduces it on the right-hand side.  Since all
-    these functions are pure, both directions are derived from the unary
-    total-WP specs through [pure_twp_rel_l]/[pure_twp_rel_r]; the [_r]
-    versions need [↑specN ⊆ E] to step the specification thread.  When the
-    unary spec carries a later (e.g. [wp_aenc']), the [_l] lemma keeps it
-    and is derived through [refines_wp_l] instead. *)
-
 Section Proofs.
 
 Context `{!relocG Σ}.
