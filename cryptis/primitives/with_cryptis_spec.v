@@ -360,9 +360,6 @@ iApply ("mint" $! (SignKey t) with "[//] [] Htts_seed Htts_sk Htts_pk").
 by iApply minted_spec_sign.
 Qed.
 
-(** Symmetric-encryption keys have no public counterpart, so a single token
-    set [T_k] is handed out alongside the seed token. *)
-
 Lemma rel_mk_senc_key_l K e (T_k : term → gset term) Ψ :
   (∀ k : senc_key, seed_of_senc_key k ∉ T_k k) →
   cryptis_rel_ctx -∗
