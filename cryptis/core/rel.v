@@ -708,7 +708,29 @@ Fixpoint publicly_related t t' : iProp :=
 Proof. elim/term_ind': t t' => /=; apply _. Qed.
 
 #[global] Instance publicly_related_timeless t t' : Timeless (PUB⟨t, t'⟩).
-Proof. elim/term_ind': t t' => /=; apply _. Qed.
+Proof.
+elim/term_lt_ind: t t' => t IH t'.
+case: t IH => [n|a b|a|kt s|k b|s|pt wf nf] IH /=; try apply _.
+- have ? : ∀ t'', Timeless (PUB⟨a, t''⟩)
+    by apply: IH; rewrite (tsize_eq (TPair _ _)); lia.
+  have ? : ∀ t'', Timeless (PUB⟨b, t''⟩)
+    by apply: IH; rewrite (tsize_eq (TPair _ _)); lia.
+  apply _.
+- have ? : ∀ t'', Timeless (PUB⟨s, t''⟩)
+    by apply: IH; rewrite (tsize_eq (TKey _ _)); lia.
+  apply _.
+- have Hk : ∀ t'', Timeless (PUB⟨k, t''⟩)
+    by apply: IH; rewrite (tsize_eq (TSeal _ _)); lia.
+  have Hb : ∀ t'', Timeless (PUB⟨b, t''⟩)
+    by apply: IH; rewrite (tsize_eq (TSeal _ _)); lia.
+  case: k IH Hk => [n|a b'|a|kt s|k b'|s|pt wf nf] IH Hk; try apply _.
+  have ? : ∀ t'', Timeless (PUB⟨s, t''⟩).
+  { apply: IH. rewrite (tsize_eq (TSeal _ _)) (tsize_eq (TKey _ _)). lia. }
+  apply _.
+- have ? : ∀ t'', Timeless (PUB⟨s, t''⟩)
+    by apply: IH; rewrite (tsize_eq (THash _)); lia.
+  apply _.
+Qed.
 
 Section Invariant.
 
@@ -961,20 +983,34 @@ Lemma publicly_related_TSeal k k' t t' :
       | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
         match kt with
         | ADec | Verify => False
-        | Sign => PUB⟨t, t'⟩
+        | Sign => PUB⟨TKey Verify k1, TKey Verify k1'⟩ ∧ PUB⟨t, t'⟩
         | AEnc | SEnc => PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩
         end
       | _, _ => False
       end)).
 Proof.
 rewrite /=. iSplit.
-- iIntros "#(? & ? & [?|(? & ? & ? & ?)])"; [by iLeft | iRight; by do 5 (iSplit; first done)].
-- iIntros "#[[H1 H2]|(? & ? & ? & ? & ? & ?)]";
-    last by (do 2 (iSplit; first done); iRight; do 3 (iSplit; first done)).
-  iPoseProof (publicly_related_minted with "H1") as "[? ?]".
-  iPoseProof (publicly_related_minted with "H2") as "[? ?]".
-  rewrite minted_TSeal minted_spec_TSeal.
-  iSplit; first by iSplit. iSplit; first by iSplit. iLeft. by iSplit.
+- iIntros "#(mk & mk' & [?|(? & ? & ? & #Hbox)])"; first by iLeft.
+  iRight. do 5 (iSplit; first done). iModIntro.
+  case: k => [n|a b|a|kt k1|k b|s|pt wf nf] //.
+  case: k' => [n'|a' b'|a'|kt' k1'|k'' b'|s'|pt' wf' nf'] //.
+  iDestruct "Hbox" as "[-> Hbox]". iSplit; first done.
+  case: kt' => //.
+  iDestruct "Hbox" as "[Hv Ht]". iSplit; last done.
+  rewrite minted_TSeal !minted_TKey minted_spec_TSeal !minted_spec_TKey.
+  iDestruct "mk" as "[mk1 _]". iDestruct "mk'" as "[mk1' _]".
+  by do 3 (iSplit; first done).
+- iIntros "#[[H1 H2]|(mk & mk' & ? & ? & ? & #Hbox)]".
+  { iPoseProof (publicly_related_minted with "H1") as "[? ?]".
+    iPoseProof (publicly_related_minted with "H2") as "[? ?]".
+    rewrite minted_TSeal minted_spec_TSeal.
+    iSplit; first by iSplit. iSplit; first by iSplit. iLeft. by iSplit. }
+  do 2 (iSplit; first done). iRight. do 3 (iSplit; first done). iModIntro.
+  case: k => [n|a b|a|kt k1|k b|s|pt wf nf] //.
+  case: k' => [n'|a' b'|a'|kt' k1'|k'' b'|s'|pt' wf' nf'] //.
+  iDestruct "Hbox" as "[-> Hbox]". iSplit; first done.
+  case: kt' => //.
+  iDestruct "Hbox" as "[(_ & _ & _ & Hv) Ht]". by iSplit.
 Qed.
 
 Lemma publicly_related_THash t t' :
@@ -1052,9 +1088,10 @@ case: decide => // k_t_k' [<-].
 iIntros "#Hk #[[_ Ht]|(_ & _ & _ & _ & _ & #Hrest)]"; first done.
 case: k_t k_t' => // kt k1 [] // kt' k1' in k_t_k k_t_k' *.
 iDestruct "Hrest" as "[<- Hrest]".
-case: kt k_t_k k_t_k' => // - [<-] [<-] //.
+case: kt k_t_k k_t_k' => // - [<-] [<-].
 - iApply "Hrest". rewrite publicly_related_TKey.
   by iDestruct "Hk" as "[??]".
+- by iDestruct "Hrest" as "[_ ?]".
 - iApply "Hrest". rewrite publicly_related_TKey.
   by iDestruct "Hk" as "[??]".
 Qed.
