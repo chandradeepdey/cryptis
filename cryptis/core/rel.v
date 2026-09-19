@@ -645,7 +645,11 @@ Fixpoint publicly_related t t' : iProp :=
       | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
         match kt with
         | ADec | Verify => False
-        | Sign => publicly_related t1 t1'
+        (* We need PUB⟨TKey Verify k1, TKey Verify k2⟩ here.
+            The termination checker won't like that, so inlined *)
+        | Sign => (publicly_related k1 k1' ∨
+                  (publicly_linked (TKey Verify k1) (TKey Verify k1') ∧ linked k1 k1')) ∧
+                  publicly_related t1 t1'
         | AEnc | SEnc => publicly_related k1 k1' → publicly_related t1 t1'
         end
       | _, _ => False
