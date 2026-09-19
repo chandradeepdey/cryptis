@@ -14,6 +14,13 @@ In the `cryptis` directory you will find:
   cryptographic terms.  Definition of the attacker.
 - `tactics`: Ltac tactics for symbolically executing the main HeapLang functions
   on terms.
+- Relational layer (built on [ReLoC](https://gitlab.mpi-sws.org/iris/reloc)):
+  `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs
+  and its invariant; `primitives/*_spec.v` are the relational specs of the
+  primitives; `primitives/attacker_spec.v` models the attacker as an arbitrary
+  program self-related at a type that abstracts over terms; `rel_adequacy.v`
+  turns a ReLoC refinement into a statement about executions
+  (`cryptis_rel_adequacy`).
 
 ## Case studies
 
@@ -32,6 +39,8 @@ In the `examples` directory you will find our case studies:
 - `tls13`: TLS 1.3 handshake (partial; `impl.v` + per-component `proofs/`).
 - `challenge_response`, `composite_game`, `permanent`, `counter`: smaller
   single-file examples plus a composite security game.
+- `ind_cpa`: relational IND-CPA game for asymmetric encryption, closed by
+  `ind_cpa_secure` via `cryptis_rel_adequacy`.
 
 ## Building
 

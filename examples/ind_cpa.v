@@ -12,6 +12,8 @@ From reloc Require Import reloc.
 From cryptis Require Import lib_spec.
 From cryptis.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec.
+From cryptis.primitives Require Import attacker_spec.
+From cryptis Require Import rel_adequacy.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -226,13 +228,12 @@ rel_apply_r rel_aenc'_r.
 rel_values. iApply "post". by iApply "Hwand".
 Qed.
 
-Lemma rel_alice c c' (b: bool) :
+Lemma rel_alice c c' :
   cryptis_rel_ctx -∗
   channel_rel c c' -∗
   REL alice c << alice c' : λ p1 p2,
-    ⌜∃ b1 b'1 b2 b'2 : bool,
-    p1 = (#b1, #b'1)%V ∧ p2 = (#b2, #b'2)%V ∧
-    (b = b1 → b ≠ b2 ∧ b'1 = b'2)⌝.
+    ⌜∃ b g b' g' : bool,
+    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice.
 rel_pures_l. rel_pures_r.
@@ -340,9 +341,25 @@ iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
         with "Hctx [] Hguess") as %H.
 { by rewrite publicly_related_TInt. }
 iPureIntro.
-eexists _, _, _, _. repeat split; eauto.
-destruct choice=> /=; congruence.
-by apply bool_decide_ext.
+exists choice, (bool_decide (TInt 1 = guess)), (negb choice),
+  (bool_decide (TInt 1 = guess')).
+do 3 (split; first done). by apply bool_decide_ext.
 Qed.
 
 End CPA.
+
+(** The security game: an arbitrary well-typed attacker cannot tell which of
+    its two messages Alice encrypted.  Whenever a run of the game terminates
+    with a bit [b] and a guess [g], the run where Alice picked the other bit
+    can terminate with the same guess. *)
+Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : val) σ :
+  (∀ `{!relocG Σ}, ⊢ REL adv << adv : attacker_rel) →
+  adequate NotStuck (run_network_rel adv (alice N)) σ
+    (λ v _, ∃ thp' h v',
+       rtc erased_step ([run_network_rel adv (alice N)], σ) (of_val v' :: thp', h) ∧
+       ∃ b g b' g' : bool,
+         v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Proof.
+move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
+iIntros "#Hctx #Hc". by iApply (rel_alice with "Hctx Hc").
+Qed.

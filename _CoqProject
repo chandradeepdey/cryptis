@@ -73,6 +73,8 @@ cryptis/primitives/pre_term_spec.v
 cryptis/primitives/comp_spec.v
 cryptis/primitives/simple_spec.v
 cryptis/primitives/with_cryptis_spec.v
+cryptis/primitives/attacker_spec.v
+cryptis/rel_adequacy.v
 
 # Case studies
 
