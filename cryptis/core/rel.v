@@ -1407,21 +1407,15 @@ iDestruct (linked_in_r_lookup with "Hauth H2") as %[Hpriv|[Hpriv|Hpub]].
 - by iApply (public_rel_Public_consistent_r Hbij Hpub with "Hrel").
 Qed.
 
-Lemma publicly_related_part_bij_1 E t t1' t2' :
-  ↑cryptisN ⊆ E →
-  cryptis_rel_ctx -∗
+Lemma publicly_related_part_bij_1_open pub_l pub_r flow_l flow_r t t1' t2' :
+  public_rel_inv pub_l pub_r flow_l flow_r -∗
   PUB⟨t, t1'⟩ -∗
   PUB⟨t, t2'⟩ -∗
-  |={E}=> ⌜t1' = t2'⌝.
+  ⌜t1' = t2'⌝.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  Hflow & [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
-iAssert ⌜t1' = t2'⌝%I as %Heq; last first.
-{ iModIntro. iSplitL; last done.
-  iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame. iFrame "#". by iPureIntro. }
+iIntros "(([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+          Hflow & [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+          [%Hflow_l_cons %Hflow_r_cons]) #H1 #H2".
 iClear "Hmap_l_frag Hmap_r Hflow".
 iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t2') "H1 H2".
 - iDestruct (publicly_related_TInt_term with "H1") as %->.
@@ -1522,21 +1516,29 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
 - by iDestruct "H1" as "(_ & _ & [])".
 Qed.
 
-Lemma publicly_related_part_bij_2 E t1 t2 t' :
+Lemma publicly_related_part_bij_1_fupd E t t1' t2' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  PUB⟨t1, t'⟩ -∗
-  PUB⟨t2, t'⟩ -∗
-  |={E}=> ⌜t1 = t2⌝.
+  PUB⟨t, t1'⟩ -∗
+  PUB⟨t, t2'⟩ -∗
+  |={E}=> ⌜t1' = t2'⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  Hflow & [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
-iAssert ⌜t1 = t2⌝%I as %Heq; last first.
-{ iModIntro. iSplitL; last done.
-  iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame. iFrame "#". by iPureIntro. }
+iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
+iDestruct (publicly_related_part_bij_1_open with "Hbody H1 H2") as %Heq.
+iModIntro. iSplitL; last done.
+iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame.
+Qed.
+
+Lemma publicly_related_part_bij_2_open pub_l pub_r flow_l flow_r t1 t2 t' :
+  public_rel_inv pub_l pub_r flow_l flow_r -∗
+  PUB⟨t1, t'⟩ -∗
+  PUB⟨t2, t'⟩ -∗
+  ⌜t1 = t2⌝.
+Proof.
+iIntros "((Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+          Hflow & [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+          [%Hflow_l_cons %Hflow_r_cons]) #H1 #H2".
 iClear "Hmap_l Hmap_r_frag Hflow".
 iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' forall (t1 t2) "H1 H2".
 - iDestruct (publicly_related_term_TInt with "H1") as %->.
@@ -1637,14 +1639,28 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
 - by case: t1 => /= *; iDestruct "H1" as "(_ & _ & [])".
 Qed.
 
+Lemma publicly_related_part_bij_2_fupd E t1 t2 t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  PUB⟨t1, t'⟩ -∗
+  PUB⟨t2, t'⟩ -∗
+  |={E}=> ⌜t1 = t2⌝.
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
+iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
+iDestruct (publicly_related_part_bij_2_open with "Hbody H1 H2") as %Heq.
+iModIntro. iSplitL; last done.
+iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame.
+Qed.
+
 Lemma publicly_related_part_bij E t t' :
   ↑cryptisN ⊆ E →
   (∀ t1', cryptis_rel_ctx -∗ PUB⟨t, t'⟩ -∗ PUB⟨t, t1'⟩ -∗ |={E}=> ⌜t' = t1'⌝) ∧
   (∀ t1, cryptis_rel_ctx -∗ PUB⟨t, t'⟩ -∗ PUB⟨t1, t'⟩ -∗ |={E}=> ⌜t = t1⌝).
 Proof.
 move=> HE. split.
-- move=> t1'. exact: publicly_related_part_bij_1.
-- move=> t1. exact: publicly_related_part_bij_2.
+- move=> t1'. exact: publicly_related_part_bij_1_fupd.
+- move=> t1. exact: publicly_related_part_bij_2_fupd.
 Qed.
 
 Lemma publicly_related_part_bij' E t1 t1' t2 t2' :
@@ -1656,10 +1672,10 @@ Lemma publicly_related_part_bij' E t1 t1' t2 t2' :
 Proof.
 iIntros (HE) "#Hctx #Ht1 #Ht2".
 destruct (decide (t1 = t2)) as [->|Hne].
-{ iMod (publicly_related_part_bij_1 with "Hctx Ht1 Ht2") as %->; first done.
+{ iMod (publicly_related_part_bij_1_fupd with "Hctx Ht1 Ht2") as %->; first done.
   by iPureIntro. }
 destruct (decide (t1' = t2')) as [->|Hne'].
-{ iMod (publicly_related_part_bij_2 with "Hctx Ht1 Ht2") as %->; first done.
+{ iMod (publicly_related_part_bij_2_fupd with "Hctx Ht1 Ht2") as %->; first done.
   by iPureIntro. }
 iPureIntro. tauto.
 Qed.
