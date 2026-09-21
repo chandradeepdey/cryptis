@@ -71,7 +71,7 @@ Key dependencies (authoritative pins live in `rocq-cryptis.opam` — treat it as
   - `tactics.v` — Ltac2 automation for symbolic execution of HeapLang programs
   - `cryptis.v` — Top-level integration; defines `cryptisGpreS`/`cryptisGS` typeclasses
   - `adequacy.v` — Soundness/adequacy theorems
-  - Relational layer (ReLoC-based, files suffixed `_spec.v` or prefixed `rel`): `core/rel.v` (the `PUB⟨t, t'⟩` relation between the terms of two runs, its invariant, partial-bijection and `Spec.open` agreement lemmas), `core/rel_inv_updates.v` (ghost-state updates), `primitives/*_spec.v` (relational primitive specs; `with_cryptis_spec.v` has `channel_rel`), `primitives/attacker_spec.v` (attacker as an arbitrary program self-related at `attacker_rel`, the exported `attacker_prims`, and `run_network_rel`), `rel_adequacy.v` (`cryptis_rel_adequacy`, plus `attacker_rel_typed` for syntactically typed attackers)
+  - Relational layer (ReLoC-based, files suffixed `_spec.v` or prefixed `rel`): `core/rel.v` (the `PUB⟨t, t'⟩` relation between the terms of two runs, its invariant, partial-bijection and `Spec.open` agreement lemmas), `core/rel_inv_updates.v` (ghost-state updates), `primitives/*_spec.v` (relational primitive specs; `with_cryptis_spec.v` has `channel_rel`), `primitives/attacker_spec.v` (attacker as an arbitrary program self-related at `attacker_rel`, the exported `attacker_prims`, and `run_network_rel`), `rel_adequacy.v` (`cryptis_rel_adequacy`; `cryptis_ctx_refinement` for contextual refinement of games `λ: "adv", run_network_rel "adv" f` at type `attacker_ty → τ`; `attacker_rel_typed` for syntactically typed attackers)
 
 - **`examples/`** — Case studies (Rocq namespace `cryptis.examples`)
 
@@ -133,6 +133,6 @@ Directory-structured protocols use some of: `impl.v` (HeapLang implementation), 
 - `tls13/` — TLS 1.3 handshake (partial; `impl.v` executable layer + per-component `proofs/` (base, meth, cshare, sshare, cparams, sparams) + `proofs/protocol.v`, no closed theorem yet).
 - `challenge_response.v` — signature-based mutual authentication; `composite_game.v` runs several protocols together under one adequacy game.
 - `permanent.v`, `counter.v` — small digital-signature demos (immutable state / monotone counter).
-- `ind_cpa.v` — relational IND-CPA game (`rel_alice` in ReLoC, closed by `ind_cpa_secure` via `cryptis_rel_adequacy`); the attacker is any program self-related at `attacker_rel`.
+- `ind_cpa.v` — relational IND-CPA game. `alice b` encrypts message `b` and returns the attacker's guess; `rel_alice` relates `alice b` and `alice b'` in ReLoC, `ind_cpa_ctx_equiv` closes the game as a contextual equivalence at `attacker_ty → TBool` via `cryptis_ctx_refinement`, and `ind_cpa_secure` is the adequacy form for the nondeterministic-bit wrapper `alice_guess_wrapped`.
 
 The `gen_conn → conn → rpc → store` chain is a real abstraction stack (reuse it), and the `nsl` / `iso_dh` / `store` `game.v` files share a consistent template worth following.

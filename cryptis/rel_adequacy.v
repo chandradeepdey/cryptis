@@ -8,6 +8,10 @@
     is arbitrary code; see [attacker_spec.v] for why the typing assumption
     prevents it from inspecting term representations.
 
+    [cryptis_ctx_refinement] turns the same refinement into a contextual
+    refinement between the two games seen as functions of the attacker, so
+    that the attacker is an arbitrary well-typed context.
+
     [attacker_rel_typed] discharges the self-relatedness assumption for any
     attacker that is syntactically well typed at [attacker_ty], via ReLoC's
     fundamental theorem.
@@ -79,4 +83,32 @@ Proof.
 move=> Hty. iPoseProof (refines_typed attacker_ty [] adv Hty) as "H".
 iApply (refines_wand with "H"). iIntros (v v') "Hv !>".
 iExact "Hv".
+Qed.
+
+(** * Contextual refinement
+
+    Here the attacker is the context.  A game [λ: "adv", run_network_rel "adv" f]
+    has type [attacker_ty → τ] and may be plugged into any well-typed
+    context, which in particular may apply it to any well-typed attacker and
+    observe the result.  The hypothesis is the same protocol refinement as for
+    [cryptis_rel_adequacy]; the two contexts may even hand different (but
+    related) attackers to the two games.  The statement mentions no [Σ]: the
+    ghost state is fixed internally to [#[relocΣ; public_relΣ]]. *)
+Lemma cryptis_ctx_refinement (f f' : val) τ :
+  (∀ Σ `{!relocG Σ, !public_relGS Σ} Δ c c',
+      cryptis_rel_ctx -∗
+      channel_rel c c' -∗
+      REL f c << f' c' : interp τ Δ) →
+  ∅ ⊨ (λ: "adv", run_network_rel "adv" f)
+      ≤ctx≤ (λ: "adv", run_network_rel "adv" f') : (attacker_ty → τ)%ty.
+Proof.
+move=> Hf.
+apply: (refines_sound #[relocΣ; public_relΣ]) => Hreloc Δ.
+iMod (public_relGS_alloc ⊤ _) as (Hpub) "#Hctx".
+rel_pures_l. rel_pures_r.
+iApply refines_arrow_val. iIntros "!> %adv %adv' #Hadv".
+rel_pures_l. rel_pures_r.
+iApply (rel_run_network_rel with "Hctx [] []").
+- by rel_values.
+- iIntros (c c') "#Hc". by iApply (Hf with "Hctx Hc").
 Qed.

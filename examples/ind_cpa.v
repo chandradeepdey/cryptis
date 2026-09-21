@@ -41,18 +41,20 @@ Definition aenc' : val := λ: "pk" "m",
   let: "nonce" := mk_nonce #() in
   aenc "pk" (Tag $ N.@"m") (term_of_list ["nonce"; "m"]).
 
-Definition alice : val := λ: "c",
+Definition alice (b : bool) : val := λ: "c",
   let: "skA" := mk_aenc_key #() in
   let: "pkA" := pkey "skA" in
   send "c" "pkA";;
   let: "msg_0" := recv "c" in
   let: "msg_1" := recv "c" in
-  let: "b" := nondet_bool #() in
-  let: "msg" := if: "b" then "msg_0" else "msg_1" in
+  let: "msg" := if: #b then "msg_0" else "msg_1" in
   send "c" (aenc' "pkA" "msg");;
   let: "guess" := recv "c" in
-  let: "guess" := eq_term (TInt 1) "guess" in
-  ("b", "guess").
+  eq_term (TInt 1) "guess".
+
+Definition alice_guess_wrapped : val := λ: "c",
+  let: "b" := nondet_bool #() in
+  ("b", if: "b" then alice true "c" else alice false "c").
 
 Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp) :
   cryptis_rel_ctx -∗
@@ -228,12 +230,10 @@ rel_apply_r rel_aenc'_r.
 rel_values. iApply "post". by iApply "Hwand".
 Qed.
 
-Lemma rel_alice c c' :
+Lemma rel_alice c c' (b b' : bool) :
   cryptis_rel_ctx -∗
   channel_rel c c' -∗
-  REL alice c << alice c' : λ p1 p2,
-    ⌜∃ b g b' g' : bool,
-    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
+  REL alice b c << alice b' c' : lrel_bool.
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice.
 rel_pures_l. rel_pures_r.
@@ -307,17 +307,17 @@ rel_bind_l (recv _). rel_bind_r (recv _).
 iApply refines_bind'. iApply rel_recv=> //.
 iIntros (msg_1 msg_1') "#Hmsg_1"=> /=.
 rel_pures_l. rel_pures_r.
-rel_apply_l rel_nondet_bool_l. iIntros (choice); rel_pures_l.
-rel_apply_r (rel_nondet_bool_r _ _ (negb choice)); rel_pures_r.
 rel_bind_l (if: _ then _ else _)%E.
 rel_bind_r (if: _ then _ else _)%E.
 iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'⌝ ∧ minted m ∧ minted_spec m')%I).
 { rewrite (publicly_related_minted msg_0) (publicly_related_minted msg_1).
   iDestruct "Hmsg_0" as "[? ?]".
   iDestruct "Hmsg_1" as "[? ?]".
-  case: choice; rel_pures_l; rel_pures_r; rel_values.
-  iExists msg_0, msg_1'; iFrame "#"; eauto.
-  iExists msg_1, msg_0'; iFrame "#"; eauto. }
+  case: b; case: b'; rel_pures_l; rel_pures_r; rel_values.
+  - iExists msg_0, msg_0'; iFrame "#"; eauto.
+  - iExists msg_0, msg_1'; iFrame "#"; eauto.
+  - iExists msg_1, msg_0'; iFrame "#"; eauto.
+  - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures_l. rel_pures_r.
 rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
@@ -332,34 +332,67 @@ rel_bind_l (recv _). rel_bind_r (recv _).
 iApply refines_bind'. iApply rel_recv=> //.
 iIntros (guess guess') "#Hguess"=> /=.
 rel_pures_l. rel_pures_r.
-rel_bind_l (eq_term _ _). rel_bind_r (eq_term _ _).
-iApply refines_bind'. iApply rel_eq_term=> /=.
-rel_pures_l. rel_pures_r.
+rel_apply_l rel_eq_term_l. rel_apply_r rel_eq_term_r.
 rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
         ltac:(solve_ndisj)
         with "Hctx [] Hguess") as %H.
 { by rewrite publicly_related_TInt. }
-iPureIntro.
-exists choice, (bool_decide (TInt 1 = guess)), (negb choice),
-  (bool_decide (TInt 1 = guess')).
-do 3 (split; first done). by apply bool_decide_ext.
+iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
+split; first done. do 2 f_equal. by apply bool_decide_ext.
+Qed.
+
+Lemma rel_alice_guess_wrapped c c' :
+  cryptis_rel_ctx -∗
+  channel_rel c c' -∗
+  REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
+    ⌜∃ b g b' g' : bool,
+    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
+Proof.
+iIntros "#Hctx #Hc". rewrite /alice_guess_wrapped.
+rel_pures_l. rel_pures_r.
+rel_apply_l rel_nondet_bool_l. iIntros (choice).
+rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
+case: choice; rel_pures_l; rel_pures_r.
+- rel_bind_l (alice true _). rel_bind_r (alice false _).
+  iApply refines_bind; first by iApply rel_alice.
+  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
+  rel_pures_l. rel_pures_r. rel_values.
+  iPureIntro. by exists true, g, false, g.
+- rel_bind_l (alice false _). rel_bind_r (alice true _).
+  iApply refines_bind; first by iApply rel_alice.
+  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
+  rel_pures_l. rel_pures_r. rel_values.
+  iPureIntro. by exists false, g, true, g.
 Qed.
 
 End CPA.
 
-(** The security game: an arbitrary well-typed attacker cannot tell which of
-    its two messages Alice encrypted.  Whenever a run of the game terminates
-    with a bit [b] and a guess [g], the run where Alice picked the other bit
-    can terminate with the same guess. *)
+Definition ind_cpa_game N (b : bool) : expr :=
+  (λ: "adv", run_network_rel "adv" (alice N b))%E.
+
+(** IND-CPA as a contextual equivalence: no well-typed context, in
+    particular no well-typed attacker, can tell which of its two messages
+    Alice encrypts. *)
+Theorem ind_cpa_ctx_equiv N b b' :
+  ∅ ⊨ ind_cpa_game N b =ctx= ind_cpa_game N b' : (attacker_ty → TBool)%ty.
+Proof.
+split; apply: cryptis_ctx_refinement => Σ ? ? Δ c c'; iIntros "#Hctx #Hc";
+  by iApply (rel_alice with "Hctx Hc").
+Qed.
+
+(** The same fact as an adequacy statement for the nondeterministic game:
+    whenever a run terminates with a bit [b] and a guess [g], the run where
+    Alice picked the other bit can terminate with the same guess. *)
 Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : val) σ :
   (∀ `{!relocG Σ}, ⊢ REL adv << adv : attacker_rel) →
-  adequate NotStuck (run_network_rel adv (alice N)) σ
+  adequate NotStuck (run_network_rel adv (alice_guess_wrapped N)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network_rel adv (alice N)], σ) (of_val v' :: thp', h) ∧
+       rtc erased_step ([run_network_rel adv (alice_guess_wrapped N)], σ)
+         (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iIntros "#Hctx #Hc". by iApply (rel_alice with "Hctx Hc").
+iIntros "#Hctx #Hc". by iApply (rel_alice_guess_wrapped with "Hctx Hc").
 Qed.

@@ -20,7 +20,8 @@ In the `cryptis` directory you will find:
   primitives; `primitives/attacker_spec.v` models the attacker as an arbitrary
   program self-related at a type that abstracts over terms; `rel_adequacy.v`
   turns a ReLoC refinement into a statement about executions
-  (`cryptis_rel_adequacy`).
+  (`cryptis_rel_adequacy`) or into a contextual refinement with the attacker
+  as the context (`cryptis_ctx_refinement`).
 
 ## Case studies
 
@@ -39,8 +40,9 @@ In the `examples` directory you will find our case studies:
 - `tls13`: TLS 1.3 handshake (partial; `impl.v` + per-component `proofs/`).
 - `challenge_response`, `composite_game`, `permanent`, `counter`: smaller
   single-file examples plus a composite security game.
-- `ind_cpa`: relational IND-CPA game for asymmetric encryption, closed by
-  `ind_cpa_secure` via `cryptis_rel_adequacy`.
+- `ind_cpa`: relational IND-CPA game for asymmetric encryption, closed as a
+  contextual equivalence (`ind_cpa_ctx_equiv`) and as an adequacy statement
+  (`ind_cpa_secure`).
 
 ## Building
 

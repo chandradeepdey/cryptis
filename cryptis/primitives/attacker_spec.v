@@ -314,11 +314,11 @@ Qed.
 
 (** * Running a protocol against an arbitrary attacker *)
 
-Lemma rel_run_network_rel (adv f f' : val) (A : val → val → iProp Σ) :
+Lemma rel_run_network_rel (adv adv' f f' : val) (A : val → val → iProp Σ) :
   cryptis_rel_ctx -∗
-  (REL adv << adv : attacker_rel) -∗
+  (REL adv << adv' : attacker_rel) -∗
   (∀ c c', channel_rel c c' -∗ REL f c << f' c' : A) -∗
-  REL run_network_rel adv f << run_network_rel adv f' : A.
+  REL run_network_rel adv f << run_network_rel adv' f' : A.
 Proof.
 iIntros "#Hctx Hadv Hf". rewrite /run_network_rel.
 rel_pures_l. rel_pures_r.
