@@ -41,9 +41,8 @@ In the `examples` directory you will find our case studies:
 - `tls13`: TLS 1.3 handshake (partial; `impl.v` + per-component `proofs/`).
 - `challenge_response`, `composite_game`, `permanent`, `counter`: smaller
   single-file examples plus a composite security game.
-- `ind_cpa`: relational IND-CPA game for asymmetric encryption, closed as a
-  contextual equivalence (`ind_cpa_ctx_equiv`) and as an adequacy statement
-  (`ind_cpa_secure`).
+- `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
+  encryption.
 
 ## Building
 

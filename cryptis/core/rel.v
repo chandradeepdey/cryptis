@@ -700,6 +700,20 @@ Lemma seal_pred_rel_token_seal_pred_rel F E N Φ :
   False.
 Proof. iIntros (?) "token pred". by iApply (nown_token with "token pred"). Qed.
 
+Definition seal_pred_rel_token_point F N :=
+  seal_pred_rel_token F (⊤ ∖ {[positives_flatten (namespace_car N)]}).
+
+Lemma seal_pred_rel_set_point F N Φ :
+  seal_pred_rel_token F ⊤ ==∗
+  seal_pred_rel F N Φ ∗ seal_pred_rel_token_point F N.
+Proof. iIntros "token". by iApply nown_alloc_point. Qed.
+
+Lemma seal_pred_rel_token_point_agree F N N' Φ :
+  seal_pred_rel_token_point F N -∗
+  seal_pred_rel F N' Φ -∗
+  ⌜N' = N⌝.
+Proof. iIntros "token pred". by iApply (nown_token_point_agree with "token pred"). Qed.
+
 Definition seal_pred_input_untag N s : option seal_pred_input :=
   match s with
   | Some (k, t) =>
@@ -823,6 +837,20 @@ Lemma hash_pred_rel_token_hash_pred_rel E N Ψ :
   hash_pred_rel N Ψ -∗
   False.
 Proof. iIntros (?) "token pred". by iApply (nown_token with "token pred"). Qed.
+
+Definition hash_pred_rel_token_point N :=
+  hash_pred_rel_token (⊤ ∖ {[positives_flatten (namespace_car N)]}).
+
+Lemma hash_pred_rel_set_point N Ψ :
+  hash_pred_rel_token ⊤ ==∗
+  hash_pred_rel N Ψ ∗ hash_pred_rel_token_point N.
+Proof. iIntros "token". by iApply nown_alloc_point. Qed.
+
+Lemma hash_pred_rel_token_point_agree N N' Ψ :
+  hash_pred_rel_token_point N -∗
+  hash_pred_rel N' Ψ -∗
+  ⌜N' = N⌝.
+Proof. iIntros "token pred". by iApply (nown_token_point_agree with "token pred"). Qed.
 
 Definition hash_pred_input_untag N h : option hash_pred_input :=
   match h with
@@ -1073,6 +1101,9 @@ Arguments seal_pred_rel_token {Σ _} F E.
 Arguments seal_pred_rel_set {Σ _} F E N Φ _.
 Arguments seal_pred_rel_agree {Σ _} s s' F N Φ1 Φ2.
 Arguments seal_pred_rel_token_seal_pred_rel {Σ _} F E N Φ _.
+Arguments seal_pred_rel_token_point {Σ _} F N.
+Arguments seal_pred_rel_set_point {Σ _} F N Φ.
+Arguments seal_pred_rel_token_point_agree {Σ _} F N N' Φ.
 Arguments wf_seal_rel {Σ _} F s s'.
 Arguments wf_seal_rel_elim {Σ _} F N Φ s s' b b' _ _ _.
 Arguments hash_pred_rel {Σ _} N Ψ.
@@ -1080,6 +1111,9 @@ Arguments hash_pred_rel_token {Σ _} E.
 Arguments hash_pred_rel_set {Σ _} E N Ψ _.
 Arguments hash_pred_rel_agree {Σ _} h h' N Ψ1 Ψ2.
 Arguments hash_pred_rel_token_hash_pred_rel {Σ _} E N Ψ _.
+Arguments hash_pred_rel_token_point {Σ _} N.
+Arguments hash_pred_rel_set_point {Σ _} N Ψ.
+Arguments hash_pred_rel_token_point_agree {Σ _} N N' Ψ.
 Arguments wf_hash_rel {Σ _} h h'.
 Arguments wf_hash_rel_elim {Σ _} N Ψ h h' u u' _ _ _.
 

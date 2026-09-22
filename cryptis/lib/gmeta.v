@@ -119,6 +119,33 @@ rewrite gmeta_token_difference //.
 by iDestruct "t" as "[t _]".
 Qed.
 
+Lemma gmeta_set_point `{Countable L} γ N (x : L) :
+  gmeta_token γ ⊤ ==∗
+  gmeta γ N x ∗ gmeta_token γ (⊤ ∖ {[positives_flatten (namespace_car N)]}).
+Proof.
+iIntros "token".
+have sub : {[positives_flatten (namespace_car N)]} ⊆ (⊤ : coPset) by set_solver.
+rewrite (gmeta_token_difference γ sub).
+iDestruct "token" as "[token1 token2]". iFrame "token2".
+iApply (own_update with "token1").
+apply: reservation_map_alloc; [set_solver | done].
+Qed.
+
+Lemma gmeta_token_point_agree `{Countable L} γ N N' (x : L) :
+  gmeta_token γ (⊤ ∖ {[positives_flatten (namespace_car N)]}) -∗
+  gmeta γ N' x -∗
+  ⌜N' = N⌝.
+Proof.
+iIntros "token #meta".
+iPoseProof (own_valid_2 with "token meta") as "%valid".
+iPureIntro. move/reservation_map_disj: valid.
+case: (decide (positives_flatten (namespace_car N') =
+               positives_flatten (namespace_car N))) => [e _|ne]; last set_solver.
+move/(f_equal positives_unflatten): e.
+rewrite !positives_unflatten_flatten => - [].
+by case: N N' => ? [] ? /= ->.
+Qed.
+
 End Laws.
 
 Arguments gmeta_token_difference {Σ _} γ E1 E2.

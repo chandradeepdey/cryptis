@@ -42,6 +42,25 @@ iIntros "%sub token (%γ' & #meta & _)".
 by iApply (gmeta_gmeta_token with "token meta").
 Qed.
 
+Lemma nown_alloc_point γ N (a : A) :
+  ✓ a → gmeta_token γ ⊤ ==∗
+  nown γ N a ∗ gmeta_token γ (⊤ ∖ {[positives_flatten (namespace_car N)]}).
+Proof.
+intros valid_a. iIntros "token".
+iMod (own_alloc a) as "(%γ' & own)"; auto.
+iMod (gmeta_set_point _ N γ' with "token") as "[meta token]".
+iModIntro. iFrame "token". iExists γ'. by iFrame.
+Qed.
+
+Lemma nown_token_point_agree γ N N' (a : A) :
+  gmeta_token γ (⊤ ∖ {[positives_flatten (namespace_car N)]}) -∗
+  nown γ N' a -∗
+  ⌜N' = N⌝.
+Proof.
+iIntros "token (%γ' & #meta & _)".
+by iApply (gmeta_token_point_agree with "token meta").
+Qed.
+
 Lemma nown_valid γ N (a : A) : nown γ N a -∗ ✓ a.
 Proof.
 iIntros "(%γ' & #own_γ & own)". iApply (own_valid with "own").
@@ -135,3 +154,4 @@ End NOwn.
 
 #[global] Typeclasses Opaque nown.
 Arguments nown_alloc {Σ _ A _ γ} N {_} a.
+Arguments nown_alloc_point {Σ _ A _ γ} N a.

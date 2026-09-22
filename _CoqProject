@@ -177,3 +177,4 @@ examples/composite_game.v
 # Relational-specific
 
 examples/ind_cpa.v
+examples/ind_cca2.v
