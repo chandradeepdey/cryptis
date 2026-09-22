@@ -2,7 +2,7 @@ From iris.algebra Require Import auth cmra ofe gmap gset local_updates.
 From iris.base_logic.lib Require Import own.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
-From cryptis.lib Require Import saved_prop.
+From cryptis.lib Require Import gmeta nown saved_prop.
 From cryptis.core Require Import term minted.
 From cryptis Require Import cryptis.
 From cryptis.core Require Import minted_spec.
@@ -13,30 +13,43 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Notation seal_pred_input := (option (term * term)).
+Notation hash_pred_input := (option term).
+
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
   #[local] public_relGpreS_flow :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
+  #[local] public_relGpreS_seal :: savedPredG Σ (seal_pred_input * seal_pred_input);
+  #[local] public_relGpreS_hash :: savedPredG Σ (hash_pred_input * hash_pred_input);
   #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
-  #[local] public_relGpreS_prop :: savedPropG Σ;
+  #[local] public_relGpreS_meta :: metaGS Σ;
 }.
 
 Class public_relGS Σ := Public_relGS {
   #[global] maps_inG :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
   #[global] flow_inG :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
+  #[global] seal_inG :: savedPredG Σ (seal_pred_input * seal_pred_input);
+  #[global] hash_inG :: savedPredG Σ (hash_pred_input * hash_pred_input);
   #[global] term_meta_inG :: term_metaGS Σ;
   #[global] term_meta_spec_inG :: term_meta_specGS Σ;
-  #[global] prop_inG :: savedPropG Σ;
+  #[global] meta_inG :: metaGS Σ;
   public_rel_map_l : gname;
   public_rel_map_r : gname;
   public_rel_flow_l : gname;
   public_rel_flow_r : gname;
+  public_rel_aenc_name : gname;
+  public_rel_sign_name : gname;
+  public_rel_senc_name : gname;
+  public_rel_hash_name : gname;
 }.
 
 Definition public_relΣ : gFunctors :=
   #[GFunctor (authUR (gmapUR term (authUR (optionUR stateR))));
     GFunctor (authUR (gmapUR term (authUR (gset_disjUR term))));
+    savedPredΣ (seal_pred_input * seal_pred_input);
+    savedPredΣ (hash_pred_input * hash_pred_input);
     term_metaΣ;
-    savedPropΣ].
+    metaΣ].
 
 #[global] Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
 Proof. solve_inG. Qed.
@@ -621,6 +634,262 @@ Qed.
 
 End Flow.
 
+Section SealPred.
+
+Implicit Types (F : functionality) (N : namespace).
+Implicit Types (Φ : seal_pred_input → seal_pred_input → iProp).
+Implicit Types (s b : seal_pred_input).
+
+Definition rel_name_of_functionality F :=
+  match F with
+  | AENC => public_rel_aenc_name
+  | SIGN => public_rel_sign_name
+  | SENC => public_rel_senc_name
+  end.
+
+Definition seal_pred_rel F N Φ : iProp :=
+  nown (rel_name_of_functionality F) N
+    (saved_pred DfracDiscarded (λ '(s, s'), Φ s s')).
+
+#[global] Instance seal_pred_rel_persistent F N Φ : Persistent (seal_pred_rel F N Φ).
+Proof. apply _. Qed.
+
+Definition seal_pred_rel_token F E :=
+  gmeta_token (rel_name_of_functionality F) E.
+
+Lemma seal_pred_rel_token_difference F E1 E2 :
+  E1 ⊆ E2 →
+  seal_pred_rel_token F E2 ⊣⊢
+  seal_pred_rel_token F E1 ∗ seal_pred_rel_token F (E2 ∖ E1).
+Proof.
+move=> sub; rewrite /seal_pred_rel_token; exact: gmeta_token_difference.
+Qed.
+
+Lemma seal_pred_rel_token_drop E1 E2 F :
+  E1 ⊆ E2 →
+  seal_pred_rel_token F E2 -∗
+  seal_pred_rel_token F E1.
+Proof.
+iIntros (sub) "t".
+rewrite seal_pred_rel_token_difference //.
+by iDestruct "t" as "[t _]".
+Qed.
+
+Lemma seal_pred_rel_agree s s' F N Φ1 Φ2 :
+  seal_pred_rel F N Φ1 -∗
+  seal_pred_rel F N Φ2 -∗
+  ▷ (Φ1 s s' ≡ Φ2 s s').
+Proof.
+rewrite /seal_pred_rel. iIntros "#own1 #own2".
+iPoseProof (nown_valid_2 with "own1 own2") as "#valid".
+iPoseProof (saved_pred_op_validI with "valid") as "[_ #agree]".
+by iApply ("agree" $! (s, s')).
+Qed.
+
+Lemma seal_pred_rel_set F E N Φ :
+  ↑N ⊆ E →
+  seal_pred_rel_token F E ==∗
+  seal_pred_rel F N Φ ∗
+  seal_pred_rel_token F (E ∖ ↑N).
+Proof. iIntros (?) "token". by iApply nown_alloc. Qed.
+
+Lemma seal_pred_rel_token_seal_pred_rel F E N Φ :
+  ↑N ⊆ E →
+  seal_pred_rel_token F E -∗
+  seal_pred_rel F N Φ -∗
+  False.
+Proof. iIntros (?) "token pred". by iApply (nown_token with "token pred"). Qed.
+
+Definition seal_pred_input_untag N s : option seal_pred_input :=
+  match s with
+  | Some (k, t) =>
+    match Spec.untag (Tag N) t with
+    | Some b => Some (Some (k, b))
+    | None => None
+    end
+  | None => Some None
+  end.
+
+Lemma seal_pred_input_untag_Some N k t b :
+  seal_pred_input_untag N (Some (k, t)) = Some b ↔
+  ∃ t0, b = Some (k, t0) ∧ t = Spec.tag (Tag N) t0.
+Proof.
+rewrite /seal_pred_input_untag. split.
+- case e: (Spec.untag _ _) => [t0|] // [<-].
+  exists t0. split=> //. by apply Spec.untagK.
+- case=> t0 [-> ->]. by rewrite Spec.tagK.
+Qed.
+
+Lemma seal_pred_input_untag_None N b :
+  seal_pred_input_untag N None = Some b ↔ b = None.
+Proof. rewrite /seal_pred_input_untag. split; congruence. Qed.
+
+Lemma seal_pred_input_untag_tag N k t :
+  seal_pred_input_untag N (Some (k, Spec.tag (Tag N) t)) = Some (Some (k, t)).
+Proof. by rewrite /seal_pred_input_untag Spec.tagK. Qed.
+
+Definition wf_seal_rel F s s' : iProp :=
+  ∃ N Φ b b',
+    ⌜seal_pred_input_untag N s = Some b⌝ ∧ ⌜seal_pred_input_untag N s' = Some b'⌝ ∧
+    seal_pred_rel F N Φ ∧ □ ▷ Φ b b'.
+
+#[global] Instance wf_seal_rel_persistent F s s' : Persistent (wf_seal_rel F s s').
+Proof. apply _. Qed.
+
+Lemma seal_pred_input_untag_agree N1 N2 k t b1 b2 :
+  seal_pred_input_untag N1 (Some (k, t)) = Some b1 →
+  seal_pred_input_untag N2 (Some (k, t)) = Some b2 →
+  N1 = N2.
+Proof.
+case/seal_pred_input_untag_Some => [t1 [_ ->]] /seal_pred_input_untag_Some [t2 [_ e]].
+by case/Spec.tag_inj: e => /Tag_inj.
+Qed.
+
+Lemma wf_seal_rel_elim F N Φ s s' b b' :
+  is_Some s ∨ is_Some s' →
+  seal_pred_input_untag N s = Some b →
+  seal_pred_input_untag N s' = Some b' →
+  wf_seal_rel F s s' -∗
+  seal_pred_rel F N Φ -∗
+  □ ▷ Φ b b'.
+Proof.
+iIntros (Hs Hb Hb') "(%N' & %Φ' & %b1 & %b1' & %Hb1 & %Hb1' & #HΦ' & #inv) #HΦ".
+have HN : N' = N.
+{ case: Hs => - [[k t] e]; subst.
+  - exact: seal_pred_input_untag_agree Hb1 Hb.
+  - exact: seal_pred_input_untag_agree Hb1' Hb'. }
+subst N'. rewrite Hb in Hb1. rewrite Hb' in Hb1'.
+case: Hb1 Hb1' => <- [<-].
+iPoseProof (seal_pred_rel_agree b b' with "HΦ HΦ'") as "e".
+by iIntros "!> !>"; iRewrite "e".
+Qed.
+
+End SealPred.
+
+Section HashPred.
+
+Implicit Types (Ψ : hash_pred_input → hash_pred_input → iProp).
+Implicit Types (h : hash_pred_input).
+
+Definition hash_pred_rel N Ψ : iProp :=
+  nown public_rel_hash_name N
+    (saved_pred DfracDiscarded (λ '(h, h'), Ψ h h')).
+
+#[global] Instance hash_pred_rel_persistent N Ψ : Persistent (hash_pred_rel N Ψ).
+Proof. apply _. Qed.
+
+Definition hash_pred_rel_token E :=
+  gmeta_token public_rel_hash_name E.
+
+Lemma hash_pred_rel_token_difference E1 E2 :
+  E1 ⊆ E2 →
+  hash_pred_rel_token E2 ⊣⊢
+  hash_pred_rel_token E1 ∗ hash_pred_rel_token (E2 ∖ E1).
+Proof.
+move=> sub; rewrite /hash_pred_rel_token; exact: gmeta_token_difference.
+Qed.
+
+Lemma hash_pred_rel_token_drop E1 E2 :
+  E1 ⊆ E2 →
+  hash_pred_rel_token E2 -∗
+  hash_pred_rel_token E1.
+Proof.
+iIntros (sub) "t".
+rewrite hash_pred_rel_token_difference //.
+by iDestruct "t" as "[t _]".
+Qed.
+
+Lemma hash_pred_rel_agree h h' N Ψ1 Ψ2 :
+  hash_pred_rel N Ψ1 -∗
+  hash_pred_rel N Ψ2 -∗
+  ▷ (Ψ1 h h' ≡ Ψ2 h h').
+Proof.
+rewrite /hash_pred_rel. iIntros "#own1 #own2".
+iPoseProof (nown_valid_2 with "own1 own2") as "#valid".
+iPoseProof (saved_pred_op_validI with "valid") as "[_ #agree]".
+by iApply ("agree" $! (h, h')).
+Qed.
+
+Lemma hash_pred_rel_set E N Ψ :
+  ↑N ⊆ E →
+  hash_pred_rel_token E ==∗
+  hash_pred_rel N Ψ ∗
+  hash_pred_rel_token (E ∖ ↑N).
+Proof. iIntros (?) "token". by iApply nown_alloc. Qed.
+
+Lemma hash_pred_rel_token_hash_pred_rel E N Ψ :
+  ↑N ⊆ E →
+  hash_pred_rel_token E -∗
+  hash_pred_rel N Ψ -∗
+  False.
+Proof. iIntros (?) "token pred". by iApply (nown_token with "token pred"). Qed.
+
+Definition hash_pred_input_untag N h : option hash_pred_input :=
+  match h with
+  | Some t =>
+    match Spec.untag (Tag N) t with
+    | Some b => Some (Some b)
+    | None => None
+    end
+  | None => Some None
+  end.
+
+Lemma hash_pred_input_untag_Some N t h :
+  hash_pred_input_untag N (Some t) = Some h ↔
+  ∃ t0, h = Some t0 ∧ t = Spec.tag (Tag N) t0.
+Proof.
+rewrite /hash_pred_input_untag. split.
+- case e: (Spec.untag _ _) => [t0|] // [<-].
+  exists t0. split=> //. by apply Spec.untagK.
+- case=> t0 [-> ->]. by rewrite Spec.tagK.
+Qed.
+
+Lemma hash_pred_input_untag_None N h :
+  hash_pred_input_untag N None = Some h ↔ h = None.
+Proof. rewrite /hash_pred_input_untag. split; congruence. Qed.
+
+Lemma hash_pred_input_untag_tag N t :
+  hash_pred_input_untag N (Some (Spec.tag (Tag N) t)) = Some (Some t).
+Proof. by rewrite /hash_pred_input_untag Spec.tagK. Qed.
+
+Lemma hash_pred_input_untag_agree N1 N2 t h1 h2 :
+  hash_pred_input_untag N1 (Some t) = Some h1 →
+  hash_pred_input_untag N2 (Some t) = Some h2 →
+  N1 = N2.
+Proof.
+case/hash_pred_input_untag_Some => [t1 [_ ->]] /hash_pred_input_untag_Some [t2 [_ e]].
+by case/Spec.tag_inj: e => /Tag_inj.
+Qed.
+
+Definition wf_hash_rel h h' : iProp :=
+  ∃ N Ψ u u',
+    ⌜hash_pred_input_untag N h = Some u⌝ ∧ ⌜hash_pred_input_untag N h' = Some u'⌝ ∧
+    hash_pred_rel N Ψ ∧ □ ▷ Ψ u u'.
+
+#[global] Instance wf_hash_rel_persistent h h' : Persistent (wf_hash_rel h h').
+Proof. apply _. Qed.
+
+Lemma wf_hash_rel_elim N Ψ h h' (u u' : hash_pred_input) :
+  is_Some h ∨ is_Some h' →
+  hash_pred_input_untag N h = Some u →
+  hash_pred_input_untag N h' = Some u' →
+  wf_hash_rel h h' -∗
+  hash_pred_rel N Ψ -∗
+  □ ▷ Ψ u u'.
+Proof.
+iIntros (Hh Hu Hu') "(%N' & %Ψ' & %u1 & %u1' & %Hu1 & %Hu1' & #HΨ' & #inv) #HΨ".
+have HN : N' = N.
+{ case: Hh => - [t e]; subst.
+  - exact: hash_pred_input_untag_agree Hu1 Hu.
+  - exact: hash_pred_input_untag_agree Hu1' Hu'. }
+subst N'. rewrite Hu in Hu1. rewrite Hu' in Hu1'.
+case: Hu1 Hu1' => <- [<-].
+iPoseProof (hash_pred_rel_agree u u' with "HΨ HΨ'") as "e".
+by iIntros "!> !>"; iRewrite "e".
+Qed.
+
+End HashPred.
+
 Fixpoint publicly_related t t' : iProp :=
   minted t ∧ minted_spec t' ∧
   match t, t' with
@@ -649,20 +918,27 @@ Fixpoint publicly_related t t' : iProp :=
             The termination checker won't like that, so inlined *)
         | Sign => (publicly_related k1 k1' ∨
                   (publicly_linked (TKey Verify k1) (TKey Verify k1') ∧ linked k1 k1')) ∧
-                  publicly_related t1 t1'
-        | AEnc | SEnc => publicly_related k1 k1' → publicly_related t1 t1'
+                  publicly_related t1 t1' ∧
+                  wf_seal_rel SIGN (Some (TKey Sign k1, t1)) (Some (TKey Sign k1', t1'))
+        | AEnc => (publicly_related k1 k1' → publicly_related t1 t1') ∧
+                  wf_seal_rel AENC (Some (TKey ADec k1, t1)) (Some (TKey ADec k1', t1'))
+        | SEnc => (publicly_related k1 k1' → publicly_related t1 t1') ∧
+                  wf_seal_rel SENC (Some (TKey SEnc k1, t1)) (Some (TKey SEnc k1', t1'))
         end
       | _, _ => False
       end))
   | THash t1, THash t1' =>
     publicly_related t1 t1' ∨
-    (publicly_linked t t' ∧ linked t1 t1')
+    (publicly_linked t t' ∧ linked t1 t1' ∧ wf_hash_rel (Some t1) (Some t1'))
   | TNonce a, TSeal k' t1' => publicly_linked t t' ∧ secret_in_r t1' ∧
     □ (match k' with
       | TKey kt' k1' =>
         match kt' with
         | ADec | Sign | Verify => False
-        | AEnc | SEnc => secret_in_r k1'
+        | AEnc => secret_in_r k1' ∧
+                  wf_seal_rel AENC None (Some (TKey ADec k1', t1'))
+        | SEnc => secret_in_r k1' ∧
+                  wf_seal_rel SENC None (Some (TKey SEnc k1', t1'))
         end
       | _ => False
       end)
@@ -671,29 +947,42 @@ Fixpoint publicly_related t t' : iProp :=
       | TKey kt k1 =>
         match kt with
         | ADec | Sign | Verify => False
-        | AEnc | SEnc => secret_in_l k1
+        | AEnc => secret_in_l k1 ∧
+                  wf_seal_rel AENC (Some (TKey ADec k1, t1)) None
+        | SEnc => secret_in_l k1 ∧
+                  wf_seal_rel SENC (Some (TKey SEnc k1, t1)) None
         end
       | _ => False
       end)
-  | TNonce a, THash t1' => publicly_linked t t' ∧ secret_in_r t1'
-  | THash t1, TNonce a' => publicly_linked t t' ∧ secret_in_l t1
+  | TNonce a, THash t1' =>
+    publicly_linked t t' ∧ secret_in_r t1' ∧ wf_hash_rel None (Some t1')
+  | THash t1, TNonce a' =>
+    publicly_linked t t' ∧ secret_in_l t1 ∧ wf_hash_rel (Some t1) None
   | TSeal k t1, THash t1' =>
     publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
+    wf_hash_rel None (Some t1') ∧
     □ (match k with
       | TKey kt k1 =>
         match kt with
         | ADec | Sign | Verify => False
-        | AEnc | SEnc => secret_in_l k1
+        | AEnc => secret_in_l k1 ∧
+                  wf_seal_rel AENC (Some (TKey ADec k1, t1)) None
+        | SEnc => secret_in_l k1 ∧
+                  wf_seal_rel SENC (Some (TKey SEnc k1, t1)) None
         end
       | _ => False
       end)
   | THash t1, TSeal k' t1' =>
     publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
+    wf_hash_rel (Some t1) None ∧
     □ (match k' with
       | TKey kt' k1' =>
         match kt' with
         | ADec | Sign | Verify => False
-        | AEnc | SEnc => secret_in_r k1'
+        | AEnc => secret_in_r k1' ∧
+                  wf_seal_rel AENC None (Some (TKey ADec k1', t1'))
+        | SEnc => secret_in_r k1' ∧
+                  wf_seal_rel SENC None (Some (TKey SEnc k1', t1'))
         end
       | _ => False
       end)
@@ -706,31 +995,6 @@ Fixpoint publicly_related t t' : iProp :=
 
 #[global] Instance publicly_related_persistent t t' : Persistent (PUB⟨t, t'⟩).
 Proof. elim/term_ind': t t' => /=; apply _. Qed.
-
-#[global] Instance publicly_related_timeless t t' : Timeless (PUB⟨t, t'⟩).
-Proof.
-elim/term_lt_ind: t t' => t IH t'.
-case: t IH => [n|a b|a|kt s|k b|s|pt wf nf] IH /=; try apply _.
-- have ? : ∀ t'', Timeless (PUB⟨a, t''⟩)
-    by apply: IH; rewrite (tsize_eq (TPair _ _)); lia.
-  have ? : ∀ t'', Timeless (PUB⟨b, t''⟩)
-    by apply: IH; rewrite (tsize_eq (TPair _ _)); lia.
-  apply _.
-- have ? : ∀ t'', Timeless (PUB⟨s, t''⟩)
-    by apply: IH; rewrite (tsize_eq (TKey _ _)); lia.
-  apply _.
-- have Hk : ∀ t'', Timeless (PUB⟨k, t''⟩)
-    by apply: IH; rewrite (tsize_eq (TSeal _ _)); lia.
-  have Hb : ∀ t'', Timeless (PUB⟨b, t''⟩)
-    by apply: IH; rewrite (tsize_eq (TSeal _ _)); lia.
-  case: k IH Hk => [n|a b'|a|kt s|k b'|s|pt wf nf] IH Hk; try apply _.
-  have ? : ∀ t'', Timeless (PUB⟨s, t''⟩).
-  { apply: IH. rewrite (tsize_eq (TSeal _ _)) (tsize_eq (TKey _ _)). lia. }
-  apply _.
-- have ? : ∀ t'', Timeless (PUB⟨s, t''⟩)
-    by apply: IH; rewrite (tsize_eq (THash _)); lia.
-  apply _.
-Qed.
 
 Section Invariant.
 
@@ -804,10 +1068,29 @@ End PublicRel.
 Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
   (at level 20, no associativity, format "PUB⟨ a , b ⟩").
 
+Arguments seal_pred_rel {Σ _} F N Φ.
+Arguments seal_pred_rel_token {Σ _} F E.
+Arguments seal_pred_rel_set {Σ _} F E N Φ _.
+Arguments seal_pred_rel_agree {Σ _} s s' F N Φ1 Φ2.
+Arguments seal_pred_rel_token_seal_pred_rel {Σ _} F E N Φ _.
+Arguments wf_seal_rel {Σ _} F s s'.
+Arguments wf_seal_rel_elim {Σ _} F N Φ s s' b b' _ _ _.
+Arguments hash_pred_rel {Σ _} N Ψ.
+Arguments hash_pred_rel_token {Σ _} E.
+Arguments hash_pred_rel_set {Σ _} E N Ψ _.
+Arguments hash_pred_rel_agree {Σ _} h h' N Ψ1 Ψ2.
+Arguments hash_pred_rel_token_hash_pred_rel {Σ _} E N Ψ _.
+Arguments wf_hash_rel {Σ _} h h'.
+Arguments wf_hash_rel_elim {Σ _} N Ψ h h' u u' _ _ _.
+
 Lemma public_relGS_alloc `{!relocG Σ} E :
   public_relGpreS Σ →
   ⊢ |={E}=> ∃ (H : public_relGS Σ),
-              cryptis_rel_ctx.
+              cryptis_rel_ctx ∗
+              seal_pred_rel_token AENC ⊤ ∗
+              seal_pred_rel_token SIGN ⊤ ∗
+              seal_pred_rel_token SENC ⊤ ∗
+              hash_pred_rel_token ⊤.
 Proof.
 move=> ?; iStartProof.
 iMod term_metaGS_alloc as "[% #?]".
@@ -820,13 +1103,19 @@ iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
   as "[%public_rel_flow_l Hflow_l]"; first by apply auth_auth_valid.
 iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
   as "[%public_rel_flow_r Hflow_r]"; first by apply auth_auth_valid.
-pose (Hpub := Public_relGS _ _ _ _ _
+iMod gmeta_token_alloc as (public_rel_aenc_name) "Haenc".
+iMod gmeta_token_alloc as (public_rel_sign_name) "Hsign".
+iMod gmeta_token_alloc as (public_rel_senc_name) "Hsenc".
+iMod gmeta_token_alloc as (public_rel_hash_name) "Hhash".
+pose (Hpub := Public_relGS _ _ _ _ _ _ _
                 public_rel_map_l public_rel_map_r
-                public_rel_flow_l public_rel_flow_r).
+                public_rel_flow_l public_rel_flow_r
+                public_rel_aenc_name public_rel_sign_name public_rel_senc_name
+                public_rel_hash_name).
 iExists Hpub.
 iMod (inv_alloc cryptisN _
         (∃ pub_l pub_r flow_l flow_r, public_rel_inv pub_l pub_r flow_l flow_r)%I
-        with "[Hmap_l Hmap_r Hflow_l Hflow_r]") as "#Hinv"; last by iFrame "#".
+        with "[Hmap_l Hmap_r Hflow_l Hflow_r]") as "#Hinv"; last by iFrame "#∗".
 iModIntro. iExists ∅, ∅, ∅, ∅.
 rewrite /public_rel_inv /public_rel_map_inv /public_rel_flow_inv
         /public_rel_map_l_auth /public_rel_map_r_auth
@@ -1031,8 +1320,12 @@ Lemma publicly_related_TSeal k k' t t' :
       | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
         match kt with
         | ADec | Verify => False
-        | Sign => PUB⟨TKey Verify k1, TKey Verify k1'⟩ ∧ PUB⟨t, t'⟩
-        | AEnc | SEnc => PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩
+        | Sign => PUB⟨TKey Verify k1, TKey Verify k1'⟩ ∧ PUB⟨t, t'⟩ ∧
+                  wf_seal_rel SIGN (Some (TKey Sign k1, t)) (Some (TKey Sign k1', t'))
+        | AEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧
+                  wf_seal_rel AENC (Some (TKey ADec k1, t)) (Some (TKey ADec k1', t'))
+        | SEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧
+                  wf_seal_rel SENC (Some (TKey SEnc k1, t)) (Some (TKey SEnc k1', t'))
         end
       | _, _ => False
       end)).
@@ -1044,7 +1337,7 @@ rewrite /=. iSplit.
   case: k' => [n'|a' b'|a'|kt' k1'|k'' b'|s'|pt' wf' nf'] //.
   iDestruct "Hbox" as "[-> Hbox]". iSplit; first done.
   case: kt' => //.
-  iDestruct "Hbox" as "[Hv Ht]". iSplit; last done.
+  iDestruct "Hbox" as "(Hv & Ht & Hwf)". iSplit; last by iSplit.
   rewrite minted_TSeal !minted_TKey minted_spec_TSeal !minted_spec_TKey.
   iDestruct "mk" as "[mk1 _]". iDestruct "mk'" as "[mk1' _]".
   by do 3 (iSplit; first done).
@@ -1058,19 +1351,21 @@ rewrite /=. iSplit.
   case: k' => [n'|a' b'|a'|kt' k1'|k'' b'|s'|pt' wf' nf'] //.
   iDestruct "Hbox" as "[-> Hbox]". iSplit; first done.
   case: kt' => //.
-  iDestruct "Hbox" as "[(_ & _ & _ & Hv) Ht]". by iSplit.
+  iDestruct "Hbox" as "((_ & _ & _ & Hv) & Ht & Hwf)". by iSplit; last iSplit.
 Qed.
 
 Lemma publicly_related_THash t t' :
   PUB⟨THash t, THash t'⟩ ⊣⊢
   PUB⟨t, t'⟩ ∨
   (minted t ∧ minted_spec t' ∧
-   publicly_linked (THash t) (THash t') ∧ linked t t').
+   publicly_linked (THash t) (THash t') ∧ linked t t' ∧
+   wf_hash_rel (Some t) (Some t')).
 Proof.
 rewrite /= minted_THash minted_spec_THash. iSplit.
-- iIntros "#(? & ? & [?|(? & ?)])"; [by iLeft | iRight; by do 3 (iSplit; first done)].
-- iIntros "#[H|(? & ? & ? & ?)]";
-    last by (do 2 (iSplit; first done); iRight; iSplit).
+- iIntros "#(? & ? & [?|(? & ? & ?)])";
+    [by iLeft | iRight; by do 4 (iSplit; first done)].
+- iIntros "#[H|(? & ? & ? & ? & ?)]";
+    last by (do 2 (iSplit; first done); iRight; do 2 (iSplit; first done)).
   iPoseProof (publicly_related_minted with "H") as "[? ?]".
   do 2 (iSplit; first done). by iLeft.
 Qed.
@@ -1103,7 +1398,7 @@ Lemma publicly_related_THash_term t (t' : term) :
   (publicly_linked (THash t) t' ∧ secret_in_l t).
 Proof.
 case: t' => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & ? & ?)". iRight. by iSplit.
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
 - iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
 - iIntros "_". iLeft. by eauto.
 Qed.
@@ -1114,7 +1409,7 @@ Lemma publicly_related_term_THash (t : term) t' :
   (publicly_linked t (THash t') ∧ secret_in_r t').
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & ? & ?)". iRight. by iSplit.
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
 - iIntros "(_ & _ & ? & _ & ? & _)". iRight. by iSplit.
 - iIntros "_". iLeft. by eauto.
 Qed.
@@ -1137,10 +1432,10 @@ iIntros "#Hk #[[_ Ht]|(_ & _ & _ & _ & _ & #Hrest)]"; first done.
 case: k_t k_t' => // kt k1 [] // kt' k1' in k_t_k k_t_k' *.
 iDestruct "Hrest" as "[<- Hrest]".
 case: kt k_t_k k_t_k' => // - [<-] [<-].
-- iApply "Hrest". rewrite publicly_related_TKey.
+- iDestruct "Hrest" as "[Hrest _]". iApply "Hrest". rewrite publicly_related_TKey.
   by iDestruct "Hk" as "[??]".
-- by iDestruct "Hrest" as "[_ ?]".
-- iApply "Hrest". rewrite publicly_related_TKey.
+- by iDestruct "Hrest" as "(_ & ? & _)".
+- iDestruct "Hrest" as "[Hrest _]". iApply "Hrest". rewrite publicly_related_TKey.
   by iDestruct "Hk" as "[??]".
 Qed.
 
@@ -1275,7 +1570,9 @@ Lemma publicly_related_aenc (sk sk' : aenc_key) N (t t' : term) :
                    (Spec.enc (Spec.pkey sk') (Tag N) t') ∧
    linked (Spec.pkey sk) (Spec.pkey sk') ∧
    linked (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') ∧
-   □ (PUB⟨sk, sk'⟩ → PUB⟨t, t'⟩)).
+   □ (PUB⟨sk, sk'⟩ → PUB⟨t, t'⟩) ∧
+   wf_seal_rel AENC (Some (sk : term, Spec.tag (Tag N) t))
+                    (Some (sk' : term, Spec.tag (Tag N) t'))).
 Proof.
 rewrite publicly_related_adec_key'.
 rewrite /Spec.enc publicly_related_TSeal.
@@ -1285,13 +1582,13 @@ iSplit.
 - iIntros "#[[Hk [_ Ht]]|([Hmk Hmt] & [Hmk' Hmt'] & Hel & Hpk & Hpt & #Hrest)]";
     first by iLeft; iSplit.
   iRight. do 7 (iSplit; first done).
-  iIntros "!> #Hs". iDestruct "Hrest" as "[_ Hrest]".
-  by iDestruct ("Hrest" with "Hs") as "[_ ?]".
-- iIntros "#[[Hk Ht]|(Hmk & Hmt & Hmk' & Hmt' & Hel & Hpk & Hpt & #Hrest)]";
+  iDestruct "Hrest" as "[_ [Hrest Hwf]]". iSplit; last done.
+  iIntros "!> #Hs". by iDestruct ("Hrest" with "Hs") as "[_ ?]".
+- iIntros "#[[Hk Ht]|(Hmk & Hmt & Hmk' & Hmt' & Hel & Hpk & Hpt & #Hrest & #Hwf)]";
     first by iLeft; iSplit; last iSplit.
   iRight. iSplit; first by iSplit. iSplit; first by iSplit.
   do 3 (iSplit; first done).
-  iIntros "!>". iSplit; first done.
+  iIntros "!>". iSplit; first done. iSplit; last done.
   iIntros "#Hs". iSplit; first done. by iApply "Hrest".
 Qed.
 
@@ -1591,8 +1888,8 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
     by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
                     (or_introl (ex_intro _ _ (conj Hs I))) with "Hmap_l H1") as "[]". }
   rewrite !publicly_related_THash.
-  iDestruct "H1" as "[H1|(_ & _ & Hel1 & [Hpriv1 _])]";
-  iDestruct "H2" as "[H2|(_ & _ & Hel2 & [Hpriv2 _])]".
+  iDestruct "H1" as "[H1|(_ & _ & Hel1 & [Hpriv1 _] & _)]";
+  iDestruct "H2" as "[H2|(_ & _ & Hel2 & [Hpriv2 _] & _)]".
   + by iDestruct ("IH" with "Hmap_l Hpub_consistent H1 H2") as %->.
   + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent H1 Hpriv2") as "#H2".
@@ -1625,8 +1922,10 @@ Lemma publicly_related_part_bij_1_fupd E t t1' t2' :
   |={E}=> ⌜t1' = t2'⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
-iDestruct (publicly_related_part_bij_1_open with "Hbody H1 H2") as %Heq.
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
+iAssert (▷ ⌜t1' = t2'⌝)%I as "#Heq".
+{ iNext. by iApply (publicly_related_part_bij_1_open with "Hbody H1 H2"). }
+iDestruct "Heq" as ">%Heq".
 iModIntro. iSplitL; last done.
 iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame.
 Qed.
@@ -1727,8 +2026,8 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
     by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
                     (or_introl (ex_intro _ _ (conj Hs I))) with "Hmap_r H1") as "[]". }
   rewrite !publicly_related_THash.
-  iDestruct "H1" as "[H1|(_ & _ & Hel1 & [_ Hpriv1])]";
-  iDestruct "H2" as "[H2|(_ & _ & Hel2 & [_ Hpriv2])]".
+  iDestruct "H1" as "[H1|(_ & _ & Hel1 & [_ Hpriv1] & _)]";
+  iDestruct "H2" as "[H2|(_ & _ & Hel2 & [_ Hpriv2] & _)]".
   + by iDestruct ("IH" with "Hmap_r Hpub_consistent H1 H2") as %->.
   + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent H1 Hpriv2") as "#H2".
@@ -1761,8 +2060,10 @@ Lemma publicly_related_part_bij_2_fupd E t1 t2 t' :
   |={E}=> ⌜t1 = t2⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
-iDestruct (publicly_related_part_bij_2_open with "Hbody H1 H2") as %Heq.
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
+iAssert (▷ ⌜t1 = t2⌝)%I as "#Heq".
+{ iNext. by iApply (publicly_related_part_bij_2_open with "Hbody H1 H2"). }
+iDestruct "Heq" as ">%Heq".
 iModIntro. iSplitL; last done.
 iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame.
 Qed.
@@ -1927,9 +2228,13 @@ Qed.
   (⌜kt = AEnc ∨ kt = SEnc⌝ ∧ secret_in_l s).
 Proof.
 case: t' => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & _ & _ & #Hbox)". iRight. by case: kt; eauto.
+- iIntros "(_ & _ & _ & _ & #Hbox)". iRight.
+  case: kt; try (by iDestruct "Hbox" as "[]");
+  (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 - iIntros "_". iLeft. by eauto.
-- iIntros "(_ & _ & _ & _ & _ & #Hbox)". iRight. by case: kt; eauto.
+- iIntros "(_ & _ & _ & _ & _ & _ & #Hbox)". iRight.
+  case: kt; try (by iDestruct "Hbox" as "[]");
+  (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 Qed.
 
 #[local] Lemma publicly_related_term_TSeal_key (t : term) kt' s' b' :
@@ -1938,9 +2243,13 @@ Qed.
   (⌜kt' = AEnc ∨ kt' = SEnc⌝ ∧ secret_in_r s').
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & _ & _ & #Hbox)". iRight. by case: kt'; eauto.
+- iIntros "(_ & _ & _ & _ & #Hbox)". iRight.
+  case: kt'; try (by iDestruct "Hbox" as "[]");
+  (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 - iIntros "_". iLeft. by eauto.
-- iIntros "(_ & _ & _ & _ & _ & #Hbox)". iRight. by case: kt'; eauto.
+- iIntros "(_ & _ & _ & _ & _ & _ & #Hbox)". iRight.
+  case: kt'; try (by iDestruct "Hbox" as "[]");
+  (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 Qed.
 
 (** The second disjunct of [publicly_related_TSeal], specialised to a
@@ -2146,8 +2455,10 @@ Lemma publicly_related_open_fupd E k k' t t' :
   |={E}=> ⌜is_Some (Spec.open k t) ↔ is_Some (Spec.open k' t')⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Hk #Ht".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
-iDestruct (publicly_related_open_open with "Hbody Hk Ht") as %Hiff.
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r & Hbody)".
+iAssert (▷ ⌜is_Some (Spec.open k t) ↔ is_Some (Spec.open k' t')⌝)%I as "#Hiff".
+{ iNext. by iApply (publicly_related_open_open with "Hbody Hk Ht"). }
+iDestruct "Hiff" as ">%Hiff".
 iModIntro. iSplitL; last done.
 iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame.
 Qed.

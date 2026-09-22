@@ -15,8 +15,9 @@ In the `cryptis` directory you will find:
 - `tactics`: Ltac tactics for symbolically executing the main HeapLang functions
   on terms.
 - Relational layer (built on [ReLoC](https://gitlab.mpi-sws.org/iris/reloc)):
-  `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs
-  and its invariant; `primitives/*_spec.v` are the relational specs of the
+  `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs,
+  its invariant, and the relational seal and hash predicates (`seal_pred_rel`,
+  `hash_pred_rel`) that constrain honestly linked ciphertexts and hashes; `primitives/*_spec.v` are the relational specs of the
   primitives; `primitives/attacker_spec.v` models the attacker as an arbitrary
   program self-related at a type that abstracts over terms; `rel_adequacy.v`
   turns a ReLoC refinement into a statement about executions

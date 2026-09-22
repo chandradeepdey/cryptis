@@ -37,11 +37,11 @@ Lemma public_rel_flow_l_extend E t :
           term_token t (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf Httm".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap_inv &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap_inv &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_fresh flow_l t with "Hmeta_flow_l Httf") as "%Hfresh".
 iMod (own_update with "Hflow_l") as "[Hflow_l Hflow_frag_t]".
 { apply auth_update_alloc.
@@ -85,11 +85,11 @@ Lemma public_rel_flow_r_extend E t' :
           term_token_spec t' (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf Httm".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap_inv &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap_inv &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_fresh flow_r t' with "Hmeta_flow_r Httf") as "%Hfresh".
 iMod (own_update with "Hflow_r") as "[Hflow_r Hflow_frag_t']".
 { apply auth_update_alloc.
@@ -133,11 +133,11 @@ Lemma public_rel_flow_l_extend_2 E t t1' :
           pending_in_l t t1'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf Httm".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap_inv &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap_inv &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_fresh flow_l t with "Hmeta_flow_l Httf") as "%Hfresh".
 iMod (own_update with "Hflow_l") as "[Hflow_l Hflow_frag_t]".
 { apply auth_update_alloc.
@@ -181,11 +181,11 @@ Lemma public_rel_flow_r_extend_2 E t' t1 :
           pending_in_r t1 t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf Httm".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap_inv &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap_inv &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_fresh flow_r t' with "Hmeta_flow_r Httf") as "%Hfresh".
 iMod (own_update with "Hflow_r") as "[Hflow_r Hflow_frag_t']".
 { apply auth_update_alloc.
@@ -233,11 +233,11 @@ Lemma public_rel_flow_l_grow E t ts tsup :
           term_token t (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iDestruct (big_sepM_delete _ _ t _ Hfltts with "Hflow_l_frag") as "[Hl_frac2 Hflow_l_frag]".
 iCombine "Hl_frac Hl_frac2" as "Hl".
@@ -298,11 +298,11 @@ Lemma public_rel_flow_r_grow E t' ts t'sup :
           term_token_spec t' (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t' _ Hfrt'ts with "Hflow_r_frag") as "[Hr_frac2 Hflow_r_frag]".
 iCombine "Hr_frac Hr_frac2" as "Hr".
@@ -363,11 +363,11 @@ Lemma public_rel_flow_l_grow_2 E t tsup :
 Proof.
 move=> /is_nonceP [a ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l (TNonce a) with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
 iDestruct (big_sepM_delete _ _ (TNonce a) _ Hflt with "Hflow_l_frag") as "[Hl_frac2 Hflow_l_frag]".
@@ -425,11 +425,11 @@ Lemma public_rel_flow_r_grow_2 E t' t'sup :
 Proof.
 move=> /is_nonceP [a' ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r (TNonce a') with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
 iDestruct (big_sepM_delete _ _ (TNonce a') _ Hfrt' with "Hflow_r_frag") as "[Hr_frac2 Hflow_r_frag]".
@@ -487,11 +487,11 @@ Lemma public_rel_flow_l_grow_3 E t tsub tsup :
           term_token t (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot") as "%Hprot".
@@ -553,11 +553,11 @@ Lemma public_rel_flow_r_grow_3 E t' t'sub t'sup :
           term_token_spec t' (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot") as "%Hprot".
@@ -619,11 +619,11 @@ Lemma public_rel_flow_l_grow_4 E t t1' ts tsup :
           pending_in_l t t1'.
 Proof.
 iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hl_frac Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iDestruct (big_sepM_delete _ _ t _ Hfltts with "Hflow_l_frag") as "[Hl_frac2 Hflow_l_frag]".
 iCombine "Hl_frac Hl_frac2" as "Hl".
@@ -684,11 +684,11 @@ Lemma public_rel_flow_r_grow_4 E t' t1 ts t'sup :
           pending_in_r t1 t'.
 Proof.
 iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hr_frac Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t' _ Hfrt'ts with "Hflow_r_frag") as "[Hr_frac2 Hflow_r_frag]".
 iCombine "Hr_frac Hr_frac2" as "Hr".
@@ -749,11 +749,11 @@ Lemma public_rel_flow_l_grow_5 E t t1' tsup :
 Proof.
 move=> /is_nonceP [a ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hfrag") as "%Hpltts".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
 iDestruct (big_sepM_delete _ _ (TNonce a) _ Hflt with "Hflow_l_frag") as "[Hl_frac2 Hflow_l_frag]".
@@ -813,11 +813,11 @@ Lemma public_rel_flow_r_grow_5 E t' t1 t'sup :
 Proof.
 move=> /is_nonceP [a' ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hfrag") as "%Hprtst'".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
 iDestruct (big_sepM_delete _ _ (TNonce a') _ Hfrt' with "Hflow_r_frag") as "[Hr_frac2 Hflow_r_frag]".
@@ -877,11 +877,11 @@ Lemma public_rel_flow_l_grow_6 E t t1' tsub tsup :
           pending_in_l t t1'.
 Proof.
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hfrag") as "%Hpltts".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot") as "%Hprot".
@@ -945,11 +945,11 @@ Lemma public_rel_flow_r_grow_6 E t' t1 t'sub t'sup :
           pending_in_r t1 t'.
 Proof.
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hfrag") as "%Hprtst'".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot") as "%Hprot".
@@ -1014,11 +1014,11 @@ Lemma public_rel_flow_l_shrink E t ts tsup t1 :
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hprot1 Htt".
 iPoseProof (public_rel_flow_l_ne with "Hprot Hprot1") as "%Hne".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot1") as "(%ts1 & % & %)".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1089,11 +1089,11 @@ Lemma public_rel_flow_r_shrink E t' ts t'sup t1' :
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hprot1 Htts".
 iPoseProof (public_rel_flow_r_ne with "Hprot Hprot1") as "%Hne".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot1") as "(%ts1 & % & %)".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1165,11 +1165,11 @@ Lemma public_rel_flow_l_shrink_2 E t ts tsup :
           term_token t (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hl_frac_sup Htt_sup Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l tsup with "Hmeta_map_l Htt_sup") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac_sup") as "%Hfltsup".
@@ -1239,11 +1239,11 @@ Lemma public_rel_flow_r_shrink_2 E t' ts t'sup :
           term_token_spec t' (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hr_frac_sup Htts_sup Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t'sup with "Hmeta_map_r Htts_sup") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac_sup") as "%Hfrt'sup".
@@ -1310,11 +1310,11 @@ Lemma public_rel_flow_l_shrink_3 E t ts tsup t' :
           term_token t (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot #Hpub Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (publicly_linked_lookup_l with "Hmap_l Hpub") as "%Hpltsupt'".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1384,11 +1384,11 @@ Lemma public_rel_flow_r_shrink_3 E t' ts t'sup t :
           term_token_spec t' (↑cryptisN.@"public_rel".@"map").
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot #Hpub Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (publicly_linked_lookup_r with "Hmap_r Hpub") as "%Hprtt'sup".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1460,11 +1460,11 @@ Lemma public_rel_flow_l_shrink_4 E t t1' ts tsup t1 :
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hprot1 Hfrag".
 iPoseProof (public_rel_flow_l_ne with "Hprot Hprot1") as "%Hne".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot1") as "(%ts2 & % & %)".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1535,11 +1535,11 @@ Lemma public_rel_flow_r_shrink_4 E t' t1 ts t'sup t1' :
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hprot1 Hfrag".
 iPoseProof (public_rel_flow_r_ne with "Hprot Hprot1") as "%Hne".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  Hmap &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >Hmap &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot1") as "(%ts2 & % & %)".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1611,11 +1611,11 @@ Lemma public_rel_flow_l_shrink_5 E t t1' ts tsup :
           pending_in_l t t1'.
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hl_frac_sup Htt_sup Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l tsup with "Hmeta_map_l Htt_sup") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac_sup") as "%Hfltsup".
@@ -1685,11 +1685,11 @@ Lemma public_rel_flow_r_shrink_5 E t' t1 ts t'sup :
           pending_in_r t1 t'.
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hr_frac_sup Htts_sup Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t'sup with "Hmeta_map_r Htts_sup") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac_sup") as "%Hfrt'sup".
@@ -1756,11 +1756,11 @@ Lemma public_rel_flow_l_shrink_6 E t t1' ts tsup t' :
           pending_in_l t t1'.
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot #Hpub Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (publicly_linked_lookup_l with "Hmap_l Hpub") as "%Hpltsupt'".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1830,11 +1830,11 @@ Lemma public_rel_flow_r_shrink_6 E t' t1 ts t'sup t :
           pending_in_r t1 t'.
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot #Hpub Hfrag".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (publicly_linked_lookup_r with "Hmap_r Hpub") as "%Hprtt'sup".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 have Hts : ts ≠ ∅ by set_solver.
@@ -1906,11 +1906,11 @@ Lemma public_rel_map_l_extend E t t' tsub :
           pending_in_l t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hprot Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot") as "%Hprot".
 iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
@@ -1957,11 +1957,11 @@ Lemma public_rel_map_r_extend E t t' t'sub :
           pending_in_r t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hprot Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot") as "%Hprot".
 iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
@@ -2003,11 +2003,11 @@ Lemma public_rel_map_l_extend_2 E t t' :
 Proof.
 move=> /is_nonceP [a ->].
 iIntros (HE) "#(_ & _ & Hinv) Htt".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l (TNonce a) with "Hmeta_map_l Htt") as "%Hfresh".
 iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
 { apply auth_update_alloc.
@@ -2053,11 +2053,11 @@ Lemma public_rel_map_r_extend_2 E t t' :
 Proof.
 move=> /is_nonceP [a' ->].
 iIntros (HE) "#(_ & _ & Hinv) Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >(Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r (TNonce a') with "Hmeta_map_r Htts") as "%Hfresh".
 iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
 { apply auth_update_alloc.
@@ -2170,11 +2170,11 @@ Lemma public_rel_lock_Secret_l E t t' :
   |={E}=> secret_in_l t.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hl_frac".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
-                  Hflow &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
+                  >Hflow &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hpltt'".
 iDestruct (big_sepM_delete _ _ t _ Hpltt' with "Hmap_l_frag") as "[Hl_frac2 Hmap_l_frag]".
 iCombine "Hl_frac Hl_frac2" as "Hl".
@@ -2217,11 +2217,11 @@ Lemma public_rel_lock_Secret_r E t t' :
   |={E}=> secret_in_r t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hr_frac".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  Hflow &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >(Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >Hflow &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
 iDestruct (big_sepM_delete _ _ t' _ Hprtt' with "Hmap_r_frag") as "[Hr_frac2 Hmap_r_frag]".
 iCombine "Hr_frac Hr_frac2" as "Hr".
@@ -2347,11 +2347,11 @@ Lemma public_rel_lock_Public E t t' :
   |={E}=> publicly_linked t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Hl_frac Hr_frac".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
@@ -2420,11 +2420,11 @@ Lemma public_rel_lock_Public_l E t t' :
   |={E}=> publicly_linked t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Hl_frac Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
@@ -2493,11 +2493,11 @@ Lemma public_rel_lock_Public_r E t t' :
   |={E}=> publicly_linked t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Htt Hr_frac".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
@@ -2566,11 +2566,11 @@ Lemma public_rel_extend E t t' :
   |={E}=> publicly_linked t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Htt Htts".
-iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
-                  ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
-                  ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
-                  [%Hflow_l_cons %Hflow_r_cons])".
+iInv "Hinv" as "(%pub_l & %pub_r & %flow_l & %flow_r &
+                  >([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
+                  >([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
+                  >[%HPriv_l %HPriv_r] & >%Hbij & Hpub_consistent &
+                  >[%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh_l".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh_r".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
