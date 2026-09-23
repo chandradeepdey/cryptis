@@ -229,6 +229,19 @@ case: t; eauto using open_spec => k_t t /=.
 by case: decide => [e|_]; eauto using open_spec.
 Qed.
 
+Lemma open_aenc_Some seed t u :
+  open (TKey ADec seed) t = Some u ↔ t = TSeal (TKey AEnc seed) u.
+Proof.
+split.
+- rewrite /open. case: t => // k u0. case: decide => // e [<-].
+  by case: k e => //= - [] //= ? [->].
+- move=> ->. by rewrite /open decide_True.
+Qed.
+
+Lemma open_aenc_key_Some (sk : aenc_key) t u :
+  open sk t = Some u ↔ t = TSeal (pkey sk) u.
+Proof. case: sk => seed. rewrite term_of_aenc_keyE. exact: open_aenc_Some. Qed.
+
 Definition is_key t :=
   match t with
   | TKey kt _ => Some kt

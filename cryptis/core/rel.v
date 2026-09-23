@@ -774,6 +774,23 @@ iPoseProof (seal_pred_rel_agree b b' with "HΦ HΦ'") as "e".
 by iIntros "!> !>"; iRewrite "e".
 Qed.
 
+Lemma wf_seal_rel_elim_point E ι F N Φ s s' :
+  ↑ι ⊆ E →
+  inv ι (seal_pred_rel_token_point F N) -∗
+  seal_pred_rel F N Φ -∗
+  wf_seal_rel F s s' ={E}=∗
+  ∃ b b', ⌜seal_pred_input_untag N s = Some b⌝ ∧
+          ⌜seal_pred_input_untag N s' = Some b'⌝ ∧ □ ▷ Φ b b'.
+Proof.
+iIntros (HE) "#Htok #HΦ (%N' & %Φ' & %b & %b' & %Hb & %Hb' & #HΦ' & #inv)".
+iInv "Htok" as ">token".
+iDestruct (seal_pred_rel_token_point_agree with "token HΦ'") as %->.
+iModIntro. iFrame "token".
+iPoseProof (seal_pred_rel_agree b b' with "HΦ HΦ'") as "#e".
+iModIntro. iExists b, b'. do 2 (iSplit; first done).
+by iIntros "!> !>"; iRewrite "e".
+Qed.
+
 End SealPred.
 
 Section HashPred.
@@ -1420,6 +1437,42 @@ case: t => /= *; try by iIntros "(_ & _ & [])".
 - iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
 - iIntros "_". iLeft. by eauto.
 - iIntros "(_ & _ & ? & _ & ? & _)". iRight. by iSplit.
+Qed.
+
+Lemma publicly_related_TSeal_term_wf kt k1 t (t' : term) :
+  (∀ k' t1', t' ≠ TSeal k' t1') →
+  PUB⟨TSeal (TKey kt k1) t, t'⟩ -∗
+  match kt with
+  | AEnc => wf_seal_rel AENC (Some (TKey ADec k1, t)) None
+  | SEnc => wf_seal_rel SENC (Some (TKey SEnc k1, t)) None
+  | _ => False
+  end.
+Proof.
+case: t' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] Hns;
+  first [by case: (Hns k' b') | case: kt => /=; first
+    [ by iIntros "(_ & _ & [])"
+    | by iIntros "(_ & _ & _ & _ & #[_ ?])"
+    | by iIntros "(_ & _ & _ & _ & #[])"
+    | by iIntros "(_ & _ & _ & _ & _ & _ & #[_ ?])"
+    | by iIntros "(_ & _ & _ & _ & _ & _ & #[])" ]].
+Qed.
+
+Lemma publicly_related_term_TSeal_wf (t : term) kt k1' t' :
+  (∀ k t1, t ≠ TSeal k t1) →
+  PUB⟨t, TSeal (TKey kt k1') t'⟩ -∗
+  match kt with
+  | AEnc => wf_seal_rel AENC None (Some (TKey ADec k1', t'))
+  | SEnc => wf_seal_rel SENC None (Some (TKey SEnc k1', t'))
+  | _ => False
+  end.
+Proof.
+case: t => [n|a b|a|kt0 s|k b|s|pt wf nf] Hns;
+  first [by case: (Hns k b) | case: kt => /=; first
+    [ by iIntros "(_ & _ & [])"
+    | by iIntros "(_ & _ & _ & _ & #[_ ?])"
+    | by iIntros "(_ & _ & _ & _ & #[])"
+    | by iIntros "(_ & _ & _ & _ & _ & _ & #[_ ?])"
+    | by iIntros "(_ & _ & _ & _ & _ & _ & #[])" ]].
 Qed.
 
 Lemma publicly_related_THash_term t (t' : term) :
@@ -2491,6 +2544,65 @@ iAssert (▷ ⌜is_Some (Spec.open k t) ↔ is_Some (Spec.open k' t')⌝)%I as "
 iDestruct "Hiff" as ">%Hiff".
 iModIntro. iSplitL; last done.
 iModIntro. iExists pub_l, pub_r, flow_l, flow_r. iFrame.
+Qed.
+
+Lemma publicly_related_open_aenc_fupd E (sk sk' : aenc_key) t t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  PUB⟨Spec.pkey sk, Spec.pkey sk'⟩ -∗
+  publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
+  PUB⟨t, t'⟩ ={E}=∗
+  match Spec.open sk t, Spec.open sk' t' with
+  | Some u, Some u' =>
+    PUB⟨u, u'⟩ ∨ wf_seal_rel AENC (Some (sk : term, u)) (Some (sk' : term, u'))
+  | Some u, None => wf_seal_rel AENC (Some (sk : term, u)) None
+  | None, Some u' => wf_seal_rel AENC None (Some (sk' : term, u'))
+  | None, None => True
+  end.
+Proof.
+move=> HE. case: sk sk' => [sA] [sA'].
+rewrite term_of_aenc_keyE /term_of_aenc_key_def.
+rewrite -[seed_of_aenc_key (AEncKey sA)]/sA -[seed_of_aenc_key (AEncKey sA')]/sA'.
+rewrite -[Spec.pkey (TKey ADec sA)]/(TKey AEnc sA).
+rewrite -[Spec.pkey (TKey ADec sA')]/(TKey AEnc sA').
+iIntros "#Hctx #Hpk #[Hlink_l Hlink_r] #Ht".
+have Hsh : ∀ t0, (∃ k u, t0 = TSeal k u) ∨ (∀ k u, t0 ≠ TSeal k u).
+{ case=> *; try by right. left; eauto. }
+case eL: (Spec.open (TKey ADec sA) t) => [u|];
+case eR: (Spec.open (TKey ADec sA') t') => [u'|]; iSimpl.
+- move/Spec.open_aenc_Some: (eL) => ?; subst t.
+  move/Spec.open_aenc_Some: (eR) => ?; subst t'.
+  iDestruct (publicly_related_TSeal with "Ht") as "[[_ Hu]|(_ & _ & _ & _ & _ & #Hbox)]".
+  { iModIntro. by iLeft. }
+  iSimpl in "Hbox". iDestruct "Hbox" as "(_ & _ & Hwf)".
+  iModIntro. by iRight.
+- move/Spec.open_aenc_Some: (eL) => ?; subst t.
+  case: (Hsh t') => [[k' [u' ?]]|Hns]; last first.
+  { iModIntro. by iApply (publicly_related_TSeal_term_wf AEnc _ _ Hns with "Ht"). }
+  subst t'.
+  have Hk' : k' ≠ TKey AEnc sA'.
+  { move=> ?; subst k'.
+    have := proj2 (Spec.open_aenc_Some sA' (TSeal (TKey AEnc sA') u') u') eq_refl.
+    by rewrite eR. }
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [Hkl _] & _ & _)]".
+  + iMod (publicly_related_part_bij' with "Hctx Hpk Hk") as %Hiff; first done.
+    by case: Hk'; symmetry; apply Hiff.
+  + iDestruct (linked_in_l_publicly_linked_in_l with "Hkl Hlink_l") as %?.
+    subst k'. by case: Hk'.
+- move/Spec.open_aenc_Some: (eR) => ?; subst t'.
+  case: (Hsh t) => [[k [u ?]]|Hns]; last first.
+  { iModIntro. by iApply (publicly_related_term_TSeal_wf AEnc _ _ Hns with "Ht"). }
+  subst t.
+  have Hk : k ≠ TKey AEnc sA.
+  { move=> ?; subst k.
+    have := proj2 (Spec.open_aenc_Some sA (TSeal (TKey AEnc sA) u) u) eq_refl.
+    by rewrite eL. }
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [_ Hkr] & _ & _)]".
+  + iMod (publicly_related_part_bij' with "Hctx Hk Hpk") as %Hiff; first done.
+    by case: Hk; apply Hiff.
+  + iDestruct (linked_in_r_publicly_linked_in_r with "Hkr Hlink_r") as %?.
+    subst k. by case: Hk.
+- by iModIntro.
 Qed.
 
 End PartBij.

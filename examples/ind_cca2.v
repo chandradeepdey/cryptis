@@ -95,61 +95,6 @@ Definition cell_inv skA skA' (l l' : loc) : iProp :=
     PUB⟨Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl,
         Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩).
 
-Lemma open_aenc_Some seed t u :
-  Spec.open (TKey ADec seed) t = Some u ↔ t = TSeal (TKey AEnc seed) u.
-Proof.
-split.
-- rewrite /Spec.open. case: t => // k u0. case: decide => // e [<-].
-  by case: k e => //= - [] //= ? [->].
-- move=> ->. by rewrite /Spec.open decide_True.
-Qed.
-
-Lemma open_aenc_key_Some skA t u :
-  Spec.open skA t = Some u ↔ t = TSeal (Spec.pkey skA) u.
-Proof. case: skA => sA. rewrite term_of_aenc_keyE. exact: open_aenc_Some. Qed.
-
-Lemma publicly_related_TSeal_aenc_l seed u t' :
-  (∀ k' u', t' ≠ TSeal k' u') →
-  PUB⟨TSeal (TKey AEnc seed) u, t'⟩ -∗
-  wf_seal_rel AENC (Some (TKey ADec seed, u)) None.
-Proof.
-case: t' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] Hns /=;
-  try by iIntros "(_ & _ & [])".
-- by iIntros "(_ & _ & _ & _ & #[_ H])".
-- by case: (Hns k' b').
-- by iIntros "(_ & _ & _ & _ & _ & _ & #[_ H])".
-Qed.
-
-Lemma publicly_related_TSeal_aenc_r t seed' u' :
-  (∀ k u, t ≠ TSeal k u) →
-  PUB⟨t, TSeal (TKey AEnc seed') u'⟩ -∗
-  wf_seal_rel AENC None (Some (TKey ADec seed', u')).
-Proof.
-case: t => [n|a b|a|kt s|k b|s|pt wf nf] Hns /=;
-  try by iIntros "(_ & _ & [])".
-- by iIntros "(_ & _ & _ & _ & #[_ H])".
-- by case: (Hns k b).
-- by iIntros "(_ & _ & _ & _ & _ & _ & #[_ H])".
-Qed.
-
-Lemma wf_seal_rel_cca s s' :
-  seal_pred_rel AENC (N.@"m") cca_pred -∗
-  inv tokenN (seal_pred_rel_token_point AENC (N.@"m")) -∗
-  wf_seal_rel AENC s s' ={⊤}=∗
-  ∃ b b', ⌜seal_pred_input_untag (N.@"m") s = Some b⌝ ∗
-          ⌜seal_pred_input_untag (N.@"m") s' = Some b'⌝ ∗
-          cca_pred b b'.
-Proof.
-iIntros "#Hpred #Htok (%N' & %Φ' & %b & %b' & %Hb & %Hb' & #HΦ' & #HΦb)".
-iInv tokenN as ">Htoken".
-iDestruct (seal_pred_rel_token_point_agree with "Htoken HΦ'") as %->.
-iModIntro. iFrame "Htoken".
-iPoseProof (seal_pred_rel_agree b b' with "Hpred HΦ'") as "#e".
-iAssert (▷ cca_pred b b')%I as "#H".
-{ iNext. by iRewrite "e". }
-iMod "H" as "#H". iModIntro. iExists b, b'. by iFrame "#".
-Qed.
-
 Lemma rel_oracle_open skA skA' t t' :
   cryptis_rel_ctx -∗
   seal_pred_rel AENC (N.@"m") cca_pred -∗
@@ -163,55 +108,32 @@ Lemma rel_oracle_open skA skA' t t' :
      ∃ pl pl', ⌜u = Spec.tag (Tag (N.@"m")) pl ∧ u' = Spec.tag (Tag (N.@"m")) pl'⌝ ∗
        term_meta (seed_of_aenc_key skA) chalN (pl, pl')).
 Proof.
-case: skA => sA; case: skA' => sA'.
-rewrite term_of_aenc_keyE /term_of_aenc_key_def.
-rewrite -[seed_of_aenc_key (AEncKey sA)]/sA -[seed_of_aenc_key (AEncKey sA')]/sA'.
-rewrite -[Spec.pkey (TKey ADec sA)]/(TKey AEnc sA).
-rewrite -[Spec.pkey (TKey ADec sA')]/(TKey AEnc sA').
-iIntros "#Hctx #Hpred #Htok #Hpk #[Hlink_l Hlink_r] #Ht".
-have Hsh : ∀ t0, (∃ k u, t0 = TSeal k u) ∨ (∀ k u, t0 ≠ TSeal k u).
-{ case=> *; try by right. left; eauto. }
-case eL: (Spec.open (TKey ADec sA) t) => [u|];
-case eR: (Spec.open (TKey ADec sA') t') => [u'|].
-- move/open_aenc_Some: (eL) => ?; subst t.
-  move/open_aenc_Some: (eR) => ?; subst t'.
-  iDestruct (publicly_related_TSeal with "Ht") as "[[_ Hu]|(_ & _ & _ & _ & _ & #Hbox)]".
+iIntros "#Hctx #Hpred #Htok #Hpk #Hlink #Ht".
+have Hseed : ∀ seed, (skA : term) = TKey ADec seed → seed_of_aenc_key skA = seed.
+{ rewrite term_of_aenc_keyE. by move=> ? [->]. }
+iMod (publicly_related_open_aenc_fupd with "Hctx Hpk Hlink Ht") as "Ho";
+  first solve_ndisj.
+case eL: (Spec.open skA t) => [u|];
+case eR: (Spec.open skA' t') => [u'|]; iSimpl in "Ho".
+- iDestruct "Ho" as "[Hu|Hwf]".
   { iModIntro. iRight. iExists u, u'. iSplit; first by iPureIntro; split. by iLeft. }
-  iSimpl in "Hbox". iDestruct "Hbox" as "(_ & _ & Hwf)".
-  iMod (wf_seal_rel_cca with "Hpred Htok Hwf") as (b b') "(%Hb & %Hb' & Hcca)".
+  iMod (wf_seal_rel_elim_point with "Htok Hpred Hwf") as (b b') "(%Hb & %Hb' & #Hcca)";
+    first solve_ndisj.
   case/seal_pred_input_untag_Some: Hb => pl [? ?]; subst b u.
   case/seal_pred_input_untag_Some: Hb' => pl' [? ?]; subst b' u'.
-  iSimpl in "Hcca". iDestruct "Hcca" as (seed [= <-]) "Hmeta".
+  iMod "Hcca" as "#Hcca". iSimpl in "Hcca".
+  iDestruct "Hcca" as (seed e) "Hmeta". move/Hseed: e => ?; subst seed.
   iModIntro. iRight. iExists _, _. iSplit; first by iPureIntro; split.
-  iRight. iExists pl, pl'. by iFrame.
-- move/open_aenc_Some: (eL) => ?; subst t.
-  case: (Hsh t') => [[k' [u' ?]]|Hns]; first subst t'.
-  + iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [Hkl _] & _ & _)]".
-    * iMod (publicly_related_part_bij' with "Hctx Hpk Hk") as %Hiff; first solve_ndisj.
-      have ? : k' = TKey AEnc sA' by symmetry; apply Hiff. subst k'.
-      have := proj2 (open_aenc_Some sA' (TSeal (TKey AEnc sA') u') u') eq_refl.
-      by rewrite eR.
-    * iDestruct (linked_in_l_publicly_linked_in_l with "Hkl Hlink_l") as %?. subst k'.
-      have := proj2 (open_aenc_Some sA' (TSeal (TKey AEnc sA') u') u') eq_refl.
-      by rewrite eR.
-  + iPoseProof (publicly_related_TSeal_aenc_l _ _ Hns with "Ht") as "Hwf".
-    iMod (wf_seal_rel_cca with "Hpred Htok Hwf") as (b b') "(_ & %Hb' & Hcca)".
-    move/seal_pred_input_untag_None: Hb' => ?; subst b'.
-    case: b => [[??]|]; iSimpl in "Hcca"; by iDestruct "Hcca" as "[]".
-- move/open_aenc_Some: (eR) => ?; subst t'.
-  case: (Hsh t) => [[k [u ?]]|Hns]; first subst t.
-  + iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [_ Hkr] & _ & _)]".
-    * iMod (publicly_related_part_bij' with "Hctx Hk Hpk") as %Hiff; first solve_ndisj.
-      have ? : k = TKey AEnc sA by apply Hiff. subst k.
-      have := proj2 (open_aenc_Some sA (TSeal (TKey AEnc sA) u) u) eq_refl.
-      by rewrite eL.
-    * iDestruct (linked_in_r_publicly_linked_in_r with "Hkr Hlink_r") as %?. subst k.
-      have := proj2 (open_aenc_Some sA (TSeal (TKey AEnc sA) u) u) eq_refl.
-      by rewrite eL.
-  + iPoseProof (publicly_related_TSeal_aenc_r _ _ Hns with "Ht") as "Hwf".
-    iMod (wf_seal_rel_cca with "Hpred Htok Hwf") as (b b') "(%Hb & _ & Hcca)".
-    move/seal_pred_input_untag_None: Hb => ?; subst b.
-    iSimpl in "Hcca". by iDestruct "Hcca" as "[]".
+  iRight. iExists pl, pl'. by iSplit; first by iPureIntro; split.
+- iMod (wf_seal_rel_elim_point with "Htok Hpred Ho") as (b b') "(_ & %Hb' & #Hcca)";
+    first solve_ndisj.
+  move/seal_pred_input_untag_None: Hb' => ?; subst b'.
+  iMod "Hcca" as "#Hcca".
+  case: b => [[??]|]; iSimpl in "Hcca"; by iDestruct "Hcca" as "[]".
+- iMod (wf_seal_rel_elim_point with "Htok Hpred Ho") as (b b') "(%Hb & _ & #Hcca)";
+    first solve_ndisj.
+  move/seal_pred_input_untag_None: Hb => ?; subst b.
+  iMod "Hcca" as "#Hcca". iSimpl in "Hcca". by iDestruct "Hcca" as "[]".
 - iModIntro. iLeft. by iPureIntro; split.
 Qed.
 
@@ -276,7 +198,7 @@ iMod (rel_oracle_open with "Hctx Hpred Htok Hpk Hlink Ht")
       - case: (decide (ct = t)) => [e|ne]; first by iLeft.
         iRight. by iSplit.
       - iDestruct (term_meta_agree with "Hmeta Hmeta1") as %[= <- <-].
-        iLeft. iPureIntro. move/open_aenc_key_Some: eL => ->.
+        iLeft. iPureIntro. move/Spec.open_aenc_key_Some: eL => ->.
         by rewrite /ct /Spec.enc. }
     * have e' : ct' = t' by apply Hiff.
       rewrite !bool_decide_eq_true_2 //.
