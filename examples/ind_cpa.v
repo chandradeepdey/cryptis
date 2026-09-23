@@ -1,18 +1,9 @@
-From stdpp Require Import base gmap.
-From mathcomp Require Import ssreflect.
-From iris.algebra Require Import agree auth csum gset gmap excl frac.
-From iris.algebra Require Import reservation_map.
-From iris.heap_lang Require Import notation proofmode adequacy.
-From iris.heap_lang.lib Require Import par nondet_bool.
-From cryptis Require Import lib term cryptis primitives tactics.
-From cryptis Require Import role.
-From cryptis.primitives Require Import attacker.
-
+From iris.heap_lang.lib Require Import nondet_bool.
+From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
 From cryptis Require Import lib_spec.
 From cryptis.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
-From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec.
-From cryptis.primitives Require Import attacker_spec.
+From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
 From cryptis Require Import rel_adequacy.
 
 Set Implicit Arguments.

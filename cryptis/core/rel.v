@@ -1,12 +1,8 @@
-From iris.algebra Require Import auth cmra ofe gmap gset local_updates.
-From iris.base_logic.lib Require Import own.
+From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
-From cryptis Require Import lib.
 From cryptis.lib Require Import gmeta nown saved_prop.
-From cryptis.core Require Import term minted.
 From cryptis Require Import cryptis.
-From cryptis.core Require Import minted_spec.
-From cryptis.core Require Import term_meta_spec.
+From cryptis.core Require Import minted_spec term_meta_spec.
 From cryptis.core Require Export rel_state.
 
 Set Implicit Arguments.

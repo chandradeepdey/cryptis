@@ -1,20 +1,10 @@
-From stdpp Require Import base gmap.
-From mathcomp Require Import ssreflect.
-From iris.algebra Require Import agree auth csum gset gmap excl frac.
-From iris.algebra Require Import reservation_map.
-From iris.heap_lang Require Import notation proofmode adequacy.
-From iris.heap_lang.lib Require Import par nondet_bool.
-From cryptis Require Import lib term cryptis primitives tactics.
-From cryptis Require Import role.
-From cryptis.primitives Require Import attacker.
-
+From iris.heap_lang.lib Require Import nondet_bool.
+From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
 From cryptis Require Import lib_spec.
 From cryptis.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
-From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec.
-From cryptis.primitives Require Import attacker_spec.
+From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
 From cryptis Require Import rel_adequacy.
-From cryptis.examples Require Import ind_cpa.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -62,6 +52,10 @@ Proof. case: s => [[??]|]; case: s' => [[??]|]; apply _. Qed.
 #[global] Instance cca_pred_timeless s s' : Timeless (cca_pred s s').
 Proof. case: s => [[??]|]; case: s' => [[??]|]; apply _. Qed.
 
+Definition aenc' : val := λ: "pk" "m",
+  let: "nonce" := mk_nonce #() in
+  aenc "pk" (Tag $ N.@"m") (term_of_list ["nonce"; "m"]).
+
 Definition oracle : val := rec: "loop" "c" "sk" "chal" :=
   let: "t" := recv "c" in
   (match: open "sk" "t" with
@@ -81,7 +75,7 @@ Definition alice (b : bool) : val := λ: "c",
   let: "msg_0" := recv "c" in
   let: "msg_1" := recv "c" in
   let: "msg" := if: #b then "msg_0" else "msg_1" in
-  let: "ct" := aenc' N "pkA" "msg" in
+  let: "ct" := aenc' "pkA" "msg" in
   "chal" <- SOME "ct";;
   send "c" "ct";;
   let: "guess" := recv "c" in
@@ -316,8 +310,8 @@ Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
           Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩) ={⊤}=∗
     Ψ (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl)
       (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl')) -∗
-  REL aenc' N (Spec.pkey skA) m
-   << aenc' N (Spec.pkey skA') m' : Ψ.
+  REL aenc' (Spec.pkey skA) m
+   << aenc' (Spec.pkey skA') m' : Ψ.
 Proof.
 iIntros "#Hctx #Hpred %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
 rewrite /aenc'.
@@ -596,7 +590,7 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures_l. rel_pures_r.
-rel_bind_l (aenc' N _ _). rel_bind_r (aenc' N _ _).
+rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
 iApply (refines_bind _ _ _ (λ v v', ∃ pl pl',
   ⌜v = Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl⌝ ∗
   ⌜v' = Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⌝ ∗

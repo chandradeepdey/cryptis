@@ -1,4 +1,4 @@
-From iris.algebra Require Import auth cmra ofe gmap gset local_updates.
+From iris.algebra Require Import auth.
 From cryptis.core Require Import term.
 
 Set Implicit Arguments.
