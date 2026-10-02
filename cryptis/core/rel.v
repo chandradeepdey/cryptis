@@ -1,6 +1,6 @@
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
-From cryptis.lib Require Import gmeta saved_prop.
+From cryptis.lib Require Import saved_prop.
 From cryptis Require Import cryptis.
 From cryptis.core Require Import minted_spec term_meta_spec.
 From cryptis.core Require Export rel_state.
@@ -18,7 +18,6 @@ Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_seal :: savedPredG Σ (seal_pred_input * seal_pred_input);
   #[local] public_relGpreS_seal_set :: inG Σ (authR (gsetUR seal_entry));
   #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
-  #[local] public_relGpreS_meta :: metaGS Σ;
 }.
 
 Class public_relGS Σ := Public_relGS {
@@ -28,7 +27,6 @@ Class public_relGS Σ := Public_relGS {
   #[global] seal_set_inG :: inG Σ (authR (gsetUR seal_entry));
   #[global] term_meta_inG :: term_metaGS Σ;
   #[global] term_meta_spec_inG :: term_meta_specGS Σ;
-  #[global] meta_inG :: metaGS Σ;
   public_rel_map_l : gname;
   public_rel_map_r : gname;
   public_rel_flow_l : gname;
@@ -40,8 +38,7 @@ Definition public_relΣ : gFunctors :=
     GFunctor (authUR (gmapUR term (authUR (gset_disjUR term))));
     savedPredΣ (seal_pred_input * seal_pred_input);
     GFunctor (authR (gsetUR seal_entry));
-    term_metaΣ;
-    metaΣ].
+    term_metaΣ].
 
 #[global] Instance subG_public_relGpreS Σ : subG public_relΣ Σ → public_relGpreS Σ.
 Proof. solve_inG. Qed.
@@ -814,8 +811,7 @@ Fixpoint publicly_related t t' : iProp :=
   minted t ∧ minted_spec t' ∧
   match t, t' with
   | TInt n, TInt n' => ⌜n = n'⌝
-  | TPair t1 t2, TPair t1' t2' =>
-      publicly_related t1 t1' ∧ publicly_related t2 t2'
+  | TPair t1 t2, TPair t1' t2' => publicly_related t1 t1' ∧ publicly_related t2 t2'
   | TNonce a, TNonce a' => publicly_linked t t'
   | TKey kt t1, TKey kt' t1' => ⌜kt = kt'⌝ ∧
     match kt with
@@ -847,8 +843,7 @@ Fixpoint publicly_related t t' : iProp :=
         end
       | _, _ => False
       end))
-  | THash t1, THash t1' =>
-    publicly_related t1 t1' ∨
+  | THash t1, THash t1' => publicly_related t1 t1' ∨
     (publicly_linked t t' ∧ linked t1 t1')
   | TNonce a, TSeal k' t1' => publicly_linked t t' ∧ secret_in_r t1' ∧
     □ (match k' with
@@ -874,10 +869,8 @@ Fixpoint publicly_related t t' : iProp :=
         end
       | _ => False
       end)
-  | TNonce a, THash t1' =>
-    publicly_linked t t' ∧ secret_in_r t1'
-  | THash t1, TNonce a' =>
-    publicly_linked t t' ∧ secret_in_l t1
+  | TNonce a, THash t1' => publicly_linked t t' ∧ secret_in_r t1'
+  | THash t1, TNonce a' => publicly_linked t t' ∧ secret_in_l t1
   | TSeal k t1, THash t1' =>
     publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
     □ (match k with
@@ -1023,7 +1016,7 @@ iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
   as "[%public_rel_flow_l Hflow_l]"; first by apply auth_auth_valid.
 iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
   as "[%public_rel_flow_r Hflow_r]"; first by apply auth_auth_valid.
-pose (Hpub := Public_relGS _ _ _ _ _ _ _
+pose (Hpub := Public_relGS _ _ _ _ _ _
                 public_rel_map_l public_rel_map_r
                 public_rel_flow_l public_rel_flow_r).
 iExists Hpub.
