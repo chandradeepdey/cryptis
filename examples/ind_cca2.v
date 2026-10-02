@@ -584,7 +584,7 @@ Definition ind_cca2_game N (b : bool) : expr :=
 Theorem ind_cca2_ctx_equiv N b b' :
   ∅ ⊨ ind_cca2_game N b =ctx= ind_cca2_game N b' : (attacker_ty → TBool)%ty.
 Proof.
-split; apply: cryptis_ctx_refinement => Σ ? ? Δ; iIntros "#Hctx _";
+split; apply: cryptis_ctx_refinement => Σ ? ? Δ; iIntros "#Hctx";
   iIntros "!> !> %c %c' #Hc"; by iApply (rel_alice with "Hctx Hc").
 Qed.
 
@@ -599,7 +599,7 @@ Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : val) �
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
-iIntros "#Hctx _".
+iIntros "#Hctx".
 iIntros "!> !> %c %c' #Hc".
 by iApply (rel_alice_guess_wrapped with "Hctx Hc").
 Qed.

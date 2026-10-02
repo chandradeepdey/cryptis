@@ -16,9 +16,9 @@ In the `cryptis` directory you will find:
   on terms.
 - Relational layer (built on [ReLoC](https://gitlab.mpi-sws.org/iris/reloc)):
   `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs,
-  its invariant, the per-key sets of honest seal entries (`seal_owner_l`,
-  `sealed_in_l`, …) whose owner controls honestly linked ciphertexts, and the
-  relational hash predicates (`hash_pred_rel`); `primitives/*_spec.v` are the relational specs of the
+  its invariant, and the per-key sets of honest seal entries
+  (`seal_owner_l`, `sealed_in_l`, …) behind honestly linked ciphertexts;
+  `primitives/*_spec.v` are the relational specs of the
   primitives; `primitives/attacker_spec.v` models the attacker as an arbitrary
   program self-related at a type that abstracts over terms; `rel_adequacy.v`
   turns a ReLoC refinement into a statement about executions
