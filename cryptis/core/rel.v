@@ -10,12 +10,14 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Notation seal_pred_input := (option (term * term)).
+Notation seal_entry := (seal_pred_input * seal_pred_input * gname)%type.
 Notation hash_pred_input := (option term).
 
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
   #[local] public_relGpreS_flow :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
   #[local] public_relGpreS_seal :: savedPredG Σ (seal_pred_input * seal_pred_input);
+  #[local] public_relGpreS_seal_set :: inG Σ (authR (gsetUR seal_entry));
   #[local] public_relGpreS_hash :: savedPredG Σ (hash_pred_input * hash_pred_input);
   #[local] public_relGpreS_term_meta :: term_metaGpreS Σ;
   #[local] public_relGpreS_meta :: metaGS Σ;
@@ -25,6 +27,7 @@ Class public_relGS Σ := Public_relGS {
   #[global] maps_inG :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
   #[global] flow_inG :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
   #[global] seal_inG :: savedPredG Σ (seal_pred_input * seal_pred_input);
+  #[global] seal_set_inG :: inG Σ (authR (gsetUR seal_entry));
   #[global] hash_inG :: savedPredG Σ (hash_pred_input * hash_pred_input);
   #[global] term_meta_inG :: term_metaGS Σ;
   #[global] term_meta_spec_inG :: term_meta_specGS Σ;
@@ -33,9 +36,6 @@ Class public_relGS Σ := Public_relGS {
   public_rel_map_r : gname;
   public_rel_flow_l : gname;
   public_rel_flow_r : gname;
-  public_rel_aenc_name : gname;
-  public_rel_sign_name : gname;
-  public_rel_senc_name : gname;
   public_rel_hash_name : gname;
 }.
 
@@ -43,6 +43,7 @@ Definition public_relΣ : gFunctors :=
   #[GFunctor (authUR (gmapUR term (authUR (optionUR stateR))));
     GFunctor (authUR (gmapUR term (authUR (gset_disjUR term))));
     savedPredΣ (seal_pred_input * seal_pred_input);
+    GFunctor (authR (gsetUR seal_entry));
     savedPredΣ (hash_pred_input * hash_pred_input);
     term_metaΣ;
     metaΣ].
@@ -632,163 +633,184 @@ End Flow.
 
 Section SealPred.
 
-Implicit Types (F : functionality) (N : namespace).
 Implicit Types (Φ : seal_pred_input → seal_pred_input → iProp).
-Implicit Types (s b : seal_pred_input).
+Implicit Types (s : seal_pred_input) (e : seal_entry) (S : gset seal_entry).
 
-Definition rel_name_of_functionality F :=
-  match F with
-  | AENC => public_rel_aenc_name
-  | SIGN => public_rel_sign_name
-  | SENC => public_rel_senc_name
-  end.
+Definition seal_pred γ Φ : iProp :=
+  own γ (saved_pred DfracDiscarded (λ '(s, s'), Φ s s')).
 
-Definition seal_pred_rel F N Φ : iProp :=
-  nown (rel_name_of_functionality F) N
-    (saved_pred DfracDiscarded (λ '(s, s'), Φ s s')).
-
-#[global] Instance seal_pred_rel_persistent F N Φ : Persistent (seal_pred_rel F N Φ).
+#[global] Instance seal_pred_persistent γ Φ : Persistent (seal_pred γ Φ).
 Proof. apply _. Qed.
 
-Definition seal_pred_rel_token F E :=
-  gmeta_token (rel_name_of_functionality F) E.
+Lemma seal_pred_alloc Φ : ⊢ |==> ∃ γ, seal_pred γ Φ.
+Proof. iApply own_alloc. by apply saved_pred_valid. Qed.
 
-Lemma seal_pred_rel_token_difference F E1 E2 :
-  E1 ⊆ E2 →
-  seal_pred_rel_token F E2 ⊣⊢
-  seal_pred_rel_token F E1 ∗ seal_pred_rel_token F (E2 ∖ E1).
-Proof.
-move=> sub; rewrite /seal_pred_rel_token; exact: gmeta_token_difference.
-Qed.
-
-Lemma seal_pred_rel_token_drop E1 E2 F :
-  E1 ⊆ E2 →
-  seal_pred_rel_token F E2 -∗
-  seal_pred_rel_token F E1.
-Proof.
-iIntros (sub) "t".
-rewrite seal_pred_rel_token_difference //.
-by iDestruct "t" as "[t _]".
-Qed.
-
-Lemma seal_pred_rel_agree s s' F N Φ1 Φ2 :
-  seal_pred_rel F N Φ1 -∗
-  seal_pred_rel F N Φ2 -∗
+Lemma seal_pred_agree s s' γ Φ1 Φ2 :
+  seal_pred γ Φ1 -∗
+  seal_pred γ Φ2 -∗
   ▷ (Φ1 s s' ≡ Φ2 s s').
 Proof.
-rewrite /seal_pred_rel. iIntros "#own1 #own2".
-iPoseProof (nown_valid_2 with "own1 own2") as "#valid".
+iIntros "#own1 #own2".
+iPoseProof (own_valid_2 with "own1 own2") as "#valid".
 iPoseProof (saved_pred_op_validI with "valid") as "[_ #agree]".
 by iApply ("agree" $! (s, s')).
 Qed.
 
-Lemma seal_pred_rel_set F E N Φ :
-  ↑N ⊆ E →
-  seal_pred_rel_token F E ==∗
-  seal_pred_rel F N Φ ∗
-  seal_pred_rel_token F (E ∖ ↑N).
-Proof. iIntros (?) "token". by iApply nown_alloc. Qed.
+Definition seal_owner_l k S : iProp :=
+  ∃ γ, term_meta k (cryptisN.@"public_rel".@"seal") γ ∗ own γ (● S).
 
-Lemma seal_pred_rel_token_seal_pred_rel F E N Φ :
-  ↑N ⊆ E →
-  seal_pred_rel_token F E -∗
-  seal_pred_rel F N Φ -∗
-  False.
-Proof. iIntros (?) "token pred". by iApply (nown_token with "token pred"). Qed.
+Definition seal_owner_r k S : iProp :=
+  ∃ γ, term_meta_spec k (cryptisN.@"public_rel".@"seal") γ ∗ own γ (● S).
 
-Definition seal_pred_rel_token_point F N :=
-  seal_pred_rel_token F (⊤ ∖ {[positives_flatten (namespace_car N)]}).
+Definition sealed_in_l k e : iProp :=
+  ∃ γ, term_meta k (cryptisN.@"public_rel".@"seal") γ ∗ own γ (◯ {[e]}).
 
-Lemma seal_pred_rel_set_point F N Φ :
-  seal_pred_rel_token F ⊤ ==∗
-  seal_pred_rel F N Φ ∗ seal_pred_rel_token_point F N.
-Proof. iIntros "token". by iApply nown_alloc_point. Qed.
+Definition sealed_in_r k e : iProp :=
+  ∃ γ, term_meta_spec k (cryptisN.@"public_rel".@"seal") γ ∗ own γ (◯ {[e]}).
 
-Lemma seal_pred_rel_token_point_agree F N N' Φ :
-  seal_pred_rel_token_point F N -∗
-  seal_pred_rel F N' Φ -∗
-  ⌜N' = N⌝.
-Proof. iIntros "token pred". by iApply (nown_token_point_agree with "token pred"). Qed.
-
-Definition seal_pred_input_untag N s : option seal_pred_input :=
-  match s with
-  | Some (k, t) =>
-    match Spec.untag (Tag N) t with
-    | Some b => Some (Some (k, b))
-    | None => None
-    end
-  | None => Some None
-  end.
-
-Lemma seal_pred_input_untag_Some N k t b :
-  seal_pred_input_untag N (Some (k, t)) = Some b ↔
-  ∃ t0, b = Some (k, t0) ∧ t = Spec.tag (Tag N) t0.
-Proof.
-rewrite /seal_pred_input_untag. split.
-- case e: (Spec.untag _ _) => [t0|] // [<-].
-  exists t0. split=> //. by apply Spec.untagK.
-- case=> t0 [-> ->]. by rewrite Spec.tagK.
-Qed.
-
-Lemma seal_pred_input_untag_None N b :
-  seal_pred_input_untag N None = Some b ↔ b = None.
-Proof. rewrite /seal_pred_input_untag. split; congruence. Qed.
-
-Lemma seal_pred_input_untag_tag N k t :
-  seal_pred_input_untag N (Some (k, Spec.tag (Tag N) t)) = Some (Some (k, t)).
-Proof. by rewrite /seal_pred_input_untag Spec.tagK. Qed.
-
-Definition wf_seal_rel F s s' : iProp :=
-  ∃ N Φ b b',
-    ⌜seal_pred_input_untag N s = Some b⌝ ∧ ⌜seal_pred_input_untag N s' = Some b'⌝ ∧
-    seal_pred_rel F N Φ ∧ □ ▷ Φ b b'.
-
-#[global] Instance wf_seal_rel_persistent F s s' : Persistent (wf_seal_rel F s s').
+#[global] Instance sealed_in_l_persistent k e : Persistent (sealed_in_l k e).
 Proof. apply _. Qed.
 
-Lemma seal_pred_input_untag_agree N1 N2 k t b1 b2 :
-  seal_pred_input_untag N1 (Some (k, t)) = Some b1 →
-  seal_pred_input_untag N2 (Some (k, t)) = Some b2 →
-  N1 = N2.
+#[global] Instance sealed_in_r_persistent k e : Persistent (sealed_in_r k e).
+Proof. apply _. Qed.
+
+Lemma seal_owner_l_alloc k E :
+  ↑cryptisN.@"public_rel".@"seal" ⊆ E →
+  term_token k E ==∗
+  seal_owner_l k ∅ ∗ term_token k (E ∖ ↑cryptisN.@"public_rel".@"seal").
 Proof.
-case/seal_pred_input_untag_Some => [t1 [_ ->]] /seal_pred_input_untag_Some [t2 [_ e]].
-by case/Spec.tag_inj: e => /Tag_inj.
+iIntros (sub) "token".
+iMod (own_alloc (● (∅ : gset seal_entry))) as (γ) "own"; first by apply auth_auth_valid.
+iMod (term_meta_set' γ _ sub with "token") as "[#meta token]".
+iModIntro. iFrame "token". iExists γ. by iFrame.
 Qed.
 
-Lemma wf_seal_rel_elim F N Φ s s' b b' :
-  is_Some s ∨ is_Some s' →
-  seal_pred_input_untag N s = Some b →
-  seal_pred_input_untag N s' = Some b' →
-  wf_seal_rel F s s' -∗
-  seal_pred_rel F N Φ -∗
-  □ ▷ Φ b b'.
+Lemma seal_owner_r_alloc k E :
+  ↑cryptisN.@"public_rel".@"seal" ⊆ E →
+  term_token_spec k E ==∗
+  seal_owner_r k ∅ ∗ term_token_spec k (E ∖ ↑cryptisN.@"public_rel".@"seal").
 Proof.
-iIntros (Hs Hb Hb') "(%N' & %Φ' & %b1 & %b1' & %Hb1 & %Hb1' & #HΦ' & #inv) #HΦ".
-have HN : N' = N.
-{ case: Hs => - [[k t] e]; subst.
-  - exact: seal_pred_input_untag_agree Hb1 Hb.
-  - exact: seal_pred_input_untag_agree Hb1' Hb'. }
-subst N'. rewrite Hb in Hb1. rewrite Hb' in Hb1'.
-case: Hb1 Hb1' => <- [<-].
-iPoseProof (seal_pred_rel_agree b b' with "HΦ HΦ'") as "e".
-by iIntros "!> !>"; iRewrite "e".
+iIntros (sub) "token".
+iMod (own_alloc (● (∅ : gset seal_entry))) as (γ) "own"; first by apply auth_auth_valid.
+iMod (term_meta_spec_set' γ _ sub with "token") as "[#meta token]".
+iModIntro. iFrame "token". iExists γ. by iFrame.
 Qed.
 
-Lemma wf_seal_rel_elim_point E ι F N Φ s s' :
-  ↑ι ⊆ E →
-  inv ι (seal_pred_rel_token_point F N) -∗
-  seal_pred_rel F N Φ -∗
-  wf_seal_rel F s s' ={E}=∗
-  ∃ b b', ⌜seal_pred_input_untag N s = Some b⌝ ∧
-          ⌜seal_pred_input_untag N s' = Some b'⌝ ∧ □ ▷ Φ b b'.
+Lemma seal_owner_l_insert k S e :
+  seal_owner_l k S ==∗ seal_owner_l k (S ∪ {[e]}) ∗ sealed_in_l k e.
 Proof.
-iIntros (HE) "#Htok #HΦ (%N' & %Φ' & %b & %b' & %Hb & %Hb' & #HΦ' & #inv)".
-iInv "Htok" as ">token".
-iDestruct (seal_pred_rel_token_point_agree with "token HΦ'") as %->.
-iModIntro. iFrame "token".
-iPoseProof (seal_pred_rel_agree b b' with "HΦ HΦ'") as "#e".
-iModIntro. iExists b, b'. do 2 (iSplit; first done).
-by iIntros "!> !>"; iRewrite "e".
+iIntros "(%γ & #meta & own)".
+iMod (own_update with "own") as "[own frag]".
+{ apply auth_update_alloc, (gset_local_update _ _ (S ∪ {[e]})). set_solver. }
+iPoseProof (own_mono _ _ (◯ {[e]}) with "frag") as "#frag'".
+{ apply auth_frag_mono, gset_included. set_solver. }
+iModIntro. iSplitL "own"; iExists γ; by iFrame "#∗".
+Qed.
+
+Lemma seal_owner_r_insert k S e :
+  seal_owner_r k S ==∗ seal_owner_r k (S ∪ {[e]}) ∗ sealed_in_r k e.
+Proof.
+iIntros "(%γ & #meta & own)".
+iMod (own_update with "own") as "[own frag]".
+{ apply auth_update_alloc, (gset_local_update _ _ (S ∪ {[e]})). set_solver. }
+iPoseProof (own_mono _ _ (◯ {[e]}) with "frag") as "#frag'".
+{ apply auth_frag_mono, gset_included. set_solver. }
+iModIntro. iSplitL "own"; iExists γ; by iFrame "#∗".
+Qed.
+
+Lemma seal_owner_l_sealed_in_l k S e :
+  seal_owner_l k S -∗ sealed_in_l k e -∗ ⌜e ∈ S⌝.
+Proof.
+iIntros "(%γ & #meta & own) (%γ' & #meta' & #frag)".
+iDestruct (term_meta_agree with "meta meta'") as %<-.
+iDestruct (own_valid_2 with "own frag") as %[incl _]%auth_both_valid_discrete.
+iPureIntro. move/gset_included: incl. set_solver.
+Qed.
+
+Lemma seal_owner_r_sealed_in_r k S e :
+  seal_owner_r k S -∗ sealed_in_r k e -∗ ⌜e ∈ S⌝.
+Proof.
+iIntros "(%γ & #meta & own) (%γ' & #meta' & #frag)".
+iDestruct (term_meta_spec_agree with "meta meta'") as %<-.
+iDestruct (own_valid_2 with "own frag") as %[incl _]%auth_both_valid_discrete.
+iPureIntro. move/gset_included: incl. set_solver.
+Qed.
+
+Definition sealed_input_l s e : iProp :=
+  match s with
+  | Some (TKey _ k, _) => sealed_in_l k e
+  | Some _ => False
+  | None => True
+  end.
+
+Definition sealed_input_r s' e : iProp :=
+  match s' with
+  | Some (TKey _ k, _) => sealed_in_r k e
+  | Some _ => False
+  | None => True
+  end.
+
+#[global] Instance sealed_input_l_persistent s e : Persistent (sealed_input_l s e).
+Proof. case: s => [[[] ?]|]; apply _. Qed.
+
+#[global] Instance sealed_input_r_persistent s' e : Persistent (sealed_input_r s' e).
+Proof. case: s' => [[[] ?]|]; apply _. Qed.
+
+Definition wf_seal_rel s s' : iProp :=
+  ∃ γ Φ,
+    sealed_input_l s (s, s', γ) ∧ sealed_input_r s' (s, s', γ) ∧
+    seal_pred γ Φ ∧ □ ▷ Φ s s'.
+
+#[global] Instance wf_seal_rel_persistent s s' : Persistent (wf_seal_rel s s').
+Proof. apply _. Qed.
+
+Lemma wf_seal_rel_intro k k' t t' kt kt' γ Φ :
+  sealed_in_l k (Some (TKey kt k, t), Some (TKey kt' k', t'), γ) -∗
+  sealed_in_r k' (Some (TKey kt k, t), Some (TKey kt' k', t'), γ) -∗
+  seal_pred γ Φ -∗
+  □ ▷ Φ (Some (TKey kt k, t)) (Some (TKey kt' k', t')) -∗
+  wf_seal_rel (Some (TKey kt k, t)) (Some (TKey kt' k', t')).
+Proof. iIntros "#? #? #? #?". iExists γ, Φ. by iFrame "#". Qed.
+
+Lemma wf_seal_rel_owner_l k S kt t s' :
+  seal_owner_l k S -∗
+  wf_seal_rel (Some (TKey kt k, t)) s' -∗
+  ∃ γ Φ, ⌜(Some (TKey kt k, t), s', γ) ∈ S⌝ ∧
+         seal_pred γ Φ ∧ □ ▷ Φ (Some (TKey kt k, t)) s'.
+Proof.
+iIntros "own (%γ & %Φ & #Hl & _ & #HΦ & #HΦs)".
+iDestruct (seal_owner_l_sealed_in_l with "own Hl") as %?.
+iExists γ, Φ. by iFrame "#".
+Qed.
+
+Lemma wf_seal_rel_owner_r k' S' kt' t' s :
+  seal_owner_r k' S' -∗
+  wf_seal_rel s (Some (TKey kt' k', t')) -∗
+  ∃ γ Φ, ⌜(s, Some (TKey kt' k', t'), γ) ∈ S'⌝ ∧
+         seal_pred γ Φ ∧ □ ▷ Φ s (Some (TKey kt' k', t')).
+Proof.
+iIntros "own (%γ & %Φ & _ & #Hr & #HΦ & #HΦs)".
+iDestruct (seal_owner_r_sealed_in_r with "own Hr") as %?.
+iExists γ, Φ. by iFrame "#".
+Qed.
+
+Lemma sealed_input_aenc_l (sk : aenc_key) t e :
+  sealed_input_l (Some (sk : term, t)) e ⊣⊢ sealed_in_l (seed_of_aenc_key sk) e.
+Proof. by case: sk => [k]; rewrite term_of_aenc_keyE. Qed.
+
+Lemma sealed_input_aenc_r (sk' : aenc_key) t' e :
+  sealed_input_r (Some (sk' : term, t')) e ⊣⊢ sealed_in_r (seed_of_aenc_key sk') e.
+Proof. by case: sk' => [k']; rewrite term_of_aenc_keyE. Qed.
+
+Lemma wf_seal_rel_aenc_intro (sk sk' : aenc_key) t t' γ Φ :
+  sealed_in_l (seed_of_aenc_key sk) (Some (sk : term, t), Some (sk' : term, t'), γ) -∗
+  sealed_in_r (seed_of_aenc_key sk') (Some (sk : term, t), Some (sk' : term, t'), γ) -∗
+  seal_pred γ Φ -∗
+  □ ▷ Φ (Some (sk : term, t)) (Some (sk' : term, t')) -∗
+  wf_seal_rel (Some (sk : term, t)) (Some (sk' : term, t')).
+Proof.
+iIntros "#? #? #? #?". iExists γ, Φ.
+rewrite sealed_input_aenc_l sealed_input_aenc_r. by iFrame "#".
 Qed.
 
 End SealPred.
@@ -850,20 +872,6 @@ Lemma hash_pred_rel_token_hash_pred_rel E N Ψ :
   hash_pred_rel N Ψ -∗
   False.
 Proof. iIntros (?) "token pred". by iApply (nown_token with "token pred"). Qed.
-
-Definition hash_pred_rel_token_point N :=
-  hash_pred_rel_token (⊤ ∖ {[positives_flatten (namespace_car N)]}).
-
-Lemma hash_pred_rel_set_point N Ψ :
-  hash_pred_rel_token ⊤ ==∗
-  hash_pred_rel N Ψ ∗ hash_pred_rel_token_point N.
-Proof. iIntros "token". by iApply nown_alloc_point. Qed.
-
-Lemma hash_pred_rel_token_point_agree N N' Ψ :
-  hash_pred_rel_token_point N -∗
-  hash_pred_rel N' Ψ -∗
-  ⌜N' = N⌝.
-Proof. iIntros "token pred". by iApply (nown_token_point_agree with "token pred"). Qed.
 
 Definition hash_pred_input_untag N h : option hash_pred_input :=
   match h with
@@ -960,11 +968,11 @@ Fixpoint publicly_related t t' : iProp :=
         | Sign => (publicly_related k1 k1' ∨
                   (publicly_linked (TKey Verify k1) (TKey Verify k1') ∧ linked k1 k1')) ∧
                   publicly_related t1 t1' ∧
-                  wf_seal_rel SIGN (Some (TKey Sign k1, t1)) (Some (TKey Sign k1', t1'))
+                  wf_seal_rel (Some (TKey Sign k1, t1)) (Some (TKey Sign k1', t1'))
         | AEnc => (publicly_related k1 k1' → publicly_related t1 t1') ∧
-                  wf_seal_rel AENC (Some (TKey ADec k1, t1)) (Some (TKey ADec k1', t1'))
+                  wf_seal_rel (Some (TKey ADec k1, t1)) (Some (TKey ADec k1', t1'))
         | SEnc => (publicly_related k1 k1' → publicly_related t1 t1') ∧
-                  wf_seal_rel SENC (Some (TKey SEnc k1, t1)) (Some (TKey SEnc k1', t1'))
+                  wf_seal_rel (Some (TKey SEnc k1, t1)) (Some (TKey SEnc k1', t1'))
         end
       | _, _ => False
       end))
@@ -977,9 +985,9 @@ Fixpoint publicly_related t t' : iProp :=
         match kt' with
         | ADec | Sign | Verify => False
         | AEnc => secret_in_r k1' ∧
-                  wf_seal_rel AENC None (Some (TKey ADec k1', t1'))
+                  wf_seal_rel None (Some (TKey ADec k1', t1'))
         | SEnc => secret_in_r k1' ∧
-                  wf_seal_rel SENC None (Some (TKey SEnc k1', t1'))
+                  wf_seal_rel None (Some (TKey SEnc k1', t1'))
         end
       | _ => False
       end)
@@ -989,9 +997,9 @@ Fixpoint publicly_related t t' : iProp :=
         match kt with
         | ADec | Sign | Verify => False
         | AEnc => secret_in_l k1 ∧
-                  wf_seal_rel AENC (Some (TKey ADec k1, t1)) None
+                  wf_seal_rel (Some (TKey ADec k1, t1)) None
         | SEnc => secret_in_l k1 ∧
-                  wf_seal_rel SENC (Some (TKey SEnc k1, t1)) None
+                  wf_seal_rel (Some (TKey SEnc k1, t1)) None
         end
       | _ => False
       end)
@@ -1007,9 +1015,9 @@ Fixpoint publicly_related t t' : iProp :=
         match kt with
         | ADec | Sign | Verify => False
         | AEnc => secret_in_l k1 ∧
-                  wf_seal_rel AENC (Some (TKey ADec k1, t1)) None
+                  wf_seal_rel (Some (TKey ADec k1, t1)) None
         | SEnc => secret_in_l k1 ∧
-                  wf_seal_rel SENC (Some (TKey SEnc k1, t1)) None
+                  wf_seal_rel (Some (TKey SEnc k1, t1)) None
         end
       | _ => False
       end)
@@ -1021,9 +1029,9 @@ Fixpoint publicly_related t t' : iProp :=
         match kt' with
         | ADec | Sign | Verify => False
         | AEnc => secret_in_r k1' ∧
-                  wf_seal_rel AENC None (Some (TKey ADec k1', t1'))
+                  wf_seal_rel None (Some (TKey ADec k1', t1'))
         | SEnc => secret_in_r k1' ∧
-                  wf_seal_rel SENC None (Some (TKey SEnc k1', t1'))
+                  wf_seal_rel None (Some (TKey SEnc k1', t1'))
         end
       | _ => False
       end)
@@ -1109,24 +1117,31 @@ End PublicRel.
 Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
   (at level 20, no associativity, format "PUB⟨ a , b ⟩").
 
-Arguments seal_pred_rel {Σ _} F N Φ.
-Arguments seal_pred_rel_token {Σ _} F E.
-Arguments seal_pred_rel_set {Σ _} F E N Φ _.
-Arguments seal_pred_rel_agree {Σ _} s s' F N Φ1 Φ2.
-Arguments seal_pred_rel_token_seal_pred_rel {Σ _} F E N Φ _.
-Arguments seal_pred_rel_token_point {Σ _} F N.
-Arguments seal_pred_rel_set_point {Σ _} F N Φ.
-Arguments seal_pred_rel_token_point_agree {Σ _} F N N' Φ.
-Arguments wf_seal_rel {Σ _} F s s'.
-Arguments wf_seal_rel_elim {Σ _} F N Φ s s' b b' _ _ _.
+Arguments seal_pred {Σ _} γ Φ.
+Arguments seal_pred_alloc {Σ _} Φ.
+Arguments seal_pred_agree {Σ _} s s' γ Φ1 Φ2.
+Arguments seal_owner_l {Σ _ _} k S.
+Arguments seal_owner_r {Σ _ _} k S.
+Arguments sealed_in_l {Σ _ _} k e.
+Arguments sealed_in_r {Σ _ _} k e.
+Arguments seal_owner_l_alloc {Σ _ _} k E _.
+Arguments seal_owner_r_alloc {Σ _ _} k E _.
+Arguments seal_owner_l_insert {Σ _ _} k S e.
+Arguments seal_owner_r_insert {Σ _ _} k S e.
+Arguments seal_owner_l_sealed_in_l {Σ _ _} k S e.
+Arguments seal_owner_r_sealed_in_r {Σ _ _} k S e.
+Arguments wf_seal_rel {Σ _ _} s s'.
+Arguments wf_seal_rel_intro {Σ _ _} k k' t t' kt kt' γ Φ.
+Arguments wf_seal_rel_owner_l {Σ _ _} k S kt t s'.
+Arguments wf_seal_rel_owner_r {Σ _ _} k' S' kt' t' s.
+Arguments sealed_input_aenc_l {Σ _ _} sk t e.
+Arguments sealed_input_aenc_r {Σ _ _} sk' t' e.
+Arguments wf_seal_rel_aenc_intro {Σ _ _} sk sk' t t' γ Φ.
 Arguments hash_pred_rel {Σ _} N Ψ.
 Arguments hash_pred_rel_token {Σ _} E.
 Arguments hash_pred_rel_set {Σ _} E N Ψ _.
 Arguments hash_pred_rel_agree {Σ _} h h' N Ψ1 Ψ2.
 Arguments hash_pred_rel_token_hash_pred_rel {Σ _} E N Ψ _.
-Arguments hash_pred_rel_token_point {Σ _} N.
-Arguments hash_pred_rel_set_point {Σ _} N Ψ.
-Arguments hash_pred_rel_token_point_agree {Σ _} N N' Ψ.
 Arguments wf_hash_rel {Σ _} h h'.
 Arguments wf_hash_rel_elim {Σ _} N Ψ h h' u u' _ _ _.
 
@@ -1134,9 +1149,6 @@ Lemma public_relGS_alloc `{!relocG Σ} E :
   public_relGpreS Σ →
   ⊢ |={E}=> ∃ (H : public_relGS Σ),
               cryptis_rel_ctx ∗
-              seal_pred_rel_token AENC ⊤ ∗
-              seal_pred_rel_token SIGN ⊤ ∗
-              seal_pred_rel_token SENC ⊤ ∗
               hash_pred_rel_token ⊤.
 Proof.
 move=> ?; iStartProof.
@@ -1150,14 +1162,10 @@ iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
   as "[%public_rel_flow_l Hflow_l]"; first by apply auth_auth_valid.
 iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
   as "[%public_rel_flow_r Hflow_r]"; first by apply auth_auth_valid.
-iMod gmeta_token_alloc as (public_rel_aenc_name) "Haenc".
-iMod gmeta_token_alloc as (public_rel_sign_name) "Hsign".
-iMod gmeta_token_alloc as (public_rel_senc_name) "Hsenc".
 iMod gmeta_token_alloc as (public_rel_hash_name) "Hhash".
-pose (Hpub := Public_relGS _ _ _ _ _ _ _
+pose (Hpub := Public_relGS _ _ _ _ _ _ _ _
                 public_rel_map_l public_rel_map_r
                 public_rel_flow_l public_rel_flow_r
-                public_rel_aenc_name public_rel_sign_name public_rel_senc_name
                 public_rel_hash_name).
 iExists Hpub.
 iMod (inv_alloc cryptisN _
@@ -1368,11 +1376,11 @@ Lemma publicly_related_TSeal k k' t t' :
         match kt with
         | ADec | Verify => False
         | Sign => PUB⟨TKey Verify k1, TKey Verify k1'⟩ ∧ PUB⟨t, t'⟩ ∧
-                  wf_seal_rel SIGN (Some (TKey Sign k1, t)) (Some (TKey Sign k1', t'))
+                  wf_seal_rel (Some (TKey Sign k1, t)) (Some (TKey Sign k1', t'))
         | AEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧
-                  wf_seal_rel AENC (Some (TKey ADec k1, t)) (Some (TKey ADec k1', t'))
+                  wf_seal_rel (Some (TKey ADec k1, t)) (Some (TKey ADec k1', t'))
         | SEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧
-                  wf_seal_rel SENC (Some (TKey SEnc k1, t)) (Some (TKey SEnc k1', t'))
+                  wf_seal_rel (Some (TKey SEnc k1, t)) (Some (TKey SEnc k1', t'))
         end
       | _, _ => False
       end)).
@@ -1443,8 +1451,8 @@ Lemma publicly_related_TSeal_term_wf kt k1 t (t' : term) :
   (∀ k' t1', t' ≠ TSeal k' t1') →
   PUB⟨TSeal (TKey kt k1) t, t'⟩ -∗
   match kt with
-  | AEnc => wf_seal_rel AENC (Some (TKey ADec k1, t)) None
-  | SEnc => wf_seal_rel SENC (Some (TKey SEnc k1, t)) None
+  | AEnc => wf_seal_rel (Some (TKey ADec k1, t)) None
+  | SEnc => wf_seal_rel (Some (TKey SEnc k1, t)) None
   | _ => False
   end.
 Proof.
@@ -1461,8 +1469,8 @@ Lemma publicly_related_term_TSeal_wf (t : term) kt k1' t' :
   (∀ k t1, t ≠ TSeal k t1) →
   PUB⟨t, TSeal (TKey kt k1') t'⟩ -∗
   match kt with
-  | AEnc => wf_seal_rel AENC None (Some (TKey ADec k1', t'))
-  | SEnc => wf_seal_rel SENC None (Some (TKey SEnc k1', t'))
+  | AEnc => wf_seal_rel None (Some (TKey ADec k1', t'))
+  | SEnc => wf_seal_rel None (Some (TKey SEnc k1', t'))
   | _ => False
   end.
 Proof.
@@ -1654,7 +1662,7 @@ Lemma publicly_related_aenc (sk sk' : aenc_key) N (t t' : term) :
    linked (Spec.pkey sk) (Spec.pkey sk') ∧
    linked (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') ∧
    □ (PUB⟨sk, sk'⟩ → PUB⟨t, t'⟩) ∧
-   wf_seal_rel AENC (Some (sk : term, Spec.tag (Tag N) t))
+   wf_seal_rel (Some (sk : term, Spec.tag (Tag N) t))
                     (Some (sk' : term, Spec.tag (Tag N) t'))).
 Proof.
 rewrite publicly_related_adec_key'.
@@ -2554,9 +2562,9 @@ Lemma publicly_related_open_aenc_fupd E (sk sk' : aenc_key) t t' :
   PUB⟨t, t'⟩ ={E}=∗
   match Spec.open sk t, Spec.open sk' t' with
   | Some u, Some u' =>
-    PUB⟨u, u'⟩ ∨ wf_seal_rel AENC (Some (sk : term, u)) (Some (sk' : term, u'))
-  | Some u, None => wf_seal_rel AENC (Some (sk : term, u)) None
-  | None, Some u' => wf_seal_rel AENC None (Some (sk' : term, u'))
+    PUB⟨u, u'⟩ ∨ wf_seal_rel (Some (sk : term, u)) (Some (sk' : term, u'))
+  | Some u, None => wf_seal_rel (Some (sk : term, u)) None
+  | None, Some u' => wf_seal_rel None (Some (sk' : term, u'))
   | None, None => True
   end.
 Proof.

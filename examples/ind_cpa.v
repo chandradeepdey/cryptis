@@ -28,8 +28,6 @@ A --> *: if b then {nonce, msg_0}@pkA else {nonce, msg_1}@pkA
 
 *)
 
-Definition cpa_pred : seal_pred_input → seal_pred_input → iProp := λ _ _, True%I.
-
 Definition aenc' : val := λ: "pk" "m",
   let: "nonce" := mk_nonce #() in
   aenc "pk" (Tag $ N.@"m") (term_of_list ["nonce"; "m"]).
@@ -49,9 +47,11 @@ Definition alice_guess_wrapped : val := λ: "c",
   let: "b" := nondet_bool #() in
   ("b", if: "b" then alice true "c" else alice false "c").
 
-Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp) :
+Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
+    (S S' : gset seal_entry) :
   cryptis_rel_ctx -∗
-  seal_pred_rel AENC (N.@"m") cpa_pred -∗
+  seal_owner_l (seed_of_aenc_key skA) S -∗
+  seal_owner_r (seed_of_aenc_key skA') S' -∗
   ⌜is_nonce (seed_of_aenc_key skA)⌝ -∗
   minted (Spec.pkey skA) -∗
   minted_spec (Spec.pkey skA') -∗
@@ -62,7 +62,7 @@ Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
   REL aenc' (Spec.pkey skA) m
    << aenc' (Spec.pkey skA') m' : Ψ.
 Proof.
-iIntros "#Hctx #Hpred %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
+iIntros "#Hctx owner_l owner_r %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
 rewrite /aenc'.
 rel_pures_l. rel_pures_r.
 rel_apply_l (rel_mk_nonce_l _ _
@@ -202,14 +202,17 @@ iAssert (minted pl) as "#mint_pl".
 { rewrite /pl minted_of_list /=. by iFrame "#". }
 iAssert (minted_spec pl') as "#mint_spec_pl'".
 { rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
+iMod (seal_pred_alloc (λ _ _, True%I)) as (γ) "#Hpred".
+iMod (seal_owner_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'), γ)
+        with "owner_l") as "[owner_l #Hin_l]".
+iMod (seal_owner_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'), γ)
+        with "owner_r") as "[owner_r #Hin_r]".
 iAssert (□ (publicly_linked c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
 { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
   do 5 (iSplit; first done).
   iSplit; first by iApply publicly_linked_linked.
   iSplit; first done. iSplit; first done.
-  iExists (N.@"m"), cpa_pred, (Some (skA : term, pl)), (Some (skA' : term, pl')).
-  do 2 (iSplit; first by iPureIntro; apply seal_pred_input_untag_tag).
-  iSplit; first done. by iIntros "!> !>". }
+  iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r Hpred"). by iIntros "!> !>". }
 iMod (public_rel_flow_l_extend (E:=⊤) c ltac:(solve_ndisj)
         with "Hctx tt_c_flow tt_c_map") as "[prot_c tt_c_map]".
 iMod (public_rel_flow_r_extend (E:=⊤) c' ltac:(solve_ndisj)
@@ -229,11 +232,10 @@ Qed.
 
 Lemma rel_alice c c' (b b' : bool) :
   cryptis_rel_ctx -∗
-  seal_pred_rel AENC (N.@"m") cpa_pred -∗
   channel_rel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
 Proof.
-iIntros "#Hctx #Hpred #Hc". rewrite /alice.
+iIntros "#Hctx #Hc". rewrite /alice.
 rel_pures_l. rel_pures_r.
 have Hdisj : ∀ sk : aenc_key,
     seed_of_aenc_key sk ∉ (∅ : gset term) ∧
@@ -259,9 +261,13 @@ rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
 rel_pures_l. rel_pures_r.
 (* Tokens. *)
 rewrite (term_token_difference (seed_of_aenc_key skA) (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
-iDestruct "token_a" as "[token_a _]".
+iDestruct "token_a" as "[token_a token_a_rest]".
+iMod (seal_owner_l_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
+        with "token_a_rest") as "[owner_a _]".
 rewrite (term_token_spec_difference (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
-iDestruct "token_spec_a" as "[token_spec_a _]".
+iDestruct "token_spec_a" as "[token_spec_a token_spec_a_rest]".
+iMod (seal_owner_r_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
+        with "token_spec_a_rest") as "[owner_a' _]".
 rewrite (term_token_difference (Spec.pkey skA)
            (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
 iDestruct "token_pkA" as "[token_pkA_flow token_pkA]".
@@ -319,7 +325,7 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures_l. rel_pures_r.
 rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
-iApply refines_bind'. iApply rel_aenc'=> //=.
+iApply refines_bind'. iApply (rel_aenc' with "Hctx owner_a owner_a'")=> //=.
 by rewrite minted_pkey. by rewrite minted_spec_pkey.
 iIntros (c_msg c_msg') "#Hcmsg".
 rel_bind_l (send _ _). rel_bind_r (send _ _).
@@ -342,13 +348,12 @@ Qed.
 
 Lemma rel_alice_guess_wrapped c c' :
   cryptis_rel_ctx -∗
-  seal_pred_rel AENC (N.@"m") cpa_pred -∗
   channel_rel c c' -∗
   REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
 Proof.
-iIntros "#Hctx #Hpred #Hc". rewrite /alice_guess_wrapped.
+iIntros "#Hctx #Hc". rewrite /alice_guess_wrapped.
 rel_pures_l. rel_pures_r.
 rel_apply_l rel_nondet_bool_l. iIntros (choice).
 rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
@@ -376,10 +381,8 @@ Definition ind_cpa_game N (b : bool) : expr :=
 Theorem ind_cpa_ctx_equiv N b b' :
   ∅ ⊨ ind_cpa_game N b =ctx= ind_cpa_game N b' : (attacker_ty → TBool)%ty.
 Proof.
-split; apply: cryptis_ctx_refinement => Σ ? ? Δ; iIntros "#Hctx Haenc _ _ _";
-  iMod (seal_pred_rel_set AENC ⊤ (N.@"m") cpa_pred ltac:(solve_ndisj) with "Haenc")
-    as "[#Hpred _]";
-  iIntros "!> !> %c %c' #Hc"; by iApply (rel_alice with "Hctx Hpred Hc").
+split; apply: cryptis_ctx_refinement => Σ ? ? Δ; iIntros "#Hctx _";
+  iIntros "!> !> %c %c' #Hc"; by iApply (rel_alice with "Hctx Hc").
 Qed.
 
 (** The same fact as an adequacy statement for the nondeterministic game:
@@ -395,8 +398,6 @@ Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : val) σ
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
-iIntros "#Hctx Haenc _ _ _".
-iMod (seal_pred_rel_set AENC ⊤ (N.@"m") cpa_pred ltac:(solve_ndisj) with "Haenc")
-  as "[#Hpred _]".
-iIntros "!> !> %c %c' #Hc". by iApply (rel_alice_guess_wrapped with "Hctx Hpred Hc").
+iIntros "#Hctx _".
+iIntros "!> !> %c %c' #Hc". by iApply (rel_alice_guess_wrapped with "Hctx Hc").
 Qed.
