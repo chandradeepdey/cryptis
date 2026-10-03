@@ -202,17 +202,16 @@ iAssert (minted pl) as "#mint_pl".
 { rewrite /pl minted_of_list /=. by iFrame "#". }
 iAssert (minted_spec pl') as "#mint_spec_pl'".
 { rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
-iMod (seal_pred_alloc (λ _ _, True%I)) as (γ) "#Hpred".
-iMod (seal_owner_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'), γ)
+iMod (seal_owner_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
         with "owner_l") as "[owner_l #Hin_l]".
-iMod (seal_owner_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'), γ)
+iMod (seal_owner_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
         with "owner_r") as "[owner_r #Hin_r]".
 iAssert (□ (publicly_linked c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
 { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
   do 5 (iSplit; first done).
   iSplit; first by iApply publicly_linked_linked.
   iSplit; first done. iSplit; first done.
-  iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r Hpred"). by iIntros "!> !>". }
+  by iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r"). }
 iMod (public_rel_flow_l_extend (E:=⊤) c ltac:(solve_ndisj)
         with "Hctx tt_c_flow tt_c_map") as "[prot_c tt_c_map]".
 iMod (public_rel_flow_r_extend (E:=⊤) c' ltac:(solve_ndisj)
