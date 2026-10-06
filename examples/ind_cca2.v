@@ -72,17 +72,17 @@ Definition alice_guess_wrapped : val := λ: "c",
 
 Local Abbreviation challenge skA skA' pl pl' :=
   ((Some (skA : term, Spec.tag (Tag (N.@"m")) pl),
-    Some (skA' : term, Spec.tag (Tag (N.@"m")) pl')) : seal_entry).
+    Some (skA' : term, Spec.tag (Tag (N.@"m")) pl')) : wf_seal_data * wf_seal_data).
 
 Definition cell_inv skA skA' (l l' : loc) : iProp :=
   (l ↦ NONEV ∗ l' ↦ₛ NONEV ∗
-   seal_owner_l (seed_of_aenc_key skA) ∅ ∗
-   seal_owner_r (seed_of_aenc_key skA') ∅) ∨
+   seals_auth_l (seed_of_aenc_key skA) ∅ ∗
+   seals_auth_r (seed_of_aenc_key skA') ∅) ∨
   (∃ pl pl',
     l ↦ SOMEV (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl) ∗
     l' ↦ₛ SOMEV (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl') ∗
-    seal_owner_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
-    seal_owner_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
+    seals_auth_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
+    seals_auth_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
     term_meta (seed_of_aenc_key skA) storeN () ∗
     PUB⟨Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl,
         Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩).
@@ -96,7 +96,7 @@ Lemma rel_oracle_open skA skA' (l l' : loc) t t' :
   ⌜Spec.open skA t = None ∧ Spec.open skA' t' = None⌝ ∨
   ∃ u u', ⌜Spec.open skA t = Some u ∧ Spec.open skA' t' = Some u'⌝ ∗
     (PUB⟨u, u'⟩ ∨
-     sealed_in_l (seed_of_aenc_key skA)
+     seals_l (seed_of_aenc_key skA)
        (Some (skA : term, u), Some (skA' : term, u'))).
 Proof.
 iIntros "#Hctx #Hcell #Hpk #Hlink #Ht".
@@ -106,17 +106,17 @@ case eL: (Spec.open skA t) => [u|];
 case eR: (Spec.open skA' t') => [u'|]; iSimpl in "Ho".
 - iDestruct "Ho" as "[Hu|[Hl _]]".
   { iModIntro. iRight. iExists u, u'. iSplit; first by iPureIntro; split. by iLeft. }
-  rewrite sealed_input_aenc_l.
+  rewrite wf_seal_data_seals_aenc_l.
   iModIntro. iRight. iExists u, u'. iSplit; first by iPureIntro; split.
   by iRight.
-- iDestruct "Ho" as "[Hl _]". rewrite sealed_input_aenc_l.
-  iInv "Hcell" as "[(_ & _ & >owner & _)|(%pl & %pl' & _ & _ & >owner & _)]".
-  + by iDestruct (seal_owner_l_sealed_in_l with "owner Hl") as %?%not_elem_of_empty.
-  + by iDestruct (seal_owner_l_sealed_in_l with "owner Hl") as %[=]%elem_of_singleton.
-- iDestruct "Ho" as "[_ Hr]". rewrite sealed_input_aenc_r.
-  iInv "Hcell" as "[(_ & _ & _ & >owner)|(%pl & %pl' & _ & _ & _ & >owner & _)]".
-  + by iDestruct (seal_owner_r_sealed_in_r with "owner Hr") as %?%not_elem_of_empty.
-  + by iDestruct (seal_owner_r_sealed_in_r with "owner Hr") as %[=]%elem_of_singleton.
+- iDestruct "Ho" as "[Hl _]". rewrite wf_seal_data_seals_aenc_l.
+  iInv "Hcell" as "[(_ & _ & >seals & _)|(%pl & %pl' & _ & _ & >seals & _)]".
+  + by iDestruct (seals_auth_l_elem_of with "seals Hl") as %?%not_elem_of_empty.
+  + by iDestruct (seals_auth_l_elem_of with "seals Hl") as %[=]%elem_of_singleton.
+- iDestruct "Ho" as "[_ Hr]". rewrite wf_seal_data_seals_aenc_r.
+  iInv "Hcell" as "[(_ & _ & _ & >seals)|(%pl & %pl' & _ & _ & _ & >seals & _)]".
+  + by iDestruct (seals_auth_r_elem_of with "seals Hr") as %?%not_elem_of_empty.
+  + by iDestruct (seals_auth_r_elem_of with "seals Hr") as %[=]%elem_of_singleton.
 - iModIntro. iLeft. by iPureIntro; split.
 Qed.
 
@@ -152,12 +152,12 @@ iMod (rel_oracle_open with "Hctx Hcell Hpk Hlink Ht")
   rel_pures_l. rel_pures_r. by iApply "IH".
 - rewrite eL eR. rel_pures_l. rel_pures_r.
   rel_load_l_atomic.
-  iInv cellN as "[(Hl & Hl' & >owner & >owner')|(%pl & %pl' & Hl & Hl' & >owner & >owner' & >#Hstore & #Hct)]" "Hclose".
+  iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl & %pl' & Hl & Hl' & >seals & >seals' & >#Hstore & #Hct)]" "Hclose".
   + iDestruct "Hu" as "[#Hu|#Hin]"; last first.
-    { by iDestruct (seal_owner_l_sealed_in_l with "owner Hin") as %?%not_elem_of_empty. }
+    { by iDestruct (seals_auth_l_elem_of with "seals Hin") as %?%not_elem_of_empty. }
     iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
     rel_load_r.
-    iMod ("Hclose" with "[Hl Hl' owner owner']") as "_".
+    iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
     { iNext. iLeft. iFrame. }
     rel_pures_l. rel_pures_r.
     rel_bind_l (send _ _). rel_bind_r (send _ _).
@@ -170,13 +170,13 @@ iMod (rel_oracle_open with "Hctx Hcell Hpk Hlink Ht")
     { iDestruct "Hu" as "[#Hu|#Hin]".
       - case: (decide (ct = t)) => [e|ne]; first by iLeft.
         iRight. by iSplit.
-      - iDestruct (seal_owner_l_sealed_in_l with "owner Hin") as %e%elem_of_singleton.
+      - iDestruct (seals_auth_l_elem_of with "seals Hin") as %e%elem_of_singleton.
         simplify_eq/=.
         iLeft. iPureIntro. move/Spec.open_aenc_key_Some: eL => ->.
         by rewrite /ct /Spec.enc. }
     iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
     rel_load_r.
-    iMod ("Hclose" with "[Hl Hl' owner owner']") as "_".
+    iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
     { iNext. iRight. iExists pl, pl'. by iFrame "#∗". }
     rel_pures_l. rel_pures_r.
     rel_apply_l rel_eq_term_l. rel_apply_r rel_eq_term_r.
@@ -209,10 +209,10 @@ Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
   minted m -∗ minted_spec m' -∗
   (∀ pl pl',
     (∀ E, ⌜↑cryptisN ⊆ E⌝ -∗
-      seal_owner_l (seed_of_aenc_key skA) ∅ -∗
-      seal_owner_r (seed_of_aenc_key skA') ∅ ={E}=∗
-      seal_owner_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
-      seal_owner_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
+      seals_auth_l (seed_of_aenc_key skA) ∅ -∗
+      seals_auth_r (seed_of_aenc_key skA') ∅ ={E}=∗
+      seals_auth_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
+      seals_auth_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
            PUB⟨Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl,
                Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩) ={⊤}=∗
     Ψ (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl)
@@ -365,11 +365,11 @@ iMod (public_rel_flow_r_extend (E:=⊤) c' ltac:(solve_ndisj)
         with "Hctx tts_c_flow tts_c_map") as "[prot_c' tts_c_map]".
 (* The ciphertexts are linked later, once they are recorded as the challenge. *)
 iMod ("post" $! pl pl' with "[prot_c prot_c' tt_c_map tts_c_map]") as "post".
-{ iIntros (E HE) "owner_l owner_r".
-  iMod (seal_owner_l_insert _ _ (challenge skA skA' pl pl') with "owner_l")
-    as "[owner_l #Hin_l]".
-  iMod (seal_owner_r_insert _ _ (challenge skA skA' pl pl') with "owner_r")
-    as "[owner_r #Hin_r]".
+{ iIntros (E HE) "seals_l seals_r".
+  iMod (seals_auth_l_insert _ _ (challenge skA skA' pl pl') with "seals_l")
+    as "[seals_l #Hin_l]".
+  iMod (seals_auth_r_insert _ _ (challenge skA skA' pl pl') with "seals_r")
+    as "[seals_r #Hin_r]".
   rewrite !left_id_L.
   iAssert (□ (publicly_linked c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
   { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
@@ -426,12 +426,12 @@ iDestruct "token_a" as "[token_a token_a_rest]".
 rewrite (term_token_difference (seed_of_aenc_key skA) (↑storeN)
            (⊤ ∖ ↑cryptisN.@"public_rel".@"map")); last solve_ndisj.
 iDestruct "token_a_rest" as "[token_store token_a_rest]".
-iMod (seal_owner_l_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map" ∖ ↑storeN) ltac:(solve_ndisj)
-        with "token_a_rest") as "[owner_a _]".
+iMod (seals_auth_l_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map" ∖ ↑storeN) ltac:(solve_ndisj)
+        with "token_a_rest") as "[seals_a _]".
 rewrite (term_token_spec_difference (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
 iDestruct "token_spec_a" as "[token_spec_a token_spec_a_rest]".
-iMod (seal_owner_r_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
-        with "token_spec_a_rest") as "[owner_a' _]".
+iMod (seals_auth_r_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
+        with "token_spec_a_rest") as "[seals_a' _]".
 rewrite (term_token_difference (Spec.pkey skA)
            (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
 iDestruct "token_pkA" as "[token_pkA_flow token_pkA]".
@@ -466,7 +466,7 @@ iPoseProof ("Hwand" with "elem_pkA") as "#Hpub".
 (* The challenge cell and the oracle. *)
 rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
 rel_pures_l. rel_pures_r.
-iMod (inv_alloc cellN _ (cell_inv skA skA' l l') with "[Hl Hl' owner_a owner_a']") as "#Hcell".
+iMod (inv_alloc cellN _ (cell_inv skA skA' l l') with "[Hl Hl' seals_a seals_a']") as "#Hcell".
 { iNext. iLeft. iFrame. }
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply refines_bind.
@@ -504,10 +504,10 @@ iApply (refines_bind _ _ _ (λ v v', ∃ pl pl',
   ⌜v = Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl⌝ ∗
   ⌜v' = Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⌝ ∗
   (∀ E, ⌜↑cryptisN ⊆ E⌝ -∗
-     seal_owner_l (seed_of_aenc_key skA) ∅ -∗
-     seal_owner_r (seed_of_aenc_key skA') ∅ ={E}=∗
-     seal_owner_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
-     seal_owner_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
+     seals_auth_l (seed_of_aenc_key skA) ∅ -∗
+     seals_auth_r (seed_of_aenc_key skA') ∅ ={E}=∗
+     seals_auth_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
+     seals_auth_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
           PUB⟨Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl,
               Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩))%I).
 { iApply (rel_aenc' skA skA' msg msg' with "Hctx [//] [] [] elem_pkA secret_a mint_msg mint_spec_msg'").
@@ -518,16 +518,16 @@ iIntros (? ?) "(%pl & %pl' & -> & -> & link)"=> /=.
 rel_pures_l. rel_pures_r.
 (* Store the challenge and link it. *)
 rel_store_l_atomic.
-iInv cellN as "[(Hl & Hl' & >owner & >owner')|(%pl0 & %pl0' & Hl & Hl' & _ & _ & >#Hstore0 & _)]" "Hclose";
+iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl0 & %pl0' & Hl & Hl' & _ & _ & >#Hstore0 & _)]" "Hclose";
   last first.
 { by iDestruct (term_meta_token with "token_store Hstore0") as "[]". }
 iMod (term_meta_set storeN () (↑storeN) (seed_of_aenc_key skA) ltac:(done)
         with "token_store") as "#Hstore".
-iMod ("link" $! (⊤ ∖ ↑cellN) with "[] owner owner'") as "(owner & owner' & #Hct)".
+iMod ("link" $! (⊤ ∖ ↑cellN) with "[] seals seals'") as "(seals & seals' & #Hct)".
 { iPureIntro. solve_ndisj. }
 iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
 rel_store_r.
-iMod ("Hclose" with "[Hl Hl' owner owner']") as "_".
+iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
 { iNext. iRight. iExists pl, pl'. by iFrame "#∗". }
 rel_pures_l. rel_pures_r.
 rel_bind_l (send _ _). rel_bind_r (send _ _).

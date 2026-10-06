@@ -48,10 +48,10 @@ Definition alice_guess_wrapped : val := λ: "c",
   ("b", if: "b" then alice true "c" else alice false "c").
 
 Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
-    (S S' : gset seal_entry) :
+    (S S' : gset (wf_seal_data * wf_seal_data)) :
   cryptis_rel_ctx -∗
-  seal_owner_l (seed_of_aenc_key skA) S -∗
-  seal_owner_r (seed_of_aenc_key skA') S' -∗
+  seals_auth_l (seed_of_aenc_key skA) S -∗
+  seals_auth_r (seed_of_aenc_key skA') S' -∗
   ⌜is_nonce (seed_of_aenc_key skA)⌝ -∗
   minted (Spec.pkey skA) -∗
   minted_spec (Spec.pkey skA') -∗
@@ -62,7 +62,7 @@ Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
   REL aenc' (Spec.pkey skA) m
    << aenc' (Spec.pkey skA') m' : Ψ.
 Proof.
-iIntros "#Hctx owner_l owner_r %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
+iIntros "#Hctx seals_l seals_r %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
 rewrite /aenc'.
 rel_pures_l. rel_pures_r.
 rel_apply_l (rel_mk_nonce_l _ _
@@ -202,10 +202,10 @@ iAssert (minted pl) as "#mint_pl".
 { rewrite /pl minted_of_list /=. by iFrame "#". }
 iAssert (minted_spec pl') as "#mint_spec_pl'".
 { rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
-iMod (seal_owner_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
-        with "owner_l") as "[owner_l #Hin_l]".
-iMod (seal_owner_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
-        with "owner_r") as "[owner_r #Hin_r]".
+iMod (seals_auth_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
+        with "seals_l") as "[seals_l #Hin_l]".
+iMod (seals_auth_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
+        with "seals_r") as "[seals_r #Hin_r]".
 iAssert (□ (publicly_linked c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
 { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
   do 5 (iSplit; first done).
@@ -261,12 +261,12 @@ rel_pures_l. rel_pures_r.
 (* Tokens. *)
 rewrite (term_token_difference (seed_of_aenc_key skA) (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
 iDestruct "token_a" as "[token_a token_a_rest]".
-iMod (seal_owner_l_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
-        with "token_a_rest") as "[owner_a _]".
+iMod (seals_auth_l_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
+        with "token_a_rest") as "[seals_a _]".
 rewrite (term_token_spec_difference (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
 iDestruct "token_spec_a" as "[token_spec_a token_spec_a_rest]".
-iMod (seal_owner_r_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
-        with "token_spec_a_rest") as "[owner_a' _]".
+iMod (seals_auth_r_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
+        with "token_spec_a_rest") as "[seals_a' _]".
 rewrite (term_token_difference (Spec.pkey skA)
            (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
 iDestruct "token_pkA" as "[token_pkA_flow token_pkA]".
@@ -324,7 +324,7 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures_l. rel_pures_r.
 rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
-iApply refines_bind'. iApply (rel_aenc' with "Hctx owner_a owner_a'")=> //=.
+iApply refines_bind'. iApply (rel_aenc' with "Hctx seals_a seals_a'")=> //=.
 by rewrite minted_pkey. by rewrite minted_spec_pkey.
 iIntros (c_msg c_msg') "#Hcmsg".
 rel_bind_l (send _ _). rel_bind_r (send _ _).
