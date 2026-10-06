@@ -10,14 +10,14 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Notation ind_cca2N := (nroot.@"ind_cca2").
-Notation storeN := (ind_cca2N.@"store").
-Notation cellN := (ind_cca2N.@"cell").
+Abbreviation ind_cca2N := (nroot.@"ind_cca2").
+Abbreviation storeN := (ind_cca2N.@"store").
+Abbreviation cellN := (ind_cca2N.@"cell").
 
 Section CCA2.
 
 Context `{!relocG Σ, !public_relGS Σ}.
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Implicit Types (t u : term).
 Implicit Types (skA : aenc_key).
@@ -70,7 +70,7 @@ Definition alice_guess_wrapped : val := λ: "c",
   let: "b" := nondet_bool #() in
   ("b", if: "b" then alice true "c" else alice false "c").
 
-Local Notation challenge skA skA' pl pl' γ :=
+Local Abbreviation challenge skA skA' pl pl' γ :=
   ((Some (skA : term, Spec.tag (Tag (N.@"m")) pl),
     Some (skA' : term, Spec.tag (Tag (N.@"m")) pl'), γ) : seal_entry).
 

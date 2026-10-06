@@ -11,8 +11,8 @@ Section PublicRelUpdates.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
-Notation iProp := (iProp Σ).
-Notation iPropO := (iPropO Σ).
+Abbreviation iProp := (iProp Σ).
+Abbreviation iPropO := (iPropO Σ).
 
 Implicit Types t : term.
 Implicit Types st : state.

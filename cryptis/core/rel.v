@@ -9,8 +9,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Notation seal_pred_input := (option (term * term)).
-Notation seal_entry := (seal_pred_input * seal_pred_input * gname)%type.
+Abbreviation seal_pred_input := (option (term * term)).
+Abbreviation seal_entry := (seal_pred_input * seal_pred_input * gname)%type.
 
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
@@ -47,8 +47,8 @@ Section PublicRel.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
-Notation iProp := (iProp Σ).
-Notation iPropO := (iPropO Σ).
+Abbreviation iProp := (iProp Σ).
+Abbreviation iPropO := (iPropO Σ).
 
 Implicit Types t : term.
 Implicit Types st : state.
@@ -902,7 +902,7 @@ Fixpoint publicly_related t t' : iProp :=
   end.
 
 #[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
-  (at level 20, no associativity, format "PUB⟨ a , b ⟩").
+  (at level 0, no associativity, format "PUB⟨ a , b ⟩").
 
 #[global] Instance publicly_related_persistent t t' : Persistent (PUB⟨t, t'⟩).
 Proof. elim/term_ind': t t' => /=; apply _. Qed.
@@ -977,7 +977,7 @@ End Invariant.
 End PublicRel.
 
 Notation "PUB⟨ a , b ⟩" := (publicly_related a b)
-  (at level 20, no associativity, format "PUB⟨ a , b ⟩").
+  (at level 0, no associativity, format "PUB⟨ a , b ⟩").
 
 Arguments seal_pred {Σ _} γ Φ.
 Arguments seal_pred_alloc {Σ _} Φ.
@@ -1040,8 +1040,8 @@ Section RelProperties.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
-Notation iProp := (iProp Σ).
-Notation iPropO := (iPropO Σ).
+Abbreviation iProp := (iProp Σ).
+Abbreviation iPropO := (iPropO Σ).
 
 Implicit Types t : term.
 Implicit Types st : state.

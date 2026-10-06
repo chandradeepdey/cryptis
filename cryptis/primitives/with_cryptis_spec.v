@@ -23,7 +23,7 @@ Section Proofs.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
-Notation nonce := loc.
+Abbreviation nonce := loc.
 Implicit Types E : coPset.
 Implicit Types a : nonce.
 Implicit Types t : term.

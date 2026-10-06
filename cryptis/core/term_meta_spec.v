@@ -19,9 +19,9 @@ Class term_meta_specGS Σ : Type := TermMetaSpecGS {
 Section TermMetaSpec.
 
 Context `{!relocG Σ}.
-Notation iProp := (iProp Σ).
-Notation iPropO := (iPropO Σ).
-Notation iPropI := (iPropI Σ).
+Abbreviation iProp := (iProp Σ).
+Abbreviation iPropO := (iPropO Σ).
+Abbreviation iPropI := (iPropI Σ).
 
 Definition term_meta_spec_inv `{!term_meta_specGS Σ} : iProp :=
   ∃ names : gmap term gname,

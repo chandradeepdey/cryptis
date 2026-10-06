@@ -13,7 +13,7 @@ Unset Printing Implicit Defensive.
 Section CPA.
 
 Context `{!relocG Σ, !public_relGS Σ}.
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Implicit Types (t nonce : term).
 Implicit Types (skA : aenc_key).
