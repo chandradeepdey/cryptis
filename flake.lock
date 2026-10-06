@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "actris": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773651268,
+        "narHash": "sha256-Kp3YDN2C2QNIDHfg9AJGfOjQ/9sM2MHRICO8iPgYdBw=",
+        "ref": "refs/heads/master",
+        "rev": "fa669607568fbf897f6551b7bc9e912b10e1b577",
+        "revCount": 873,
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/iris/actris.git"
+      },
+      "original": {
+        "rev": "fa669607568fbf897f6551b7bc9e912b10e1b577",
+        "type": "git",
+        "url": "https://gitlab.mpi-sws.org/iris/actris.git"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -54,22 +71,6 @@
         "type": "github"
       }
     },
-    "iris": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1761319387,
-        "narHash": "sha256-z4flAe4il0v5vwDd5hccpIMVkJ0HRPok52b//22d8h4=",
-        "ref": "refs/heads/master",
-        "rev": "f5bc4aa957d8f775d86ebf1bfea7f1c4c58732da",
-        "revCount": 8449,
-        "type": "git",
-        "url": "https://gitlab.mpi-sws.org/iris/iris.git"
-      },
-      "original": {
-        "type": "git",
-        "url": "https://gitlab.mpi-sws.org/iris/iris.git"
-      }
-    },
     "nix-github-actions": {
       "inputs": {
         "nixpkgs": [
@@ -92,11 +93,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1779805253,
-        "narHash": "sha256-FnvOWDyoyaWZ3GgQC+8uXCaoFrbmTWKkpnVnDaDOYfs=",
+        "lastModified": 1790956036,
+        "narHash": "sha256-kBHhnmxlcQ4ZIiwL8H8s+6DYjbomXqva0xm5llbRGoU=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "b931f829718b2840c83caabe35c26e5eb9c5d440",
+        "rev": "b9210733e3e46fceaddc624cc2e3be94e94dd7cb",
         "type": "github"
       },
       "original": {
@@ -135,6 +136,22 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1777472283,
+        "narHash": "sha256-aBE1ZpelOBBLtNUoqvQfAawzMvLzL+iwfl4/nyEwz8c=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "8f21ecf6d80d56dd43f4c7c9191fb805aa8ac98f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "8f21ecf6d80d56dd43f4c7c9191fb805aa8ac98f",
+        "type": "github"
+      }
+    },
     "pytanque": {
       "flake": false,
       "locked": {
@@ -154,33 +171,46 @@
     "reloc": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "iris": "iris",
         "nixpkgs": [
           "nixpkgs"
-        ],
-        "stdpp": "stdpp"
+        ]
       },
       "locked": {
-        "lastModified": 1779805913,
-        "narHash": "sha256-QBzNjAEnh6KXdQTonZwEuu6iOLr5cS8cQ16z/Pv0HWw=",
-        "ref": "local-changes",
-        "rev": "883acc3d8ebf844ece524be24370fa8a85713e13",
-        "revCount": 384,
+        "lastModified": 1791226216,
+        "narHash": "sha256-j58MKF1+xbS9XrJ3u7kF1uxdZBLEeL8SdUyuR5sP63I=",
+        "ref": "refs/heads/master",
+        "rev": "b80d3bc90c4db6f8557c895c8c58a9c6386d31db",
+        "revCount": 382,
         "type": "git",
-        "url": "https://gitlab.mpi-sws.org/arthuraa/reloc.git"
+        "url": "https://gitlab.mpi-sws.org/chandradeepdey/reloc.git"
       },
       "original": {
-        "ref": "local-changes",
+        "rev": "b80d3bc90c4db6f8557c895c8c58a9c6386d31db",
         "type": "git",
-        "url": "https://gitlab.mpi-sws.org/arthuraa/reloc.git"
+        "url": "https://gitlab.mpi-sws.org/chandradeepdey/reloc.git"
+      }
+    },
+    "rocq-lsp": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770220825,
+        "narHash": "sha256-VJLe7zNcvbUN0QsA/cKuhyr6kHKGWDf9Wp8uFhHQGvw=",
+        "owner": "rocq-community",
+        "repo": "rocq-lsp",
+        "rev": "f49d7b391c8dc6599a00d126d7bfedc9efbdc2e7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rocq-community",
+        "ref": "v9.2",
+        "repo": "rocq-lsp",
+        "type": "github"
       }
     },
     "rocq-mcp": {
       "inputs": {
         "flake-parts": "flake-parts_2",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs_2",
         "pytanque": "pytanque",
         "rocq-mcp": "rocq-mcp_2"
       },
@@ -216,27 +246,13 @@
     },
     "root": {
       "inputs": {
+        "actris": "actris",
         "flake-parts": "flake-parts",
         "nix-github-actions": "nix-github-actions",
         "nixpkgs": "nixpkgs",
         "reloc": "reloc",
+        "rocq-lsp": "rocq-lsp",
         "rocq-mcp": "rocq-mcp"
-      }
-    },
-    "stdpp": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1761736858,
-        "narHash": "sha256-NXHWSi3wfSVabf0MZP21XqyFHbqBZvDoh217W+cSSy4=",
-        "ref": "refs/heads/master",
-        "rev": "b944893175a525b3d9969ad9931c5bbace766782",
-        "revCount": 3024,
-        "type": "git",
-        "url": "https://gitlab.mpi-sws.org/iris/stdpp.git"
-      },
-      "original": {
-        "type": "git",
-        "url": "https://gitlab.mpi-sws.org/iris/stdpp.git"
       }
     },
     "systems": {

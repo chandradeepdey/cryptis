@@ -50,11 +50,13 @@ In the `examples` directory you will find our case studies:
 Cryptis is known to compile with the following dependencies:
 
 - rocq-prover
-- rocq-core v9.1.1
-- rocq-mathcomp-ssreflect v2.5.0
+- rocq-core v9.2.0
+- rocq-mathcomp-ssreflect v2.6.0
 - coq-deriving v0.2.3
 - rocq-iris v4.5.0
 - rocq-iris-heap-lang v4.5.0
+- rocq-actris fa66960 (Nix)/367149a (opam)
+- coq-reloc b80d3bc
 
 ### Nix
 

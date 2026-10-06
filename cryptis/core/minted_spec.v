@@ -11,7 +11,7 @@ Section MintedSpec.
 
 Context `{!relocG Σ}.
 
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Definition minted_spec_loc (a : loc) : iProp :=
   a ↦ₛ□ #().
@@ -69,19 +69,20 @@ Lemma minted_spec_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
 
 Lemma minted_spec_TExpN t ts :
-  negb (is_exp t) -> invs_canceled ts ->
+  negb (is_exp t) -> negb (is_gmul t) -> negb (is_ginv t) ->
+  invs_canceled ts ->
   minted_spec (TExpN t ts) ⊣⊢ minted_spec t ∧ [∗ list] t' ∈ ts, minted_spec t'.
 Proof.
-move => nx ic.
-rewrite unlock (nonces_of_term_TExpN nx ic) big_sepS_union_pers.
+move => nx nm ni ic.
+rewrite unlock (nonces_of_term_TExpN nx nm ni ic) big_sepS_union_pers.
 by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma minted_spec_base_exps t :
   minted_spec t ⊣⊢ minted_spec (base t) ∧ [∗ list] t' ∈ exps t, minted_spec t'.
 Proof.
-by rewrite -{1}[t]base_expsK
-  (minted_spec_TExpN (base_Nexp t) (invs_canceled_factors (expo t))).
+rewrite unlock (nonces_of_term_base_exps t) big_sepS_union_pers.
+by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma all_minted_spec_TExpN t ts :
@@ -105,12 +106,12 @@ by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma minted_spec_TExp t1 t2 :
-  negb (is_exp t1) ->
+  negb (is_exp t1) -> negb (is_gmul t1) -> negb (is_ginv t1) ->
   minted_spec (TExp t1 t2) ⊣⊢ minted_spec t1 ∧ minted_spec t2.
 Proof.
-move => nx.
+move => nx nm ni.
 have -> : TExp t1 t2 = TExpN t1 (factors t2) by rewrite /TExpN factorsK.
-rewrite (minted_spec_TExpN nx (invs_canceled_factors t2)).
+rewrite (minted_spec_TExpN nx nm ni (invs_canceled_factors t2)).
 by rewrite -minted_spec_factors.
 Qed.
 
@@ -135,7 +136,7 @@ Lemma minted_spec_to_list t ts :
   minted_spec t -∗ [∗ list] t' ∈ ts, minted_spec t'.
 Proof.
 elim/term_ind': t ts => //=.
-  by case=> // ts [<-] /=; iIntros "?".
+  by case=> // [] ts [<-] /=; iIntros "?".
 move=> t _ tl IH ts.
 case e: (Spec.to_list tl) => [ts'|] // [<-] /=.
 rewrite minted_spec_TPair /=; iIntros "[??]"; iFrame.

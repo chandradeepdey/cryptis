@@ -58,14 +58,21 @@ opam repo add rocq-released https://rocq-prover.org/opam/released
 opam install . # or: make builddep && make
 ```
 
-Key dependencies (authoritative pins live in `rocq-cryptis.opam` — treat it as the single source of truth): rocq-core 9.1.1, rocq-mathcomp-ssreflect 2.5.0, rocq-iris 4.5.0, rocq-iris-heap-lang 4.5.0, coq-deriving 0.2.3. `README.md` and this file must agree with the opam file.
+Key dependencies (authoritative pins live in `rocq-cryptis.opam` — treat it as the single source of truth): rocq-core 9.2.0, rocq-mathcomp-ssreflect 2.6.0, rocq-iris 4.5.0, rocq-iris-heap-lang 4.5.0, coq-deriving 0.2.3, coq-reloc b80d3bc (`stable_53b3b8b` branch of `chandradeepdey/reloc`). `README.md` and this file must agree with the opam file.
+
+nixpkgs has no Rocq 9.2 build of `coq-lsp`, and `rocq-community/rocq-lsp` has no 9.2 release
+yet, so `flake.nix` builds its `v9.2` branch; switch to the nixpkgs package once there is one.
+`actris` is pinned to a fixed upstream commit and must not be updated; it is intentionally
+absent from the opam file.
+`flake.nix` takes `reloc` (and the autosubst it needs) from the reloc flake's overlay, which
+extends `rocqPackages_9_2`.
 
 ## Code Architecture
 
 ### Directory Structure
 
 - **`cryptis/`** — Core library (Rocq namespace `cryptis`)
-  - `lib/` — Utilities: session management, adequacy, Diffie-Hellman helpers, ghost state helpers
+  - `lib/` — Utilities: session management, adequacy, Diffie-Hellman helpers, ghost state helpers. `dh.v` owns the protocol-independent DH reasoning, in two flavours: `dh_seed`/`dh_publ` for a seed that is never public and carries a protocol payload `P` (`dh_seed_elim*`, `dh_public_TExp`, `wp_mk_dh`), and the bare `dh_key_share` for a seed whose secrecy is conditional (`public_dh_share`, `public_dh_secret*`, used by `iso_dh` and `opaque`). Case studies instantiate these rather than re-deriving them.
   - `core/` — Foundation: term definitions, public predicate, term metadata
   - `primitives/` — HeapLang implementations of cryptographic operations
   - `tactics.v` — Ltac2 automation for symbolic execution of HeapLang programs
@@ -84,11 +91,28 @@ Key dependencies (authoritative pins live in `rocq-cryptis.opam` — treat it as
 - `TKey (kt : key_type) t` — keys, where `key_type = AEnc | ADec | Sign | Verify | SEnc`
 - `TSeal k t` — a single sealing constructor covering asymmetric encryption, signatures, and symmetric encryption (disambiguated by the key's `key_type`)
 - `THash t` — hashes
-- `TNonFree pt of PreTerm.wf pt & is_non_free pt` — the Diffie–Hellman fragment (inverse / exponentiation / product), represented indirectly by a well-formed `PreTerm.pre_term`
+- `TNonFree pt of PreTerm.wf pt & is_non_free pt` — the Diffie–Hellman fragment (the two inverses, the two products and exponentiation), represented indirectly by a well-formed `PreTerm.pre_term`
 
-`TInv`, `TExp`, `TExpN`, `TMul`, `TMulN` are **smart constructors** (locked `Definition`s over `TNonFree`), *not* real constructors — so `case`/`elim` on them is not structural; use the custom induction principles (`term_ind`/`term_rect` in `core/term/base.v`, `term_lt_ind` in `core/term/tsize.v`). Typed key wrappers `aenc_key`/`sign_key`/`senc_key` sit on top of `TKey`, and the surface API lives in `Module Spec` (`core/term/spec.v`: `Spec.tag`, `Spec.of_list`, `Spec.pkey`, `Spec.to_list`, …).
+**Two multiplicative structures.** The DH group and the exponent ring are *separate* operations, and never mix:
 
-The term layer is split across `core/term/` and aggregated by `core/term.v`: `base.v` (the `term` inductive, the `unfold`/`fold` ↔ `pre_term` conjugation, smart constructors, instances, destructor defs, the `count` API (`count`, `count_inj`, `count_TMulN`, `count_TInv`, …), and the structural `term_rect`/`term_ind` eliminators), `algebra.v` (multiplicative-group + DH-exponentiation laws), `tsize.v` (the `tsize` measure, its termination lemmas, and the well-founded `term_lt_rect`/`term_lt_ind`), `repr.v` (`val_of_term`/`repr`), `nonces.v`, `subterms.v`, `spec.v`. Downstream imports `cryptis.core.term`, so the split is transparent — but **module-qualified references (`base.foo`) break when a lemma moves file**; prefer unqualified names. Each split file must re-declare the file-local `Implicit Types (t k : term) (ts : list term).` and `Set Implicit Arguments.` block (those do not cross a `Require` boundary).
+| | group (base of `^`) | exponents |
+| --- | --- | --- |
+| product | `TGMulN` / `TGMul`, unit `TGMulN []` | `TMulN` / `TMul`, unit `TMulN []` |
+| inverse | `TGInv` | `TInv` |
+| factors / counting | `gfactors`, `gcount`, `ginvs_canceled` | `factors`, `count`, `invs_canceled` |
+| recognisers | `is_gmul`, `is_ginv` | `is_mul`, `is_inv` |
+
+`TExp : G → E → G` takes a group element and a scalar. The group validates `(a·b)^x = a^x·b^x`, `1^x = 1` and `(a⁻¹)^x = (a^x)⁻¹`; the exponents validate `(g^a)^b = g^(a·b)`, `g^1 = g` and `(g^a)^(a⁻¹) = g`. Both are abelian groups. The group product is what lets `examples/opaque/` express HMQV: an exponent *sum* is unavailable, but distributivity turns `Y^(x + c)` into `Y^x · Y^c`. **Identifying them is unsound**: with one carrier, those laws make `x ↦ (_^x)` a homomorphism `G → ℤ_n*`, whose image is trivial on any large prime-order subgroup — so exponentiation degenerates to the identity in any group where DLP is hard. A scalar product or scalar inverse in a *base* is therefore just an atom: `(a·b)^x` does **not** distribute.
+
+A term heading neither exponent operation — `negb (is_enon_free t)`, where `is_enon_free := is_inv || is_mul` (`core/term/base.v`, the exponent-side sibling of `PreTerm.is_gnon_free`) — is its own single `factors` entry, so a signed `count` between two such terms is decided by plain disequality. `core/term/algebra.v` packages that as `TInv_Nenf_ne`, `count_Nenf_ne`, `elem_of_factors_cons` / `elem_of_factors_cons_weak` and `not_elem_of_factors_TMulN_Nenf`; a protocol that must locate one exponent inside a product of others (`examples/opaque/`) goes through them, with `Nenf_TNonce` / `Nenf_THash` discharging the side conditions.
+
+Underneath, `PreTerm.pre_term` is an *arity-indexed* datatype: `PT0 o`, `PT1 o pt`, `PT2 o pt1 pt2` and `PTN o ts`, where the operations of each arity live in their own inductive (`term_op0`, `term_op1`, `term_op2`, `term_opN`) with its own derived `eqType`/`choiceType`/`countType`/`orderType`. `term_op1` has `O1Key | O1Hash | O1Inv | O1GInv` and `term_opN` has `ONMul | ONGMul`, with `PTInv`/`PTGInv`/`PTMul`/`PTGMul` as `Notation`s — so `match`es and `case` patterns keep naming each operation directly, and adding another one turns every operation-specific `match` into a non-exhaustiveness error rather than a silent wrong branch. Two habits follow: in `case`/`elim` intro patterns the op1 and n-ary branches destruct the operation (`case: pt => [o|[k| | |] t|o t1 t2|[|] ts]`, or `[|||[|] ts]` when the other branches need no names); and structural functions that ignore the operation (`height`, `PreTerm.tsize`, `nonces_of_pre_term`) match on `PT1 _`/`PTN _ ts`, while operation-specific ones (`is_mul`, `is_gmul`, `factors`, `gfactors`, `wf`, `normalize`) match on the notation. New constructors go **last**, so the `deriving`-generated order agrees with the tag order HeapLang's `leq_term_op1`/`leq_term_opN` compare. The HeapLang encoding mirrors the arities too: `(#TOpN_tag, (repr o, repr_list …))`, with `repr ONMul = #TMul_tag` and `repr ONGMul = #TGMul_tag`.
+
+`TInv`, `TGInv`, `TExp`, `TExpN`, `TMul`, `TMulN`, `TGMul`, `TGMulN` are **smart constructors** (locked `Definition`s over `TNonFree`), *not* real constructors — so `case`/`elim` on them is not structural; use the custom induction principles (`term_ind`/`term_rect` in `core/term/base.v`, `term_lt_ind` in `core/term/tsize.v`). Typed key wrappers `aenc_key`/`sign_key`/`senc_key` sit on top of `TKey`, and the surface API lives in `Module Spec` (`core/term/spec.v`: `Spec.tag`, `Spec.of_list`, `Spec.pkey`, `Spec.to_list`, …).
+
+Exponentiation is an endomorphism of the *group*: `(a·b)^x = a^x·b^x`, and hence also `1^x = 1` and `(a⁻¹)^x = (a^x)⁻¹`. `PreTerm.wf` therefore demands that the base of a normal-form exponential be a **group atom** — neither group product, nor group inverse, nor exponential (`negb (is_gnon_free b)`, the smaller sibling of the `is_non_free` that `TNonFree` uses); `PreTerm.exp` re-establishes this by spreading over `PreTerm.gfactors` (`exp b e := gmul ((λ t, exp_aux t e) <$> gfactors b)`, with `exp_aux` handling the `PTGInv` case and `mk_exp` the `e = 1` guard). Two consequences bite downstream: `TExp` is **not** injective in the exponent at the group unit, so `TExp_injr`, `base_TExp`, `expo_TExp`, `tsize_TExp`, `minted_TExp`, `public_TExpN` and friends carry `negb (is_gmul b)` / `negb (is_ginv b)` premises; and a protocol that exponentiates an attacker-supplied value must either reject the identity or reason factor-by-factor (`gfactors_TExp`, `public_TExp_gfactors`, `subterm_TExp_gfactors`). Note there is **no** `is_mul_base`/`is_inv_base`: only `is_gmul_base`/`is_ginv_base` hold, since `wf (PTExp (PTMul ts) e)` is legal.
+
+The term layer is split across `core/term/` and aggregated by `core/term.v`: `base.v` (the `term` inductive, the `unfold`/`fold` ↔ `pre_term` conjugation, smart constructors, instances, destructor defs, the two counting APIs (`count`/`count_inj`/`count_TMulN`/`count_TInv` and `gcount`/`gcount_inj`/`gcount_TGMulN`/`gcount_TGInv`), and the structural `term_rect`/`term_ind` eliminators), `algebra.v` (both abelian-group theories + DH-exponentiation laws), `tsize.v` (the `tsize` measure, its termination lemmas, and the well-founded `term_lt_rect`/`term_lt_ind`), `repr.v` (`val_of_term`/`repr`), `nonces.v`, `subterms.v`, `spec.v`. Downstream imports `cryptis.core.term`, so the split is transparent — but **module-qualified references (`base.foo`) break when a lemma moves file**; prefer unqualified names. Each split file must re-declare the file-local `Implicit Types (t k : term) (ts : list term).` and `Set Implicit Arguments.` block (those do not cross a `Require` boundary).
 
 **The Public Predicate** (`core/public.v`): Central to the framework. `public t` (an Iris proposition) holds when term `t` is known to the attacker. Protocol proofs establish invariants about which terms are and are not public.
 
@@ -99,7 +123,7 @@ The term layer is split across `core/term/` and aggregated by `core/term.v`: `ba
 
 These are thin wrappers over the generic `seal_pred F N Φ` (with `F : functionality = AENC | SIGN | SENC`); predicates are allocated against a `seal_pred_token F E`.
 
-**HeapLang Primitives** (`primitives/`): Concrete implementations with associated Hoare-triple specs — sealing (`aenc`/`adec`, `sign`/`verify`, `senc`/`sdec`), `hash`, key handling (`pkey`, `mk_nonce`, `mk_aenc_key`, `mk_sign_key`, `derive_senc_key`, `is_aenc_key`), Diffie–Hellman (`tint`, `texp`), the generic `open`, and channel I/O (`send`, `recv`).
+**HeapLang Primitives** (`primitives/`): Concrete implementations with associated Hoare-triple specs — sealing (`aenc`/`adec`, `sign`/`verify`, `senc`/`sdec`), `hash`, key handling (`pkey`, `mk_nonce`, `mk_aenc_key`, `mk_sign_key`, `derive_senc_key`, `is_aenc_key`), Diffie–Hellman (`tint`, `texp`; group operations `tgmul`, `tginv`, `tgone`; exponent operations `tmul`, `tinv`, `tone`), the generic `open`, and channel I/O (`send`, `recv`).  `primitives/attacker.v` exposes every one of these to the symbolic attacker — omitting one would make it strictly weaker than a real attacker.
 
 **Tactics** (`tactics.v`): Custom tactics (`tac_wp_hash`, `tac_wp_list_match`, etc.) for stepping through HeapLang programs that manipulate cryptographic terms.
 
@@ -119,7 +143,7 @@ examples/*
 
 The `_CoqProject` file specifies the exact file ordering for compilation.
 
-**mathcomp ↔ stdpp boundary:** `core/pre_term/base.v` is implemented in mathcomp (`seq`, `%O` order, `~~`, `sort <=%O`, bigops, `deriving`); `core/pre_term/normalize.v` (normal forms + the `wf`/`normalize` machinery) is already stdpp-only. `core/pre_term/with_stdpp.v` is *the* bridge, and is where any new mathcomp→stdpp translation belongs: it packages the deriving-generated order both as `pt_order` (a stdpp `relation` with `RelDecision`/`Transitive`/`Total`/`AntiSymm`) and as a global `Lexico PreTerm.pre_term` instance (with `StrictOrder`/`TrichotomyT`, which is what makes `bool_decide (x = y ∨ lexico x y)` decidable), and proves `pt_order_lexico`, `pt_order_mul` (the derived order on `PTMul ts` *is* stdpp's `lexico` on `ts`) and `pt_orderE` (the structural comparison equation, stated with `bool_decide` and `op0_le`/`op1_le`/`op2_le` instead of `<=%O`). Because of that bridge, `primitives/pre_term.v` — which implements the `normalize.v` operations in HeapLang — needs no mathcomp beyond `ssreflect`. Everything from `core/term/` upward is stdpp (`Forall`, `≡ₚ`, `∈`, `merge_sort`). The active boolean→Prop coercion above `pre_term` is stdpp's `Is_true`, **not** ssreflect's `is_true` (bridged by `is_trueP` in `lib/mathcomp_compat.v`); mixing the two silently breaks `rewrite`/`apply`.
+**mathcomp ↔ stdpp boundary:** `core/pre_term/base.v` is implemented in mathcomp (`seq`, `%O` order, `~~`, `sort <=%O`, bigops, `deriving`); `core/pre_term/normalize.v` (normal forms + the `wf`/`normalize` machinery) is already stdpp-only. `core/pre_term/with_stdpp.v` is *the* bridge, and is where any new mathcomp→stdpp translation belongs: it packages the deriving-generated order both as `pt_order` (a stdpp `relation` with `RelDecision`/`Transitive`/`Total`/`AntiSymm`) and as a global `Lexico PreTerm.pre_term` instance (with `StrictOrder`/`TrichotomyT`, which is what makes `bool_decide (x = y ∨ lexico x y)` decidable), and proves `pt_order_lexico`, `pt_order_N` (the derived order on `PTN o ts` *is* stdpp's `lexico` on `ts`) and `pt_orderE` (the structural comparison equation, stated with `bool_decide` and `op0_le`/`op1_le`/`op2_le`/`opN_le` instead of `<=%O`). Because of that bridge, `primitives/pre_term.v` — which implements the `normalize.v` operations in HeapLang — needs no mathcomp beyond `ssreflect`. Everything from `core/term/` upward is stdpp (`Forall`, `≡ₚ`, `∈`, `merge_sort`). The active boolean→Prop coercion above `pre_term` is stdpp's `Is_true`, **not** ssreflect's `is_true` (bridged by `is_trueP` in `lib/mathcomp_compat.v`); mixing the two silently breaks `rewrite`/`apply`.
 
 ### Case Studies
 
@@ -131,7 +155,7 @@ Directory-structured protocols use some of: `impl.v` (HeapLang implementation), 
 - `gen_conn/`, `conn/` — generic and authenticated secure-connection layers (building blocks).
 - `rpc/` — remote procedure calls over `conn`.
 - `store/` — authenticated key-value store over `rpc` (game in `store/game.v`); `alist/` is a supporting association-list module.
-- `opaque/` — OPAQUE-style password-authenticated key exchange (partial: `impl.v`, `shared.v`, `client_proofs.v`, `server_proofs.v`, `game.v`; `game.v` stops at `wp_game`, no closed theorem yet).
+- `opaque/` — OPAQUE-style password-authenticated key exchange, with the paper's **HMQV** key exchange (partial: `impl.v`, `shared.v`, `client_proofs.v`, `server_proofs.v`, `game.v`; `game.v` stops at `wp_game`, no closed theorem yet). The key `(X_b · P_b^m_b)^(x_a + m_a·p_a)` needs an exponent sum the algebra does not have, so distributivity trades it for a group product: `(X_b · P_b^m_b)^x_a · (X_b · P_b^m_b)^(m_a·p_a)` (`hmqv_K` in `shared.v`; `hmqv_K_sym` says both roles compute the same element). Secrecy rests on the static-static group factor `g^(p_b·m_b·m_a·p_a)`, which survives whatever `X_b` the peer sends — that is HMQV's own argument, symbolically the occurs check `gcount_TExp_eq0` (`core/term/tsize.v`): the multiplier `m_b` is a hash of `X_b`, hence strictly bigger, so `X_b` cannot contain it. `hmqv_key_gfactors` packages what both roles need.
 - `tls13/` — TLS 1.3 handshake (partial; `impl.v` executable layer + per-component `proofs/` (base, meth, cshare, sshare, cparams, sparams) + `proofs/protocol.v`, no closed theorem yet).
 - `challenge_response.v` — signature-based mutual authentication; `composite_game.v` runs several protocols together under one adequacy game.
 - `permanent.v`, `counter.v` — small digital-signature demos (immutable state / monotone counter).

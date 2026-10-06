@@ -17,7 +17,7 @@ Section Verif.
 
 Context `{!cryptisGS Σ, !heapGS Σ, !iso_dhGS Σ, !GenConn.connGS Σ}.
 Context `{!RPC.rpcGS Σ, !storeGS Σ}.
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Context `{!storeG Σ}.
 
@@ -42,7 +42,7 @@ iMod (store_call t2' with "db mapsto") as "(store & mapsto & waiting)".
 wp_lam. wp_pures. wp_list. wp_term_of_list.
 iPoseProof (store_ctx_store with "[//]") as "?".
 iPoseProof (store_ctx_rpc_ctx with "[//]") as "?".
-wp_apply (RPC.wp_call with "[] [$conn $store]").
+wp_apply (RPC.wp_call with "[$conn $store]").
 { rewrite public_of_list. do 4!iSplit => //=; first by eauto. }
 iIntros "%ts' (conn & store & _)". wp_pures. iApply "post".
 iFrame. by iApply "waiting".

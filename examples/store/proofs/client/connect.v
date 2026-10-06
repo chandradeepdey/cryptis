@@ -19,7 +19,7 @@ Section Verif.
 
 Context `{!cryptisGS Σ, !heapGS Σ, !iso_dhGS Σ, !GenConn.connGS Σ}.
 Context `{!RPC.rpcGS Σ, !storeGS Σ}.
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Context `{!storeG Σ}.
 
@@ -46,7 +46,7 @@ iIntros "!> %Φ client post".
 iDestruct "client" as "(%db & ready & state)".
 wp_lam. wp_pures.
 iApply (RPC.wp_connect (db_client_ready skI skR db)
-         with "[] [$]") => //; eauto.
+         with "[//] [//] [//] [] [] [$]") => //.
 iIntros "!> %cs (conn & ready)".
 iApply "post".
 by iFrame.

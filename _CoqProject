@@ -1,6 +1,6 @@
--arg "-w -convert_concl_no_check"
 -arg "-w -redundant-canonical-projection"
 -arg "-w -notation-overridden"
+-arg "-w -level-tolerance"
 
 -R examples cryptis.examples
 -R cryptis cryptis
@@ -103,6 +103,15 @@ examples/gen_conn/proofs/base.v
 examples/gen_conn/proofs.v
 examples/gen_conn.v
 
+examples/sess/impl.v
+examples/sess/proofmode.v
+examples/sess/proofs/base.v
+examples/sess/proofs.v
+examples/sess/tag.v
+examples/sess/trusted.v
+examples/sess/examples.v
+examples/sess.v
+
 examples/conn/proofs/base.v
 examples/conn/proofs.v
 examples/conn.v
@@ -173,6 +182,18 @@ examples/tls13.v
 examples/composite_game.v
 
 ## Storage
+
+examples/store_sess/impl.v
+examples/store_sess/proofs/base.v
+examples/store_sess/proofs/client/store.v
+examples/store_sess/proofs/client/load.v
+examples/store_sess/proofs/client/create.v
+examples/store_sess/proofs/client/connect.v
+examples/store_sess/proofs/client/close.v
+examples/store_sess/proofs/client.v
+examples/store_sess/proofs/server.v
+examples/store_sess/proofs.v
+examples/store_sess/game.v
 
 # Relational-specific
 

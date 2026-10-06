@@ -18,7 +18,7 @@ Section Verif.
 
 Context `{!cryptisGS Σ, !heapGS Σ, !iso_dhGS Σ, !GenConn.connGS Σ}.
 Context `{!RPC.rpcGS Σ, !storeGS Σ}.
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Implicit Types (cs : GenConn.state).
 Implicit Types (skI skR : sign_key) (kS t : term).
@@ -44,7 +44,7 @@ iAssert (RPC.client_connected skI skR cs ∗
   iPoseProof (RPC.client_connected_failure with "conn fail") as "#H".
   iFrame "conn". by iLeft. }
 wp_lam. wp_pures.
-wp_apply (RPC.wp_close with "[] [$conn]"); eauto.
+wp_apply (RPC.wp_close with "[$conn]"); eauto.
 iIntros "pub". iApply "post". by iFrame.
 Qed.
 

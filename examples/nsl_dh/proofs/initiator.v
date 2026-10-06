@@ -16,7 +16,7 @@ Unset Printing Implicit Defensive.
 Section Verif.
 
 Context `{!heapGS Σ, !cryptisGS Σ, !nsl_dhGS Σ}.
-Notation iProp := (iProp Σ).
+Abbreviation iProp := (iProp Σ).
 
 Implicit Types (rl : role) (t nI nR sI sR kS : term).
 Implicit Types (skI skR : aenc_key).
@@ -309,7 +309,9 @@ iDestruct "inv" as "[#pub|inv_m2]".
         have Nm_bp : negb (is_mul (TNonce b')) by [].
         have e_b : b = b'.
         { rewrite /gb in e_gb'.
-          have e := TExp_injr _ _ _ e_gb'. congruence. }
+          have NmInt : negb (is_gmul (TInt 0)) by [].
+    have NiInt : negb (is_ginv (TInt 0)) by [].
+    have e := TExp_injr _ _ _ NmInt NiInt e_gb'. congruence. }
         subst b'.
         iSplitR "".
         + (* ▷ (released ga ∧ released gb) → public ga *)

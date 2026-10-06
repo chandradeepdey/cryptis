@@ -11,16 +11,18 @@ dev-repo: "git+https://github.com/arthuraa/cryptis.git"
 
 depends: [
   "rocq-prover"
-  "rocq-core" {= "9.1.1"}
-  "rocq-mathcomp-ssreflect" {= "2.5.0"}
+  "rocq-core" {= "9.2.0"}
+  "rocq-mathcomp-ssreflect" {= "2.6.0"}
   "coq-deriving" {= "0.2.3"}
   "rocq-iris" {= "4.5.0"}
   "rocq-iris-heap-lang" {= "4.5.0"}
+  "rocq-actris" {= "dev"}
   "coq-reloc" {= "dev"}
 ]
 
 pin-depends: [
-  ["coq-reloc.dev" "git+https://gitlab.mpi-sws.org/arthuraa/reloc.git#883acc3d8ebf844ece524be24370fa8a85713e13"]
+  ["rocq-actris.dev" "git+https://gitlab.mpi-sws.org/chandradeepdey/actris.git#367149af8552433256d96394a40227f3b15b2cf2"]
+  ["coq-reloc.dev" "git+https://gitlab.mpi-sws.org/chandradeepdey/reloc.git#b80d3bc90c4db6f8557c895c8c58a9c6386d31db"]
 ]
 
 build: [make "-j%{jobs}%"]
