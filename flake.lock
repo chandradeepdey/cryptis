@@ -5,16 +5,16 @@
       "locked": {
         "lastModified": 1773651268,
         "narHash": "sha256-Kp3YDN2C2QNIDHfg9AJGfOjQ/9sM2MHRICO8iPgYdBw=",
-        "ref": "refs/heads/master",
+        "owner": "rocq-iris",
+        "repo": "actris",
         "rev": "fa669607568fbf897f6551b7bc9e912b10e1b577",
-        "revCount": 873,
-        "type": "git",
-        "url": "https://gitlab.mpi-sws.org/iris/actris.git"
+        "type": "github"
       },
       "original": {
-        "rev": "fa669607568fbf897f6551b7bc9e912b10e1b577",
-        "type": "git",
-        "url": "https://gitlab.mpi-sws.org/iris/actris.git"
+        "owner": "rocq-iris",
+        "ref": "actris-4.5.0",
+        "repo": "actris",
+        "type": "github"
       }
     },
     "flake-parts": {
