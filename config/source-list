@@ -18,13 +18,6 @@ cryptis/lib/size_rec_pred.v
 cryptis/lib.v
 cryptis/role.v
 
-# Relational-specific
-
-cryptis/lib/refines.v
-cryptis/lib/list_spec.v
-cryptis/lib/list_match_spec.v
-cryptis/lib_spec.v
-
 cryptis/core/pre_term/base.v
 cryptis/core/pre_term/normalize.v
 cryptis/core/pre_term/with_stdpp.v
@@ -42,14 +35,6 @@ cryptis/core/term_meta.v
 cryptis/core/public.v
 cryptis/cryptis.v
 
-# Relational-specific
-
-cryptis/core/minted_spec.v
-cryptis/core/term_meta_spec.v
-cryptis/core/rel_state.v
-cryptis/core/rel.v
-cryptis/core/rel_inv_updates.v
-
 cryptis/primitives/notations.v
 cryptis/primitives/sms.v
 cryptis/primitives/pre_term.v
@@ -61,15 +46,6 @@ cryptis/primitives.v
 cryptis/tactics.v
 
 cryptis/adequacy.v
-
-# Relational-specific
-
-cryptis/primitives/pre_term_spec.v
-cryptis/primitives/comp_spec.v
-cryptis/primitives/simple_spec.v
-cryptis/primitives/with_cryptis_spec.v
-cryptis/primitives/attacker_spec.v
-cryptis/rel_adequacy.v
 
 # Case studies
 
@@ -167,11 +143,6 @@ examples/tls13.v
 
 examples/composite_game.v
 
-# Relational-specific
-
-examples/ind_cpa.v
-examples/ind_cca2.v
-
 # Session types
 
 session/impl.v
@@ -195,3 +166,24 @@ session/examples/store/proofs/client.v
 session/examples/store/proofs/server.v
 session/examples/store/proofs.v
 session/examples/store/game.v
+
+# Relational layer
+
+relational/lib/refines.v
+relational/lib/list_spec.v
+relational/lib/list_match_spec.v
+relational/lib_spec.v
+relational/core/minted_spec.v
+relational/core/term_meta_spec.v
+relational/core/rel_state.v
+relational/core/rel.v
+relational/core/rel_inv_updates.v
+relational/primitives/pre_term_spec.v
+relational/primitives/comp_spec.v
+relational/primitives/simple_spec.v
+relational/primitives/with_cryptis_spec.v
+relational/primitives/attacker_spec.v
+relational/rel_adequacy.v
+
+relational/examples/ind_cpa.v
+relational/examples/ind_cca2.v

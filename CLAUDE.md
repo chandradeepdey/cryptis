@@ -58,9 +58,9 @@ opam repo add rocq-released https://rocq-prover.org/opam/released
 opam install . # or: make builddep && make
 ```
 
-The repository holds three opam packages, one per top-level source directory: `rocq-cryptis` (`cryptis/`), `rocq-cryptis-examples` (`examples/`) and `rocq-cryptis-session` (`session/`). Each builds and installs only its own directory through `./make-package <dir>`, assuming the packages it depends on are installed; `make` alone builds all three. Only `rocq-cryptis-session` depends on actris; `rocq-cryptis` depends on reloc for the relational layer.
+The repository holds four opam packages, one per top-level source directory: `rocq-cryptis` (`cryptis/`), `rocq-cryptis-examples` (`examples/`), `rocq-cryptis-session` (`session/`) and `rocq-hypercryptis` (`relational/`). Each builds and installs only its own directory through `./make-package <dir>`, assuming the packages it depends on are installed; `make` alone builds all four. Only `rocq-cryptis-session` depends on actris, and only `rocq-hypercryptis` on reloc.
 
-Key dependencies (authoritative pins live in the `*.opam` files — treat them as the single source of truth): rocq-core 9.2.0, rocq-stdlib, rocq-hierarchy-builder, rocq-elpi, rocq-mathcomp-ssreflect 2.6.0, coq-deriving 0.2.3, rocq-stdpp, rocq-iris 4.5.0, rocq-iris-heap-lang 4.5.0, coq-reloc b80d3bc (`stable_53b3b8b` branch of `chandradeepdey/reloc`), rocq-actris 367149a (`stable_fa66960` branch of `chandradeepdey/actris`; `rocq-cryptis-session` only). The unversioned ones follow from the pinned packages. `README.md` and this file must agree with the opam files.
+Key dependencies (authoritative pins live in the `*.opam` files — treat them as the single source of truth): rocq-core 9.2.0, rocq-stdlib, rocq-hierarchy-builder, rocq-elpi, rocq-mathcomp-ssreflect 2.6.0, coq-deriving 0.2.3, rocq-stdpp, rocq-iris 4.5.0, rocq-iris-heap-lang 4.5.0, coq-reloc b80d3bc (`stable_53b3b8b` branch of `chandradeepdey/reloc`; `rocq-hypercryptis` only), rocq-actris 367149a (`stable_fa66960` branch of `chandradeepdey/actris`; `rocq-cryptis-session` only). The unversioned ones follow from the pinned packages. `README.md` and this file must agree with the opam files.
 
 nixpkgs has no Rocq 9.2 build of `coq-lsp`, and `rocq-community/rocq-lsp` has no 9.2 release
 yet, so `flake.nix` builds its `v9.2` branch; switch to the nixpkgs package once there is one.
@@ -79,11 +79,13 @@ extends `rocqPackages_9_2`.
   - `tactics.v` — Ltac2 automation for symbolic execution of HeapLang programs
   - `cryptis.v` — Top-level integration; defines `cryptisGpreS`/`cryptisGS` typeclasses
   - `adequacy.v` — Soundness/adequacy theorems
-  - `*_spec.v`, `rel*.v` — relational layer (see Core Concepts)
 
 - **`examples/`** — Case studies (Rocq namespace `cryptis.examples`)
 
 - **`session/`** — Actris-style session types over `iso_dh` + `gen_conn` (Rocq namespace `cryptis.sess`, its own line in `config/paths` and its own package `rocq-cryptis-session`): `impl.v`, `proofs/base.v`, `proofs.v`, aggregated by `sess.v` (`Module Sess`), plus `tag.v`, `trusted.v`, `proofmode.v`. Its case studies live in `session/examples/` (`cryptis.sess.examples`): `basic.v` and the `store/` key-value store (game in `store/game.v`). Import it as `From cryptis.sess Require Import sess`.
+
+- **`relational/`** — HyperCryptis, the relational layer over ReLoC (Rocq namespace `cryptis.hyper`, its own package `rocq-hypercryptis`; see Core Concepts). It mirrors the `cryptis/` layout: `lib/` and `lib_spec.v`, `core/` (`rel.v`, `rel_state.v`, `rel_inv_updates.v`, `minted_spec.v`, `term_meta_spec.v`), `primitives/*_spec.v`, `rel_adequacy.v`. Its case studies live in `relational/examples/` (`cryptis.hyper.examples`):
+  - `ind_cpa.v`, `ind_cca2.v` — relational IND-CPA / IND-CCA2 games (`ind_cpa_ctx_equiv`/`ind_cpa_secure`, `ind_cca2_ctx_equiv`/`ind_cca2_secure`). In CCA2 an oracle decrypts every query except the challenge, which Alice records in a write-once cell before it is linked.
 
 ### Core Concepts
 
@@ -130,12 +132,13 @@ These are thin wrappers over the generic `seal_pred F N Φ` (with `F : functiona
 
 **Tactics** (`tactics.v`): Custom tactics (`tac_wp_hash`, `tac_wp_list_match`, etc.) for stepping through HeapLang programs that manipulate cryptographic terms.
 
-**Relational layer** (ReLoC; `core/rel.v`, `core/rel_inv_updates.v`, `primitives/*_spec.v`, `rel_adequacy.v`): `PUB⟨t, t'⟩` relates a left-run term to a right-run term — structurally, or via an *honest link* (`publicly_linked`, created with `public_rel_extend`) where the payloads may differ. Each key seed carries a set of *seal links* `(s, s')`, pairs of the two sides' `wf_seal_data`, `Some (sk, payload)` or `None`. `seals_auth_l`/`seals_auth_r` are the authoritative part of that set, allocated from the seed's term token under `cryptisN.@"public_rel".@"seal"` (`seals_auth_l_alloc`) and extended with `seals_auth_l_insert`; `seals_l k e` / `seals_r k e` ("`k` seals `e`") are the persistent membership fragments, lifted to `wf_seal_data` by `wf_seal_data_seals_l`. An honest seal link carries `wf_seal_rel s s'`, i.e. both fragments (built with `wf_seal_rel_aenc_intro`), so only a holder of the authoritative part can link under a key; a decryptor holding that part matches a link against its own set with `wf_seal_rel_elem_of_l` / `seals_auth_l_elem_of`. A protocol that lets peers encrypt to its key shares the part through an invariant, and any fact a decryptor should learn about an honest payload pair is stated there over the links (`□ [∗ set] e ∈ S, Φ e.1 e.2`). `PUB⟨t, t'⟩` is timeless. A decryption oracle under a secret key starts from `publicly_related_open_aenc_fupd`. Honest hash links carry only `linked` preimages. `cryptis_ctx_refinement` / `cryptis_rel_adequacy` close a game from `cryptis_rel_ctx -∗ channel_rel c c' -∗ REL f c << f' c' : A`; the theorems at the end of `examples/ind_cpa.v` are the template.
+**Relational layer** (ReLoC; `relational/`: `core/rel.v`, `core/rel_inv_updates.v`, `primitives/*_spec.v`, `rel_adequacy.v`): `PUB⟨t, t'⟩` relates a left-run term to a right-run term — structurally, or via an *honest link* (`publicly_linked`, created with `public_rel_extend`) where the payloads may differ. Each key seed carries a set of *seal links* `(s, s')`, pairs of the two sides' `wf_seal_data`, `Some (sk, payload)` or `None`. `seals_auth_l`/`seals_auth_r` are the authoritative part of that set, allocated from the seed's term token under `cryptisN.@"public_rel".@"seal"` (`seals_auth_l_alloc`) and extended with `seals_auth_l_insert`; `seals_l k e` / `seals_r k e` ("`k` seals `e`") are the persistent membership fragments, lifted to `wf_seal_data` by `wf_seal_data_seals_l`. An honest seal link carries `wf_seal_rel s s'`, i.e. both fragments (built with `wf_seal_rel_aenc_intro`), so only a holder of the authoritative part can link under a key; a decryptor holding that part matches a link against its own set with `wf_seal_rel_elem_of_l` / `seals_auth_l_elem_of`. A protocol that lets peers encrypt to its key shares the part through an invariant, and any fact a decryptor should learn about an honest payload pair is stated there over the links (`□ [∗ set] e ∈ S, Φ e.1 e.2`). `PUB⟨t, t'⟩` is timeless. A decryption oracle under a secret key starts from `publicly_related_open_aenc_fupd`. Honest hash links carry only `linked` preimages. `cryptis_ctx_refinement` / `cryptis_rel_adequacy` close a game from `cryptis_rel_ctx -∗ channel_rel c c' -∗ REL f c << f' c' : A`; the theorems at the end of `relational/examples/ind_cpa.v` are the template.
 
 ### Module Dependency Order
 
 ```
 session/examples/* → session/* → examples/{iso_dh,gen_conn}
+relational/examples/* → relational/* → cryptis + primitives, reloc
 examples/*
   → cryptis + primitives + tactics
     → cryptis.v (integration)
@@ -145,7 +148,7 @@ examples/*
             → mathcomp, iris, iris.heap_lang
 ```
 
-`config/source-list` specifies the exact file ordering for compilation; `config/paths` holds the `-Q` load paths and `config/flags` the warning flags. `make` generates `_RocqProject` from the three (`gen_RocqProject.sh`); edit `config/*`, never `_RocqProject`. `dune build` instead uses one `rocq.theory` per directory (`cryptis/dune`, `examples/dune`, `session/dune`).
+`config/source-list` specifies the exact file ordering for compilation; `config/paths` holds the `-Q` load paths and `config/flags` the warning flags. `make` generates `_RocqProject` from the three (`gen_RocqProject.sh`); edit `config/*`, never `_RocqProject`. `dune build` instead uses one `rocq.theory` per directory (`cryptis/dune`, `examples/dune`, `session/dune`, `relational/dune`).
 
 **mathcomp ↔ stdpp boundary:** `core/pre_term/base.v` is implemented in mathcomp (`seq`, `%O` order, `~~`, `sort <=%O`, bigops, `deriving`); `core/pre_term/normalize.v` (normal forms + the `wf`/`normalize` machinery) is already stdpp-only. `core/pre_term/with_stdpp.v` is *the* bridge, and is where any new mathcomp→stdpp translation belongs: it packages the deriving-generated order both as `pt_order` (a stdpp `relation` with `RelDecision`/`Transitive`/`Total`/`AntiSymm`) and as a global `Lexico PreTerm.pre_term` instance (with `StrictOrder`/`TrichotomyT`, which is what makes `bool_decide (x = y ∨ lexico x y)` decidable), and proves `pt_order_lexico`, `pt_order_N` (the derived order on `PTN o ts` *is* stdpp's `lexico` on `ts`) and `pt_orderE` (the structural comparison equation, stated with `bool_decide` and `op0_le`/`op1_le`/`op2_le`/`opN_le` instead of `<=%O`). Because of that bridge, `primitives/pre_term.v` — which implements the `normalize.v` operations in HeapLang — needs no mathcomp beyond `ssreflect`. Everything from `core/term/` upward is stdpp (`Forall`, `≡ₚ`, `∈`, `merge_sort`). The active boolean→Prop coercion above `pre_term` is stdpp's `Is_true`, **not** ssreflect's `is_true` (bridged by `is_trueP` in `lib/mathcomp_compat.v`); mixing the two silently breaks `rewrite`/`apply`.
 
@@ -163,6 +166,5 @@ Directory-structured protocols use some of: `impl.v` (HeapLang implementation), 
 - `tls13/` — TLS 1.3 handshake (partial; `impl.v` executable layer + per-component `proofs/` (base, meth, cshare, sshare, cparams, sparams) + `proofs/protocol.v`, no closed theorem yet).
 - `challenge_response.v` — signature-based mutual authentication; `composite_game.v` runs several protocols together under one adequacy game.
 - `permanent.v`, `counter.v` — small digital-signature demos (immutable state / monotone counter).
-- `ind_cpa.v`, `ind_cca2.v` — relational IND-CPA / IND-CCA2 games (`ind_cpa_ctx_equiv`/`ind_cpa_secure`, `ind_cca2_ctx_equiv`/`ind_cca2_secure`). In CCA2 an oracle decrypts every query except the challenge, which Alice records in a write-once cell before it is linked.
 
 The `gen_conn → conn → rpc → store` chain is a real abstraction stack (reuse it), and the `nsl` / `iso_dh` / `store` `game.v` files share a consistent template worth following.

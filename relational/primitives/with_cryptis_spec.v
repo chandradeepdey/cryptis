@@ -1,9 +1,9 @@
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
-From cryptis.core Require Import minted_spec term_meta_spec rel.
-From cryptis Require Import lib_spec.
-From cryptis.primitives Require Import simple_spec.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
+From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.primitives Require Import simple_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

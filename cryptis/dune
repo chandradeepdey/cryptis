@@ -3,4 +3,4 @@
  (name cryptis)
  (package rocq-cryptis)
  (generate_project_file)
- (theories Stdlib Ltac2 HB elpi elpi_elpi mathcomp deriving stdpp iris Autosubst reloc))
+ (theories Stdlib Ltac2 HB elpi elpi_elpi mathcomp deriving stdpp iris))

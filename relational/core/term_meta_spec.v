@@ -2,7 +2,8 @@ From reloc Require Import reloc.
 From iris.base_logic.lib Require Import ghost_map.
 From cryptis Require Import lib.
 From cryptis.lib Require Import gmeta nown saved_prop.
-From cryptis.core Require Import term term_meta minted_spec.
+From cryptis.core Require Import term term_meta.
+From cryptis.hyper.core Require Import minted_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

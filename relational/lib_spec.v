@@ -2,7 +2,7 @@ From iris.heap_lang.lib Require Import nondet_bool.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require adequacy.
-From cryptis.lib Require Export refines list_spec list_match_spec.
+From cryptis.hyper.lib Require Export refines list_spec list_match_spec.
 
 (* THIS IS A VERY GROSS HACK *)
 Lemma heapGS_heapGpreS Σ `{!heapGS Σ} : heapGpreS Σ.

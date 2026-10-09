@@ -1,5 +1,6 @@
 From reloc Require Import reloc.
-From cryptis.lib Require Import repr list_match refines.
+From cryptis.lib Require Import repr list_match.
+From cryptis.hyper.lib Require Import refines.
 
 (** Relational counterparts of [wp_list_match] in [lib/list_match.v].  The
     [tp_*] helpers below are only used to derive [rel_list_match_r]: they

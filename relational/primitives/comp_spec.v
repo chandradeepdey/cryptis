@@ -1,7 +1,7 @@
 From reloc Require Import reloc.
 From cryptis.core Require Import term.
 From cryptis.primitives Require Import pre_term comp.
-From cryptis Require Import lib_spec.
+From cryptis.hyper Require Import lib_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

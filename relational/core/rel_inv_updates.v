@@ -1,7 +1,7 @@
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
-From cryptis.core Require Import term_meta_spec rel.
+From cryptis.hyper.core Require Import term_meta_spec rel.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

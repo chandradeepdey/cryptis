@@ -14,16 +14,6 @@ In the `cryptis` directory you will find:
   cryptographic terms.  Definition of the attacker.
 - `tactics`: Ltac tactics for symbolically executing the main HeapLang functions
   on terms.
-- Relational layer (built on [ReLoC](https://gitlab.mpi-sws.org/iris/reloc)):
-  `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs,
-  its invariant, and the per-key sets of honest seal links
-  (`seals_auth_l`, `seals_l`, …) behind honestly linked ciphertexts;
-  `primitives/*_spec.v` are the relational specs of the
-  primitives; `primitives/attacker_spec.v` models the attacker as an arbitrary
-  program self-related at a type that abstracts over terms; `rel_adequacy.v`
-  turns a ReLoC refinement into a statement about executions
-  (`cryptis_rel_adequacy`) or into a contextual refinement with the attacker
-  as the context (`cryptis_ctx_refinement`).
 
 ## Case studies
 
@@ -42,8 +32,6 @@ In the `examples` directory you will find our case studies:
 - `tls13`: TLS 1.3 handshake (partial; `impl.v` + per-component `proofs/`).
 - `challenge_response`, `composite_game`, `permanent`, `counter`: smaller
   single-file examples plus a composite security game.
-- `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
-  encryption.
 
 ## Session types
 
@@ -56,6 +44,26 @@ tagged-message layer `tag`, the `trusted` wrapper for honest parties, and
 - `basic`: small protocols (send-42, vote, key-value database).
 - `store`: authenticated key-value store over session types (game is in its
   own file).
+
+## HyperCryptis: Indistinguishability in the Dolev-Yao model
+
+In the `relational` directory (Rocq namespace `cryptis.hyper`) you will find the
+relational layer, built on [ReLoC](https://iris-project.org/reloc):
+
+- `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs,
+  its invariant, and the per-key sets of honest seal links
+  (`seals_auth_l`, `seals_l`, …) behind honestly linked ciphertexts.
+- `primitives/*_spec.v` are the relational specs of the primitives;
+  `primitives/attacker_spec.v` models the attacker as an arbitrary program
+  self-related at a type that abstracts over terms.
+- `rel_adequacy.v` turns a ReLoC refinement into a statement about executions
+  (`cryptis_rel_adequacy`) or into a contextual refinement with the attacker
+  as the context (`cryptis_ctx_refinement`).
+
+Its case studies live in `relational/examples`:
+
+- `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
+  encryption.
 
 ## Building
 

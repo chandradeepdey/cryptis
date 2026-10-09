@@ -1,0 +1,27 @@
+opam-version: "2.0"
+name: "rocq-hypercryptis"
+version: "dev"
+license: "MIT"
+maintainer: "Arthur Azevedo de Amorim <arthur.aa@gmail.com>"
+authors: "Arthur Azevedo de Amorim, Chandradeep Dey"
+synopsis: "HyperCryptis: Indistinguishability in the Dolev-Yao model"
+homepage: "https://github.com/arthuraa/cryptis"
+bug-reports: "https://github.com/arthuraa/cryptis/issues"
+dev-repo: "git+https://github.com/arthuraa/cryptis.git"
+
+tags: [
+  "logpath:cryptis.hyper"
+  "logpath:cryptis.hyper.examples"
+]
+
+depends: [
+  "rocq-cryptis" {= version}
+  "coq-reloc" {= "dev"}
+]
+
+pin-depends: [
+  ["coq-reloc.dev" "git+https://gitlab.mpi-sws.org/chandradeepdey/reloc.git#b80d3bc90c4db6f8557c895c8c58a9c6386d31db"]
+]
+
+build: ["./make-package" "relational" "-j%{jobs}%"]
+install: ["./make-package" "relational" "install"]

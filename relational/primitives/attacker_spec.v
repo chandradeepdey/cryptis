@@ -22,10 +22,11 @@
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
-From cryptis.core Require Import term minted_spec term_meta_spec rel rel_inv_updates.
+From cryptis.core Require Import term.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.primitives Require Import pre_term simple comp with_cryptis.
-From cryptis Require Import lib_spec.
-From cryptis.primitives Require Import simple_spec comp_spec with_cryptis_spec.
+From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

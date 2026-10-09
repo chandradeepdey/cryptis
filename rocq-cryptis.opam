@@ -26,11 +26,6 @@ depends: [
   "rocq-stdpp"
   "rocq-iris" {= "4.5.0"}
   "rocq-iris-heap-lang" {= "4.5.0"}
-  "coq-reloc" {= "dev"}
-]
-
-pin-depends: [
-  ["coq-reloc.dev" "git+https://gitlab.mpi-sws.org/chandradeepdey/reloc.git#b80d3bc90c4db6f8557c895c8c58a9c6386d31db"]
 ]
 
 build: ["./make-package" "cryptis" "-j%{jobs}%"]
