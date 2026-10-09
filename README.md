@@ -45,14 +45,29 @@ In the `examples` directory you will find our case studies:
 - `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
   encryption.
 
+## Session types
+
+In the `session` directory (Rocq namespace `cryptis.sess`) you will find
+Actris-style session types for authenticated channels built on `iso_dh` and
+`gen_conn`: `impl`, `proofs`, `proofs/base` (aggregated by `sess`), the
+tagged-message layer `tag`, the `trusted` wrapper for honest parties, and
+`proofmode` tactics.  Its case studies live in `session/examples`:
+
+- `basic`: small protocols (send-42, vote, key-value database).
+- `store`: authenticated key-value store over session types (game is in its
+  own file).
+
 ## Building
 
 Cryptis is known to compile with the following dependencies:
 
-- rocq-prover
 - rocq-core v9.2.0
+- rocq-stdlib
+- rocq-hierarchy-builder
+- rocq-elpi
 - rocq-mathcomp-ssreflect v2.6.0
 - coq-deriving v0.2.3
+- rocq-stdpp
 - rocq-iris v4.5.0
 - rocq-iris-heap-lang v4.5.0
 - rocq-actris fa66960 (Nix)/367149a (opam)
