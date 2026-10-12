@@ -106,9 +106,10 @@ Proof.
 iApply pure_twp_rel_l => //=;
 last by move=> ?; iIntros "_"; iApply twp_term_of_list => //.
 rewrite !andb_True; repeat split; first by apply term_pure.
-elim: ts => [| t ts' IHts']; rewrite repr_list_unseal => //=.
+rewrite [@repr_list]unlock.
+elim: ts => [| t ts' IHts'] => //=.
 rewrite andb_True; split; first by apply term_pure.
-by rewrite -repr_list_unseal.
+done.
 Qed.
 
 Lemma rel_term_of_list_r E K e ts Ψ :
@@ -120,9 +121,10 @@ move=> ?.
 iApply pure_twp_rel_r => //=;
 last by move=> ?; iIntros "_"; iApply twp_term_of_list => //.
 rewrite !andb_True; repeat split; first by apply term_pure.
-elim: ts => [| t ts' IHts']; rewrite repr_list_unseal => //=.
+rewrite [@repr_list]unlock.
+elim: ts => [| t ts' IHts'] => //=.
 rewrite andb_True; split; first by apply term_pure.
-by rewrite -repr_list_unseal.
+done.
 Qed.
 
 Lemma rel_list_of_term_l E K e t Ψ :

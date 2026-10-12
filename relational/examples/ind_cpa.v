@@ -115,17 +115,17 @@ set c' := Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'.
 case/is_nonceP: (Hn) => [an En]. case/is_nonceP: (Hn') => [an' En'].
 (* Split the tokens. *)
 have Hd_c : ({[n]} ∪ {[pl]} ∪ {[tg]} : gset term) ## {[c]}.
-{ rewrite /c /tg /pl /Spec.enc Spec.tag_unseal Spec.of_list_unseal En /=. set_solver. }
+{ rewrite /c /tg /pl /Spec.enc [Spec.tag]unlock [Spec.of_list]unlock En /=. set_solver. }
 have Hd_tg : ({[n]} ∪ {[pl]} : gset term) ## {[tg]}.
-{ rewrite /tg /pl Spec.tag_unseal Spec.of_list_unseal Tag_unseal En /=. set_solver. }
+{ rewrite /tg /pl [Spec.tag]unlock [Spec.of_list]unlock [Tag]unlock En /=. set_solver. }
 have Hd_pl : ({[n]} : gset term) ## {[pl]}.
-{ rewrite /pl Spec.of_list_unseal En /=. set_solver. }
+{ rewrite /pl [Spec.of_list]unlock En /=. set_solver. }
 have Hd_c' : ({[n']} ∪ {[pl']} ∪ {[tg']} : gset term) ## {[c']}.
-{ rewrite /c' /tg' /pl' /Spec.enc Spec.tag_unseal Spec.of_list_unseal En' /=. set_solver. }
+{ rewrite /c' /tg' /pl' /Spec.enc [Spec.tag]unlock [Spec.of_list]unlock En' /=. set_solver. }
 have Hd_tg' : ({[n']} ∪ {[pl']} : gset term) ## {[tg']}.
-{ rewrite /tg' /pl' Spec.tag_unseal Spec.of_list_unseal Tag_unseal En' /=. set_solver. }
+{ rewrite /tg' /pl' [Spec.tag]unlock [Spec.of_list]unlock [Tag]unlock En' /=. set_solver. }
 have Hd_pl' : ({[n']} : gset term) ## {[pl']}.
-{ rewrite /pl' Spec.of_list_unseal En' /=. set_solver. }
+{ rewrite /pl' [Spec.of_list]unlock En' /=. set_solver. }
 rewrite big_sepS_union // big_sepS_union // big_sepS_union // !big_sepS_singleton.
 iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
 rewrite big_sepS_union // big_sepS_union // big_sepS_union // !big_sepS_singleton.
@@ -166,13 +166,13 @@ rewrite (term_token_spec_difference c' (↑cryptisN.@"public_rel".@"map")
 iDestruct "tts_c" as "[tts_c_map _]".
 (* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
 have Hsub_pl : is_immediate_subterm n pl.
-{ rewrite /pl Spec.of_list_unseal /=. exact: SubtermPairL. }
+{ rewrite /pl [Spec.of_list]unlock /=. exact: SubtermPairL. }
 have Hsub_tg : is_immediate_subterm pl tg.
-{ rewrite /tg Spec.tag_unseal. exact: SubtermPairR. }
+{ rewrite /tg [Spec.tag]unlock. exact: SubtermPairR. }
 have Hsub_pl' : is_immediate_subterm n' pl'.
-{ rewrite /pl' Spec.of_list_unseal /=. exact: SubtermPairL. }
+{ rewrite /pl' [Spec.of_list]unlock /=. exact: SubtermPairL. }
 have Hsub_tg' : is_immediate_subterm pl' tg'.
-{ rewrite /tg' Spec.tag_unseal. exact: SubtermPairR. }
+{ rewrite /tg' [Spec.tag]unlock. exact: SubtermPairR. }
 iMod (public_rel_flow_l_extend (E:=⊤) n ltac:(solve_ndisj)
         with "Hctx tt_n_flow tt_n_map") as "[prot_n tt_n_map]".
 iMod (public_rel_flow_l_grow_2 (E:=⊤) Hn ltac:(solve_ndisj) Hsub_pl

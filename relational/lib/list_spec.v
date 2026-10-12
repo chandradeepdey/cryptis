@@ -12,7 +12,7 @@ Lemma rel_get_list_l E K e (l: list A) (n: nat) Ψ :
   (REL fill K (repr (l !! n)%stdpp : expr) << e @ E : Ψ) -∗
   REL fill K (repr l !! #n) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 elim: n l => [|n IH] [|x l] /=; iIntros "H";
 rel_rec_l; rel_pures_l; eauto.
 rewrite (_ : (S n - 1)%Z = n); try lia.
@@ -25,7 +25,7 @@ Lemma rel_get_list_r E K e (l: list A) (n: nat) Ψ :
   REL e << fill K (repr l !! #n) @ E : Ψ.
 Proof.
 move=> ?.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 elim: n l => [|n IH] [|x l] /=; iIntros "H";
 rel_rec_r; rel_pures_r; eauto.
 rewrite (_ : (S n - 1)%Z = n); try lia.
@@ -35,17 +35,17 @@ Qed.
 Lemma rel_nil_l E K e Ψ :
   (REL fill K (repr (@nil A) : expr) << e @ E : Ψ) -∗
   REL fill K (Val []%V) << e @ E : Ψ .
-Proof. by rewrite /NILV /= repr_list_unseal; iIntros "?"; rel_pures_l. Qed.
+Proof. by rewrite /NILV /= [@repr_list]unlock; iIntros "?"; rel_pures_l. Qed.
 
 Lemma rel_nil_r E K e Ψ :
   (REL e << fill K (repr (@nil A) : expr) @ E : Ψ) -∗
   REL e << fill K (Val []%V) @ E : Ψ .
-Proof. by rewrite /NILV /= repr_list_unseal; iIntros "?"; rel_pures_r. Qed.
+Proof. by rewrite /NILV /= [@repr_list]unlock; iIntros "?"; rel_pures_r. Qed.
 
 Lemma rel_cons_l E K e x xs Ψ :
   (REL fill K (repr (x :: xs)%list : expr) << e @ E : Ψ) -∗
   REL fill K (repr x :: repr xs) << e @ E : Ψ.
-Proof. by rewrite /= repr_list_unseal; iIntros "?"; rewrite /CONS; rel_pures_l. Qed.
+Proof. by rewrite /= [@repr_list]unlock; iIntros "?"; rewrite /CONS; rel_pures_l. Qed.
 
 Lemma rel_cons_r E K e x xs Ψ :
   ↑specN ⊆ E →
@@ -53,7 +53,7 @@ Lemma rel_cons_r E K e x xs Ψ :
   REL e << fill K (repr x :: repr xs) @ E : Ψ.
 Proof.
 move=> ?.
-by rewrite /= repr_list_unseal; iIntros "?"; rewrite /CONS; rel_pures_r.
+by rewrite /= [@repr_list]unlock; iIntros "?"; rewrite /CONS; rel_pures_r.
 Qed.
 
 Lemma rel_eq_list_l `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
@@ -64,7 +64,7 @@ Lemma rel_eq_list_l `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
   (REL fill K (#(bool_decide (l1 = l2)) : expr) << e @ E : Ψ) -∗
   REL fill K (eq_list f (repr l1) (repr l2)) << e @ E : Ψ.
 Proof.
-rewrite repr_list_unseal /=.
+rewrite [@repr_list]unlock /=.
 elim: l1 l2 Ψ => [|x1 l1 IH] [|x2 l2] Ψ rel_f_l /=;
   iIntros "post" ; rel_rec_l; rel_pures_l; do 1?by iApply "post".
 rel_bind_l (f _ _). iApply (rel_f_l _ x1 x2); first by set_solver.
@@ -87,7 +87,7 @@ Lemma rel_eq_list_r `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
   REL e << fill K (eq_list f (repr l1) (repr l2)) @ E : Ψ.
 Proof.
 move=> HE.
-rewrite repr_list_unseal /=.
+rewrite [@repr_list]unlock /=.
 elim: l1 l2 Ψ => [|x1 l1 IH] [|x2 l2] Ψ rel_f_r /=;
   iIntros "post" ; rel_rec_r; rel_pures_r; do 1?by iApply "post".
 rel_bind_r (f _ _). iApply (rel_f_r _ x1 x2 HE); first by set_solver.
@@ -121,7 +121,7 @@ Lemma rel_scan_list_l E K e φ ψ (f : val) (l : list A) Ψ :
   (∀ r : option val, ψ (repr r) -∗ REL fill K (repr r : expr) << e @ E : Ψ) -∗
   REL fill K (scan_list f (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 iIntros "#Hf". iInduction l as [|x l] "IH" forall (K); iIntros "Hψ Hφ post".
 - rel_rec_l; rel_pures_l. by iApply ("post" $! None with "Hψ").
 - iDestruct "Hφ" as "[Hφ_x Hφ_l]". rel_rec_l; rel_pures_l.
@@ -143,7 +143,7 @@ Lemma rel_scan_list_r E K e φ ψ (f : val) (l : list A) Ψ :
   (∀ r : option val, ψ (repr r) -∗ REL e << fill K (repr r : expr) @ E : Ψ) -∗
   REL e << fill K (scan_list f (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal.
+move=> HE. rewrite /= [@repr_list]unlock.
 iIntros "#Hf". iInduction l as [|x l] "IH" forall (K); iIntros "Hψ Hφ post".
 - rel_rec_r; rel_pures_r. by iApply ("post" $! None with "Hψ").
 - iDestruct "Hφ" as "[Hφ_x Hφ_l]". rel_rec_r; rel_pures_r.
@@ -160,7 +160,7 @@ Lemma rel_find_list_l E K e (f : A → bool) (fimpl : val) (l : list A) Ψ :
   (REL fill K (repr (find f l) : expr) << e @ E : Ψ) -∗
   REL fill K (find_list fimpl (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 elim: l K => [|x l IH] K rel_f /=; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (fimpl _). iApply (rel_f _ x); first by set_solver.
@@ -176,7 +176,7 @@ Lemma rel_find_list_r E K e (f : A → bool) (fimpl : val) (l : list A) Ψ :
   (REL e << fill K (repr (find f l) : expr) @ E : Ψ) -∗
   REL e << fill K (find_list fimpl (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal.
+move=> HE. rewrite /= [@repr_list]unlock.
 elim: l K => [|x l IH] K rel_f /=; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (fimpl _). iApply (rel_f _ x); first by set_solver.
@@ -191,7 +191,7 @@ Lemma rel_filter_list_l E K e (f : A → bool) (fimpl : val) (l : list A) Ψ :
   (REL fill K (repr (List.filter f l) : expr) << e @ E : Ψ) -∗
   REL fill K (filter_list fimpl (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 elim: l K => [|x l IH] K rel_f /=; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (filter_list _ _).
@@ -208,7 +208,7 @@ Lemma rel_filter_list_r E K e (f : A → bool) (fimpl : val) (l : list A) Ψ :
   (REL e << fill K (repr (List.filter f l) : expr) @ E : Ψ) -∗
   REL e << fill K (filter_list fimpl (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal.
+move=> HE. rewrite /= [@repr_list]unlock.
 elim: l K => [|x l IH] K rel_f /=; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (filter_list _ _).
@@ -221,7 +221,7 @@ Lemma rel_append_lists_l E K e (l1 l2 : list A) Ψ :
   (REL fill K (repr (l1 ++ l2) : expr) << e @ E : Ψ) -∗
   REL fill K (append_lists (repr l1) (repr l2)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 elim: l1 K => [|x l1 IH] K /=; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (append_lists _ _). iApply IH. rewrite /=. rel_pures_l.
@@ -233,7 +233,7 @@ Lemma rel_append_lists_r E K e (l1 l2 : list A) Ψ :
   (REL e << fill K (repr (l1 ++ l2) : expr) @ E : Ψ) -∗
   REL e << fill K (append_lists (repr l1) (repr l2)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal.
+move=> HE. rewrite /= [@repr_list]unlock.
 elim: l1 K => [|x l1 IH] K /=; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (append_lists _ _). iApply IH. rewrite /=. rel_pures_r.
@@ -247,7 +247,7 @@ Lemma rel_map_list_l E K e (f : A → B) (fimpl : val) (xs : list A) Ψ :
   (REL fill K (repr (map f xs) : expr) << e @ E : Ψ) -∗
   REL fill K (map_list fimpl (repr xs)) << e @ E : Ψ.
 Proof.
-rewrite /= !repr_list_unseal.
+rewrite /= ![@repr_list]unlock.
 elim: xs K => [|x xs IH] K rel_f /=; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (map_list _ _).
@@ -264,7 +264,7 @@ Lemma rel_map_list_r E K e (f : A → B) (fimpl : val) (xs : list A) Ψ :
   (REL e << fill K (repr (map f xs) : expr) @ E : Ψ) -∗
   REL e << fill K (map_list fimpl (repr xs)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= !repr_list_unseal.
+move=> HE. rewrite /= ![@repr_list]unlock.
 elim: xs K => [|x xs IH] K rel_f /=; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (map_list _ _).
@@ -280,7 +280,7 @@ Lemma rel_foldr_list_l E K e (f : B → A → A) (fimpl : val) (l : list B) (x :
   (REL fill K (repr (foldr f x l) : expr) << e @ E : Ψ) -∗
   REL fill K (foldr_list fimpl (repr x) (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal.
+rewrite /= [@repr_list]unlock.
 elim: l K => [|b l IH] K rel_f /=; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (foldr_list _ _ _).
@@ -297,7 +297,7 @@ Lemma rel_foldr_list_r E K e (f : B → A → A) (fimpl : val) (l : list B) (x :
   (REL e << fill K (repr (foldr f x l) : expr) @ E : Ψ) -∗
   REL e << fill K (foldr_list fimpl (repr x) (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal.
+move=> HE. rewrite /= [@repr_list]unlock.
 elim: l K => [|b l IH] K rel_f /=; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (foldr_list _ _ _).
@@ -358,7 +358,7 @@ Lemma rel_rem_list_l E K e (eqImpl : val) v l Ψ :
   (REL fill K (repr (rem v l) : expr) << e @ E : Ψ) -∗
   REL fill K (rem_list eqImpl (repr v) (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal => rel_eq.
+rewrite /= [@repr_list]unlock => rel_eq.
 elim: l K => [|x l IH] K /=; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (eqImpl _ _). iApply (rel_eq _ x v).
@@ -377,7 +377,7 @@ Lemma rel_rem_list_r E K e (eqImpl : val) v l Ψ :
   (REL e << fill K (repr (rem v l) : expr) @ E : Ψ) -∗
   REL e << fill K (rem_list eqImpl (repr v) (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal => rel_eq.
+move=> HE. rewrite /= [@repr_list]unlock => rel_eq.
 elim: l K => [|x l IH] K /=; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (eqImpl _ _). iApply (rel_eq _ x v).
@@ -447,7 +447,7 @@ Lemma rel_insert_sorted_l E K e (f : val) x l Ψ :
          REL fill K (repr l' : expr) << e @ E : Ψ) -∗
   REL fill K (insert_sorted f (repr x) (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal => sorted_l rel_f.
+rewrite /= [@repr_list]unlock => sorted_l rel_f.
 elim: l sorted_l K => [|y l IH] sorted_l K /=; iIntros "post";
   rel_rec_l; rel_pures_l.
 - iApply ("post" $! [x]); iPureIntro; last done.
@@ -480,7 +480,7 @@ Lemma rel_insert_sorted_r E K e (f : val) x l Ψ :
          REL e << fill K (repr l' : expr) @ E : Ψ) -∗
   REL e << fill K (insert_sorted f (repr x) (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal => sorted_l rel_f.
+move=> HE. rewrite /= [@repr_list]unlock => sorted_l rel_f.
 elim: l sorted_l K => [|y l IH] sorted_l K /=; iIntros "post";
   rel_rec_r; rel_pures_r.
 - iApply ("post" $! [x]); iPureIntro; last done.
@@ -510,11 +510,12 @@ Lemma rel_insertion_sort_l E K e (f : val) l Ψ :
   (REL fill K (repr (merge_sort R l) : expr) << e @ E : Ψ) -∗
   REL fill K (insertion_sort f (repr l)) << e @ E : Ψ.
 Proof.
-rewrite /= repr_list_unseal => rel_f.
+rewrite /= [@repr_list]unlock => rel_f.
 elim: l K => [|y l IH] K; iIntros "post"; rel_rec_l; rel_pures_l.
 - by iApply "post".
 - rel_bind_l (insertion_sort _ _). iApply IH.
-  rewrite /= -repr_list_unseal.
+  have -> : foldr (λ (x : A) v, SOMEV (repr x, v)%V) NONEV = repr_list
+    by rewrite [@repr_list]unlock.
   rel_apply_l (rel_insert_sorted_l _ _ _ _ _ _ _ (merge_sort_sorted R l) rel_f).
   iIntros (l') "%ss' %perm'".
   have -> : merge_sort R (y :: l) = l'.
@@ -531,11 +532,12 @@ Lemma rel_insertion_sort_r E K e (f : val) l Ψ :
   (REL e << fill K (repr (merge_sort R l) : expr) @ E : Ψ) -∗
   REL e << fill K (insertion_sort f (repr l)) @ E : Ψ.
 Proof.
-move=> HE. rewrite /= repr_list_unseal => rel_f.
+move=> HE. rewrite /= [@repr_list]unlock => rel_f.
 elim: l K => [|y l IH] K; iIntros "post"; rel_rec_r; rel_pures_r.
 - by iApply "post".
 - rel_bind_r (insertion_sort _ _). iApply IH.
-  rewrite /= -repr_list_unseal.
+  have -> : foldr (λ (x : A) v, SOMEV (repr x, v)%V) NONEV = repr_list
+    by rewrite [@repr_list]unlock.
   rel_apply_r (rel_insert_sorted_r _ _ _ _ _ _ _ HE (merge_sort_sorted R l) rel_f).
   iIntros (l') "%ss' %perm'".
   have -> : merge_sort R (y :: l) = l'.
@@ -564,7 +566,7 @@ Lemma rel_leq_list_l E K e (feq fle : val) l1 l2 Ψ :
   (REL fill K (#(bool_decide (l1 = l2 ∨ lexico l1 l2)) : expr) << e @ E : Ψ) -∗
   REL fill K (leq_list feq fle (repr l1) (repr l2)) << e @ E : Ψ.
 Proof.
-move=> rel_feq. rewrite /= repr_list_unseal.
+move=> rel_feq. rewrite /= [@repr_list]unlock.
 elim: l1 l2 K => [|x1 l1 IH] [|x2 l2] K rel_fle; iIntros "post";
   rel_rec_l; rel_pures_l; rewrite bool_decide_lexico_le; try by iApply "post".
 rel_bind_l (feq _ _). iApply (rel_feq _ x1 x2).
@@ -585,7 +587,7 @@ Lemma rel_leq_list_r E K e (feq fle : val) l1 l2 Ψ :
   (REL e << fill K (#(bool_decide (l1 = l2 ∨ lexico l1 l2)) : expr) @ E : Ψ) -∗
   REL e << fill K (leq_list feq fle (repr l1) (repr l2)) @ E : Ψ.
 Proof.
-move=> HE rel_feq. rewrite /= repr_list_unseal.
+move=> HE rel_feq. rewrite /= [@repr_list]unlock.
 elim: l1 l2 K => [|x1 l1 IH] [|x2 l2] K rel_fle; iIntros "post";
   rel_rec_r; rel_pures_r; rewrite bool_decide_lexico_le; try by iApply "post".
 rel_bind_r (feq _ _). iApply (rel_feq _ x1 x2).

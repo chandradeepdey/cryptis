@@ -42,28 +42,28 @@ iApply "m_t2". iPureIntro. set_solver.
 Qed.
 
 Lemma minted_spec_TInt n : minted_spec (TInt n) ⊣⊢ True.
-Proof. by rewrite unlock nonces_of_term_unseal /= big_sepS_empty. Qed.
+Proof. by rewrite unlock nonces_of_termE /= big_sepS_empty. Qed.
 
 Lemma minted_spec_TPair t1 t2 : minted_spec (TPair t1 t2) ⊣⊢ minted_spec t1 ∧ minted_spec t2.
 Proof.
-by rewrite unlock nonces_of_term_unseal /= !big_sepS_union_pers.
+by rewrite unlock nonces_of_termE /= !big_sepS_union_pers.
 Qed.
 
 Lemma minted_spec_TNonce a : minted_spec (TNonce a) ⊣⊢ minted_spec_loc (nonce_loc a).
 Proof.
-by rewrite unlock nonces_of_term_unseal /= big_sepS_singleton.
+by rewrite unlock nonces_of_termE /= big_sepS_singleton.
 Qed.
 
 Lemma minted_spec_TKey kt t : minted_spec (TKey kt t) ⊣⊢ minted_spec t.
-Proof. by rewrite unlock nonces_of_term_unseal /=. Qed.
+Proof. by rewrite unlock nonces_of_termE /=. Qed.
 
 Lemma minted_spec_TSeal k t : minted_spec (TSeal k t) ⊣⊢ minted_spec k ∧ minted_spec t.
 Proof.
-by rewrite unlock nonces_of_term_unseal /= !big_sepS_union_pers.
+by rewrite unlock nonces_of_termE /= !big_sepS_union_pers.
 Qed.
 
 Lemma minted_spec_THash t : minted_spec (THash t) ⊣⊢ minted_spec t.
-Proof. by rewrite unlock nonces_of_term_unseal /=. Qed.
+Proof. by rewrite unlock nonces_of_termE /=. Qed.
 
 Lemma minted_spec_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
@@ -147,17 +147,17 @@ Lemma minted_spec_of_list ts :
   minted_spec (Spec.of_list ts) ⊣⊢
   [∗ list] t ∈ ts, minted_spec t.
 Proof.
-rewrite Spec.of_list_unseal.
+rewrite [Spec.of_list]unlock.
 elim: ts => [|t ts IH]; first by rewrite minted_spec_TInt.
 by rewrite minted_spec_TPair /= IH bi.persistent_and_sep.
 Qed.
 
 Lemma minted_spec_Tag N : ⊢ minted_spec (Tag N).
-Proof. by rewrite Tag_unseal minted_spec_TInt. Qed.
+Proof. by rewrite [Tag]unlock minted_spec_TInt. Qed.
 
 Lemma minted_spec_tag N t : minted_spec (Spec.tag (Tag N) t) ⊣⊢ minted_spec t.
 Proof.
-rewrite Spec.tag_unseal minted_spec_TPair; iSplit.
+rewrite [Spec.tag]unlock minted_spec_TPair; iSplit.
 - by iIntros "[_ ?]".
 - iIntros "?"; iSplit => //. iApply minted_spec_Tag.
 Qed.

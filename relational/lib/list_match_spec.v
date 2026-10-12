@@ -25,7 +25,7 @@ Implicit Types (x : A) (xs : list A).
     refines_right j v.
 Proof.
 move => HE.
-rewrite repr_list_unseal.
+rewrite [@repr_list]unlock.
 elim: vars vs => [|var vars IH] [|v vs] /= in evs k *; iIntros (dis) "pS evs".
 - tp_bind j evs; rewrite refines_right_bind.
   iPoseProof ("evs" with "pS") as ">evs".

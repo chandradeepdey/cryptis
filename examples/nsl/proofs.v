@@ -12,7 +12,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Local Existing Instance ticket_lock.
+#[local] Existing Instance ticket_lock.
 
 Section NSL.
 
@@ -76,7 +76,7 @@ iMod (aenc_pred_set (N := nslN.@"m3") msg3_pred with "t1")
 iModIntro; iFrame; do !iSplit => //.
 Qed.
 
-Global Instance nsl_ctx_persistent : Persistent nsl_ctx.
+#[global] Instance nsl_ctx_persistent : Persistent nsl_ctx.
 Proof. apply _. Qed.
 
 Definition session_NSL skI skR si : iProp :=
@@ -183,7 +183,10 @@ wp_apply (wp_mk_nonce_freshN
            ∅
            (λ _, public skI ∨ public skR)%I
            (λ _, False)%I
-           (λ nR, {[nR; SEncKey (Spec.of_list [Spec.pkey skI; Spec.pkey skR; nI; nR]) : term]})) => //.
+           (λ nR : nonce,
+             {[nR : term;
+               SEncKey (Spec.of_list [Spec.pkey skI; Spec.pkey skR;
+                                      nI; nR : term]) : term]})) => //.
 - by iIntros "% %".
 - iIntros "%nR".
   rewrite big_sepS_union_pers !big_sepS_singleton minted_senc minted_of_list.
@@ -195,7 +198,7 @@ iIntros "%nR _ #m_nR #s_nR _ _ tokens".
 rewrite bi.intuitionistic_intuitionistically.
 set sess_key := SEncKey (Spec.of_list [_; _; _; _]).
 have ? : TNonce nR ≠ sess_key.
-  rewrite /sess_key keysE. by move=> E; discriminate E.
+  rewrite /sess_key [term_of_senc_key]unlock. by move=> E; discriminate E.
 rewrite big_sepS_union; last set_solver.
 rewrite !big_sepS_singleton. iDestruct "tokens" as "[nR_token sk_token]".
 wp_pures. wp_list. wp_term_of_list.

@@ -143,7 +143,7 @@ iMod (term_token_alloc (T' t) (¬ minted t) (minted t) with "Hctx [] [] [fresh]"
 - iSplit.
   + by iDestruct "fresh" as "[fresh _]".
   + by iDestruct "fresh" as "[_ >fresh]".
-rel_pures_l. rewrite val_of_term_unseal.
+rel_pures_l. rewrite [val_of_term]unlock.
 iApply ("mint" $! (TNonce (Nonce l)))=> //=.
 Qed.
 
@@ -172,7 +172,7 @@ iMod (term_token_spec_alloc (T' t) (¬ minted_spec t) (minted_spec t) with "Hctx
 - iSplit.
   + by iDestruct "fresh" as "[fresh _]".
   + by iDestruct "fresh" as "[_ >fresh]".
-rel_pures_r. rewrite val_of_term_unseal.
+rel_pures_r. rewrite [val_of_term]unlock.
 iApply ("mint" $! (TNonce (Nonce l)))=> //=.
 Qed.
 

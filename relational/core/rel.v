@@ -760,11 +760,11 @@ Qed.
 
 Lemma wf_seal_data_seals_aenc_l (sk : aenc_key) t e :
   wf_seal_data_seals_l (Some (sk : term, t)) e ⊣⊢ seals_l (seed_of_aenc_key sk) e.
-Proof. by case: sk => [k]; rewrite term_of_aenc_keyE. Qed.
+Proof. by case: sk => [k]; rewrite [term_of_aenc_key]unlock. Qed.
 
 Lemma wf_seal_data_seals_aenc_r (sk' : aenc_key) t' e :
   wf_seal_data_seals_r (Some (sk' : term, t')) e ⊣⊢ seals_r (seed_of_aenc_key sk') e.
-Proof. by case: sk' => [k']; rewrite term_of_aenc_keyE. Qed.
+Proof. by case: sk' => [k']; rewrite [term_of_aenc_key]unlock. Qed.
 
 Lemma wf_seal_rel_aenc_intro (sk sk' : aenc_key) t t' :
   seals_l (seed_of_aenc_key sk) (Some (sk : term, t), Some (sk' : term, t')) -∗
@@ -1376,7 +1376,7 @@ Qed.
 
 Lemma publicly_related_Tag N N' : PUB⟨Tag N, Tag N'⟩ ⊣⊢ ⌜N = N'⌝.
 Proof.
-rewrite Tag_unseal publicly_related_TInt. iSplit.
+rewrite [Tag]unlock publicly_related_TInt. iSplit.
 - iIntros "%H". injection H as H. by apply encode_inj in H.
 - iIntros "->". done.
 Qed.
@@ -1386,7 +1386,7 @@ Lemma publicly_related_Tag_term N (t' : term) :
   ⌜t' = Tag N⌝.
 Proof.
 iIntros "#H".
-rewrite Tag_unseal /Tag_def.
+rewrite [Tag]unlock.
 by iPoseProof (publicly_related_TInt_term with "H") as "->".
 Qed.
 
@@ -1395,7 +1395,7 @@ Lemma publicly_related_term_Tag (t : term) N' :
   ⌜t = Tag N'⌝.
 Proof.
 iIntros "#H".
-rewrite Tag_unseal /Tag_def.
+rewrite [Tag]unlock.
 by iPoseProof (publicly_related_term_TInt with "H") as "->".
 Qed.
 
@@ -1403,7 +1403,7 @@ Lemma publicly_related_tag N N' t t' :
   PUB⟨Spec.tag (Tag N) t, Spec.tag (Tag N') t'⟩ ⊣⊢
   ⌜N = N'⌝ ∧ PUB⟨t, t'⟩.
 Proof.
-by rewrite Spec.tag_unseal /Spec.tag_def publicly_related_TPair publicly_related_Tag.
+by rewrite [Spec.tag]unlock publicly_related_TPair publicly_related_Tag.
 Qed.
 
 Lemma publicly_related_tag_term N t (t' : term) :
@@ -1411,7 +1411,7 @@ Lemma publicly_related_tag_term N t (t' : term) :
   ∃ t1', ⌜t' = Spec.tag (Tag N) t1'⌝.
 Proof.
 iIntros "#H".
-rewrite Spec.tag_unseal /Spec.tag_def.
+rewrite [Spec.tag]unlock.
 iPoseProof (publicly_related_TPair_term with "H") as "(%t1' & %t2' & ->)".
 rewrite publicly_related_TPair.
 iDestruct "H" as "[H1 H2]".
@@ -1424,7 +1424,7 @@ Lemma publicly_related_term_tag (t : term) N t' :
   ∃ t1, ⌜t = Spec.tag (Tag N) t1⌝.
 Proof.
 iIntros "#H".
-rewrite Spec.tag_unseal /Spec.tag_def.
+rewrite [Spec.tag]unlock.
 iPoseProof (publicly_related_term_TPair with "H") as "(%t1 & %t2 & ->)".
 rewrite publicly_related_TPair.
 iDestruct "H" as "[H1 H2]".
@@ -2407,7 +2407,7 @@ Lemma publicly_related_open_aenc_fupd E (sk sk' : aenc_key) t t' :
   end.
 Proof.
 move=> HE. case: sk sk' => [sA] [sA'].
-rewrite term_of_aenc_keyE /term_of_aenc_key_def.
+rewrite [term_of_aenc_key]unlock.
 rewrite -[seed_of_aenc_key (AEncKey sA)]/sA -[seed_of_aenc_key (AEncKey sA')]/sA'.
 rewrite -[Spec.pkey (TKey ADec sA)]/(TKey AEnc sA).
 rewrite -[Spec.pkey (TKey ADec sA')]/(TKey AEnc sA').
