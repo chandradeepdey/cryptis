@@ -30,7 +30,7 @@ In the `examples` directory you will find our case studies:
   `alist` is a supporting association-list module.
 - `opaque`: OPAQUE-style password-authenticated key exchange with HMQV,
   including game and ISO-DH-style authentication (resource exchange, tokens
-  on the session key).
+  on each party's key share).
 - `tls13`: TLS 1.3 handshake (partial; `impl.v` + per-component `proofs/`).
 - `challenge_response`, `composite_game`, `permanent`, `counter`: smaller
   single-file examples plus a composite security game.
@@ -80,7 +80,7 @@ Cryptis is known to compile with the following dependencies:
 - rocq-stdpp
 - rocq-iris v4.5.0
 - rocq-iris-heap-lang v4.5.0
-- rocq-actris fa66960 (Nix)/367149a (opam)
+- rocq-actris v4.5.0
 - coq-reloc b80d3bc
 
 ### Nix
