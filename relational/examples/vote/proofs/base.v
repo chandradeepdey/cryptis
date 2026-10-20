@@ -29,7 +29,7 @@ Implicit Types (st : list (option (term * term))).
 (** * Ghost state *)
 
 Definition ballot_ct skT n v : term :=
-  Spec.enc (Spec.pkey skT) (Tag (voteN.@"vote")) (TPair n v).
+  Spec.random_aenc (Spec.pkey skT) (Tag (voteN.@"vote")) n v.
 
 Definition ballot_seal skV skV' skT skT' n n' v v' : wf_seal_data * wf_seal_data :=
   (Some (skV : term, Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT n v)),
@@ -74,16 +74,18 @@ Lemma voter_key_pkey skV skV' skT skT' v v' :
   voter_key skV skV' skT skT' v v' -∗ PUB⟨Spec.pkey skV, Spec.pkey skV'⟩.
 Proof. by iIntros "(_ & _ & _ & _ & ? & _)". Qed.
 
-Lemma urn_inv_insert E skT skT' e :
+Lemma urn_inv_insert E skT skT' e (P : iProp) :
   ↑urnN ⊆ E →
-  inv urnN (urn_inv skT skT') ={E}=∗
-  seals_l (seed_of_aenc_key skT) e ∗ seals_r (seed_of_aenc_key skT') e.
+  inv urnN (urn_inv skT skT') -∗
+  (∀ S S', seals_auth_l (seed_of_aenc_key skT) S -∗
+           seals_auth_r (seed_of_aenc_key skT') S' ={E ∖ ↑urnN}=∗
+           seals_auth_l (seed_of_aenc_key skT) (S ∪ {[e]}) ∗
+           seals_auth_r (seed_of_aenc_key skT') (S' ∪ {[e]}) ∗ P) ={E}=∗ P.
 Proof.
-iIntros (HE) "#Hinv".
+iIntros (HE) "#Hinv upd".
 iInv "Hinv" as "(%S & %S' & >seals & >seals')".
-iMod (seals_auth_l_insert _ _ e with "seals") as "[seals #Hl]".
-iMod (seals_auth_r_insert _ _ e with "seals'") as "[seals' #Hr]".
-iModIntro. iSplitL; last by iFrame "#".
+iMod ("upd" with "seals seals'") as "(seals & seals' & HP)".
+iModIntro. iSplitR "HP"; last done.
 iNext. iExists _, _. iFrame.
 Qed.
 

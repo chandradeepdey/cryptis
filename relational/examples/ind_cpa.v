@@ -15,7 +15,7 @@ Section CPA.
 Context `{!relocG Σ, !public_relGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
-Implicit Types (t nonce : term).
+Implicit Types (t : term).
 Implicit Types (skA : aenc_key).
 
 Variable N : namespace.
@@ -28,10 +28,6 @@ A --> *: if b then {nonce, msg_0}@pkA else {nonce, msg_1}@pkA
 
 *)
 
-Definition aenc' : val := λ: "pk" "m",
-  let: "nonce" := mk_nonce #() in
-  aenc "pk" (Tag $ N.@"m") (term_of_list ["nonce"; "m"]).
-
 Definition alice (b : bool) : val := λ: "c",
   let: "skA" := mk_aenc_key #() in
   let: "pkA" := pkey "skA" in
@@ -39,90 +35,13 @@ Definition alice (b : bool) : val := λ: "c",
   let: "msg_0" := recv "c" in
   let: "msg_1" := recv "c" in
   let: "msg" := if: #b then "msg_0" else "msg_1" in
-  send "c" (aenc' "pkA" "msg");;
+  send "c" (random_aenc "pkA" (Tag $ N.@"m") "msg");;
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
 
 Definition alice_guess_wrapped : val := λ: "c",
   let: "b" := nondet_bool #() in
   ("b", if: "b" then alice true "c" else alice false "c").
-
-Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
-    (S S' : gset (wf_seal_data * wf_seal_data)) :
-  cryptis_rel_ctx -∗
-  seals_auth_l (seed_of_aenc_key skA) S -∗
-  seals_auth_r (seed_of_aenc_key skA') S' -∗
-  ⌜is_nonce (seed_of_aenc_key skA)⌝ -∗
-  minted (Spec.pkey skA) -∗
-  minted_spec (Spec.pkey skA') -∗
-  publicly_linked (Spec.pkey skA) (Spec.pkey skA') -∗
-  secret_in_l (seed_of_aenc_key skA) -∗
-  minted m -∗ minted_spec m' -∗
-  (∀ c c', PUB⟨c, c'⟩ -∗ Ψ c c') -∗
-  REL aenc' (Spec.pkey skA) m
-   << aenc' (Spec.pkey skA') m' : Ψ.
-Proof.
-iIntros "#Hctx seals_l seals_r %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
-rewrite /aenc'. rel_pures.
-rel_apply_l (rel_mk_nonce_l _ _
-  (λ n, {[ n;
-           Spec.of_list [n; m];
-           Spec.tag (Tag (N.@"m")) (Spec.of_list [n; m]);
-           Spec.enc (Spec.pkey skA) (Tag (N.@"m")) (Spec.of_list [n; m]) ]})
-  with "[//]"); first solve_minted_iff.
-iIntros (n) "%Hn #mint_n Htt".
-rel_apply_r (rel_mk_nonce_r _ _
-  (λ n, {[ n;
-           Spec.of_list [n; m'];
-           Spec.tag (Tag (N.@"m")) (Spec.of_list [n; m']);
-           Spec.enc (Spec.pkey skA') (Tag (N.@"m")) (Spec.of_list [n; m']) ]})
-  with "[//]"); first solve_minted_iff.
-iIntros (n') "%Hn' #mint_spec_n' Htts".
-split_term_tokens.
-iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
-iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
-set pl := Spec.of_list [n; m].
-set tg := Spec.tag (Tag (N.@"m")) pl.
-set c := Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl.
-set pl' := Spec.of_list [n'; m'].
-set tg' := Spec.tag (Tag (N.@"m")) pl'.
-set c' := Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'.
-(* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
-iMod (public_rel_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
-iMod (public_rel_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx protby_pl tt_pl") as "protby_tg".
-iMod (public_rel_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx tts_n") as "protby_pl'".
-iMod (public_rel_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
-iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
-        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#priv_tg".
-(* The secret keys can never become publicly related. *)
-iAssert (□ (PUB⟨skA, skA'⟩ → PUB⟨pl, pl'⟩))%I as "#Hbox".
-{ iIntros "!> #Hsk". iExFalso.
-  rewrite publicly_related_adec_key'.
-  iDestruct (publicly_related_nonce_term _ Hnonce_a with "Hsk") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_a Hl") as "[]". }
-(* The ciphertexts are publicly related. *)
-iAssert (minted pl) as "#mint_pl".
-{ rewrite /pl minted_of_list /=. by iFrame "#". }
-iAssert (minted_spec pl') as "#mint_spec_pl'".
-{ rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
-iMod (seals_auth_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
-        with "seals_l") as "[seals_l #Hin_l]".
-iMod (seals_auth_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
-        with "seals_r") as "[seals_r #Hin_r]".
-iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tt_c tts_c")
-  as "[_ #Hpub_c]".
-{ iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
-  do 5 (iSplit; first done).
-  iSplit; first by iApply publicly_linked_linked.
-  iSplit; first done. iSplit; first done.
-  by iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r"). }
-(* Run the program. *)
-rel_prims. rel_values. by iApply "post".
-Qed.
 
 Lemma rel_alice c c' (b b' : bool) :
   cryptis_rel_ctx -∗
@@ -176,9 +95,15 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (rel_aenc' with "Hctx seals_a seals_a'")=> //=.
-by rewrite minted_pkey. by rewrite minted_spec_pkey.
-iIntros (c_msg c_msg') "#Hcmsg".
+rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
+  with "Hctx [//] mint_skA mint_spec_skA' elem_pkA secret_a mint_msg mint_spec_msg' [] [] [] []").
+{ iPureIntro. set_solver. }
+{ iPureIntro. set_solver. }
+{ by iIntros (?); rewrite big_sepS_empty. }
+{ by iIntros (?); rewrite big_sepS_empty. }
+iIntros (n n') "_ _ _ _ _ _ upd".
+iMod ("upd" $! ⊤ with "[//] seals_a seals_a'") as "(seals_a & seals_a' & #Hcmsg)".
+iModIntro.
 rel_apply (rel_send with "Hc Hcmsg").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.
 rel_apply (rel_recv with "Hc").

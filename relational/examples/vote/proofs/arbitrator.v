@@ -32,9 +32,8 @@ Definition slot_empty (p : term * option term) : bool :=
   match p.2 with None => true | Some _ => false end.
 
 Definition vote_of skT (t : term) : option Z :=
-  match Spec.dec skT (Tag (voteN.@"vote")) t with
-  | Some pl =>
-    match Spec.untuple pl with Some q => Spec.to_int q.2 | None => None end
+  match Spec.random_adec skT (Tag (voteN.@"vote")) t with
+  | Some v => Spec.to_int v
   | None => None
   end.
 
@@ -95,7 +94,7 @@ rewrite IH // Forall_cons. split; [by split; eauto | by case].
 Qed.
 
 Lemma vote_of_ballot skT n (v : Z) : vote_of skT (ballot_ct skT n (TInt v)) = Some v.
-Proof. by rewrite /vote_of /ballot_ct /Spec.enc Spec.dec_aenc_key. Qed.
+Proof. by rewrite /vote_of /ballot_ct Spec.random_adec_aenc. Qed.
 
 Lemma tally_slots_l_eq skT skT' ks votes votes' st acc :
   length st = length ks → length votes = length ks →
@@ -184,13 +183,10 @@ Lemma rel_tally_vote_l K e skT p t Ψ :
 Proof.
 iIntros "post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_l; last by iApply "post".
-rel_apply_l rel_adec'_l. iModIntro. iSplit; last first.
-{ iIntros (Hnone). rewrite /vote_of Hnone. rel_pures_l. by iApply "post". }
-iIntros (pl _ Hdec). rewrite /vote_of Hdec. rel_pures_l.
-rel_apply_l rel_untuple_l.
-case: (Spec.untuple pl) => [[q1 q2]|] /=; rel_pures_l; last by iApply "post".
+rel_apply_l rel_random_adec_l. rewrite /vote_of.
+case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_l; last by iApply "post".
 rel_apply_l rel_to_int_l.
-case: (Spec.to_int q2) => [k|] /=; rel_pures_l; last by iApply "post".
+case: (Spec.to_int v) => [k|] /=; rel_pures_l; last by iApply "post".
 rel_apply_l rel_avl_lookup_l. rewrite /incr.
 case: (AVL.lookup k t) => [n|] /=; rel_pures_l; by rel_apply_l rel_avl_insert_l.
 Qed.
@@ -201,13 +197,10 @@ Lemma rel_tally_vote_r K e skT p t Ψ :
 Proof.
 iIntros "post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_r; last by iApply "post".
-rel_apply_r rel_adec'_r. iSplit; last first.
-{ iIntros (Hnone). rewrite /vote_of Hnone. rel_pures_r. by iApply "post". }
-iIntros (pl _ Hdec). rewrite /vote_of Hdec. rel_pures_r.
-rel_apply_r rel_untuple_r.
-case: (Spec.untuple pl) => [[q1 q2]|] /=; rel_pures_r; last by iApply "post".
+rel_apply_r rel_random_adec_r. rewrite /vote_of.
+case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_r; last by iApply "post".
 rel_apply_r rel_to_int_r.
-case: (Spec.to_int q2) => [k|] /=; rel_pures_r; last by iApply "post".
+case: (Spec.to_int v) => [k|] /=; rel_pures_r; last by iApply "post".
 rel_apply_r rel_avl_lookup_r. rewrite /incr.
 case: (AVL.lookup k t) => [n|] /=; rel_pures_r; by rel_apply_r rel_avl_insert_r.
 Qed.

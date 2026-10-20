@@ -37,10 +37,6 @@ for the challenge ciphertext.
 
 *)
 
-Definition aenc' : val := λ: "pk" "m",
-  let: "nonce" := mk_nonce #() in
-  aenc "pk" (Tag $ N.@"m") (term_of_list ["nonce"; "m"]).
-
 Definition oracle : val := rec: "loop" "c" "sk" "chal" :=
   let: "t" := recv "c" in
   (match: open "sk" "t" with
@@ -60,7 +56,7 @@ Definition alice (b : bool) : val := λ: "c",
   let: "msg_0" := recv "c" in
   let: "msg_1" := recv "c" in
   let: "msg" := if: #b then "msg_0" else "msg_1" in
-  let: "ct" := aenc' "pkA" "msg" in
+  let: "ct" := random_aenc "pkA" (Tag $ N.@"m") "msg" in
   "chal" <- SOME "ct";;
   send "c" "ct";;
   let: "guess" := recv "c" in
@@ -192,92 +188,6 @@ iMod (rel_oracle_open with "Hctx Hcell Hpk Hlink Ht")
       rel_pures. by iApply "IH".
 Qed.
 
-Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp) :
-  cryptis_rel_ctx -∗
-  ⌜is_nonce (seed_of_aenc_key skA)⌝ -∗
-  minted (Spec.pkey skA) -∗
-  minted_spec (Spec.pkey skA') -∗
-  publicly_linked (Spec.pkey skA) (Spec.pkey skA') -∗
-  secret_in_l (seed_of_aenc_key skA) -∗
-  minted m -∗ minted_spec m' -∗
-  (∀ pl pl',
-    (∀ E, ⌜↑cryptisN ⊆ E⌝ -∗
-      seals_auth_l (seed_of_aenc_key skA) ∅ -∗
-      seals_auth_r (seed_of_aenc_key skA') ∅ ={E}=∗
-      seals_auth_l (seed_of_aenc_key skA) {[challenge skA skA' pl pl']} ∗
-      seals_auth_r (seed_of_aenc_key skA') {[challenge skA skA' pl pl']} ∗
-           PUB⟨Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl,
-               Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩) ={⊤}=∗
-    Ψ (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl)
-      (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl')) -∗
-  REL aenc' (Spec.pkey skA) m
-   << aenc' (Spec.pkey skA') m' : Ψ.
-Proof.
-iIntros "#Hctx %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
-rewrite /aenc'. rel_pures.
-rel_apply_l (rel_mk_nonce_l _ _
-  (λ n, {[ n;
-           Spec.of_list [n; m];
-           Spec.tag (Tag (N.@"m")) (Spec.of_list [n; m]);
-           Spec.enc (Spec.pkey skA) (Tag (N.@"m")) (Spec.of_list [n; m]) ]})
-  with "[//]"); first solve_minted_iff.
-iIntros (n) "%Hn #mint_n Htt".
-rel_apply_r (rel_mk_nonce_r _ _
-  (λ n, {[ n;
-           Spec.of_list [n; m'];
-           Spec.tag (Tag (N.@"m")) (Spec.of_list [n; m']);
-           Spec.enc (Spec.pkey skA') (Tag (N.@"m")) (Spec.of_list [n; m']) ]})
-  with "[//]"); first solve_minted_iff.
-iIntros (n') "%Hn' #mint_spec_n' Htts".
-split_term_tokens.
-iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
-iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
-set pl := Spec.of_list [n; m].
-set tg := Spec.tag (Tag (N.@"m")) pl.
-set c := Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl.
-set pl' := Spec.of_list [n'; m'].
-set tg' := Spec.tag (Tag (N.@"m")) pl'.
-set c' := Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'.
-(* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
-iMod (public_rel_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
-iMod (public_rel_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx protby_pl tt_pl") as "protby_tg".
-iMod (public_rel_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx tts_n") as "protby_pl'".
-iMod (public_rel_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
-iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
-        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#priv_tg".
-(* The secret keys can never become publicly related. *)
-iAssert (□ (PUB⟨skA, skA'⟩ → PUB⟨pl, pl'⟩))%I as "#Hbox".
-{ iIntros "!> #Hsk". iExFalso.
-  rewrite publicly_related_adec_key'.
-  iDestruct (publicly_related_nonce_term _ Hnonce_a with "Hsk") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_a Hl") as "[]". }
-iAssert (minted pl) as "#mint_pl".
-{ rewrite /pl minted_of_list /=. by iFrame "#". }
-iAssert (minted_spec pl') as "#mint_spec_pl'".
-{ rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
-(* The ciphertexts are linked later, once they are recorded as the challenge. *)
-iMod ("post" $! pl pl' with "[tt_c tts_c]") as "post".
-{ iIntros (E HE) "seals_l seals_r".
-  iMod (seals_auth_l_insert _ _ (challenge skA skA' pl pl') with "seals_l")
-    as "[seals_l #Hin_l]".
-  iMod (seals_auth_r_insert _ _ (challenge skA skA' pl pl') with "seals_r")
-    as "[seals_r #Hin_r]".
-  rewrite !left_id_L.
-  iMod (public_rel_publish HE with "Hctx [] tt_c tts_c") as "[_ #Hpub_c]".
-  { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
-    do 5 (iSplit; first done).
-    iSplit; first by iApply publicly_linked_linked.
-    iSplit; first done. iSplit; first done.
-    by iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r"). }
-  iModIntro. by iFrame "#∗". }
-(* Run the program. *)
-rel_prims. by rel_values.
-Qed.
-
 Lemma rel_alice c c' (b b' : bool) :
   cryptis_rel_ctx -∗
   channel_rel c c' -∗
@@ -346,10 +256,13 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (rel_aenc' skA skA' msg msg'
-  with "Hctx [//] [] [] elem_pkA secret_a mint_msg mint_spec_msg'");
-  [by rewrite minted_pkey | by rewrite minted_spec_pkey |].
-iIntros (pl pl') "link". iModIntro. rel_pures.
+rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
+  with "Hctx [//] mint_skA mint_spec_skA' elem_pkA secret_a mint_msg mint_spec_msg' [] [] [] []").
+{ iPureIntro. set_solver. }
+{ iPureIntro. set_solver. }
+{ by iIntros (?); rewrite big_sepS_empty. }
+{ by iIntros (?); rewrite big_sepS_empty. }
+iIntros (n n') "_ _ _ _ _ _ link". iModIntro. rel_pures.
 (* Store the challenge and link it. *)
 rel_store_l_atomic.
 iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl0 & %pl0' & Hl & Hl' & _ & _ & >#Hstore0 & _)]" "Hclose";
@@ -357,12 +270,13 @@ iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl0 & %pl0' & Hl & Hl' & _ & _ &
 { by iDestruct (term_meta_token with "token_store Hstore0") as "[]". }
 iMod (term_meta_set storeN () (↑storeN) (seed_of_aenc_key skA) ltac:(done)
         with "token_store") as "#Hstore".
-iMod ("link" $! (⊤ ∖ ↑cellN) with "[] seals seals'") as "(seals & seals' & #Hct)".
+iMod ("link" $! (⊤ ∖ ↑cellN) ∅ ∅ with "[] seals seals'") as "(seals & seals' & #Hct)".
 { iPureIntro. solve_ndisj. }
+rewrite !left_id_L /random_seal.
 iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
 rel_store_r.
 iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
-{ iNext. iRight. iExists pl, pl'. by iFrame "#∗". }
+{ iNext. iRight. iExists (TPair n msg), (TPair n' msg'). by iFrame "#∗". }
 rel_pures.
 rel_apply (rel_send with "Hc Hct").
 iIntros (? ?) "[-> ->]"=> /=.
