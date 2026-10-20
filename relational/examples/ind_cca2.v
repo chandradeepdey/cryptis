@@ -332,19 +332,19 @@ have Hsub_pl' : is_immediate_subterm n' pl'.
 have Hsub_tg' : is_immediate_subterm pl' tg'.
 { rewrite /tg' [Spec.tag]unlock. exact: SubtermPairR. }
 iMod (public_rel_flow_l_extend (E:=⊤) n ltac:(solve_ndisj)
-        with "Hctx tt_n_flow tt_n_map") as "[prot_n tt_n_map]".
+        with "Hctx tt_n_flow") as "prot_n".
 iMod (public_rel_flow_l_grow_2 (E:=⊤) Hn ltac:(solve_ndisj) Hsub_pl
         with "Hctx prot_n tt_n_map") as "(prot_n & protby_pl & tt_n_map)".
 iMod (public_rel_flow_l_extend (E:=⊤) pl ltac:(solve_ndisj)
-        with "Hctx tt_pl_flow tt_pl_map") as "[prot_pl tt_pl_map]".
+        with "Hctx tt_pl_flow") as "prot_pl".
 iMod (public_rel_flow_l_grow_3 (E:=⊤) n ltac:(solve_ndisj) Hsub_tg
         with "Hctx protby_pl prot_pl tt_pl_map") as "(prot_pl & protby_tg & protby_pl & tt_pl_map)".
 iMod (public_rel_flow_r_extend (E:=⊤) n' ltac:(solve_ndisj)
-        with "Hctx tts_n_flow tts_n_map") as "[prot_n' tts_n_map]".
+        with "Hctx tts_n_flow") as "prot_n'".
 iMod (public_rel_flow_r_grow_2 (E:=⊤) Hn' ltac:(solve_ndisj) Hsub_pl'
         with "Hctx prot_n' tts_n_map") as "(prot_n' & protby_pl' & tts_n_map)".
 iMod (public_rel_flow_r_extend (E:=⊤) pl' ltac:(solve_ndisj)
-        with "Hctx tts_pl_flow tts_pl_map") as "[prot_pl' tts_pl_map]".
+        with "Hctx tts_pl_flow") as "prot_pl'".
 iMod (public_rel_flow_r_grow_3 (E:=⊤) n' ltac:(solve_ndisj) Hsub_tg'
         with "Hctx protby_pl' prot_pl' tts_pl_map") as "(prot_pl' & protby_tg' & protby_pl' & tts_pl_map)".
 iMod (linked_extend (E:=⊤) tg tg' pl pl' ltac:(solve_ndisj)
@@ -360,9 +360,9 @@ iAssert (minted pl) as "#mint_pl".
 iAssert (minted_spec pl') as "#mint_spec_pl'".
 { rewrite /pl' minted_spec_of_list /=. by iFrame "#". }
 iMod (public_rel_flow_l_extend (E:=⊤) c ltac:(solve_ndisj)
-        with "Hctx tt_c_flow tt_c_map") as "[prot_c tt_c_map]".
+        with "Hctx tt_c_flow") as "prot_c".
 iMod (public_rel_flow_r_extend (E:=⊤) c' ltac:(solve_ndisj)
-        with "Hctx tts_c_flow tts_c_map") as "[prot_c' tts_c_map]".
+        with "Hctx tts_c_flow") as "prot_c'".
 (* The ciphertexts are linked later, once they are recorded as the challenge. *)
 iMod ("post" $! pl pl' with "[prot_c prot_c' tt_c_map tts_c_map]") as "post".
 { iIntros (E HE) "seals_l seals_r".
@@ -451,9 +451,9 @@ iMod (public_rel_secret_l_2 (E:=⊤) Hnonce_a ltac:(solve_ndisj) with "Hctx toke
 iMod (public_rel_secret_r_2 (E:=⊤) Hnonce_a' ltac:(solve_ndisj) with "Hctx token_spec_a") as "#secret_a'".
 (* The public keys are publicly related. *)
 iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey skA) ltac:(solve_ndisj)
-        with "Hctx token_pkA_flow token_pkA_map") as "[prot_pkA token_pkA_map]".
+        with "Hctx token_pkA_flow") as "prot_pkA".
 iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey skA') ltac:(solve_ndisj)
-        with "Hctx token_spec_pkA_flow token_spec_pkA_map") as "[prot_pkA' token_spec_pkA_map]".
+        with "Hctx token_spec_pkA_flow") as "prot_pkA'".
 iAssert (□ (publicly_linked (Spec.pkey skA) (Spec.pkey skA') -∗
             PUB⟨Spec.pkey skA, Spec.pkey skA'⟩))%I as "#Hwand".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.

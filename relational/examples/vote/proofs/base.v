@@ -302,9 +302,9 @@ iMod (public_rel_secret_r_2 (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token
 iDestruct (token_flow_map with "token_pk") as "(token_pk_flow & token_pk_map & _)".
 iDestruct (token_spec_flow_map with "token_pk'") as "(token_pk'_flow & token_pk'_map & _)".
 iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey skT) ltac:(solve_ndisj)
-        with "Hctx token_pk_flow token_pk_map") as "[prot_pk token_pk_map]".
+        with "Hctx token_pk_flow") as "prot_pk".
 iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey skT') ltac:(solve_ndisj)
-        with "Hctx token_pk'_flow token_pk'_map") as "[prot_pk' token_pk'_map]".
+        with "Hctx token_pk'_flow") as "prot_pk'".
 iAssert (□ (publicly_linked (Spec.pkey skT) (Spec.pkey skT') -∗
             PUB⟨Spec.pkey skT, Spec.pkey skT'⟩))%I as "#Hwand".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
@@ -355,12 +355,12 @@ rewrite (term_token_difference (seed_of_sign_key skV) (↑signedN)
               ∖ ↑cryptisN.@"public_rel".@"seal")); last solve_ndisj.
 iDestruct "token_s_rest" as "[token_signed _]".
 iMod (public_rel_flow_l_extend (E:=⊤) (seed_of_sign_key skV) ltac:(solve_ndisj)
-        with "Hctx token_s_flow token_s_map") as "[prot_s token_s_map]".
+        with "Hctx token_s_flow") as "prot_s".
 iMod (public_rel_flow_l_grow_2 (E:=⊤) Hnonce ltac:(solve_ndisj)
         (is_immediate_subterm_sign_key skV)
         with "Hctx prot_s token_s_map") as "(prot_s & protby_sk & token_s_map)".
 iMod (public_rel_flow_r_extend (E:=⊤) (seed_of_sign_key skV') ltac:(solve_ndisj)
-        with "Hctx token_s'_flow token_s'_map") as "[prot_s' token_s'_map]".
+        with "Hctx token_s'_flow") as "prot_s'".
 iMod (public_rel_flow_r_grow_2 (E:=⊤) Hnonce' ltac:(solve_ndisj)
         (is_immediate_subterm_sign_key skV')
         with "Hctx prot_s' token_s'_map") as "(prot_s' & protby_sk' & token_s'_map)".
@@ -379,9 +379,9 @@ iMod (public_rel_secret_r (E:=⊤) with "Hctx protby_sk' token_sk'_map")
 iDestruct (token_flow_map with "token_pk") as "(token_pk_flow & token_pk_map & _)".
 iDestruct (token_spec_flow_map with "token_pk'") as "(token_pk'_flow & token_pk'_map & _)".
 iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey skV) ltac:(solve_ndisj)
-        with "Hctx token_pk_flow token_pk_map") as "[prot_pk token_pk_map]".
+        with "Hctx token_pk_flow") as "prot_pk".
 iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey skV') ltac:(solve_ndisj)
-        with "Hctx token_pk'_flow token_pk'_map") as "[prot_pk' token_pk'_map]".
+        with "Hctx token_pk'_flow") as "prot_pk'".
 iMod (public_rel_extend (E:=⊤) (Spec.pkey skV) (Spec.pkey skV') ltac:(solve_ndisj)
         with "Hctx [] prot_pk prot_pk' token_pk_map token_pk'_map") as "#elem_pk".
 { iIntros "#elem". by iApply (pub_verify_key with "mint_sk mint_sk' secret_s secret_s' elem"). }

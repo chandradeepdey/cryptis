@@ -261,9 +261,9 @@ rewrite (term_token_spec_difference n' (↑cryptisN.@"public_rel".@"map")
            (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
 iDestruct "Htts" as "[Htts_map _]".
 iMod (public_rel_flow_l_extend (E:=⊤) n ltac:(solve_ndisj)
-        with "Hctx Htt_flow Htt_map") as "[prot_n Htt_map]".
+        with "Hctx Htt_flow") as "prot_n".
 iMod (public_rel_flow_r_extend (E:=⊤) n' ltac:(solve_ndisj)
-        with "Hctx Htts_flow Htts_map") as "[prot_n' Htts_map]".
+        with "Hctx Htts_flow") as "prot_n'".
 iMod (public_rel_extend (E:=⊤) n n' ltac:(solve_ndisj)
         with "Hctx [] prot_n prot_n' Htt_map Htts_map") as "#Hel".
 { iIntros "#Hel". rewrite (publicly_related_nonce Hn Hn'). by iSplit; last iSplit. }
