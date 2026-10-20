@@ -204,3 +204,7 @@ relational/examples/ind_cca2.v
 relational/examples/vote/impl.v
 relational/examples/vote/proofs/base.v
 relational/examples/vote/proofs/voter.v
+relational/examples/vote/proofs/arbitrator.v
+relational/examples/vote/proofs.v
+relational/examples/vote.v
+relational/examples/vote/game.v
