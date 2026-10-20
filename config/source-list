@@ -197,6 +197,9 @@ relational/primitives/comp_spec.v
 relational/primitives/simple_spec.v
 relational/primitives/with_cryptis_spec.v
 relational/primitives/attacker_spec.v
+relational/proofmode/updates.v
+relational/proofmode/tactics.v
+relational/proofmode.v
 relational/rel_adequacy.v
 
 relational/examples/ind_cpa.v

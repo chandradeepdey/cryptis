@@ -76,6 +76,9 @@ relational layer, built on [ReLoC](https://iris-project.org/reloc):
 - `rel_adequacy.v` turns a ReLoC refinement into a statement about executions
   (`cryptis_rel_adequacy`) or into a contextual refinement with the attacker
   as the context (`cryptis_ctx_refinement`).
+- `proofmode/*`, `proofmode`: the ghost state updates for freshly created
+  terms and the tactics that run both programs through the primitives and
+  discharge the side conditions of nonce and key creation.
 
 Its case studies live in `relational/examples`:
 
