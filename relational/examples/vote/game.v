@@ -9,6 +9,7 @@ From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
 From cryptis.hyper.lib Require Import avl_spec.
+From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl proofs.
 From cryptis.hyper Require Import rel_adequacy.
 
@@ -42,15 +43,15 @@ Lemma rel_election_guess c c' cands votes votes' :
   REL election_guess cands votes c << election_guess cands votes' c' : lrel_bool.
 Proof.
 iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess.
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_bind_l (election_of _ _ _). rel_bind_r (election_of _ _ _).
 iApply refines_bind; first by iApply rel_election_of.
 iIntros (? ?) "[-> ->]"=> /=.
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_bind_l (recv _). rel_bind_r (recv _).
 iApply refines_bind'. iApply rel_recv=> //.
 iIntros (guess guess') "#Hguess"=> /=.
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_apply_l rel_eq_term_l. rel_apply_r rel_eq_term_r.
 rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
@@ -71,20 +72,20 @@ Lemma rel_election_guess_wrapped c c' cands votes0 votes1 :
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
 Proof.
 iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess_wrapped.
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_apply_l rel_nondet_bool_l. iIntros (choice).
 rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
-case: choice; rel_pures_l; rel_pures_r.
+case: choice; rel_pures.
 - rel_bind_l (election_guess _ votes1 _). rel_bind_r (election_guess _ votes0 _).
   iApply refines_bind;
     first by iApply (rel_election_guess _ _ _ (Permutation_sym Hperm) with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures_l. rel_pures_r. rel_values.
+  rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
 - rel_bind_l (election_guess _ votes0 _). rel_bind_r (election_guess _ votes1 _).
   iApply refines_bind; first by iApply (rel_election_guess _ _ _ Hperm with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures_l. rel_pures_r. rel_values.
+  rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
 Qed.
 

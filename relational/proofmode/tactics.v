@@ -35,8 +35,9 @@ From cryptis.hyper.lib Require Import avl_spec.
 From cryptis.hyper.primitives Require Import pre_term_spec simple_spec comp_spec with_cryptis_spec.
 
 Ltac minted_simpl :=
-  rewrite /Spec.enc ?minted_TSeal ?minted_tag ?minted_of_list ?minted_TPair
-    ?minted_spec_TSeal ?minted_spec_tag ?minted_spec_of_list ?minted_spec_TPair /=.
+  rewrite /Spec.enc
+    ?(minted_TSeal, minted_tag, minted_of_list, minted_TPair,
+      minted_spec_TSeal, minted_spec_tag, minted_spec_of_list, minted_spec_TPair) /=.
 
 Ltac unfold_sets := repeat match goal with x := _ |- _ => subst x end.
 

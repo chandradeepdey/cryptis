@@ -9,6 +9,7 @@ From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
 From cryptis.hyper.lib Require Import avl_spec.
+From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl.
 From cryptis.hyper.examples.vote.proofs Require Import base.
 
@@ -260,7 +261,7 @@ iIntros "post". rel_apply_l rel_avl_to_list_l.
 rel_bind_l (map_list _ _).
 iApply (rel_map_list_l _ _ _ pair_of pair_term (AVL.to_list t) with "[post]").
 - move=> K' [k v] _. iIntros "post". rewrite /pair_term /=. rel_pures_l.
-  rel_apply_l rel_tint_l. rel_pures_l. rel_apply_l rel_tint_l. by rel_apply_l rel_tuple_l.
+  by rel_prims_l.
 - rewrite /=. by rel_apply_l rel_term_of_list_l.
 Qed.
 
@@ -273,7 +274,7 @@ rel_bind_r (map_list _ _).
 iApply (rel_map_list_r _ _ _ pair_of pair_term (AVL.to_list t) with "[post]");
   first solve_ndisj.
 - move=> K' [k v] _. iIntros "post". rewrite /pair_term /=. rel_pures_r.
-  rel_apply_r rel_tint_r. rel_pures_r. rel_apply_r rel_tint_r. by rel_apply_r rel_tuple_r.
+  by rel_prims_r.
 - rewrite /=. by rel_apply_r rel_term_of_list_r.
 Qed.
 
@@ -356,12 +357,12 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
   iIntros "#Hctx #Hkeys #Hm".
 - iDestruct (big_sepL2_nil_inv_l with "Hkeys") as %->.
   case: st Hst Hok => [|??] //= _ _.
-  rel_rec_l. rel_rec_r. rel_pures_l. rel_pures_r. rel_values. iModIntro.
+  rel_rec_l. rel_rec_r. rel_pures. rel_values. iModIntro.
   iExists []. iPureIntro. by do !split => //=.
 - iDestruct (big_sepL2_cons_inv_l with "Hkeys") as (sk' ks'' ->) "[#HV #Hkeys']".
   case: st Hst Hok => [|o st] //= [Hst].
   case: votes votes' Hv Hv' => [|v votes] [|v' votes'] //= [Hv] [Hv'] [Ho Hok].
-  rel_rec_l. rel_rec_r. rel_pures_l. rel_pures_r.
+  rel_rec_l. rel_rec_r. rel_pures.
   iMod (pub_verify_cases with "Hctx HV Hm") as "[[%HnL %HnR]|(%n & %n' & -> & ->)]".
   + rel_apply_l rel_verify'_l. iModIntro. iSplit.
     { iIntros (u _ Hdec). by rewrite HnL in Hdec. }
@@ -373,7 +374,7 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
     iApply (refines_bind with "[]").
     { by iApply (IH _ st votes votes' Hst Hv Hv' Hok with "Hctx Hkeys' Hm"). }
     iIntros (? ?) "(%st' & -> & -> & %Hlen' & %Hok')" => /=.
-    rel_pures_l. rel_pures_r. rel_values. iModIntro.
+    rel_pures. rel_values. iModIntro.
     iExists (o :: st'). iPureIntro. do 2 (split; first done).
     split; [by rewrite /= Hlen' | by split].
   + rel_apply_l rel_verify'_l. iModIntro. iSplit; last first.
@@ -382,7 +383,7 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
     rel_apply_r rel_verify'_r. iSplit; last first.
     { iIntros (Hdec). by rewrite Spec.dec_sign_key in Hdec. }
     iIntros (u' e' _). case: e' => /Spec.tag_inj [_ <-].
-    rel_pures_l. rel_pures_r. rel_values. iModIntro.
+    rel_pures. rel_values. iModIntro.
     iExists (Some (ballot_ct skT n (TInt v), ballot_ct skT' n' (TInt v')) :: st).
     iPureIntro. do 2 (split; first done). split; first done. split; last done.
     by exists n, n'.
@@ -403,14 +404,14 @@ iIntros (Hst Hv Hv' Hkk Hok) "#Hctx #Hc #Hkeys".
 have Hlen_l : length (pkeys ks) = length st by rewrite /pkeys length_map.
 have Hlen_r : length (pkeys ks') = length st by rewrite /pkeys length_map; lia.
 iLöb as "IH" forall (st Hst Hok Hlen_l Hlen_r).
-rel_rec_l. rel_rec_r. rel_pures_l. rel_pures_r.
+rel_rec_l. rel_rec_r. rel_pures.
 rel_apply_l rel_find_empty_l. rel_apply_r rel_find_empty_r.
 case eL: (find slot_empty (slots_l (pkeys ks) st)) => [p|].
 - have [p' eR] : ∃ p', find slot_empty (slots_r (pkeys ks') st) = Some p'.
   { case e: (find _ _) => [p'|]; first by eauto.
     move/(find_slot_empty_None snd Hlen_r): e => Hall.
     by have := proj2 (find_slot_empty_None fst Hlen_l) Hall; rewrite eL. }
-  rewrite eR /=. rel_pures_l. rel_pures_r.
+  rewrite eR /=. rel_pures.
   rel_bind_l (recv _). rel_bind_r (recv _).
   iApply refines_bind'. iApply rel_recv => //.
   iIntros (m m') "#Hm" => /=.
@@ -418,11 +419,11 @@ case eL: (find slot_empty (slots_l (pkeys ks) st)) => [p|].
   iApply (refines_bind with "[]").
   { by iApply (rel_record_ballot _ _ Hst Hv Hv' Hok with "Hctx Hkeys Hm"). }
   iIntros (? ?) "(%st' & -> & -> & %Hlen' & %Hok')" => /=.
-  rel_pures_l. rel_pures_r.
+  rel_pures.
   rewrite -Hlen'. iApply ("IH" $! st' with "[%] [%] [%] [%]"); try lia; try done.
 - move/(find_slot_empty_None fst Hlen_l): eL => Hall.
   rewrite (proj2 (find_slot_empty_None snd Hlen_r) Hall) /=.
-  rel_pures_l. rel_pures_r. rel_values.
+  rel_pures. rel_values.
 Qed.
 
 Lemma rel_arbitrator c c' skT skT' ks ks' cands votes votes' :
@@ -433,7 +434,7 @@ Lemma rel_arbitrator c c' skT skT' ks ks' cands votes votes' :
    << arbitrator c' skT' (repr cands) (repr (pkeys ks')) : ().
 Proof.
 iIntros (Hperm Hv Hv' Hkk) "#Hctx #Hc #Hkeys".
-rewrite /arbitrator. rel_pures_l. rel_pures_r.
+rewrite /arbitrator. rel_pures.
 rel_apply_l rel_init_slots_l. rel_apply_r rel_init_slots_r.
 rewrite /pkeys !length_map -/(pkeys ks) -/(pkeys ks') -Hkk.
 rel_bind_l (collect _ _). rel_bind_r (collect _ _).
@@ -443,12 +444,12 @@ iApply (refines_bind with "[]").
   - by apply: slots_ok_replicate; lia. }
 iIntros (? ?) "(%st & -> & -> & %Hlen & %Hok & %Hall)" => /=.
 rewrite length_replicate in Hlen.
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_apply_l rel_seed_l. rel_apply_r rel_seed_r.
 rel_apply_l rel_tally_slots_l. rel_apply_r rel_tally_slots_r.
 rewrite (tally_slots_l_eq (seed cands) Hlen Hv Hok Hall).
 rewrite (tally_slots_r_eq (seed cands) (eq_trans Hlen Hkk) Hv' Hok Hall).
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_apply_l rel_result_l. rel_apply_r rel_result_r.
 have [HbL HmL] := to_map_foldr_incr votes (bst_seed cands).
 have [HbR HmR] := to_map_foldr_incr votes' (bst_seed cands).

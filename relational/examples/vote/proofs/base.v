@@ -9,6 +9,7 @@ From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
 From cryptis.hyper.lib Require Import avl_spec.
+From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl.
 
 Set Implicit Arguments.
@@ -212,34 +213,6 @@ case: (Spec.openP (Spec.pkey skV) t) Hiff => [k w Hk -> Hiff|Hiff].
   rewrite Hnone. by iLeft.
 Qed.
 
-(** * Token bookkeeping *)
-
-Lemma token_flow_map t :
-  term_token t ⊤ -∗
-  term_token t (↑cryptisN.@"public_rel".@"flow") ∗
-  term_token t (↑cryptisN.@"public_rel".@"map") ∗
-  term_token t (⊤ ∖ ↑cryptisN.@"public_rel".@"flow" ∖ ↑cryptisN.@"public_rel".@"map").
-Proof.
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"flow") ⊤) //.
-iIntros "[$ tok]".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-by iDestruct "tok" as "[$ $]".
-Qed.
-
-Lemma token_spec_flow_map t :
-  term_token_spec t ⊤ -∗
-  term_token_spec t (↑cryptisN.@"public_rel".@"flow") ∗
-  term_token_spec t (↑cryptisN.@"public_rel".@"map") ∗
-  term_token_spec t (⊤ ∖ ↑cryptisN.@"public_rel".@"flow" ∖ ↑cryptisN.@"public_rel".@"map").
-Proof.
-rewrite (term_token_spec_difference t (↑cryptisN.@"public_rel".@"flow") ⊤) //.
-iIntros "[$ tok]".
-rewrite (term_token_spec_difference t (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-by iDestruct "tok" as "[$ $]".
-Qed.
-
 (** * Key generation *)
 
 Lemma rel_mk_arb_key K K' Ψ :
@@ -258,41 +231,25 @@ have Hdisj : ∀ sk : aenc_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]").
-{ iIntros "%sk". by rewrite big_sepS_empty. }
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+  [solve_minted_iff.. |].
 iIntros (skT) "%Hnonce #mint_sk token_s _ token_pk".
-rewrite big_sepS_singleton.
-rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]").
-{ iIntros "%sk". by rewrite big_sepS_empty. }
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+  [solve_minted_iff.. |].
 iIntros (skT') "%Hnonce' #mint_sk' token_s' _ token_pk'".
-rewrite big_sepS_singleton.
-iDestruct (token_flow_map with "token_s") as "(_ & token_s_map & token_s_rest)".
-iDestruct (token_spec_flow_map with "token_s'") as "(_ & token_s'_map & token_s'_rest)".
-iMod (seals_auth_l_alloc with "token_s_rest") as "[seals _]"; first solve_ndisj.
-iMod (seals_auth_r_alloc with "token_s'_rest") as "[seals' _]"; first solve_ndisj.
-iMod (public_rel_secret_l_2 (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s_map")
-  as "#secret_s".
-iMod (public_rel_secret_r_2 (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'_map")
-  as "#secret_s'".
-iDestruct (token_flow_map with "token_pk") as "(token_pk_flow & token_pk_map & _)".
-iDestruct (token_spec_flow_map with "token_pk'") as "(token_pk'_flow & token_pk'_map & _)".
-iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey skT) ltac:(solve_ndisj)
-        with "Hctx token_pk_flow") as "prot_pk".
-iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey skT') ltac:(solve_ndisj)
-        with "Hctx token_pk'_flow") as "prot_pk'".
-iAssert (□ (publicly_linked (Spec.pkey skT) (Spec.pkey skT') -∗
-            PUB⟨Spec.pkey skT, Spec.pkey skT'⟩))%I as "#Hwand".
+split_term_tokens.
+iMod (public_rel_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
+  as "(#secret_s & seals & _ & _)".
+iMod (public_rel_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
+  as "(#secret_s' & seals' & _ & _)".
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] token_pk token_pk'")
+  as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
   do 3 (iSplit; first done).
   iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
-iMod (public_rel_extend (E:=⊤) (Spec.pkey skT) (Spec.pkey skT') ltac:(solve_ndisj)
-        with "Hctx Hwand prot_pk prot_pk' token_pk_map token_pk'_map") as "#elem_pk".
 iMod (inv_alloc urnN _ (urn_inv skT skT') with "[seals seals']") as "#Hurn".
 { iNext. iExists ∅, ∅. iFrame. }
-iApply "post". do 4 (iSplit; first done). iSplit; first by iApply "Hwand".
-by iFrame "#".
+iApply "post". do 4 (iSplit; first done). by iFrame "#".
 Qed.
 
 Lemma rel_mk_voter_key K K' skT skT' v v' Ψ :
@@ -312,63 +269,34 @@ have Hdisj : ∀ sk : sign_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_sign_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]").
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+rel_apply_l (rel_mk_sign_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
+  [solve_minted_iff.. |].
 iIntros (skV) "%Hnonce #mint_sk token_s token_sk token_pk".
-rewrite !big_sepS_singleton.
-rel_apply_r (rel_mk_sign_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]").
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+rel_apply_r (rel_mk_sign_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
+  [solve_minted_iff.. |].
 iIntros (skV') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
-rewrite !big_sepS_singleton.
-(* Seeds: secret, and protecting the signing keys. *)
-iDestruct (token_flow_map with "token_s") as "(token_s_flow & token_s_map & token_s_rest)".
-iDestruct (token_spec_flow_map with "token_s'") as "(token_s'_flow & token_s'_map & token_s'_rest)".
-iMod (seals_auth_l_alloc with "token_s_rest") as "[seals token_s_rest]"; first solve_ndisj.
-iMod (seals_auth_r_alloc with "token_s'_rest") as "[seals' _]"; first solve_ndisj.
+split_term_tokens.
+(* Seeds: secret; they protect the signing keys, which are secret in turn. *)
+iMod (public_rel_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
+  as "(#secret_s & seals & prot_s & token_s)".
+iMod (public_rel_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
+  as "(#secret_s' & seals' & prot_s' & _)".
 rewrite (term_token_difference (seed_of_sign_key skV) (↑signedN)
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow" ∖ ↑cryptisN.@"public_rel".@"map"
-              ∖ ↑cryptisN.@"public_rel".@"seal")); last solve_ndisj.
-iDestruct "token_s_rest" as "[token_signed _]".
-iMod (public_rel_flow_l_extend (E:=⊤) (seed_of_sign_key skV) ltac:(solve_ndisj)
-        with "Hctx token_s_flow") as "prot_s".
-iMod (public_rel_flow_l_grow_5 (E:=⊤) Hnonce ltac:(solve_ndisj)
-        (is_immediate_subterm_sign_key skV)
-        with "Hctx prot_s token_s_map") as "(prot_s & protby_sk & token_s_map)".
-iMod (public_rel_flow_r_extend (E:=⊤) (seed_of_sign_key skV') ltac:(solve_ndisj)
-        with "Hctx token_s'_flow") as "prot_s'".
-iMod (public_rel_flow_r_grow_5 (E:=⊤) Hnonce' ltac:(solve_ndisj)
-        (is_immediate_subterm_sign_key skV')
-        with "Hctx prot_s' token_s'_map") as "(prot_s' & protby_sk' & token_s'_map)".
-iMod (public_rel_secret_l_2 (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s_map")
-  as "#secret_s".
-iMod (public_rel_secret_r_2 (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'_map")
-  as "#secret_s'".
-(* Signing keys: secret. *)
-iDestruct (token_flow_map with "token_sk") as "(_ & token_sk_map & _)".
-iDestruct (token_spec_flow_map with "token_sk'") as "(_ & token_sk'_map & _)".
-iMod (public_rel_secret_l (E:=⊤) with "Hctx protby_sk token_sk_map")
-  as "[_ #secret_sk]"; first solve_ndisj.
-iMod (public_rel_secret_r (E:=⊤) with "Hctx protby_sk' token_sk'_map")
-  as "[_ #secret_sk']"; first solve_ndisj.
+           (⊤ ∖ ↑cryptisN.@"public_rel")); last solve_ndisj.
+iDestruct "token_s" as "[token_signed _]".
+iMod (public_rel_secret_step_l (E:=⊤) (is_immediate_subterm_sign_key skV)
+        ltac:(solve_ndisj) with "Hctx secret_s prot_s token_sk") as "(#secret_sk & _ & _)".
+iMod (public_rel_secret_step_r (E:=⊤) (is_immediate_subterm_sign_key skV')
+        ltac:(solve_ndisj) with "Hctx secret_s' prot_s' token_sk'") as "(#secret_sk' & _ & _)".
 (* Verification keys: publicly related. *)
-iDestruct (token_flow_map with "token_pk") as "(token_pk_flow & token_pk_map & _)".
-iDestruct (token_spec_flow_map with "token_pk'") as "(token_pk'_flow & token_pk'_map & _)".
-iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey skV) ltac:(solve_ndisj)
-        with "Hctx token_pk_flow") as "prot_pk".
-iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey skV') ltac:(solve_ndisj)
-        with "Hctx token_pk'_flow") as "prot_pk'".
-iMod (public_rel_extend (E:=⊤) (Spec.pkey skV) (Spec.pkey skV') ltac:(solve_ndisj)
-        with "Hctx [] prot_pk prot_pk' token_pk_map token_pk'_map") as "#elem_pk".
-{ iIntros "#elem". by iApply (pub_verify_key with "mint_sk mint_sk' secret_s secret_s' elem"). }
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] token_pk token_pk'")
+  as "[#elem_pk #pub_pk]".
+{ iIntros "!> #elem". by iApply (pub_verify_key with "mint_sk mint_sk' secret_s secret_s' elem"). }
 iMod (inv_alloc ballotN _ (ballot_inv skV skV' skT skT' v v') with "[seals seals']")
   as "#Hballot".
 { iNext. iLeft. iFrame. }
 iApply ("post" with "[] token_signed").
-do 4 (iSplit; first done).
-iSplit; first by iApply (pub_verify_key with "mint_sk mint_sk' secret_s secret_s' elem_pk").
-by iFrame "#".
+do 4 (iSplit; first done). by iFrame "#".
 Qed.
 
 Definition pkeys ks : list term := map (λ sk : sign_key, Spec.pkey sk) ks.
