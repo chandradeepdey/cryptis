@@ -457,6 +457,14 @@ Inductive is_immediate_subterm : term → term → Prop :=
   | SubtermSealBody k t1 : is_immediate_subterm t1 (TSeal k t1)
   | SubtermHash t1 : is_immediate_subterm t1 (THash t1).
 
+Lemma is_immediate_subterm_aenc_key (sk : aenc_key) :
+  is_immediate_subterm (seed_of_aenc_key sk) sk.
+Proof. rewrite [term_of_aenc_key]unlock. exact: SubtermKey. Qed.
+
+Lemma is_immediate_subterm_sign_key (sk : sign_key) :
+  is_immediate_subterm (seed_of_sign_key sk) sk.
+Proof. rewrite [term_of_sign_key]unlock. exact: SubtermKey. Qed.
+
 Definition public_rel_flow_l_auth flow_l : iProp :=
   own public_rel_flow_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> flow_l)) ∗
   [∗ map] t ↦ ts ∈ flow_l,

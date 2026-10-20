@@ -25,29 +25,6 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-(** * Pure facts *)
-
-Lemma tag_inj T t1 t2 : Spec.tag T t1 = Spec.tag T t2 → t1 = t2.
-Proof.
-move=> e. have := f_equal (Spec.untag T) e. by rewrite !Spec.tagK => - [].
-Qed.
-
-Lemma dec_aenc skT T t :
-  Spec.dec skT T (TSeal (Spec.pkey skT) (Spec.tag T t)) = Some t.
-Proof.
-by rewrite /Spec.dec /Spec.open decide_True ?Spec.open_key_aenc // Spec.tagK.
-Qed.
-
-Lemma dec_sign skV T t :
-  Spec.dec (Spec.pkey skV) T (TSeal skV (Spec.tag T t)) = Some t.
-Proof.
-by rewrite /Spec.dec /Spec.open decide_True ?Spec.open_key_sign // Spec.tagK.
-Qed.
-
-Lemma is_immediate_subterm_sign_key skV :
-  is_immediate_subterm (seed_of_sign_key skV) skV.
-Proof. rewrite [term_of_sign_key]unlock. exact: SubtermKey. Qed.
-
 (** * Ghost state *)
 
 Definition ballot_ct skT n v : term :=

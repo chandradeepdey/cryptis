@@ -347,6 +347,14 @@ case: k_t k1 => [] // kt1 ? [] //= kt2 ? in k_t_k2 k1_k2 *.
 case: kt1 kt2 => [] //= [] //= in k_t_k2 k1_k2 *; congruence.
 Qed.
 
+Lemma dec_aenc_key (sk : aenc_key) c t :
+  dec sk c (TSeal (pkey sk) (tag c t)) = Some t.
+Proof. by rewrite /dec /open decide_True ?open_key_aenc // tagK. Qed.
+
+Lemma dec_sign_key (sk : sign_key) c t :
+  dec (pkey sk) c (TSeal sk (tag c t)) = Some t.
+Proof. by rewrite /dec /open decide_True ?open_key_sign // tagK. Qed.
+
 Definition zero : term := TInt 0.
 
 End Spec.

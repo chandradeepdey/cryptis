@@ -94,7 +94,7 @@ rewrite IH // Forall_cons. split; [by split; eauto | by case].
 Qed.
 
 Lemma vote_of_ballot skT n (v : Z) : vote_of skT (ballot_ct skT n (TInt v)) = Some v.
-Proof. by rewrite /vote_of /ballot_ct /Spec.enc dec_aenc. Qed.
+Proof. by rewrite /vote_of /ballot_ct /Spec.enc Spec.dec_aenc_key. Qed.
 
 Lemma tally_slots_l_eq skT skT' ks votes votes' st acc :
   length st = length ks → length votes = length ks →
@@ -377,11 +377,11 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
     iExists (o :: st'). iPureIntro. do 2 (split; first done).
     split; [by rewrite /= Hlen' | by split].
   + rel_apply_l rel_verify'_l. iModIntro. iSplit; last first.
-    { iIntros (Hdec). by rewrite dec_sign in Hdec. }
-    iIntros (u e _). case: e => /tag_inj <-.
+    { iIntros (Hdec). by rewrite Spec.dec_sign_key in Hdec. }
+    iIntros (u e _). case: e => /Spec.tag_inj [_ <-].
     rel_apply_r rel_verify'_r. iSplit; last first.
-    { iIntros (Hdec). by rewrite dec_sign in Hdec. }
-    iIntros (u' e' _). case: e' => /tag_inj <-.
+    { iIntros (Hdec). by rewrite Spec.dec_sign_key in Hdec. }
+    iIntros (u' e' _). case: e' => /Spec.tag_inj [_ <-].
     rel_pures_l. rel_pures_r. rel_values. iModIntro.
     iExists (Some (ballot_ct skT n (TInt v), ballot_ct skT' n' (TInt v')) :: st).
     iPureIntro. do 2 (split; first done). split; first done. split; last done.
