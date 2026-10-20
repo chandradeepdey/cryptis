@@ -1,3 +1,51 @@
+(** Some ghost state updates for [public_rel_inv]. The right hand side lemmas
+  are identical, but used primed names and refer to [term_meta_spec] instead of
+  [term_meta] wherever applicable.
+
+[FlowUpdates]
+  - [public_rel_flow_l_extend] consumes the flow token for [t] and adds it
+    to [flow_l].
+  - The [public_rel_flow_l_grow] family marks [tsup] as protected by [t].
+    + [public_rel_flow_l_grow] is allowed when [t] already protects another term,
+      thus already satisfying the conditions of the invariant.
+    + [public_rel_flow_l_grow_2] is allowed when [t] already maps to [Secret] in
+      [map_l]. The constraints on this [t] allows it to protect [tsub].
+    + [public_rel_flow_l_grow_3] is allowed when [t] is not already in [map_l],
+      has a protector [tsub] to satisfy the protection chain requirement, and has
+      not protected anything before.
+    + [public_rel_flow_l_grow_4] is the same as [public_rel_flow_l_grow_3],
+      except [t] is marked [Private t1'] in [map_l].
+    + [public_rel_flow_l_grow_5] is the same as [public_rel_flow_l_grow_3],
+      except [t] is a nonce, and so does not need a protector.
+    + [public_rel_flow_l_grow_6] is the same as [public_rel_flow_l_grow_5],
+      except [t] is marked [Private t1'] in [map_l].
+  - The [public_rel_flow_l_shrink] family removes [tsup] from the protection of
+    [t].
+    + [public_rel_flow_l_shrink] is allowed when [tsup] has an alternative
+      protector [t1].
+    + [public_rel_flow_l_shrink_2] is allowed when [tsup] itself is not
+      protecting anything above it, and it is not in the map.
+    + [public_rel_flow_l_shrink_3] is allowed when [tsup] has been marked
+      [Public t'] in [map_l].
+
+[MapUpdates]
+- The [public_rel_map_l_extend] family adds [t ↦ Private t'] in [map_l].
+  + [public_rel_map_l_extend] is allowed when [t] is protected by a subterm.
+  + [public_rel_map_l_extend_2] is the same as [public_rel_map_l_extend], except
+    [t] is a nonce, and so does not need a protector.
+- The [linked_extend] family provides convenience wrappers around the possible
+  combinations of [public_rel_map_l_extend] and [public_rel_map_r_extend].
+- [public_rel_lock_Secret_l] turns [t ↦ Private t'] into [t ↦ Secret].
+- The [public_rel_secret_l] family directly produce [t ↦ Secret].
+  + [public_rel_secret_l] is allowed when [t] is protected by some subterm
+    [tsub], satisfying the protection chain requirement.
+  + [public_rel_secret_l_2] is the same as [public_rel_secret_l], except [t] is a
+    nonce, and so does not require protection.
+- The [public_rel_lock_Public] family and [public_rel_extend] produce
+  [publicly_linked]. They accept various combinations of not being in the map
+  already and being marked [Private] in the map. See the comment there for more
+  details. *)
+
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
