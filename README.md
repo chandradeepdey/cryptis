@@ -7,7 +7,8 @@ The material covered in the paper can be found in the following files:
 In the `cryptis` directory you will find:
 
 - `lib/*, lib`: General additions to Iris, MathComp, and stdpp; Diffie–Hellman and HMQV
-  key-exchange and ghost-state helpers; list-manipulation programs for HeapLang.
+  key-exchange and ghost-state helpers; list-manipulation programs and AVL maps
+  (`lib/avl`) for HeapLang.
 - `core/*`, `cryptis`: Core Cryptis components: cryptographic terms, the
   `public` predicate, encryption predicates, and term metadata.
 - `primitives/*`, `primitives`: HeapLang functions for manipulating
@@ -80,6 +81,12 @@ Its case studies live in `relational/examples`:
 
 - `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
   encryption.
+- `vote`: vote privacy for an election with any number of voters and
+  candidates (`vote/impl.v` + per-role `proofs/`; game is in its own file).
+  Voters sign encrypted ballots; the arbitrator accepts them in any order,
+  tallies them in an AVL map and publishes the in-order listing.  Two
+  assignments of votes to voters with the same count per candidate are
+  contextually equivalent, although the two runs build different trees.
 
 ## Building
 
