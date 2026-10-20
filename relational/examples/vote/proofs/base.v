@@ -356,12 +356,12 @@ rewrite (term_token_difference (seed_of_sign_key skV) (↑signedN)
 iDestruct "token_s_rest" as "[token_signed _]".
 iMod (public_rel_flow_l_extend (E:=⊤) (seed_of_sign_key skV) ltac:(solve_ndisj)
         with "Hctx token_s_flow") as "prot_s".
-iMod (public_rel_flow_l_grow_2 (E:=⊤) Hnonce ltac:(solve_ndisj)
+iMod (public_rel_flow_l_grow_5 (E:=⊤) Hnonce ltac:(solve_ndisj)
         (is_immediate_subterm_sign_key skV)
         with "Hctx prot_s token_s_map") as "(prot_s & protby_sk & token_s_map)".
 iMod (public_rel_flow_r_extend (E:=⊤) (seed_of_sign_key skV') ltac:(solve_ndisj)
         with "Hctx token_s'_flow") as "prot_s'".
-iMod (public_rel_flow_r_grow_2 (E:=⊤) Hnonce' ltac:(solve_ndisj)
+iMod (public_rel_flow_r_grow_5 (E:=⊤) Hnonce' ltac:(solve_ndisj)
         (is_immediate_subterm_sign_key skV')
         with "Hctx prot_s' token_s'_map") as "(prot_s' & protby_sk' & token_s'_map)".
 iMod (public_rel_secret_l_2 (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s_map")

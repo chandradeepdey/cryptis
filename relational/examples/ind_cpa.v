@@ -175,7 +175,7 @@ have Hsub_tg' : is_immediate_subterm pl' tg'.
 { rewrite /tg' [Spec.tag]unlock. exact: SubtermPairR. }
 iMod (public_rel_flow_l_extend (E:=⊤) n ltac:(solve_ndisj)
         with "Hctx tt_n_flow") as "prot_n".
-iMod (public_rel_flow_l_grow_2 (E:=⊤) Hn ltac:(solve_ndisj) Hsub_pl
+iMod (public_rel_flow_l_grow_5 (E:=⊤) Hn ltac:(solve_ndisj) Hsub_pl
         with "Hctx prot_n tt_n_map") as "(prot_n & protby_pl & tt_n_map)".
 iMod (public_rel_flow_l_extend (E:=⊤) pl ltac:(solve_ndisj)
         with "Hctx tt_pl_flow") as "prot_pl".
@@ -183,7 +183,7 @@ iMod (public_rel_flow_l_grow_3 (E:=⊤) n ltac:(solve_ndisj) Hsub_tg
         with "Hctx protby_pl prot_pl tt_pl_map") as "(prot_pl & protby_tg & protby_pl & tt_pl_map)".
 iMod (public_rel_flow_r_extend (E:=⊤) n' ltac:(solve_ndisj)
         with "Hctx tts_n_flow") as "prot_n'".
-iMod (public_rel_flow_r_grow_2 (E:=⊤) Hn' ltac:(solve_ndisj) Hsub_pl'
+iMod (public_rel_flow_r_grow_5 (E:=⊤) Hn' ltac:(solve_ndisj) Hsub_pl'
         with "Hctx prot_n' tts_n_map") as "(prot_n' & protby_pl' & tts_n_map)".
 iMod (public_rel_flow_r_extend (E:=⊤) pl' ltac:(solve_ndisj)
         with "Hctx tts_pl_flow") as "prot_pl'".
