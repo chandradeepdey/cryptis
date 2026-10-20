@@ -201,3 +201,6 @@ relational/rel_adequacy.v
 
 relational/examples/ind_cpa.v
 relational/examples/ind_cca2.v
+relational/examples/vote/impl.v
+relational/examples/vote/proofs/base.v
+relational/examples/vote/proofs/voter.v
