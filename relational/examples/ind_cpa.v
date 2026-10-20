@@ -4,7 +4,7 @@ From reloc Require Import reloc.
 From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
 From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
-From cryptis.hyper Require Import rel_adequacy.
+From cryptis.hyper Require Import rel_adequacy proofmode.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -63,134 +63,41 @@ Lemma rel_aenc' (skA skA' : aenc_key) (m m' : term) (Ψ : val → val → iProp)
    << aenc' (Spec.pkey skA') m' : Ψ.
 Proof.
 iIntros "#Hctx seals_l seals_r %Hnonce_a #mint_pk #mint_spec_pk' #elem_pk #secret_a #mint_m #mint_spec_m' post".
-rewrite /aenc'.
-rel_pures_l. rel_pures_r.
+rewrite /aenc'. rel_pures.
 rel_apply_l (rel_mk_nonce_l _ _
   (λ n, {[ n;
            Spec.of_list [n; m];
            Spec.tag (Tag (N.@"m")) (Spec.of_list [n; m]);
            Spec.enc (Spec.pkey skA) (Tag (N.@"m")) (Spec.of_list [n; m]) ]})
-  with "[//]").
-{ iIntros "%t". rewrite big_sepS_forall. iIntros (t' Ht').
-  rewrite !elem_of_union !elem_of_singleton in Ht'.
-  case: Ht' => [[[->|->]|->]|->]; iModIntro.
-  - by iSplit; iIntros "?".
-  - rewrite minted_of_list /=. iSplit; iIntros "#H".
-    + by iFrame "#".
-    + by iDestruct "H" as "[? _]".
-  - rewrite minted_tag minted_of_list /=. iSplit; iIntros "#H".
-    + by iFrame "#".
-    + by iDestruct "H" as "[? _]".
-  - rewrite /Spec.enc minted_TSeal minted_tag minted_of_list /=. iSplit; iIntros "#H".
-    + by iFrame "#".
-    + by iDestruct "H" as "[_ [? _]]". }
+  with "[//]"); first solve_minted_iff.
 iIntros (n) "%Hn #mint_n Htt".
 rel_apply_r (rel_mk_nonce_r _ _
   (λ n, {[ n;
            Spec.of_list [n; m'];
            Spec.tag (Tag (N.@"m")) (Spec.of_list [n; m']);
            Spec.enc (Spec.pkey skA') (Tag (N.@"m")) (Spec.of_list [n; m']) ]})
-  with "[//]").
-{ iIntros "%t". rewrite big_sepS_forall. iIntros (t' Ht').
-  rewrite !elem_of_union !elem_of_singleton in Ht'.
-  case: Ht' => [[[->|->]|->]|->]; iModIntro.
-  - by iSplit; iIntros "?".
-  - rewrite minted_spec_of_list /=. iSplit; iIntros "#H".
-    + by iFrame "#".
-    + by iDestruct "H" as "[? _]".
-  - rewrite minted_spec_tag minted_spec_of_list /=. iSplit; iIntros "#H".
-    + by iFrame "#".
-    + by iDestruct "H" as "[? _]".
-  - rewrite /Spec.enc minted_spec_TSeal minted_spec_tag minted_spec_of_list /=.
-    iSplit; iIntros "#H".
-    + by iFrame "#".
-    + by iDestruct "H" as "[_ [? _]]". }
+  with "[//]"); first solve_minted_iff.
 iIntros (n') "%Hn' #mint_spec_n' Htts".
+split_term_tokens.
+iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
+iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
 set pl := Spec.of_list [n; m].
 set tg := Spec.tag (Tag (N.@"m")) pl.
 set c := Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl.
 set pl' := Spec.of_list [n'; m'].
 set tg' := Spec.tag (Tag (N.@"m")) pl'.
 set c' := Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'.
-case/is_nonceP: (Hn) => [an En]. case/is_nonceP: (Hn') => [an' En'].
-(* Split the tokens. *)
-have Hd_c : ({[n]} ∪ {[pl]} ∪ {[tg]} : gset term) ## {[c]}.
-{ rewrite /c /tg /pl /Spec.enc [Spec.tag]unlock [Spec.of_list]unlock En /=. set_solver. }
-have Hd_tg : ({[n]} ∪ {[pl]} : gset term) ## {[tg]}.
-{ rewrite /tg /pl [Spec.tag]unlock [Spec.of_list]unlock [Tag]unlock En /=. set_solver. }
-have Hd_pl : ({[n]} : gset term) ## {[pl]}.
-{ rewrite /pl [Spec.of_list]unlock En /=. set_solver. }
-have Hd_c' : ({[n']} ∪ {[pl']} ∪ {[tg']} : gset term) ## {[c']}.
-{ rewrite /c' /tg' /pl' /Spec.enc [Spec.tag]unlock [Spec.of_list]unlock En' /=. set_solver. }
-have Hd_tg' : ({[n']} ∪ {[pl']} : gset term) ## {[tg']}.
-{ rewrite /tg' /pl' [Spec.tag]unlock [Spec.of_list]unlock [Tag]unlock En' /=. set_solver. }
-have Hd_pl' : ({[n']} : gset term) ## {[pl']}.
-{ rewrite /pl' [Spec.of_list]unlock En' /=. set_solver. }
-rewrite big_sepS_union // big_sepS_union // big_sepS_union // !big_sepS_singleton.
-iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
-rewrite big_sepS_union // big_sepS_union // big_sepS_union // !big_sepS_singleton.
-iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
-rewrite (term_token_difference n (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "tt_n" as "[tt_n_flow tt_n]".
-rewrite (term_token_difference n (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tt_n" as "[tt_n_map _]".
-rewrite (term_token_difference pl (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "tt_pl" as "[tt_pl_flow tt_pl]".
-rewrite (term_token_difference pl (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tt_pl" as "[tt_pl_map _]".
-rewrite (term_token_difference tg (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
-iDestruct "tt_tg" as "[tt_tg_map _]".
-rewrite (term_token_difference c (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "tt_c" as "[tt_c_flow tt_c]".
-rewrite (term_token_difference c (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tt_c" as "[tt_c_map _]".
-rewrite (term_token_spec_difference n' (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "tts_n" as "[tts_n_flow tts_n]".
-rewrite (term_token_spec_difference n' (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tts_n" as "[tts_n_map _]".
-rewrite (term_token_spec_difference pl' (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "tts_pl" as "[tts_pl_flow tts_pl]".
-rewrite (term_token_spec_difference pl' (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tts_pl" as "[tts_pl_map _]".
-rewrite (term_token_spec_difference tg' (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
-iDestruct "tts_tg" as "[tts_tg_map _]".
-rewrite (term_token_spec_difference c' (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "tts_c" as "[tts_c_flow tts_c]".
-rewrite (term_token_spec_difference c' (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tts_c" as "[tts_c_map _]".
 (* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
-have Hsub_pl : is_immediate_subterm n pl.
-{ rewrite /pl [Spec.of_list]unlock /=. exact: SubtermPairL. }
-have Hsub_tg : is_immediate_subterm pl tg.
-{ rewrite /tg [Spec.tag]unlock. exact: SubtermPairR. }
-have Hsub_pl' : is_immediate_subterm n' pl'.
-{ rewrite /pl' [Spec.of_list]unlock /=. exact: SubtermPairL. }
-have Hsub_tg' : is_immediate_subterm pl' tg'.
-{ rewrite /tg' [Spec.tag]unlock. exact: SubtermPairR. }
-iMod (public_rel_flow_l_extend (E:=⊤) n ltac:(solve_ndisj)
-        with "Hctx tt_n_flow") as "prot_n".
-iMod (public_rel_flow_l_grow_5 (E:=⊤) Hn ltac:(solve_ndisj) Hsub_pl
-        with "Hctx prot_n tt_n_map") as "(prot_n & protby_pl & tt_n_map)".
-iMod (public_rel_flow_l_extend (E:=⊤) pl ltac:(solve_ndisj)
-        with "Hctx tt_pl_flow") as "prot_pl".
-iMod (public_rel_flow_l_grow_3 (E:=⊤) n ltac:(solve_ndisj) Hsub_tg
-        with "Hctx protby_pl prot_pl tt_pl_map") as "(prot_pl & protby_tg & protby_pl & tt_pl_map)".
-iMod (public_rel_flow_r_extend (E:=⊤) n' ltac:(solve_ndisj)
-        with "Hctx tts_n_flow") as "prot_n'".
-iMod (public_rel_flow_r_grow_5 (E:=⊤) Hn' ltac:(solve_ndisj) Hsub_pl'
-        with "Hctx prot_n' tts_n_map") as "(prot_n' & protby_pl' & tts_n_map)".
-iMod (public_rel_flow_r_extend (E:=⊤) pl' ltac:(solve_ndisj)
-        with "Hctx tts_pl_flow") as "prot_pl'".
-iMod (public_rel_flow_r_grow_3 (E:=⊤) n' ltac:(solve_ndisj) Hsub_tg'
-        with "Hctx protby_pl' prot_pl' tts_pl_map") as "(prot_pl' & protby_tg' & protby_pl' & tts_pl_map)".
-iMod (linked_extend (E:=⊤) tg tg' pl pl' ltac:(solve_ndisj)
-        with "Hctx protby_tg protby_tg' tt_tg_map tts_tg_map") as "(_ & _ & #priv_tg & _ & _)".
+iMod (public_rel_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
+iMod (public_rel_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx protby_pl tt_pl") as "protby_tg".
+iMod (public_rel_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx tts_n") as "protby_pl'".
+iMod (public_rel_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
+iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
+        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#priv_tg".
 (* The secret keys can never become publicly related. *)
 iAssert (□ (PUB⟨skA, skA'⟩ → PUB⟨pl, pl'⟩))%I as "#Hbox".
 { iIntros "!> #Hsk". iExFalso.
@@ -206,27 +113,15 @@ iMod (seals_auth_l_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
         with "seals_l") as "[seals_l #Hin_l]".
 iMod (seals_auth_r_insert _ _ (Some (skA : term, tg), Some (skA' : term, tg'))
         with "seals_r") as "[seals_r #Hin_r]".
-iAssert (□ (publicly_linked c c' -∗ PUB⟨c, c'⟩))%I as "#Hwand".
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tt_c tts_c")
+  as "[_ #Hpub_c]".
 { iIntros "!> #elem_c". rewrite publicly_related_aenc. iRight.
   do 5 (iSplit; first done).
   iSplit; first by iApply publicly_linked_linked.
   iSplit; first done. iSplit; first done.
   by iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r"). }
-iMod (public_rel_flow_l_extend (E:=⊤) c ltac:(solve_ndisj)
-        with "Hctx tt_c_flow") as "prot_c".
-iMod (public_rel_flow_r_extend (E:=⊤) c' ltac:(solve_ndisj)
-        with "Hctx tts_c_flow") as "prot_c'".
-iMod (public_rel_extend (E:=⊤) c c' ltac:(solve_ndisj)
-        with "Hctx Hwand prot_c prot_c' tt_c_map tts_c_map") as "#elem_c".
 (* Run the program. *)
-rel_pures_l. rel_pures_r.
-rel_apply_l rel_nil_l.
-repeat rel_apply_l rel_cons_l. rel_apply_l rel_term_of_list_l.
-rel_apply_r rel_nil_r.
-repeat rel_apply_r rel_cons_r. rel_apply_r rel_term_of_list_r.
-rel_apply_l rel_aenc'_l. iModIntro.
-rel_apply_r rel_aenc'_r.
-rel_values. iApply "post". by iApply "Hwand".
+rel_prims. rel_values. by iApply "post".
 Qed.
 
 Lemma rel_alice c c' (b b' : bool) :
@@ -234,8 +129,7 @@ Lemma rel_alice c c' (b b' : bool) :
   channel_rel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
 Proof.
-iIntros "#Hctx #Hc". rewrite /alice.
-rel_pures_l. rel_pures_r.
+iIntros "#Hctx #Hc". rewrite /alice. rel_pures.
 have Hdisj : ∀ sk : aenc_key,
     seed_of_aenc_key sk ∉ (∅ : gset term) ∧
     seed_of_aenc_key sk ∉ ({[Spec.pkey sk]} : gset term) ∧
@@ -245,98 +139,51 @@ have Hdisj : ∀ sk : aenc_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]").
-{ iIntros "%sk". by rewrite big_sepS_empty. }
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+  [solve_minted_iff.. |].
 iIntros (skA) "%Hnonce_a #mint_skA token_a _ token_pkA".
-rewrite big_sepS_singleton.
-rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]").
-{ iIntros "%sk". by rewrite big_sepS_empty. }
-{ iIntros "%sk". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
+rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+  [solve_minted_iff.. |].
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
-rewrite big_sepS_singleton.
-rel_pures_l. rel_pures_r.
-rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
-rel_pures_l. rel_pures_r.
-(* Tokens. *)
-rewrite (term_token_difference (seed_of_aenc_key skA) (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
-iDestruct "token_a" as "[token_a token_a_rest]".
-iMod (seals_auth_l_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
-        with "token_a_rest") as "[seals_a _]".
-rewrite (term_token_spec_difference (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"map") ⊤)=> //.
-iDestruct "token_spec_a" as "[token_spec_a token_spec_a_rest]".
-iMod (seals_auth_r_alloc _ (⊤ ∖ ↑cryptisN.@"public_rel".@"map") ltac:(solve_ndisj)
-        with "token_spec_a_rest") as "[seals_a' _]".
-rewrite (term_token_difference (Spec.pkey skA)
-           (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "token_pkA" as "[token_pkA_flow token_pkA]".
-rewrite (term_token_difference (Spec.pkey skA)
-           (↑cryptisN.@"public_rel".@"map") (⊤ ∖ ↑cryptisN.@"public_rel".@"flow"));
-  last solve_ndisj.
-iDestruct "token_pkA" as "[token_pkA_map _]".
-rewrite (term_token_spec_difference (Spec.pkey skA')
-           (↑cryptisN.@"public_rel".@"flow") ⊤)=> //.
-iDestruct "token_spec_pkA'" as "[token_spec_pkA_flow token_spec_pkA']".
-rewrite (term_token_spec_difference (Spec.pkey skA')
-           (↑cryptisN.@"public_rel".@"map") (⊤ ∖ ↑cryptisN.@"public_rel".@"flow"));
-  last solve_ndisj.
-iDestruct "token_spec_pkA'" as "[token_spec_pkA_map _]".
+split_term_tokens. rel_prims.
 (* The seeds never become public. *)
-iMod (public_rel_secret_l_2 (E:=⊤) Hnonce_a ltac:(solve_ndisj) with "Hctx token_a") as "#secret_a".
-iMod (public_rel_secret_r_2 (E:=⊤) Hnonce_a' ltac:(solve_ndisj) with "Hctx token_spec_a") as "#secret_a'".
+iMod (public_rel_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
+        with "Hctx token_a") as "(#secret_a & seals_a & _ & _)".
+iMod (public_rel_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
+        with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
 (* The public keys are publicly related. *)
-iMod (public_rel_flow_l_extend (E:=⊤) (Spec.pkey skA) ltac:(solve_ndisj)
-        with "Hctx token_pkA_flow") as "prot_pkA".
-iMod (public_rel_flow_r_extend (E:=⊤) (Spec.pkey skA') ltac:(solve_ndisj)
-        with "Hctx token_spec_pkA_flow") as "prot_pkA'".
-iAssert (□ (publicly_linked (Spec.pkey skA) (Spec.pkey skA') -∗
-            PUB⟨Spec.pkey skA, Spec.pkey skA'⟩))%I as "#Hwand".
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+        with "Hctx [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
   do 3 (iSplit; first done).
   iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
-iMod (public_rel_extend (E:=⊤) (Spec.pkey skA) (Spec.pkey skA')
-        ltac:(solve_ndisj)
-        with "Hctx Hwand prot_pkA prot_pkA' token_pkA_map token_spec_pkA_map") as "#elem_pkA".
-iPoseProof ("Hwand" with "elem_pkA") as "#Hpub".
-rel_bind_l (send _ _). rel_bind_r (send _ _).
-iApply refines_bind; first by iApply rel_send.
-iIntros (? ?) "[-> ->]"=> /=.
-rel_pures_l. rel_pures_r.
-rel_bind_l (recv _). rel_bind_r (recv _).
-iApply refines_bind'. iApply rel_recv=> //.
-iIntros (msg_0 msg_0') "#Hmsg_0"=> /=.
-rel_pures_l. rel_pures_r.
-rel_bind_l (recv _). rel_bind_r (recv _).
-iApply refines_bind'. iApply rel_recv=> //.
-iIntros (msg_1 msg_1') "#Hmsg_1"=> /=.
-rel_pures_l. rel_pures_r.
+rel_apply (rel_send with "Hc Hpub").
+iIntros (? ?) "[-> ->]"=> /=. rel_pures.
+rel_apply (rel_recv with "Hc").
+iIntros (msg_0 msg_0') "#Hmsg_0"=> /=. rel_pures.
+rel_apply (rel_recv with "Hc").
+iIntros (msg_1 msg_1') "#Hmsg_1"=> /=. rel_pures.
 rel_bind_l (if: _ then _ else _)%E.
 rel_bind_r (if: _ then _ else _)%E.
 iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'⌝ ∧ minted m ∧ minted_spec m')%I).
 { rewrite (publicly_related_minted msg_0) (publicly_related_minted msg_1).
   iDestruct "Hmsg_0" as "[? ?]".
   iDestruct "Hmsg_1" as "[? ?]".
-  case: b; case: b'; rel_pures_l; rel_pures_r; rel_values.
+  case: b; case: b'; rel_pures; rel_values.
   - iExists msg_0, msg_0'; iFrame "#"; eauto.
   - iExists msg_0, msg_1'; iFrame "#"; eauto.
   - iExists msg_1, msg_0'; iFrame "#"; eauto.
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
-rel_pures_l. rel_pures_r.
-rel_bind_l (aenc' _ _). rel_bind_r (aenc' _ _).
-iApply refines_bind'. iApply (rel_aenc' with "Hctx seals_a seals_a'")=> //=.
+rel_pures.
+rel_apply (rel_aenc' with "Hctx seals_a seals_a'")=> //=.
 by rewrite minted_pkey. by rewrite minted_spec_pkey.
 iIntros (c_msg c_msg') "#Hcmsg".
-rel_bind_l (send _ _). rel_bind_r (send _ _).
-iApply refines_bind; first by iApply rel_send.
-iIntros (? ?) "[-> ->]"=> /=.
-rel_pures_l. rel_pures_r.
-rel_bind_l (recv _). rel_bind_r (recv _).
-iApply refines_bind'. iApply rel_recv=> //.
+rel_apply (rel_send with "Hc Hcmsg").
+iIntros (? ?) "[-> ->]"=> /=. rel_pures.
+rel_apply (rel_recv with "Hc").
 iIntros (guess guess') "#Hguess"=> /=.
-rel_pures_l. rel_pures_r.
-rel_apply_l rel_eq_term_l. rel_apply_r rel_eq_term_r.
-rel_values.
+rel_prims. rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
         ltac:(solve_ndisj)
         with "Hctx [] Hguess") as %H.
@@ -353,19 +200,17 @@ Lemma rel_alice_guess_wrapped c c' :
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice_guess_wrapped.
-rel_pures_l. rel_pures_r.
+rel_pures.
 rel_apply_l rel_nondet_bool_l. iIntros (choice).
 rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
-case: choice; rel_pures_l; rel_pures_r.
-- rel_bind_l (alice true _). rel_bind_r (alice false _).
-  iApply refines_bind; first by iApply rel_alice.
+case: choice; rel_pures.
+- rel_apply (rel_alice with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures_l. rel_pures_r. rel_values.
+  rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
-- rel_bind_l (alice false _). rel_bind_r (alice true _).
-  iApply refines_bind; first by iApply rel_alice.
+- rel_apply (rel_alice with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures_l. rel_pures_r. rel_values.
+  rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
 Qed.
 
