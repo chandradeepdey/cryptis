@@ -186,6 +186,7 @@ relational/lib/refines.v
 relational/lib/list_spec.v
 relational/lib/list_match_spec.v
 relational/lib_spec.v
+relational/lib/avl_spec.v
 relational/core/minted_spec.v
 relational/core/term_meta_spec.v
 relational/core/rel_state.v
