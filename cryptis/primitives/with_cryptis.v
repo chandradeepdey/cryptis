@@ -56,6 +56,20 @@ Definition mk_senc_key : val := λ: <>,
   let: "n" := mk_nonce #() in
   derive_senc_key "n".
 
+(* Randomized public-key encryption: a fresh nonce is paired with the plaintext. *)
+Definition random_aenc : val := λ: "pk" "N" "t",
+  aenc "pk" "N" (tuple (mk_nonce #()) "t").
+
+Definition random_adec : val := λ: "sk" "N" "c",
+  match: adec "sk" "N" "c" with
+    SOME "pl" =>
+    match: untuple "pl" with
+      SOME "p" => SOME (Snd "p")
+    | NONE => NONE
+    end
+  | NONE => NONE
+  end.
+
 Section Proofs.
 
 Context `{!heapGS Σ, !cryptisGS Σ}.
@@ -503,6 +517,58 @@ iPoseProof (public_aencE with "p_m [//]") as "[? [p_t|[#inv #p_t]]]".
 - iApply "post" => //. by eauto.
 - iMod (lc_fupd_elim_later_pers with "c inv") as "#?".
   iApply "post" => //. by eauto.
+Qed.
+
+Lemma twp_random_adec' E k N c Ψ :
+  Ψ (repr (Spec.random_adec k N c)) ⊢
+  WP random_adec k N c @ E [{ Ψ }].
+Proof.
+iIntros "post". rewrite /random_adec /adec /Spec.random_adec. wp_pures.
+wp_apply twp_dec. case: Spec.dec => [pl|] /=; wp_pures; last by iApply "post".
+wp_apply twp_untuple. case: Spec.untuple => [[n t]|] /=; by wp_pures.
+Qed.
+
+Lemma wp_random_adec' E k N c Ψ :
+  Ψ (repr (Spec.random_adec k N c)) ⊢
+  WP random_adec k N c @ E {{ Ψ }}.
+Proof. by iIntros "?"; iApply twp_wp; iApply twp_random_adec'. Qed.
+
+Lemma wp_random_aenc (sk : aenc_key) N t φ (P : nonce → iProp Σ) Ψ :
+  cryptis_ctx -∗
+  aenc_pred N φ -∗
+  minted sk -∗
+  minted t -∗
+  (∀ n : nonce, minted n -∗ □ (public n ↔ ▷ □ P n) -∗ term_token n ⊤ ={⊤}=∗
+     (public (TPair n t) ∨ □ φ sk (TPair n t) ∧ □ (public sk → public (TPair n t))) ∗
+     (∀ m, public m → Ψ m)) -∗
+  WP random_aenc (Spec.pkey sk) (Tag N) t {{ Ψ }}.
+Proof.
+iIntros "#ctx #pred #m_sk #m_t post". rewrite /random_aenc. wp_pures.
+wp_apply (wp_mk_nonce P (λ _, False)%I with "ctx").
+iIntros (n) "#m_n #p_n _ _ token".
+iMod ("post" with "m_n p_n token") as "[#inv post]".
+wp_apply wp_tuple. iApply (wp_aenc with "pred m_sk [] inv post").
+by rewrite minted_TPair; iSplit.
+Qed.
+
+Lemma wp_random_adec (sk : aenc_key) N m φ Ψ :
+  aenc_pred N φ -∗
+  public m -∗
+  (∀ n t, minted n -∗ minted t -∗
+          public (TPair n t) ∨ □ φ sk (TPair n t) ∧ □ (public sk → public (TPair n t)) -∗
+          Ψ (SOMEV t)) ∧
+  Ψ NONEV -∗
+  WP random_adec sk (Tag N) m {{ Ψ }}.
+Proof.
+iIntros "#pred #p_m post". rewrite /random_adec. wp_pures.
+wp_bind (adec _ _ _). iApply (wp_adec with "pred p_m").
+iSplit; last by wp_pures; iDestruct "post" as "[_ post]".
+iIntros (pl) "#m_pl #inv". wp_pures. wp_apply wp_untuple.
+case e: (Spec.untuple pl) => [[n t]|] /=; wp_pures;
+  last by iDestruct "post" as "[_ post]".
+move/Spec.untuple_Some: e => ->. rewrite minted_TPair.
+iDestruct "m_pl" as "[m_n m_t]". iDestruct "post" as "[post _]".
+iModIntro. by iApply ("post" with "m_n m_t inv").
 Qed.
 
 Lemma twp_senc (sk : senc_key) N t φ Ψ :

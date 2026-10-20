@@ -1,9 +1,10 @@
 From reloc Require Import reloc.
-From cryptis Require Import cryptis.
+From cryptis Require Import lib cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
 From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.primitives Require Import simple_spec.
+From cryptis.hyper.proofmode Require Import updates tactics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -28,6 +29,7 @@ Implicit Types E : coPset.
 Implicit Types a : nonce.
 Implicit Types t : term.
 Implicit Types v : val.
+Implicit Types sk : aenc_key.
 Implicit Types φ : val → iProp Σ.
 Implicit Types Ψ : val → val → iProp Σ.
 
@@ -617,6 +619,143 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type Sign sk)
   iDestruct "post" as "[post _]".
   by iApply ("post" $! (SignKey t)) => //;
   rewrite [term_of_sign_key]unlock.
+Qed.
+
+Lemma rel_random_adec_l E K e k N c Ψ :
+  (REL fill K (repr (Spec.random_adec k N c) : expr) << e @ E : Ψ) -∗
+  REL fill K (random_adec k N c) << e @ E : Ψ.
+Proof. pure_twp_rel twp_random_adec'. Qed.
+
+Lemma rel_random_adec_r E K e k N c Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (repr (Spec.random_adec k N c) : expr) @ E : Ψ) -∗
+  REL e << fill K (random_adec k N c) @ E : Ψ.
+Proof. pure_twp_rel twp_random_adec'. Qed.
+
+(** Randomized encryption, [random_aenc], pairs a fresh nonce with the
+  plaintext before encrypting.  The nonce is what makes two ciphertexts of the
+  same key and tag indistinguishable: it is kept secret, so neither run's
+  plaintext can be recomputed and compared.  The two ciphertexts come out
+  publicly related as long as the decryption key on the left is secret.
+
+  Because the nonce is created inside the primitive, [rel_random_aenc] is the
+  one place that hands out the nonce's tokens.  A caller that builds further
+  fresh terms on top of the ciphertext, such as a signature of it, names them
+  through the token sets [T] and [T'], one per side; they must stay clear of
+  the four terms the primitive itself registers (the nonce, the pair, the
+  tagged pair and the ciphertext) and the caller gets their tokens back
+  untouched.
+
+  The ciphertexts are linked only when the caller says so: the continuation
+  receives a view shift that records the seal in the key's seal sets and
+  returns the public relation between the ciphertexts.  Running it right away
+  gives the plain spec; postponing it lets a protocol first store the
+  ciphertext under an invariant, as a decryption oracle needs. *)
+
+Definition random_terms sk (N : namespace) n m : gset term :=
+  {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
+    Spec.random_aenc (Spec.pkey sk) (Tag N) n m]}.
+
+Definition random_seal sk sk' (N : namespace) n n' m m' : wf_seal_data * wf_seal_data :=
+  (Some (sk : term, Spec.tag (Tag N) (TPair n m)),
+   Some (sk' : term, Spec.tag (Tag N) (TPair n' m'))).
+
+Lemma rel_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
+  cryptis_rel_ctx -∗
+  ⌜is_nonce (seed_of_aenc_key sk)⌝ -∗
+  minted sk -∗
+  minted_spec sk' -∗
+  publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
+  secret_in_l (seed_of_aenc_key sk) -∗
+  minted m -∗ minted_spec m' -∗
+  ⌜∀ n, is_nonce n → random_terms sk N n m ## T n⌝ -∗
+  ⌜∀ n', is_nonce n' → random_terms sk' N n' m' ## T' n'⌝ -∗
+  (∀ n, [∗ set] t ∈ T n, □ (minted n ↔ minted t)) -∗
+  (∀ n', [∗ set] t ∈ T' n', □ (minted_spec n' ↔ minted_spec t)) -∗
+  (∀ n n', ⌜is_nonce n⌝ -∗ ⌜is_nonce n'⌝ -∗ minted n -∗ minted_spec n' -∗
+    ([∗ set] t ∈ T n, term_token t ⊤) -∗
+    ([∗ set] t ∈ T' n', term_token_spec t ⊤) -∗
+    (∀ E S S', ⌜↑cryptisN ⊆ E⌝ -∗
+      seals_auth_l (seed_of_aenc_key sk) S -∗
+      seals_auth_r (seed_of_aenc_key sk') S' ={E}=∗
+      seals_auth_l (seed_of_aenc_key sk) (S ∪ {[random_seal sk sk' N n n' m m']}) ∗
+      seals_auth_r (seed_of_aenc_key sk') (S' ∪ {[random_seal sk sk' N n n' m m']}) ∗
+      PUB⟨Spec.random_aenc (Spec.pkey sk) (Tag N) n m,
+          Spec.random_aenc (Spec.pkey sk') (Tag N) n' m'⟩) ={⊤}=∗
+    Ψ (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
+      (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m')) -∗
+  REL random_aenc (Spec.pkey sk) (Tag N) m
+   << random_aenc (Spec.pkey sk') (Tag N) m' : Ψ.
+Proof.
+iIntros "#Hctx %Hnonce #mint_sk #mint_sk' #elem_pk #secret #mint_m #mint_m'".
+iIntros "%HT %HT' #mintT #mintT' post".
+iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
+iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
+  first by rewrite minted_spec_pkey.
+rewrite /random_aenc. rel_pures.
+rel_apply_l (rel_mk_nonce_l _ _ (λ n, random_terms sk N n m ∪ T n) with "[//]").
+{ iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
+  - rewrite /random_terms in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
+      solve_minted_iff_elem.
+  - iSpecialize ("mintT" $! t). rewrite big_sepS_forall. by iApply "mintT". }
+iIntros (n) "%Hn #mint_n Htt".
+rel_apply_r (rel_mk_nonce_r _ _ (λ n', random_terms sk' N n' m' ∪ T' n') with "[//]").
+{ iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
+  - rewrite /random_terms in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
+      solve_minted_iff_elem.
+  - iSpecialize ("mintT'" $! t). rewrite big_sepS_forall. by iApply "mintT'". }
+iIntros (n') "%Hn' #mint_n' Htts".
+rewrite (big_sepS_union _ (random_terms sk N n m)); last exact: HT.
+rewrite (big_sepS_union _ (random_terms sk' N n' m')); last exact: HT'.
+iDestruct "Htt" as "[Htt tokT]". iDestruct "Htts" as "[Htts tokT']".
+rewrite /random_terms. split_term_tokens.
+iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
+iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
+set pl := TPair n m.
+set tg := Spec.tag (Tag N) pl.
+set c := Spec.random_aenc (Spec.pkey sk) (Tag N) n m.
+set pl' := TPair n' m'.
+set tg' := Spec.tag (Tag N) pl'.
+set c' := Spec.random_aenc (Spec.pkey sk') (Tag N) n' m'.
+(* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
+iMod (public_rel_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
+iMod (public_rel_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx protby_pl tt_pl") as "protby_tg".
+iMod (public_rel_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx tts_n") as "protby_pl'".
+iMod (public_rel_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
+        ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
+iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
+        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#priv_tg".
+(* The secret key can never become publicly related. *)
+iAssert (□ (PUB⟨sk, sk'⟩ → PUB⟨pl, pl'⟩))%I as "#Hbox".
+{ iIntros "!> #Hsk". iExFalso.
+  rewrite publicly_related_adec_key'.
+  iDestruct (publicly_related_nonce_term _ Hnonce with "Hsk") as "[Hl _]".
+  by iDestruct (secret_in_l_publicly_linked_in_l with "secret Hl") as "[]". }
+iAssert (minted pl) as "#mint_pl".
+{ rewrite /pl minted_TPair. by iSplit. }
+iAssert (minted_spec pl') as "#mint_pl'".
+{ rewrite /pl' minted_spec_TPair. by iSplit. }
+(* The ciphertexts are linked when the caller records the seal. *)
+iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' [tt_c tts_c]")
+  as "post".
+{ iIntros (E S S' HE) "seals_l seals_r".
+  iMod (seals_auth_l_insert _ _ (random_seal sk sk' N n n' m m') with "seals_l")
+    as "[seals_l #Hin_l]".
+  iMod (seals_auth_r_insert _ _ (random_seal sk sk' N n n' m m') with "seals_r")
+    as "[seals_r #Hin_r]".
+  iMod (public_rel_publish HE with "Hctx [] tt_c tts_c") as "[_ #Hpub_c]".
+  { iIntros "!> #elem_c". rewrite /c /c' /Spec.random_aenc publicly_related_aenc.
+    iRight. do 5 (iSplit; first done).
+    iSplit; first by iApply publicly_linked_linked.
+    iSplit; first done. iSplit; first done.
+    by iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r"). }
+  iModIntro. by iFrame "#∗". }
+(* Run the program. *)
+rel_apply_l rel_tuple_l. rel_apply_l rel_aenc'_l. rel_later.
+rel_apply_r rel_tuple_r. rel_apply_r rel_aenc'_r. by rel_values.
 Qed.
 
 End Proofs.

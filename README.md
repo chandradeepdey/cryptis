@@ -12,7 +12,9 @@ In the `cryptis` directory you will find:
 - `core/*`, `cryptis`: Core Cryptis components: cryptographic terms, the
   `public` predicate, encryption predicates, and term metadata.
 - `primitives/*`, `primitives`: HeapLang functions for manipulating
-  cryptographic terms.  Definition of the attacker.
+  cryptographic terms, including randomized public-key encryption
+  (`random_aenc`), which pairs a fresh nonce with the plaintext so that equal
+  plaintexts give different ciphertexts.  Definition of the attacker.
 - `tactics`: Ltac tactics for symbolically executing the main HeapLang functions
   on terms.
 
@@ -72,13 +74,15 @@ relational layer, built on [ReLoC](https://iris-project.org/reloc):
   (`seals_auth_l`, `seals_l`, …) behind honestly linked ciphertexts.
 - `primitives/*_spec.v` are the relational specs of the primitives;
   `primitives/attacker_spec.v` models the attacker as an arbitrary program
-  self-related at a type that abstracts over terms.
+  self-related at a type that abstracts over terms, and
+  `primitives/with_cryptis_spec.v` relates two randomized encryptions under
+  a secret key, which is what the IND games and the ballots build on.
 - `rel_adequacy.v` turns a ReLoC refinement into a statement about executions
   (`cryptis_rel_adequacy`) or into a contextual refinement with the attacker
   as the context (`cryptis_ctx_refinement`).
 - `proofmode/*`, `proofmode`: the ghost state updates for freshly created
-  terms and the tactics that run both programs through the primitives and
-  discharge the side conditions of nonce and key creation.
+  terms, the tactics that discharge the side conditions of nonce and key
+  creation, and the tactics that run both programs through the primitives.
 
 Its case studies live in `relational/examples`:
 
