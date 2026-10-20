@@ -17,6 +17,7 @@ cryptis/lib/list.v
 cryptis/lib/list_match.v
 cryptis/lib/size_rec_pred.v
 cryptis/lib.v
+cryptis/lib/avl.v
 cryptis/role.v
 
 cryptis/core/pre_term/base.v
