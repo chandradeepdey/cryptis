@@ -2,6 +2,9 @@ From iris.heap_lang.lib Require Import nondet_bool.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require adequacy.
+From cryptis.core Require Import term.
+From cryptis.core.pre_term Require Import with_stdpp.
+From cryptis.lib Require Import avl.
 From cryptis.hyper.lib Require Export refines list_spec list_match_spec.
 
 (* THIS IS A VERY GROSS HACK *)
@@ -140,3 +143,18 @@ case Hn: (0 <=? n)%Z in n' *; rel_pures_r.
 Qed.
 
 End NonDetProofs.
+
+(** Discharge the [pure_expr] side condition of [pure_twp_rel_{l,r}]. *)
+Ltac solve_pure_expr :=
+  rewrite /= ?andb_True; repeat split;
+  first [apply: term_pure | apply: val_of_pre_term_pure | apply: tree_pure].
+
+(** Prove a one-sided [rel_*_{l,r}] spec of a pure primitive from its [twp_*]
+    spec. *)
+Tactic Notation "pure_twp_rel" uconstr(twp) :=
+  lazymatch goal with
+  | |- (_ ⊆ _) → _ => move=> ?; iApply pure_twp_rel_r => //=
+  | _ => iApply pure_twp_rel_l => //=
+  end;
+  try solve_pure_expr;
+  by move=> ?; iIntros "_"; iApply twp => //.

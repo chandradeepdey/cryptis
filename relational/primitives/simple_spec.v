@@ -17,87 +17,49 @@ Implicit Types t : term.
 Implicit Types x : Z.
 Implicit Types Ψ : val → val → iProp Σ.
 
-(** Discharge the [pure_expr] side condition of [pure_twp_rel_{l,r}]. *)
-Ltac solve_pure_expr :=
-  rewrite /= ?andb_True; repeat split; apply: term_pure.
-
 Lemma rel_tint_l E K e x Ψ :
   (REL fill K (TInt x : expr) << e @ E : Ψ) -∗
   REL fill K (tint #x) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=.
-move=> ?; iIntros "_"; iApply twp_tint => //.
-Qed.
+Proof. pure_twp_rel twp_tint. Qed.
 
 Lemma rel_tint_r E K e x Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TInt x : expr) @ E : Ψ) -∗
   REL e << fill K (tint #x) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=.
-move=> ?; iIntros "_"; iApply twp_tint => //.
-Qed.
+Proof. pure_twp_rel twp_tint. Qed.
 
 Lemma rel_to_int_l E K e t Ψ :
   (REL fill K (repr (Spec.to_int t) : expr) << e @ E : Ψ) -∗
   REL fill K (to_int t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_to_int => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_to_int. Qed.
 
 Lemma rel_to_int_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.to_int t) : expr) @ E : Ψ) -∗
   REL e << fill K (to_int t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_to_int => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_to_int. Qed.
 
 Lemma rel_tuple_l E K e t1 t2 Ψ :
   (REL fill K (TPair t1 t2 : expr) << e @ E : Ψ) -∗
   REL fill K (tuple t1 t2) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_tuple => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_tuple. Qed.
 
 Lemma rel_tuple_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TPair t1 t2 : expr) @ E : Ψ) -∗
   REL e << fill K (tuple t1 t2) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_tuple => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_tuple. Qed.
 
 Lemma rel_untuple_l E K e t Ψ :
   (REL fill K (repr (Spec.untuple t) : expr) << e @ E : Ψ) -∗
   REL fill K (untuple t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_untuple => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_untuple. Qed.
 
 Lemma rel_untuple_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.untuple t) : expr) @ E : Ψ) -∗
   REL e << fill K (untuple t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_untuple => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_untuple. Qed.
 
 Lemma rel_term_of_list_l E K e ts Ψ :
   (REL fill K (repr (Spec.of_list ts) : expr) << e @ E : Ψ) -∗
@@ -130,22 +92,13 @@ Qed.
 Lemma rel_list_of_term_l E K e t Ψ :
   (REL fill K (repr (Spec.to_list t) : expr) << e @ E : Ψ) -∗
   REL fill K (list_of_term t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_list_of_term => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_list_of_term. Qed.
 
 Lemma rel_list_of_term_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.to_list t) : expr) @ E : Ψ) -∗
   REL e << fill K (list_of_term t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_list_of_term => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_list_of_term. Qed.
 
 Lemma rel_list_l `{!Repr A} E K e (xs : list A) Ψ :
   (REL fill K (repr xs : expr) << e @ E : Ψ) -∗
@@ -172,102 +125,57 @@ Qed.
 Lemma rel_tag_l E K e (N : term) t Ψ :
   (REL fill K (repr (Spec.tag N t) : expr) << e @ E : Ψ) -∗
   REL fill K (tag N t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_tag => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_tag. Qed.
 
 Lemma rel_tag_r E K e (N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.tag N t) : expr) @ E : Ψ) -∗
   REL e << fill K (tag N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_tag => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_tag. Qed.
 
 Lemma rel_untag_l E K e (N : term) t Ψ :
   (REL fill K (repr (Spec.untag N t) : expr) << e @ E : Ψ) -∗
   REL fill K (untag N t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_untag => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_untag. Qed.
 
 Lemma rel_untag_r E K e (N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.untag N t) : expr) @ E : Ψ) -∗
   REL e << fill K (untag N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_untag => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_untag. Qed.
 
 Lemma rel_key_l E K e kt (k : term) Ψ :
   (REL fill K (TKey kt k : expr) << e @ E : Ψ) -∗
   REL fill K (key kt k) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_key => //.
-apply term_pure.
-Qed.
+Proof. pure_twp_rel twp_key. Qed.
 
 Lemma rel_key_r E K e kt (k : term) Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TKey kt k : expr) @ E : Ψ) -∗
   REL e << fill K (key kt k) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_key => //.
-apply term_pure.
-Qed.
+Proof. pure_twp_rel twp_key. Qed.
 
 Lemma rel_seal_l E K e t1 t2 Ψ :
   (REL fill K (TSeal t1 t2 : expr) << e @ E : Ψ) -∗
   REL fill K (seal t1 t2) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_seal => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_seal. Qed.
 
 Lemma rel_seal_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TSeal t1 t2 : expr) @ E : Ψ) -∗
   REL e << fill K (seal t1 t2) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_seal => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_seal. Qed.
 
 Lemma rel_hash_l E K e t Ψ :
   (REL fill K (THash t : expr) << e @ E : Ψ) -∗
   REL fill K (hash t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_hash => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_hash. Qed.
 
 Lemma rel_hash_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (THash t : expr) @ E : Ψ) -∗
   REL e << fill K (hash t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_hash => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_hash. Qed.
 
 Lemma rel_derive_aenc_key_l K e t Ψ :
   ▷ (REL fill K (AEncKey t : expr) << e : Ψ) -∗
@@ -317,102 +225,57 @@ Qed.
 Lemma rel_to_key_l E K e t Ψ :
   (REL fill K (repr (Spec.to_key t) : expr) << e @ E : Ψ) -∗
   REL fill K (to_key t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_to_key => //.
-apply term_pure.
-Qed.
+Proof. pure_twp_rel twp_to_key. Qed.
 
 Lemma rel_to_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.to_key t) : expr) @ E : Ψ) -∗
   REL e << fill K (to_key t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_to_key => //.
-apply term_pure.
-Qed.
+Proof. pure_twp_rel twp_to_key. Qed.
 
 Lemma rel_open_key_l E K e t Ψ :
   (REL fill K (repr (Spec.open_key t) : expr) << e @ E : Ψ) -∗
   REL fill K (open_key t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_open_key => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_open_key. Qed.
 
 Lemma rel_open_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.open_key t) : expr) @ E : Ψ) -∗
   REL e << fill K (open_key t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_open_key => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_open_key. Qed.
 
 Lemma rel_open_l E K e t1 t2 Ψ :
   (REL fill K (repr (Spec.open t1 t2) : expr) << e @ E : Ψ) -∗
   REL fill K (open t1 t2) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_open => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_open. Qed.
 
 Lemma rel_open_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.open t1 t2) : expr) @ E : Ψ) -∗
   REL e << fill K (open t1 t2) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_open => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_open. Qed.
 
 Lemma rel_enc_l E K e k N t Ψ :
   (REL fill K (Spec.enc k N t : expr) << e @ E : Ψ) -∗
   REL fill K (enc k N t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l=> //=;
-last by move=> ?; iIntros "_"; iApply twp_enc => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_enc. Qed.
 
 Lemma rel_enc_r E K e k N t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (enc k N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r=> //=;
-last by move=> ?; iIntros "_"; iApply twp_enc => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_enc. Qed.
 
 Lemma rel_dec_l E K e (k N : term) t Ψ :
   (REL fill K (repr (Spec.dec k N t) : expr) << e @ E : Ψ) -∗
   REL fill K (dec k N t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_dec => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_dec. Qed.
 
 Lemma rel_dec_r E K e (k N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.dec k N t) : expr) @ E : Ψ) -∗
   REL e << fill K (dec k N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_dec => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_dec. Qed.
 
 Lemma rel_aenc'_l K e pk N t Ψ :
   ▷ (REL fill K (Spec.enc pk N t : expr) << e : Ψ) -∗
@@ -423,12 +286,7 @@ Lemma rel_aenc'_r E K e pk N t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc pk N t : expr) @ E : Ψ) -∗
   REL e << fill K (aenc pk N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_aenc' => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_aenc'. Qed.
 
 Lemma adec_tseal (sk : aenc_key) N t :
   ∀ t', Spec.dec sk N t = Some t' →
@@ -472,12 +330,7 @@ Lemma rel_senc'_r E K e (k N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (senc k N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_senc' => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_senc'. Qed.
 
 Lemma sdec_tseal (k : senc_key) N t :
   ∀ t', Spec.dec k N t = Some t' →
@@ -521,12 +374,7 @@ Lemma rel_sign'_r E K e (k N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (sign k N t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_sign' => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_sign'. Qed.
 
 Lemma verify_tseal (sk : sign_key) N t :
   ∀ t', Spec.dec (Spec.pkey sk) N t = Some t' →
@@ -567,61 +415,34 @@ Qed.
 Lemma rel_pkey_l E K e k Ψ :
   (REL fill K (Spec.pkey k : expr) << e @ E : Ψ) -∗
   REL fill K (pkey k) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_pkey => //.
-apply term_pure.
-Qed.
+Proof. pure_twp_rel twp_pkey. Qed.
 
 Lemma rel_pkey_r E K e k Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.pkey k : expr) @ E : Ψ) -∗
   REL e << fill K (pkey k) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_pkey => //.
-apply term_pure.
-Qed.
+Proof. pure_twp_rel twp_pkey. Qed.
 
 Lemma rel_is_key_l E K e t Ψ :
   (REL fill K (repr (Spec.is_key t) : expr) << e @ E : Ψ) -∗
   REL fill K (is_key t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_is_key => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_is_key. Qed.
 
 Lemma rel_is_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.is_key t) : expr) @ E : Ψ) -∗
   REL e << fill K (is_key t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_is_key => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_is_key. Qed.
 
 Lemma rel_has_key_type_l E K e kt t Ψ :
   (REL fill K (#(Spec.has_key_type kt t) : expr) << e @ E : Ψ) -∗
   REL fill K (has_key_type (repr kt) t) << e @ E : Ψ.
-Proof.
-iApply pure_twp_rel_l => //=;
-last by move=> ?; iIntros "_"; iApply twp_has_key_type => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_has_key_type. Qed.
 
 Lemma rel_has_key_type_r E K e kt t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (#(Spec.has_key_type kt t) : expr) @ E : Ψ) -∗
   REL e << fill K (has_key_type (repr kt) t) @ E : Ψ.
-Proof.
-move=> ?.
-iApply pure_twp_rel_r => //=;
-last by move=> ?; iIntros "_"; iApply twp_has_key_type => //.
-solve_pure_expr.
-Qed.
+Proof. pure_twp_rel twp_has_key_type. Qed.
 
 End Proofs.
