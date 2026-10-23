@@ -56,6 +56,22 @@ move=> ?.
 by rewrite /= [@repr_list]unlock; iIntros "?"; rewrite /CONS; rel_pures_r.
 Qed.
 
+Lemma rel_cons_nil_l E K e x Ψ :
+  (REL fill K (repr [x]%list : expr) << e @ E : Ψ) -∗
+  REL fill K (repr x :: Val []%V) << e @ E : Ψ.
+Proof.
+by rewrite /NILV /= [@repr_list]unlock; iIntros "?"; rewrite /CONS; rel_pures_l.
+Qed.
+
+Lemma rel_cons_nil_r E K e x Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (repr [x]%list : expr) @ E : Ψ) -∗
+  REL e << fill K (repr x :: Val []%V) @ E : Ψ.
+Proof.
+move=> ?.
+by rewrite /NILV /= [@repr_list]unlock; iIntros "?"; rewrite /CONS; rel_pures_r.
+Qed.
+
 Lemma rel_eq_list_l `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
   (∀ K (x1 x2 : A) Ψ,
       x1 ∈ l1 →
