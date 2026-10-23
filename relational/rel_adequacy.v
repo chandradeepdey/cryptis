@@ -96,10 +96,12 @@ Qed.
     context, which in particular may apply it to any well-typed attacker and
     observe the result.  The hypothesis is the same protocol refinement as for
     [cryptis_rel_adequacy]; the two contexts may even hand different (but
-    related) attackers to the two games.  The statement mentions no [Σ]: the
-    ghost state is fixed internally to [#[relocΣ; public_relΣ]]. *)
-Lemma cryptis_ctx_refinement (f f' : val) τ :
-  (∀ Σ `{!relocG Σ, !public_relGS Σ} Δ c c',
+    related) attackers to the two games.  As for [cryptis_rel_adequacy], [Σ]
+    is any set of ghost state that contains ReLoC's and [PUB]'s, so that the
+    refinement may use ghost state of its own; the contextual refinement
+    itself does not mention [Σ]. *)
+Lemma cryptis_ctx_refinement Σ `{!relocPreG Σ, !public_relGpreS Σ} (f f' : val) τ :
+  (∀ `{!relocG Σ, !public_relGS Σ} Δ c c',
       cryptis_rel_ctx -∗
       channel_rel c c' -∗
       REL f c << f' c' : interp τ Δ) →
@@ -107,7 +109,7 @@ Lemma cryptis_ctx_refinement (f f' : val) τ :
       ≤ctx≤ (λ: "adv", run_network_rel "adv" f') : (attacker_ty → τ)%ty.
 Proof.
 move=> Hf.
-apply: (refines_sound #[relocΣ; public_relΣ]) => Hreloc Δ.
+apply: (refines_sound Σ) => Hreloc Δ.
 iMod (public_relGS_alloc ⊤ _) as (Hpub) "#Hctx".
 rel_pures_l. rel_pures_r.
 iApply refines_arrow_val. iIntros "!> %adv %adv' #Hadv".

@@ -103,7 +103,8 @@ Theorem election_ctx_equiv cands votes votes' :
       (attacker_ty → ())%ty.
 Proof.
 move=> Hperm.
-by split; apply: cryptis_ctx_refinement => Σ ? ? Δ c c'; iApply rel_election_of.
+by split; apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => ? ? Δ c c';
+  iApply rel_election_of.
 Qed.
 
 (** The same fact as an adequacy statement for the nondeterministic game:

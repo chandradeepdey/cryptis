@@ -150,7 +150,8 @@ Definition ind_cpa_game N (b : bool) : expr :=
 Theorem ind_cpa_ctx_equiv N b b' :
   ∅ ⊨ ind_cpa_game N b =ctx= ind_cpa_game N b' : (attacker_ty → TBool)%ty.
 Proof.
-by split; apply: cryptis_ctx_refinement => Σ ? ? Δ c c'; iApply rel_alice.
+by split; apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => ? ? Δ c c';
+  iApply rel_alice.
 Qed.
 
 (** The same fact as an adequacy statement for the nondeterministic game:
