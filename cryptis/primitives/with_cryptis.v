@@ -56,7 +56,6 @@ Definition mk_senc_key : val := λ: <>,
   let: "n" := mk_nonce #() in
   derive_senc_key "n".
 
-(* Randomized public-key encryption: a fresh nonce is paired with the plaintext. *)
 Definition random_aenc : val := λ: "pk" "N" "t",
   aenc "pk" "N" (tuple (mk_nonce #()) "t").
 

@@ -450,12 +450,7 @@ Qed.
 Lemma val_of_pre_term_pure (pt : PreTerm.pre_term) :
   pure_val (val_of_pre_term pt).
 Proof.
-  induction pt; try (destruct o; eauto;
-    simpl; by apply andb_prop_intro).
-  simpl. apply andb_prop_intro; split; first by destruct o.
-  rewrite [@repr_list]unlock.
-  induction ts; first done.
-  simpl in *.
-  destruct X as [X1 X2].
-  apply andb_prop_intro; split; by [| apply IHts].
+elim: pt => [[]|[] ? ?|[] ? ? ? ?|[] ts IHts] //=; rewrite ?andb_True //.
+all: rewrite [@repr_list]unlock.
+all: by elim: ts IHts => //= t ts IH [? /IH ?]; rewrite andb_True.
 Qed.
