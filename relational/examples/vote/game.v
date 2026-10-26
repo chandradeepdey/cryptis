@@ -91,19 +91,21 @@ Qed.
 
 End Game.
 
-Definition election_game (cands votes : list Z) : expr :=
-  (λ: "adv", run_network_rel "adv" (election_of cands votes))%E.
+Definition election_game (cands votes : list Z) (adv : expr) : expr :=
+  (run_network_rel adv (election_of cands votes))%E.
 
-(** Vote privacy as a contextual equivalence: two assignments of votes to
-    voters with the same number of votes for every candidate yield
-    contextually equivalent elections. *)
-Theorem election_ctx_equiv cands votes votes' :
+(** Vote privacy as a contextual equivalence: against any valid attacker,
+    two assignments of votes to voters with the same number of votes for
+    every candidate yield contextually equivalent elections. *)
+Theorem election_ctx_equiv cands votes votes' adv :
   votes ≡ₚ votes' →
-  ∅ ⊨ election_game cands votes =ctx= election_game cands votes' :
-      (attacker_ty → ())%ty.
+  attacker_valid adv →
+  ∅ ⊨ election_game cands votes adv =ctx= election_game cands votes' adv :
+      TUnit.
 Proof.
-move=> Hperm.
-by split; apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => ? ? Δ c c';
+move=> Hperm Hadv.
+by split;
+  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
   iApply rel_election_of.
 Qed.
 
@@ -111,9 +113,9 @@ Qed.
     whenever a run terminates with a bit [b] and a guess [g], the run with the
     other assignment can terminate with the same guess. *)
 Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 votes1
-    (adv : val) σ :
+    (adv : expr) σ :
   votes0 ≡ₚ votes1 →
-  (∀ `{!relocG Σ}, ⊢ REL adv << adv : attacker_rel) →
+  attacker_valid adv →
   adequate NotStuck (run_network_rel adv (election_guess_wrapped cands votes0 votes1)) σ
     (λ v _, ∃ thp' h v',
        rtc erased_step

@@ -73,13 +73,16 @@ relational layer, built on [ReLoC](https://iris-project.org/reloc):
   its invariant, and the per-key sets of honest seal links
   (`seals_auth_l`, `seals_l`, …) behind honestly linked ciphertexts.
 - `primitives/*_spec.v` are the relational specs of the primitives;
-  `primitives/attacker_spec.v` models the attacker as an arbitrary program
-  self-related at a type that abstracts over terms, and
+  `primitives/attacker_spec.v` models the attacker as a program forked on the
+  network channel, calls it valid when it is self-related at the type of
+  functions from channels to unit, gives the unary primitives type-like
+  contracts over publicly related terms, and shows that every attacker well
+  typed against these contracts is valid (`attacker_valid_typed`), and
   `primitives/with_cryptis_spec.v` relates two randomized encryptions under
   a secret key, which is what the IND games and the ballots build on.
 - `rel_adequacy.v` turns a ReLoC refinement into a statement about executions
-  (`cryptis_rel_adequacy`) or into a contextual refinement with the attacker
-  as the context (`cryptis_ctx_refinement`).
+  (`cryptis_rel_adequacy`) or into a contextual refinement between the games run
+  against a valid attacker (`cryptis_ctx_refinement`).
 - `proofmode/*`, `proofmode`: the ghost state updates for freshly created
   terms, the tactics that discharge the side conditions of nonce and key
   creation, and the tactics that run both programs through the primitives.

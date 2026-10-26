@@ -317,22 +317,24 @@ Qed.
 
 End CCA2.
 
-Definition ind_cca2_game N (b : bool) : expr :=
-  (λ: "adv", run_network_rel "adv" (alice N b))%E.
+Definition ind_cca2_game N (b : bool) (adv : expr) : expr :=
+  (run_network_rel adv (alice N b))%E.
 
-(** IND-CCA2 as a contextual equivalence: no well-typed attacker with a
-    decryption oracle for every ciphertext but the challenge can tell which
-    of its two messages Alice encrypts. *)
-Theorem ind_cca2_ctx_equiv N b b' :
-  ∅ ⊨ ind_cca2_game N b =ctx= ind_cca2_game N b' : (attacker_ty → TBool)%ty.
+(** IND-CCA2 as a contextual equivalence: against any valid attacker with a
+    decryption oracle for every ciphertext but the challenge, no well-typed
+    context can tell which of the attacker's two messages Alice encrypts. *)
+Theorem ind_cca2_ctx_equiv N b b' adv :
+  attacker_valid adv →
+  ∅ ⊨ ind_cca2_game N b adv =ctx= ind_cca2_game N b' adv : TBool.
 Proof.
-by split; apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => ? ? Δ c c';
+by move=> Hadv; split;
+  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
   iApply rel_alice.
 Qed.
 
 (** The same fact as an adequacy statement for the nondeterministic game. *)
-Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : val) σ :
-  (∀ `{!relocG Σ}, ⊢ REL adv << adv : attacker_rel) →
+Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
+  attacker_valid adv →
   adequate NotStuck (run_network_rel adv (alice_guess_wrapped N)) σ
     (λ v _, ∃ thp' h v',
        rtc erased_step ([run_network_rel adv (alice_guess_wrapped N)], σ)

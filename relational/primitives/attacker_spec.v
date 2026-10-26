@@ -1,26 +1,26 @@
 (** Relational attacker model.
 
-    In the unary development ([attacker.v]) the attacker is a fixed program
-    that applies every Dolev-Yao operation to the terms on the network.  In
-    the relational development we instead let the attacker be an *arbitrary*
-    program, and only assume that it is self-related at a type that abstracts
-    over the representation of terms:
+    The attacker is a program [adv] that [init_network_rel] forks on a fresh
+    network channel, as [init_network] does in the unary development.  It is
+    valid ([attacker_valid]) when it is self-related at [attacker_rel], which
+    maps related channels to related computations; the security theorems of
+    [rel_adequacy.v] hold for every valid attacker.
 
-      ∀ termT, attacker_prims_rel termT → chan_lrel termT → ()
-
-    The attacker receives the exported primitives [attacker_prims] and the
-    network channel, both at the abstract type [termT].  Since the attacker
-    must be related at *every* [termT], it cannot inspect the representation
-    of a term (e.g. tell a ciphertext from a nonce); it can only combine terms
-    through the exported primitives.  This is exactly the guarantee needed to
-    instantiate [termT] with [PUB⟨·,·⟩]: every exported primitive preserves
-    [PUB], so any attacker preserves it too.  By ReLoC's fundamental theorem,
-    any attacker that is syntactically well typed at this type is self-related
-    ([attacker_rel_typed] in [rel_adequacy.v]).
+    The [rel_prim_*] lemmas give the unary primitives type-like contracts over
+    [lrel_term], the terms related by [PUB⟨·,·⟩], and over [lrel_channel].
+    They are what a validity proof uses when the attacker calls a primitive.
+    [attacker_valid_typed] packages them: an attacker that refers to the
+    primitives by their names in [attacker_prims] and is well typed at
+    [attacker_ty] in [attacker_prims_ty], with [#0] standing for terms and
+    [#1] for the channel, is valid.  These type variables are free, so the
+    attacker cannot inspect the representation of a term or of the channel;
+    the proof is ReLoC's fundamental theorem with [#0] interpreted as
+    [lrel_term] and [#1] as [lrel_channel].
 
     Dependency position: after [with_cryptis_spec.v]; used by [rel_adequacy.v]. *)
 
 From reloc Require Import reloc.
+From reloc.typing Require Import types interp fundamental.
 From cryptis Require Import lib cryptis.
 From cryptis.core Require Import term.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
@@ -32,71 +32,13 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(** The primitives exported to the attacker.  Binary primitives are
-    eta-expanded so that, after the two beta steps performed by the
-    relational proof, the underlying primitive is applied syntactically and
-    the specs of [simple_spec.v] and [comp_spec.v] apply.  Diffie–Hellman
-    primitives are not exported yet: the corresponding cases of
-    [publicly_related] are still work in progress. *)
-Definition attacker_prims : val :=
-  (tint,
-  (to_int,
-  ((λ: "t1" "t2", tuple "t1" "t2"),
-  (untuple,
-  (key AEnc,
-  (key ADec,
-  (key Sign,
-  (key Verify,
-  (key SEnc,
-  (pkey,
-  ((λ: "k" "t", seal "k" "t"),
-  ((λ: "k" "t", open "k" "t"),
-  (hash,
-  (mk_nonce,
-   (λ: "t1" "t2", eq_term "t1" "t2")))))))))))))))%V.
-
-(** Run a protocol [f] against an attacker [adv].  The attacker is
-    instantiated at the abstract term type (the [#()] argument is ReLoC's
-    encoding of type application), handed the primitives and the channel, and
-    forked before the protocol runs. *)
-Definition run_network_rel : val := λ: "adv" "f",
+Definition init_network_rel : val := λ: "adv",
   let: "c" := mk_channel_rel #() in
-  Fork ("adv" #() attacker_prims "c");;
-  "f" "c".
+  Fork ("adv" "c");;
+  "c".
 
-Section AttackerTypes.
-
-Context `{!relocG Σ}.
-
-Implicit Types A : lrel Σ.
-
-(** The interface seen by the attacker, at an abstract term type [A].  The
-    order matches [attacker_prims]. *)
-Definition attacker_prims_rel A : lrel Σ :=
-  ((lrel_int → A) *
-  ((A → () + lrel_int) *
-  ((A → A → A) *
-  ((A → () + A * A) *
-  ((A → A) *
-  ((A → A) *
-  ((A → A) *
-  ((A → A) *
-  ((A → A) *
-  ((A → A) *
-  ((A → A → A) *
-  ((A → A → () + A) *
-  ((A → A) *
-  ((() → A) *
-   (A → A → lrel_bool)))))))))))))))%lrel.
-
-(** A network channel at an abstract term type: a sender and a receiver. *)
-Definition chan_lrel A : lrel Σ := ((A → ()) * (() → A))%lrel.
-
-(** The type of attackers. *)
-Definition attacker_rel : lrel Σ :=
-  (∀ A, attacker_prims_rel A → chan_lrel A → ())%lrel.
-
-End AttackerTypes.
+Definition run_network_rel : val := λ: "adv" "f",
+  "f" (init_network_rel "adv").
 
 Section Proofs.
 
@@ -105,25 +47,17 @@ Context `{!relocG Σ, !public_relGS Σ}.
 Implicit Types t : term.
 Implicit Types v : val.
 
-(** Terms related by [PUB⟨·,·⟩], as a semantic type. *)
 Definition lrel_term : lrel Σ := LRel (λ v v',
   ∃ t t' : term, ⌜v = t⌝ ∗ ⌜v' = t'⌝ ∗ PUB⟨t, t'⟩)%I.
+
+Definition lrel_channel : lrel Σ := LRel channel_rel.
+
+Definition attacker_rel : lrel Σ := (lrel_channel → ())%lrel.
 
 Lemma lrel_term_intro t t' : PUB⟨t, t'⟩ -∗ lrel_term t t'.
 Proof. iIntros "#H". iExists t, t'. by eauto. Qed.
 
-Lemma channel_rel_chan_lrel c c' :
-  channel_rel c c' -∗ chan_lrel lrel_term c c'.
-Proof.
-iDestruct 1 as (sf rf sf' rf') "(-> & -> & #Hs & #Hr)".
-iExists sf, sf', rf, rf'. do 2 (iSplit; first done). iSplit.
-- iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-  by iApply ("Hs" with "Ht").
-- iIntros "!> %v %v' [-> ->]".
-  iApply "Hr". iIntros "%t %t' #Ht". by iApply lrel_term_intro.
-Qed.
-
-(** * Closure of [PUB] under the exported primitives *)
+(** * Contracts of the primitives *)
 
 Lemma rel_prim_tint : ⊢ (lrel_int → lrel_term)%lrel tint tint.
 Proof.
@@ -185,6 +119,27 @@ rel_apply_l rel_key_l. rel_apply_r rel_key_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 rewrite publicly_related_TKey. iSplit; first done.
 case: kt; try (by iLeft); done.
+Qed.
+
+Lemma rel_prim_derive_aenc_key :
+  ⊢ (lrel_term → lrel_term)%lrel derive_aenc_key derive_aenc_key.
+Proof.
+iIntros "!> %v %v' Hv". rel_rec_l. rel_rec_r.
+iApply (refines_app with "[] [Hv]"); [rel_values; iApply rel_prim_key|by rel_values].
+Qed.
+
+Lemma rel_prim_derive_sign_key :
+  ⊢ (lrel_term → lrel_term)%lrel derive_sign_key derive_sign_key.
+Proof.
+iIntros "!> %v %v' Hv". rel_rec_l. rel_rec_r.
+iApply (refines_app with "[] [Hv]"); [rel_values; iApply rel_prim_key|by rel_values].
+Qed.
+
+Lemma rel_prim_derive_senc_key :
+  ⊢ (lrel_term → lrel_term)%lrel derive_senc_key derive_senc_key.
+Proof.
+iIntros "!> %v %v' Hv". rel_rec_l. rel_rec_r.
+iApply (refines_app with "[] [Hv]"); [rel_values; iApply rel_prim_key|by rel_values].
 Qed.
 
 Lemma rel_prim_pkey : ⊢ (lrel_term → lrel_term)%lrel pkey pkey.
@@ -290,55 +245,131 @@ iModIntro. iExists (bool_decide (t1 = t2)). iPureIntro. split; first done.
 do 2 f_equal. apply bool_decide_ext. by rewrite Hiff.
 Qed.
 
-Lemma rel_attacker_prims :
-  cryptis_rel_ctx -∗
-  REL attacker_prims << attacker_prims : attacker_prims_rel lrel_term.
+Lemma rel_prim_send :
+  ⊢ (lrel_channel → lrel_term → ())%lrel send send.
 Proof.
-iIntros "#Hctx". rel_values. iModIntro.
-rewrite /attacker_prims /attacker_prims_rel.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_tint.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_to_int.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_tuple.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_untuple.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_key.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_key.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_key.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_key.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_key.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_pkey.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_seal.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first by iApply rel_prim_open.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first iApply rel_prim_hash.
-iExists _, _, _, _. do 2 (iSplit; first done). iSplit; first by iApply rel_prim_mk_nonce.
-by iApply rel_prim_eq_term.
+iIntros "!> %c %c' Hc".
+iDestruct "Hc" as (sf rf sf' rf') "(-> & -> & #Hs & _)".
+rewrite /send. rel_pures_l. rel_pures_r. rel_values. iModIntro.
+iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
+by iApply ("Hs" with "Ht").
 Qed.
 
-(** * Running a protocol against an arbitrary attacker *)
+Lemma rel_prim_recv :
+  ⊢ (lrel_channel → lrel_term)%lrel recv recv.
+Proof.
+iIntros "!> %c %c' Hc".
+iApply (rel_recv with "Hc"). iIntros "%t %t' #Ht". by iApply lrel_term_intro.
+Qed.
 
-Lemma rel_run_network_rel (adv adv' f f' : val) (A : val → val → iProp Σ) :
-  cryptis_rel_ctx -∗
+Lemma rel_run_network_rel (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
   (REL adv << adv' : attacker_rel) -∗
   (∀ c c', channel_rel c c' -∗ REL f c << f' c' : A) -∗
   REL run_network_rel adv f << run_network_rel adv' f' : A.
 Proof.
-iIntros "#Hctx Hadv Hf". rewrite /run_network_rel.
-rel_pures_l. rel_pures_r.
+iIntros "Hadv Hf". rewrite /run_network_rel.
+rel_bind_l adv. rel_bind_r adv'.
+iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
+rel_pures_l. rel_pures_r. rewrite /init_network_rel. rel_pures_l. rel_pures_r.
 rel_bind_l (mk_channel_rel #()). rel_bind_r (mk_channel_rel #()).
 iApply refines_bind; first iApply rel_mk_channel_rel.
 iIntros (c c') "#Hc /=". rel_pures_l. rel_pures_r.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
-iApply (refines_bind with "[Hadv]").
+iApply refines_bind.
 { iApply refines_fork.
-  iApply (refines_app _ _ _ _ (chan_lrel lrel_term) with "[Hadv] []"); last first.
-  { rel_values. iModIntro. by iApply channel_rel_chan_lrel. }
-  iApply (refines_app _ _ _ _ (attacker_prims_rel lrel_term) with "[Hadv] []"); last first.
-  { by iApply rel_attacker_prims. }
-  iApply (refines_app _ _ _ _ (lrel_unit) with "[Hadv] []"); last first.
-  { rel_values. }
-  iApply (refines_wand with "Hadv").
-  iIntros (v v') "H !>". iSpecialize ("H" $! lrel_term). iExact "H". }
+  iApply (refines_app _ _ _ _ lrel_channel); by rel_values. }
 iIntros (? ?) "_ /=". rel_pures_l. rel_pures_r.
 by iApply "Hf".
 Qed.
 
 End Proofs.
+
+Definition attacker_valid (adv : expr) : Prop :=
+  ∀ Σ (Hreloc : relocG Σ) (Hpub : public_relGS Σ),
+    ⊢ cryptis_rel_ctx -∗ REL adv << adv : attacker_rel.
+
+(** * Syntactically typed attackers *)
+
+(** Binary primitives are eta-expanded so that the specs of [simple_spec.v]
+    and [comp_spec.v], which match saturated applications, apply. *)
+Definition attacker_prims : gmap string val :=
+  <["tint" := tint]> $
+  <["to_int" := to_int]> $
+  <["tuple" := (λ: "t1" "t2", tuple "t1" "t2")%V]> $
+  <["untuple" := untuple]> $
+  <["derive_aenc_key" := derive_aenc_key]> $
+  <["derive_sign_key" := derive_sign_key]> $
+  <["derive_senc_key" := derive_senc_key]> $
+  <["pkey" := pkey]> $
+  <["seal" := (λ: "k" "t", seal "k" "t")%V]> $
+  <["open" := (λ: "k" "t", open "k" "t")%V]> $
+  <["hash" := hash]> $
+  <["mk_nonce" := mk_nonce]> $
+  <["eq_term" := (λ: "t1" "t2", eq_term "t1" "t2")%V]> $
+  <["send" := send]> $
+  <["recv" := recv]> ∅.
+
+Definition attacker_prims_ty : gmap string type :=
+  <["tint" := (TNat → #0)%ty]> $
+  <["to_int" := (#0 → () + TNat)%ty]> $
+  <["tuple" := (#0 → #0 → #0)%ty]> $
+  <["untuple" := (#0 → () + #0 * #0)%ty]> $
+  <["derive_aenc_key" := (#0 → #0)%ty]> $
+  <["derive_sign_key" := (#0 → #0)%ty]> $
+  <["derive_senc_key" := (#0 → #0)%ty]> $
+  <["pkey" := (#0 → #0)%ty]> $
+  <["seal" := (#0 → #0 → #0)%ty]> $
+  <["open" := (#0 → #0 → () + #0)%ty]> $
+  <["hash" := (#0 → #0)%ty]> $
+  <["mk_nonce" := (() → #0)%ty]> $
+  <["eq_term" := (#0 → #0 → TBool)%ty]> $
+  <["send" := (#1 → #0 → ())%ty]> $
+  <["recv" := (#1 → #0)%ty]> ∅.
+
+Definition attacker_ty : type := (#1 → ())%ty.
+
+Section Typed.
+
+Context `{!relocG Σ, !public_relGS Σ}.
+
+Lemma attacker_prims_env :
+  cryptis_rel_ctx -∗
+  ⟦ (λ τ, interp τ [lrel_term; lrel_channel]) <$> attacker_prims_ty ⟧*
+    ((λ v, (v, v)) <$> attacker_prims).
+Proof.
+iIntros "#Hctx".
+rewrite /attacker_prims_ty /attacker_prims !fmap_insert !fmap_empty /env_ltyped2.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_tint.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_to_int.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_tuple.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_untuple.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_derive_aenc_key.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_derive_sign_key.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_derive_senc_key.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_pkey.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_seal.
+iApply (big_sepM2_insert_2 with "[]"); first by iApply rel_prim_open.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_hash.
+iApply (big_sepM2_insert_2 with "[]"); first by iApply rel_prim_mk_nonce.
+iApply (big_sepM2_insert_2 with "[]"); first by iApply rel_prim_eq_term.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_send.
+iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_recv.
+by rewrite big_sepM2_empty.
+Qed.
+
+Lemma rel_attacker_typed e :
+  attacker_prims_ty ⊢ₜ e : attacker_ty →
+  cryptis_rel_ctx -∗
+  REL subst_map attacker_prims e << subst_map attacker_prims e : attacker_rel.
+Proof.
+move=> /(fundamental [lrel_term; lrel_channel]) He. iIntros "#Hctx".
+iPoseProof (He with "[]") as "H"; first by iApply attacker_prims_env.
+rewrite -!map_fmap_compose !map_fmap_id. iExact "H".
+Qed.
+
+End Typed.
+
+Lemma attacker_valid_typed e :
+  attacker_prims_ty ⊢ₜ e : attacker_ty →
+  attacker_valid (subst_map attacker_prims e).
+Proof. move=> He Σ ? ?. by iApply rel_attacker_typed. Qed.
