@@ -182,6 +182,7 @@ session/examples/store/game.v
 
 # Relational layer
 
+relational/proofmode/classes.v
 relational/lib/refines.v
 relational/lib/list_spec.v
 relational/lib/list_match_spec.v

@@ -3,6 +3,7 @@ From cryptis Require Import lib.
 From cryptis.core Require Import term.
 From cryptis.primitives Require Import simple.
 From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.proofmode Require Import classes.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -445,4 +446,133 @@ Lemma rel_has_key_type_r E K e kt t Ψ :
   REL e << fill K (has_key_type (repr kt) t) @ E : Ψ.
 Proof. pure_twp_rel twp_has_key_type. Qed.
 
+Definition rel_prim_l_tint (v1 : val) : RelPrimL Σ (tint v1) _ :=
+  rel_tint_l.
+Definition rel_prim_r_tint (v1 : val) : RelPrimR Σ (tint v1) _ :=
+  rel_tint_r.
+Definition rel_prim_l_to_int (v1 : val) : RelPrimL Σ (to_int v1) _ :=
+  rel_to_int_l.
+Definition rel_prim_r_to_int (v1 : val) : RelPrimR Σ (to_int v1) _ :=
+  rel_to_int_r.
+Definition rel_prim_l_tuple (v1 v2 : val) : RelPrimL Σ (tuple v1 v2) _ :=
+  rel_tuple_l.
+Definition rel_prim_r_tuple (v1 v2 : val) : RelPrimR Σ (tuple v1 v2) _ :=
+  rel_tuple_r.
+Definition rel_prim_l_untuple (v1 : val) : RelPrimL Σ (untuple v1) _ :=
+  rel_untuple_l.
+Definition rel_prim_r_untuple (v1 : val) : RelPrimR Σ (untuple v1) _ :=
+  rel_untuple_r.
+Definition rel_prim_l_term_of_list (v1 : val) : RelPrimL Σ (term_of_list v1) _ :=
+  rel_term_of_list_l.
+Definition rel_prim_r_term_of_list (v1 : val) : RelPrimR Σ (term_of_list v1) _ :=
+  rel_term_of_list_r.
+Definition rel_prim_l_list_of_term (v1 : val) : RelPrimL Σ (list_of_term v1) _ :=
+  rel_list_of_term_l.
+Definition rel_prim_r_list_of_term (v1 : val) : RelPrimR Σ (list_of_term v1) _ :=
+  rel_list_of_term_r.
+Definition rel_prim_l_tag (v1 v2 : val) : RelPrimL Σ (tag v1 v2) _ :=
+  rel_tag_l.
+Definition rel_prim_r_tag (v1 v2 : val) : RelPrimR Σ (tag v1 v2) _ :=
+  rel_tag_r.
+Definition rel_prim_l_untag (v1 v2 : val) : RelPrimL Σ (untag v1 v2) _ :=
+  rel_untag_l.
+Definition rel_prim_r_untag (v1 v2 : val) : RelPrimR Σ (untag v1 v2) _ :=
+  rel_untag_r.
+Definition rel_prim_l_key kt (v1 : val) : RelPrimL Σ (key kt v1) _ :=
+  rel_key_l.
+Definition rel_prim_r_key kt (v1 : val) : RelPrimR Σ (key kt v1) _ :=
+  rel_key_r.
+Definition rel_prim_l_seal (v1 v2 : val) : RelPrimL Σ (seal v1 v2) _ :=
+  rel_seal_l.
+Definition rel_prim_r_seal (v1 v2 : val) : RelPrimR Σ (seal v1 v2) _ :=
+  rel_seal_r.
+Definition rel_prim_l_hash (v1 : val) : RelPrimL Σ (hash v1) _ :=
+  rel_hash_l.
+Definition rel_prim_r_hash (v1 : val) : RelPrimR Σ (hash v1) _ :=
+  rel_hash_r.
+Definition rel_prim_l_derive_aenc_key (v1 : val) : RelPrimL Σ (derive_aenc_key v1) _ :=
+  rel_derive_aenc_key_l.
+Definition rel_prim_r_derive_aenc_key (v1 : val) : RelPrimR Σ (derive_aenc_key v1) _ :=
+  rel_derive_aenc_key_r.
+Definition rel_prim_l_derive_senc_key (v1 : val) : RelPrimL Σ (derive_senc_key v1) _ :=
+  rel_derive_senc_key_l.
+Definition rel_prim_r_derive_senc_key (v1 : val) : RelPrimR Σ (derive_senc_key v1) _ :=
+  rel_derive_senc_key_r.
+Definition rel_prim_l_derive_sign_key (v1 : val) : RelPrimL Σ (derive_sign_key v1) _ :=
+  rel_derive_sign_key_l.
+Definition rel_prim_r_derive_sign_key (v1 : val) : RelPrimR Σ (derive_sign_key v1) _ :=
+  rel_derive_sign_key_r.
+Definition rel_prim_l_to_key (v1 : val) : RelPrimL Σ (to_key v1) _ :=
+  rel_to_key_l.
+Definition rel_prim_r_to_key (v1 : val) : RelPrimR Σ (to_key v1) _ :=
+  rel_to_key_r.
+Definition rel_prim_l_open_key (v1 : val) : RelPrimL Σ (open_key v1) _ :=
+  rel_open_key_l.
+Definition rel_prim_r_open_key (v1 : val) : RelPrimR Σ (open_key v1) _ :=
+  rel_open_key_r.
+Definition rel_prim_l_open (v1 v2 : val) : RelPrimL Σ (open v1 v2) _ :=
+  rel_open_l.
+Definition rel_prim_r_open (v1 v2 : val) : RelPrimR Σ (open v1 v2) _ :=
+  rel_open_r.
+Definition rel_prim_l_enc (v1 v2 v3 : val) : RelPrimL Σ (enc v1 v2 v3) _ :=
+  rel_enc_l.
+Definition rel_prim_r_enc (v1 v2 v3 : val) : RelPrimR Σ (enc v1 v2 v3) _ :=
+  rel_enc_r.
+Definition rel_prim_l_dec (v1 v2 v3 : val) : RelPrimL Σ (dec v1 v2 v3) _ :=
+  rel_dec_l.
+Definition rel_prim_r_dec (v1 v2 v3 : val) : RelPrimR Σ (dec v1 v2 v3) _ :=
+  rel_dec_r.
+Definition rel_prim_l_aenc (v1 v2 v3 : val) : RelPrimL Σ (aenc v1 v2 v3) _ :=
+  rel_aenc'_l.
+Definition rel_prim_r_aenc (v1 v2 v3 : val) : RelPrimR Σ (aenc v1 v2 v3) _ :=
+  rel_aenc'_r.
+Definition rel_prim_l_senc (v1 v2 v3 : val) : RelPrimL Σ (senc v1 v2 v3) _ :=
+  rel_senc'_l.
+Definition rel_prim_r_senc (v1 v2 v3 : val) : RelPrimR Σ (senc v1 v2 v3) _ :=
+  rel_senc'_r.
+Definition rel_prim_l_sign (v1 v2 v3 : val) : RelPrimL Σ (sign v1 v2 v3) _ :=
+  rel_sign'_l.
+Definition rel_prim_r_sign (v1 v2 v3 : val) : RelPrimR Σ (sign v1 v2 v3) _ :=
+  rel_sign'_r.
+Definition rel_prim_l_pkey (v1 : val) : RelPrimL Σ (pkey v1) _ :=
+  rel_pkey_l.
+Definition rel_prim_r_pkey (v1 : val) : RelPrimR Σ (pkey v1) _ :=
+  rel_pkey_r.
+Definition rel_prim_l_is_key (v1 : val) : RelPrimL Σ (is_key v1) _ :=
+  rel_is_key_l.
+Definition rel_prim_r_is_key (v1 : val) : RelPrimR Σ (is_key v1) _ :=
+  rel_is_key_r.
+Definition rel_prim_l_has_key_type (v1 v2 : val) : RelPrimL Σ (has_key_type v1 v2) _ :=
+  rel_has_key_type_l.
+Definition rel_prim_r_has_key_type (v1 v2 : val) : RelPrimR Σ (has_key_type v1 v2) _ :=
+  rel_has_key_type_r.
+
 End Proofs.
+
+Global Hint Resolve
+  rel_prim_l_tint rel_prim_r_tint
+  rel_prim_l_to_int rel_prim_r_to_int
+  rel_prim_l_tuple rel_prim_r_tuple
+  rel_prim_l_untuple rel_prim_r_untuple
+  rel_prim_l_term_of_list rel_prim_r_term_of_list
+  rel_prim_l_list_of_term rel_prim_r_list_of_term
+  rel_prim_l_tag rel_prim_r_tag
+  rel_prim_l_untag rel_prim_r_untag
+  rel_prim_l_key rel_prim_r_key
+  rel_prim_l_seal rel_prim_r_seal
+  rel_prim_l_hash rel_prim_r_hash
+  rel_prim_l_derive_aenc_key rel_prim_r_derive_aenc_key
+  rel_prim_l_derive_senc_key rel_prim_r_derive_senc_key
+  rel_prim_l_derive_sign_key rel_prim_r_derive_sign_key
+  rel_prim_l_to_key rel_prim_r_to_key
+  rel_prim_l_open_key rel_prim_r_open_key
+  rel_prim_l_open rel_prim_r_open
+  rel_prim_l_enc rel_prim_r_enc
+  rel_prim_l_dec rel_prim_r_dec
+  rel_prim_l_aenc rel_prim_r_aenc
+  rel_prim_l_senc rel_prim_r_senc
+  rel_prim_l_sign rel_prim_r_sign
+  rel_prim_l_pkey rel_prim_r_pkey
+  rel_prim_l_is_key rel_prim_r_is_key
+  rel_prim_l_has_key_type rel_prim_r_has_key_type
+  : rel_prims.

@@ -6,6 +6,7 @@ From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import avl.
 From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.proofmode Require Import classes.
 
 Section Proofs.
 
@@ -46,4 +47,23 @@ Lemma rel_avl_to_list_r E K e t Ψ :
   REL e << fill K (avl_to_list (repr t)) @ E : Ψ.
 Proof. pure_twp_rel twp_avl_to_list. Qed.
 
+Definition rel_prim_l_avl_insert (v1 v2 v3 : val) : RelPrimL Σ (avl_insert v1 v2 v3) _ :=
+  rel_avl_insert_l.
+Definition rel_prim_r_avl_insert (v1 v2 v3 : val) : RelPrimR Σ (avl_insert v1 v2 v3) _ :=
+  rel_avl_insert_r.
+Definition rel_prim_l_avl_lookup (v1 v2 : val) : RelPrimL Σ (avl_lookup v1 v2) _ :=
+  rel_avl_lookup_l.
+Definition rel_prim_r_avl_lookup (v1 v2 : val) : RelPrimR Σ (avl_lookup v1 v2) _ :=
+  rel_avl_lookup_r.
+Definition rel_prim_l_avl_to_list (v1 : val) : RelPrimL Σ (avl_to_list v1) _ :=
+  rel_avl_to_list_l.
+Definition rel_prim_r_avl_to_list (v1 : val) : RelPrimR Σ (avl_to_list v1) _ :=
+  rel_avl_to_list_r.
+
 End Proofs.
+
+Global Hint Resolve
+  rel_prim_l_avl_insert rel_prim_r_avl_insert
+  rel_prim_l_avl_lookup rel_prim_r_avl_lookup
+  rel_prim_l_avl_to_list rel_prim_r_avl_to_list
+  : rel_prims.

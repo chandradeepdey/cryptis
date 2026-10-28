@@ -2,6 +2,7 @@ From reloc Require Import reloc.
 From cryptis.core Require Import term.
 From cryptis.primitives Require Import pre_term comp.
 From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.proofmode Require Import classes.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -121,4 +122,48 @@ Lemma rel_tgone_r E K e Ψ :
   REL e << fill K (tgone #()) @ E : Ψ.
 Proof. pure_twp_rel twp_tgone. Qed.
 
+Definition rel_prim_l_eq_term (v1 v2 : val) : RelPrimL Σ (eq_term v1 v2) _ :=
+  rel_eq_term_l.
+Definition rel_prim_r_eq_term (v1 v2 : val) : RelPrimR Σ (eq_term v1 v2) _ :=
+  rel_eq_term_r.
+Definition rel_prim_l_texp (v1 v2 : val) : RelPrimL Σ (texp v1 v2) _ :=
+  rel_texp_l.
+Definition rel_prim_r_texp (v1 v2 : val) : RelPrimR Σ (texp v1 v2) _ :=
+  rel_texp_r.
+Definition rel_prim_l_tmul (v1 v2 : val) : RelPrimL Σ (tmul v1 v2) _ :=
+  rel_tmul_l.
+Definition rel_prim_r_tmul (v1 v2 : val) : RelPrimR Σ (tmul v1 v2) _ :=
+  rel_tmul_r.
+Definition rel_prim_l_tinv (v1 : val) : RelPrimL Σ (tinv v1) _ :=
+  rel_tinv_l.
+Definition rel_prim_r_tinv (v1 : val) : RelPrimR Σ (tinv v1) _ :=
+  rel_tinv_r.
+Definition rel_prim_l_tone (v1 : val) : RelPrimL Σ (tone v1) _ :=
+  rel_tone_l.
+Definition rel_prim_r_tone (v1 : val) : RelPrimR Σ (tone v1) _ :=
+  rel_tone_r.
+Definition rel_prim_l_tgmul (v1 v2 : val) : RelPrimL Σ (tgmul v1 v2) _ :=
+  rel_tgmul_l.
+Definition rel_prim_r_tgmul (v1 v2 : val) : RelPrimR Σ (tgmul v1 v2) _ :=
+  rel_tgmul_r.
+Definition rel_prim_l_tginv (v1 : val) : RelPrimL Σ (tginv v1) _ :=
+  rel_tginv_l.
+Definition rel_prim_r_tginv (v1 : val) : RelPrimR Σ (tginv v1) _ :=
+  rel_tginv_r.
+Definition rel_prim_l_tgone (v1 : val) : RelPrimL Σ (tgone v1) _ :=
+  rel_tgone_l.
+Definition rel_prim_r_tgone (v1 : val) : RelPrimR Σ (tgone v1) _ :=
+  rel_tgone_r.
+
 End Proofs.
+
+Global Hint Resolve
+  rel_prim_l_eq_term rel_prim_r_eq_term
+  rel_prim_l_texp rel_prim_r_texp
+  rel_prim_l_tmul rel_prim_r_tmul
+  rel_prim_l_tinv rel_prim_r_tinv
+  rel_prim_l_tone rel_prim_r_tone
+  rel_prim_l_tgmul rel_prim_r_tgmul
+  rel_prim_l_tginv rel_prim_r_tginv
+  rel_prim_l_tgone rel_prim_r_tgone
+  : rel_prims.

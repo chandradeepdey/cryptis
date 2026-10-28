@@ -4,7 +4,7 @@ From cryptis.primitives Require Import simple with_cryptis.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
 From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.primitives Require Import simple_spec.
-From cryptis.hyper.proofmode Require Import updates tactics.
+From cryptis.hyper.proofmode Require Import classes updates tactics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -758,7 +758,16 @@ rel_apply_l rel_tuple_l. rel_apply_l rel_aenc'_l. rel_later.
 rel_apply_r rel_tuple_r. rel_apply_r rel_aenc'_r. by rel_values.
 Qed.
 
+Definition rel_prim_l_random_adec (v1 v2 v3 : val) : RelPrimL Σ (random_adec v1 v2 v3) _ :=
+  rel_random_adec_l.
+Definition rel_prim_r_random_adec (v1 v2 v3 : val) : RelPrimR Σ (random_adec v1 v2 v3) _ :=
+  rel_random_adec_r.
+
 End Proofs.
+
+Global Hint Resolve
+  rel_prim_l_random_adec rel_prim_r_random_adec
+  : rel_prims.
 
 Arguments channel_rel {Σ _ _}.
 Arguments rel_mk_aenc_key_l {Σ _ _} K e T_sk T_pk Ψ.

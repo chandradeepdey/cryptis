@@ -1,6 +1,7 @@
 From reloc Require Import reloc.
 From stdpp Require Import sorting list lexico.
 From cryptis.lib Require Import repr list list_sort.
+From cryptis.hyper.proofmode Require Import classes.
 
 Section ListLemmas.
 
@@ -71,6 +72,15 @@ Proof.
 move=> ?.
 by rewrite /NILV /= [@repr_list]unlock; iIntros "?"; rewrite /CONS; rel_pures_r.
 Qed.
+
+Definition rel_prim_l_cons x xs :
+  RelPrimL Σ (repr x :: repr xs) _ := rel_cons_l.
+Definition rel_prim_r_cons x xs :
+  RelPrimR Σ (repr x :: repr xs) _ := rel_cons_r.
+Definition rel_prim_l_cons_nil x :
+  RelPrimL Σ (repr x :: Val []%V) _ := rel_cons_nil_l.
+Definition rel_prim_r_cons_nil x :
+  RelPrimR Σ (repr x :: Val []%V) _ := rel_cons_nil_r.
 
 Lemma rel_eq_list_l `{EqDecision A} E K e (f : val) (l1 l2 : list A) Ψ :
   (∀ K (x1 x2 : A) Ψ,
@@ -323,6 +333,10 @@ elim: l K => [|b l IH] K rel_f /=; iIntros "post"; rel_rec_r; rel_pures_r.
 Qed.
 
 End ListLemmas.
+
+Global Hint Resolve
+  rel_prim_l_cons rel_prim_r_cons rel_prim_l_cons_nil rel_prim_r_cons_nil
+  : rel_prims.
 
 Section ListLemmasEq.
 

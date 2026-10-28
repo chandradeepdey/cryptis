@@ -85,7 +85,9 @@ relational layer, built on [ReLoC](https://iris-project.org/reloc):
   against a valid attacker (`cryptis_ctx_refinement`).
 - `proofmode/*`, `proofmode`: the ghost state updates for freshly created
   terms, the tactics that discharge the side conditions of nonce and key
-  creation, and the tactics that run both programs through the primitives.
+  creation, and the tactics that run both programs through the primitives,
+  which find the spec of each primitive through the `RelPrimL` / `RelPrimR`
+  instances that the spec files declare.
 
 Its case studies live in `relational/examples`:
 
