@@ -57,13 +57,13 @@ rel_values.
 Qed.
 
 Lemma rel_tmul_l E K e t1 t2 Ψ :
-  (REL fill K (TMulN [t1; t2] : expr) << e @ E : Ψ) -∗
+  (REL fill K (TMul {[+ t1; t2 +]} : expr) << e @ E : Ψ) -∗
   REL fill K (tmul t1 t2) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tmul. Qed.
 
 Lemma rel_tmul_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
-  (REL e << fill K (TMulN [t1; t2] : expr) @ E : Ψ) -∗
+  (REL e << fill K (TMul {[+ t1; t2 +]} : expr) @ E : Ψ) -∗
   REL e << fill K (tmul t1 t2) @ E : Ψ.
 Proof. pure_twp_rel twp_tmul. Qed.
 
@@ -79,24 +79,24 @@ Lemma rel_tinv_r E K e t Ψ :
 Proof. pure_twp_rel twp_tinv. Qed.
 
 Lemma rel_tone_l E K e Ψ :
-  (REL fill K (TMulN [] : expr) << e @ E : Ψ) -∗
+  (REL fill K (TMul ∅ : expr) << e @ E : Ψ) -∗
   REL fill K (tone #()) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tone. Qed.
 
 Lemma rel_tone_r E K e Ψ :
   ↑specN ⊆ E →
-  (REL e << fill K (TMulN [] : expr) @ E : Ψ) -∗
+  (REL e << fill K (TMul ∅ : expr) @ E : Ψ) -∗
   REL e << fill K (tone #()) @ E : Ψ.
 Proof. pure_twp_rel twp_tone. Qed.
 
 Lemma rel_tgmul_l E K e t1 t2 Ψ :
-  (REL fill K (TGMulN [t1; t2] : expr) << e @ E : Ψ) -∗
+  (REL fill K (TGMul {[+ t1; t2 +]} : expr) << e @ E : Ψ) -∗
   REL fill K (tgmul t1 t2) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tgmul. Qed.
 
 Lemma rel_tgmul_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
-  (REL e << fill K (TGMulN [t1; t2] : expr) @ E : Ψ) -∗
+  (REL e << fill K (TGMul {[+ t1; t2 +]} : expr) @ E : Ψ) -∗
   REL e << fill K (tgmul t1 t2) @ E : Ψ.
 Proof. pure_twp_rel twp_tgmul. Qed.
 
@@ -112,13 +112,13 @@ Lemma rel_tginv_r E K e t Ψ :
 Proof. pure_twp_rel twp_tginv. Qed.
 
 Lemma rel_tgone_l E K e Ψ :
-  (REL fill K (TGMulN [] : expr) << e @ E : Ψ) -∗
+  (REL fill K (TGMul ∅ : expr) << e @ E : Ψ) -∗
   REL fill K (tgone #()) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tgone. Qed.
 
 Lemma rel_tgone_r E K e Ψ :
   ↑specN ⊆ E →
-  (REL e << fill K (TGMulN [] : expr) @ E : Ψ) -∗
+  (REL e << fill K (TGMul ∅ : expr) @ E : Ψ) -∗
   REL e << fill K (tgone #()) @ E : Ψ.
 Proof. pure_twp_rel twp_tgone. Qed.
 
