@@ -1,6 +1,10 @@
-(** Ghost state of the voting case study: the arbitrator's and the voters'
-    keys, the seal sets recording each voter's one ballot, and the facts
-    about signatures under a secret key that the arbitrator relies on. *)
+(** * Ghost state of the voting case study
+
+- [GhostState]: the arbitrator's and the voters' keys, and the invariants
+  that record each voter's one ballot.
+- [Signatures]: what a signature under a voter's secret key tells the
+  arbitrator.
+- [KeyGeneration]: creating the arbitrator's and the voters' keys. *)
 
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.
@@ -26,7 +30,7 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-(** * Ghost state *)
+Section GhostState.
 
 Definition ballot_ct skT n v : term :=
   Spec.random_aenc (Spec.pkey skT) (Tag (voteN.@"vote")) n v.
@@ -124,7 +128,9 @@ iInv "Hinv" as "[(>seals & >seals')|(%n & %n' & >seals & >seals' & >#Hsigned)]".
   iNext. iRight. iExists n, n'. by iFrame "#∗".
 Qed.
 
-(** * Signatures under a secret key *)
+End GhostState.
+
+Section Signatures.
 
 Lemma pub_verify_key skV skV' :
   minted skV -∗ minted_spec skV' -∗
@@ -215,7 +221,9 @@ case: (Spec.openP (Spec.pkey skV) t) Hiff => [k w Hk -> Hiff|Hiff].
   rewrite Hnone. by iLeft.
 Qed.
 
-(** * Key generation *)
+End Signatures.
+
+Section KeyGeneration.
 
 Lemma rel_mk_arb_key K K' Ψ :
   cryptis_rel_ctx -∗
@@ -339,5 +347,7 @@ iInduction ks as [|sk ks] "IH" forall (ks' votes votes'); iIntros "H".
   iApply (big_sepL2_mono with "H") => k y1 y2 _ _.
   by case: votes; case: votes' => /=.
 Qed.
+
+End KeyGeneration.
 
 End Base.

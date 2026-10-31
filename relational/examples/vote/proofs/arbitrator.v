@@ -1,6 +1,13 @@
-(** The arbitrator: the model of its slot list and tally, the one-sided
-    specs of its pure steps, and the relational proofs of ballot collection
-    and of the published result. *)
+(** * The arbitrator
+
+- [Model] describes the arbitrator's state: one ballot slot per voter, and
+  the tally.
+- [Facts]: pure facts about slots and tallies.  Among them, the tally does
+  not depend on the order in which the votes arrive.
+- [PublicTerms]: the published result is related to itself.
+- [OneSided]: specs of the arbitrator's steps on one side at a time.
+- [TwoSided]: the relational proofs of collecting the ballots and of
+  publishing the result. *)
 
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.
@@ -26,7 +33,7 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-(** * Model *)
+Section Model.
 
 Definition slot_empty (p : term * option term) : bool :=
   match p.2 with None => true | Some _ => false end.
@@ -70,7 +77,9 @@ Fixpoint slots_ok skT skT' votes votes' st {struct st} : Prop :=
   | _, _, _ => False
   end.
 
-(** * Pure facts about slots and tallies *)
+End Model.
+
+Section Facts.
 
 Lemma slots_ok_replicate skT skT' votes votes' (n : nat) :
   length votes = n → length votes' = n →
@@ -162,7 +171,9 @@ elim: ks votes => [|sk ks IH] [|v votes] //= Hlen; first lia.
 rewrite IH //. lia.
 Qed.
 
-(** * Public terms *)
+End Facts.
+
+Section PublicTerms.
 
 Lemma pub_pair_terms (l : list (Z * Z)) :
   ⊢ PUB⟨Spec.of_list (map pair_of l), Spec.of_list (map pair_of l)⟩.
@@ -175,7 +186,9 @@ rewrite [Spec.of_list]unlock. elim: l => [|[k v] l IH].
   rewrite /pair_of publicly_related_TPair !publicly_related_TInt. by iSplit; iPureIntro.
 Qed.
 
-(** * One-sided steps of the arbitrator *)
+End PublicTerms.
+
+Section OneSided.
 
 Lemma rel_tally_vote_l K e skT p t Ψ :
   (REL fill K (repr (tally_step skT p t) : expr) << e : Ψ) -∗
@@ -334,7 +347,9 @@ move=> K' [sk v] _. iIntros "post". rewrite /=. rel_pures_r.
 rel_apply_r rel_pkey_r. by iApply "post".
 Qed.
 
-(** * Arbitrator *)
+End OneSided.
+
+Section TwoSided.
 
 Lemma rel_record_ballot skT skT' ks ks' votes votes' st m m' :
   length st = length ks → length votes = length ks → length votes' = length ks' →
@@ -452,5 +467,7 @@ have Heq : AVL.to_list (foldr incr (seed cands) votes) =
 rewrite /result Heq.
 iApply (rel_send with "Hc"). iNext. iApply pub_pair_terms.
 Qed.
+
+End TwoSided.
 
 End Arbitrator.
