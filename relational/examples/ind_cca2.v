@@ -270,7 +270,7 @@ iMod (term_meta_set storeN () (↑storeN) (seed_of_aenc_key skA) ltac:(done)
         with "token_store") as "#Hstore".
 iMod ("link" $! (⊤ ∖ ↑cellN) ∅ ∅ with "[] seals seals'") as "(seals & seals' & #Hct)".
 { iPureIntro. solve_ndisj. }
-rewrite !left_id_L /random_seal.
+rewrite !left_id_L /random_wf_seal_data.
 iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
 rel_store_r.
 iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".

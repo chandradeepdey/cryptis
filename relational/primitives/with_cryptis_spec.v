@@ -636,11 +636,11 @@ Lemma rel_random_adec_r E K e k N c Ψ :
   REL e << fill K (random_adec k N c) @ E : Ψ.
 Proof. pure_twp_rel twp_random_adec'. Qed.
 
-Definition random_terms sk (N : namespace) n m : gset term :=
+Definition random_term_chain sk (N : namespace) n m : gset term :=
   {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
     Spec.random_aenc (Spec.pkey sk) (Tag N) n m]}.
 
-Definition random_seal sk sk' (N : namespace) n n' m m' : wf_seal_data * wf_seal_data :=
+Definition random_wf_seal_data sk sk' (N : namespace) n n' m m' : wf_seal_data * wf_seal_data :=
   (Some (sk : term, Spec.tag (Tag N) (TPair n m)),
    Some (sk' : term, Spec.tag (Tag N) (TPair n' m'))).
 
@@ -652,8 +652,8 @@ Lemma rel_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
   secret_in_l (seed_of_aenc_key sk) -∗
   minted m -∗ minted_spec m' -∗
-  ⌜∀ n, is_nonce n → random_terms sk N n m ## T n⌝ -∗
-  ⌜∀ n', is_nonce n' → random_terms sk' N n' m' ## T' n'⌝ -∗
+  ⌜∀ n, is_nonce n → random_term_chain sk N n m ## T n⌝ -∗
+  ⌜∀ n', is_nonce n' → random_term_chain sk' N n' m' ## T' n'⌝ -∗
   (∀ n, [∗ set] t ∈ T n, □ (minted n ↔ minted t)) -∗
   (∀ n', [∗ set] t ∈ T' n', □ (minted_spec n' ↔ minted_spec t)) -∗
   (∀ n n', ⌜is_nonce n⌝ -∗ ⌜is_nonce n'⌝ -∗ minted n -∗ minted_spec n' -∗
@@ -662,8 +662,8 @@ Lemma rel_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ
     (∀ E S S', ⌜↑cryptisN ⊆ E⌝ -∗
       seals_auth_l (seed_of_aenc_key sk) S -∗
       seals_auth_r (seed_of_aenc_key sk') S' ={E}=∗
-      seals_auth_l (seed_of_aenc_key sk) (S ∪ {[random_seal sk sk' N n n' m m']}) ∗
-      seals_auth_r (seed_of_aenc_key sk') (S' ∪ {[random_seal sk sk' N n n' m m']}) ∗
+      seals_auth_l (seed_of_aenc_key sk) (S ∪ {[random_wf_seal_data sk sk' N n n' m m']}) ∗
+      seals_auth_r (seed_of_aenc_key sk') (S' ∪ {[random_wf_seal_data sk sk' N n n' m m']}) ∗
       PUB⟨Spec.random_aenc (Spec.pkey sk) (Tag N) n m,
           Spec.random_aenc (Spec.pkey sk') (Tag N) n' m'⟩) ={⊤}=∗
     Ψ (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
@@ -677,22 +677,22 @@ iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
   first by rewrite minted_spec_pkey.
 rewrite /random_aenc. rel_pures.
-rel_apply_l (rel_mk_nonce_l _ _ (λ n, random_terms sk N n m ∪ T n) with "[//]").
+rel_apply_l (rel_mk_nonce_l _ _ (λ n, random_term_chain sk N n m ∪ T n) with "[//]").
 { iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
-  - rewrite /random_terms in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
+  - rewrite /random_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
       solve_minted_iff_elem.
   - iSpecialize ("mintT" $! t). rewrite big_sepS_forall. by iApply "mintT". }
 iIntros (n) "%Hn #mint_n Htt".
-rel_apply_r (rel_mk_nonce_r _ _ (λ n', random_terms sk' N n' m' ∪ T' n') with "[//]").
+rel_apply_r (rel_mk_nonce_r _ _ (λ n', random_term_chain sk' N n' m' ∪ T' n') with "[//]").
 { iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
-  - rewrite /random_terms in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
+  - rewrite /random_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
       solve_minted_iff_elem.
   - iSpecialize ("mintT'" $! t). rewrite big_sepS_forall. by iApply "mintT'". }
 iIntros (n') "%Hn' #mint_n' Htts".
-rewrite (big_sepS_union _ (random_terms sk N n m)); last exact: HT.
-rewrite (big_sepS_union _ (random_terms sk' N n' m')); last exact: HT'.
+rewrite (big_sepS_union _ (random_term_chain sk N n m)); last exact: HT.
+rewrite (big_sepS_union _ (random_term_chain sk' N n' m')); last exact: HT'.
 iDestruct "Htt" as "[Htt tokT]". iDestruct "Htts" as "[Htts tokT']".
-rewrite /random_terms. split_term_tokens.
+rewrite /random_term_chain. split_term_tokens.
 iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
 iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
 set pl := TPair n m.
@@ -726,9 +726,9 @@ iAssert (minted_spec pl') as "#mint_pl'".
 iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' [tt_c tts_c]")
   as "post".
 { iIntros (E S S' HE) "seals_l seals_r".
-  iMod (seals_auth_l_insert _ _ (random_seal sk sk' N n n' m m') with "seals_l")
+  iMod (seals_auth_l_insert _ _ (random_wf_seal_data sk sk' N n n' m m') with "seals_l")
     as "[seals_l #Hin_l]".
-  iMod (seals_auth_r_insert _ _ (random_seal sk sk' N n n' m m') with "seals_r")
+  iMod (seals_auth_r_insert _ _ (random_wf_seal_data sk sk' N n n' m m') with "seals_r")
     as "[seals_r #Hin_r]".
   iMod (public_rel_publish HE with "Hctx [] tt_c tts_c") as "[_ #Hpub_c]".
   { iIntros "!> #elem_c". rewrite /c /c' /Spec.random_aenc publicly_related_aenc.

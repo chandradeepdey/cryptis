@@ -47,15 +47,15 @@ rel_apply (rel_random_aenc
   (λ n', {[ Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT' n' v');
             Spec.enc skV' (Tag (voteN.@"ballot")) (ballot_ct skT' n' v') ]})
   skT skT' with "Hctx [//] mint_T mint_T' elem_pkT secret_T mint_v mint_v' [] [] [] []").
-{ iPureIntro. move=> n Hn. rewrite /random_terms /ballot_ct. solve_term_disj. }
-{ iPureIntro. move=> n' Hn'. rewrite /random_terms /ballot_ct. solve_term_disj. }
+{ iPureIntro. move=> n Hn. rewrite /random_term_chain /ballot_ct. solve_term_disj. }
+{ iPureIntro. move=> n' Hn'. rewrite /random_term_chain /ballot_ct. solve_term_disj. }
 { rewrite /ballot_ct. solve_minted_iff. }
 { rewrite /ballot_ct. solve_minted_iff. }
 iIntros (n n') "%Hn %Hn' #mint_n #mint_n' tok tok' upd".
 split_term_tokens.
 iDestruct "tok" as "[tt_tgc tt_sig]". iDestruct "tok'" as "[tts_tgc tts_sig]".
 (* The urn records the ballot, which links the ciphertexts. *)
-iMod (urn_inv_insert (E:=⊤) _ _ (random_seal skT skT' (voteN.@"vote") n n' v v')
+iMod (urn_inv_insert (E:=⊤) _ _ (random_wf_seal_data skT skT' (voteN.@"vote") n n' v v')
         (PUB⟨ballot_ct skT n v, ballot_ct skT' n' v'⟩) ltac:(solve_ndisj)
         with "Hurn [upd]") as "#pub_c".
 { iIntros (S S') "seals seals'". iApply ("upd" with "[] seals seals'").

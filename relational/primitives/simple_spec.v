@@ -292,14 +292,6 @@ Lemma rel_aenc'_r E K e pk N t Ψ :
   REL e << fill K (aenc pk N t) @ E : Ψ.
 Proof. pure_twp_rel twp_aenc'. Qed.
 
-Lemma adec_tseal (sk : aenc_key) N t :
-  ∀ t', Spec.dec sk N t = Some t' →
-  t = TSeal (Spec.pkey sk) (Spec.tag N t').
-Proof.
-case: Spec.decP => [k_t t' H -> _ [<-]|t'] => //.
-by move: H => /Spec.open_key_aencK => ->.
-Qed.
-
 Lemma rel_adec'_l K e (sk : aenc_key) N t Ψ :
   ▷ ((∀ t', ⌜t = TSeal (Spec.pkey sk) (Spec.tag N t')⌝ -∗
             ⌜Spec.dec sk N t = Some t'⌝ -∗
@@ -336,14 +328,6 @@ Lemma rel_senc'_r E K e (k N : term) t Ψ :
   REL e << fill K (senc k N t) @ E : Ψ.
 Proof. pure_twp_rel twp_senc'. Qed.
 
-Lemma sdec_tseal (k : senc_key) N t :
-  ∀ t', Spec.dec k N t = Some t' →
-  t = TSeal k (Spec.tag N t').
-Proof.
-case: Spec.decP => [k_t t' H -> _ [<-]|t'] => //.
-by move: H => /Spec.open_key_sencK => ->.
-Qed.
-
 Lemma rel_sdec'_l K e (k : senc_key) N t Ψ :
   ▷ ((∀ t', ⌜t = TSeal k (Spec.tag N t')⌝ -∗
             ⌜Spec.dec k N t = Some t'⌝ -∗
@@ -379,14 +363,6 @@ Lemma rel_sign'_r E K e (k N : term) t Ψ :
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (sign k N t) @ E : Ψ.
 Proof. pure_twp_rel twp_sign'. Qed.
-
-Lemma verify_tseal (sk : sign_key) N t :
-  ∀ t', Spec.dec (Spec.pkey sk) N t = Some t' →
-  t = TSeal sk (Spec.tag N t').
-Proof.
-case: Spec.decP => [k_t t' H -> _ [<-]|t'] => //.
-by move: H => /Spec.open_key_signK => ->.
-Qed.
 
 Lemma rel_verify'_l K e (sk : sign_key) N t Ψ :
   ▷ ((∀ t', ⌜t = TSeal sk (Spec.tag N t')⌝ -∗

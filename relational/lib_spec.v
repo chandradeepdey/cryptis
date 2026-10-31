@@ -11,19 +11,6 @@ From cryptis.core.pre_term Require Import with_stdpp.
 From cryptis.lib Require Import avl.
 From cryptis.hyper.lib Require Export refines list_spec list_match_spec.
 
-(* THIS IS A VERY GROSS HACK *)
-Lemma heapGS_heapGpreS Σ `{!heapGS Σ} : heapGpreS Σ.
-Proof.
-  case: heapGS0 => Hinv Hgen_heap Hinv_heap Hproph_map _ Hstep_cnt.
-  constructor => //.
-  { case: Hinv => Hwsat Hlc; constructor.
-    { by case: Hwsat. }
-    { by case: Hlc. } }
-  { by case: Hgen_heap. }
-  { by case: Hinv_heap. }
-  { by case: Hproph_map. }
-Qed.
-
 Lemma pure_twp_rel_l Σ E K e t A (v: val) :
   pure_expr e →
   (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v', ⌜v' = v⌝ }]) →
@@ -33,7 +20,7 @@ Lemma pure_twp_rel_l Σ E K e t A (v: val) :
 Proof.
 move=> Hpure Hinv ?.
 have H := adequacy.heap_twp_pure_exec _ _ _ Hpure Hinv.
-have heapGpreS0: heapGpreS Σ by apply heapGS_heapGpreS; apply _.
+have heapGpreS0: heapGpreS Σ by apply adequacy.heapGS_heapGpreS; apply _.
 apply H in heapGpreS0 as (v' & Hev' & ->).
 clear Hinv H.
 apply rtc_nsteps in Hev' as (n & Hev').
@@ -51,7 +38,7 @@ Lemma pure_twp_rel_r Σ E K e t A (v: val) :
 Proof.
 move=> Hpure Hinv ? HE.
 have H := adequacy.heap_twp_pure_exec _ _ _ Hpure Hinv.
-have heapGpreS0: heapGpreS Σ by apply heapGS_heapGpreS; apply _.
+have heapGpreS0: heapGpreS Σ by apply adequacy.heapGS_heapGpreS; apply _.
 apply H in heapGpreS0 as (v' & Hev' & ->).
 clear Hinv H.
 apply rtc_nsteps in Hev' as (n & Hev').

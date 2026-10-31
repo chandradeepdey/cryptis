@@ -7,6 +7,18 @@ From iris.prelude Require Import options.
 From cryptis Require Import lib.
 From cryptis.lib Require Import gen_adequacy.
 
+Lemma heapGS_heapGpreS Σ `{!heapGS Σ} : heapGpreS Σ.
+Proof.
+  case: heapGS0 => Hinv Hgen_heap Hinv_heap Hproph_map _ Hstep_cnt.
+  constructor => //.
+  { case: Hinv => Hwsat Hlc; constructor.
+    { by case: Hwsat. }
+    { by case: Hlc. } }
+  { by case: Hgen_heap. }
+  { by case: Hinv_heap. }
+  { by case: Hproph_map. }
+Qed.
+
 Lemma heap_twp_thread_exec Σ `{!heapGpreS Σ} e σ φ :
   (∀ `{!heapGS Σ}, ⊢ inv_heap_inv -∗ WP e [{ v, ⌜φ v⌝ }]) →
   ∃ v σ', rtc thread_step (e, σ) (of_val v, σ') ∧ φ v.

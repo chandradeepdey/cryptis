@@ -1,21 +1,20 @@
-(** Relational attacker model.
+(** * The attacker
 
-    The attacker is a program [adv] that [init_network_rel] forks on a fresh
-    network channel, as [init_network] does in the unary development.  It is
-    valid ([attacker_valid]) when it is self-related at [attacker_rel], which
-    maps related channels to related computations; the security theorems of
-    [rel_adequacy.v] hold for every valid attacker.
+The attacker is a program [adv] that runs on a fresh network channel, as
+[init_network] does in the unary development.  It is valid
+([attacker_valid]) when it is related to itself, as a function from related
+channels to related computations.  The security theorems of [rel_adequacy.v]
+hold for every valid attacker.
 
-    The [rel_prim_*] lemmas give the unary primitives type-like contracts over
-    [lrel_term], the terms related by [PUB⟨·,·⟩], and over [lrel_channel].
-    They are what a validity proof uses when the attacker calls a primitive.
-    [attacker_valid_typed] packages them: an attacker that refers to the
-    primitives by their names in [attacker_prims] and is well typed at
-    [attacker_ty] in [attacker_prims_ty], with [#0] standing for terms and
-    [#1] for the channel, is valid.  These type variables are free, so the
-    attacker cannot inspect the representation of a term or of the channel;
-    the proof is ReLoC's fundamental theorem with [#0] interpreted as
-    [lrel_term] and [#1] as [lrel_channel]. *)
+- [Network] relates terms ([lrel_term]) and channels ([lrel_channel]) across
+  the runs, and runs the attacker on a fresh channel
+  ([rel_run_network_rel]).
+  - [Contracts] gives each primitive a contract in the style of a type over
+    these relations.  A proof that an attacker is valid uses them whenever
+    the attacker calls a primitive.
+- [Typed]: every well-typed attacker is valid ([attacker_valid_typed]).  Its
+  types keep terms and the channel abstract, so the attacker cannot look
+  inside them. *)
 
 From reloc Require Import reloc.
 From reloc.typing Require Import types interp fundamental.
@@ -38,7 +37,7 @@ Definition init_network_rel : val := λ: "adv",
 Definition run_network_rel : val := λ: "adv" "f",
   "f" (init_network_rel "adv").
 
-Section Proofs.
+Section Network.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
@@ -55,7 +54,7 @@ Definition attacker_rel : lrel Σ := (lrel_channel → ())%lrel.
 Lemma lrel_term_intro t t' : PUB⟨t, t'⟩ -∗ lrel_term t t'.
 Proof. iIntros "#H". iExists t, t'. by eauto. Qed.
 
-(** * Contracts of the primitives *)
+Section Contracts.
 
 Lemma rel_prim_tint : ⊢ (lrel_int → lrel_term)%lrel tint tint.
 Proof.
@@ -260,6 +259,8 @@ iIntros "!> %c %c' Hc".
 iApply (rel_recv with "Hc"). iIntros "%t %t' #Ht". by iApply lrel_term_intro.
 Qed.
 
+End Contracts.
+
 Lemma rel_run_network_rel (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
   (REL adv << adv' : attacker_rel) -∗
   (∀ c c', channel_rel c c' -∗ REL f c << f' c' : A) -∗
@@ -280,13 +281,15 @@ iIntros (? ?) "_ /=". rel_pures_l. rel_pures_r.
 by iApply "Hf".
 Qed.
 
-End Proofs.
+End Network.
 
 Definition attacker_valid (adv : expr) : Prop :=
   ∀ Σ (Hreloc : relocG Σ) (Hpub : public_relGS Σ),
     ⊢ cryptis_rel_ctx -∗ REL adv << adv : attacker_rel.
 
-(** * Syntactically typed attackers *)
+Section Typed.
+
+Context `{!relocG Σ, !public_relGS Σ}.
 
 (** Binary primitives are eta-expanded so that the specs of [simple_spec.v]
     and [comp_spec.v], which match saturated applications, apply. *)
@@ -325,10 +328,6 @@ Definition attacker_prims_ty : gmap string type :=
   <["recv" := (#1 → #0)%ty]> ∅.
 
 Definition attacker_ty : type := (#1 → ())%ty.
-
-Section Typed.
-
-Context `{!relocG Σ, !public_relGS Σ}.
 
 Lemma attacker_prims_env :
   cryptis_rel_ctx -∗
