@@ -159,8 +159,8 @@ rewrite publicly_related_TSeal. iRight.
 rewrite minted_TSeal minted_spec_TSeal.
 iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
 iSplit; first by iSplit; [iApply secret_in_l_linked_in_l | iApply secret_in_r_linked_in_r].
-iSplit; first by iApply publicly_linked_linked.
 iModIntro. iSplit; first done. iSplit; first done. iSplit; first done.
+iSplit; first by iApply publicly_linked_linked.
 by iSplit.
 Qed.
 
@@ -176,13 +176,13 @@ iIntros "#sec #Ht".
 have [[k' [w' ->]]|Hns] : (∃ k' w', t' = TSeal k' w') ∨ (∀ k' w', t' ≠ TSeal k' w').
 { case: t' => *; try by right. left; eauto. }
 - rewrite publicly_related_TSeal.
-  iDestruct "Ht" as "[[Hk _]|(_ & _ & _ & _ & _ & #Hbox)]".
+  iDestruct "Ht" as "[[Hk _]|(_ & _ & _ & _ & #Hbox)]".
   + iDestruct (publicly_related_TKey_term with "Hk") as %[s' ->].
     rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk]".
     iDestruct (publicly_related_nonce_term _ Hnonce with "Hk") as "[Hl _]".
     by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
   + case: k' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf']; try by iDestruct "Hbox" as "[]".
-    iDestruct "Hbox" as "[<- (_ & Hw & [Hl _])]".
+    iDestruct "Hbox" as "[<- (_ & Hw & _ & [Hl _])]".
     iExists s', w'. by eauto.
 - by iDestruct (publicly_related_TSeal_term_wf Sign _ _ Hns with "Ht") as "[]".
 Qed.

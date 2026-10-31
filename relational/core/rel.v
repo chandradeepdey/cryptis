@@ -1226,43 +1226,44 @@ Lemma publicly_related_TSeal k k' t t' :
   (PUB⟨k, k'⟩ ∧ PUB⟨t, t'⟩) ∨
   (minted (TSeal k t) ∧ minted_spec (TSeal k' t') ∧
    publicly_linked (TSeal k t) (TSeal k' t') ∧
-   linked k k' ∧ linked t t' ∧
+   linked k k' ∧
    □ (match k, k' with
       | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
         match kt with
         | ADec | Verify => False
-        | Sign => PUB⟨TKey Verify k1, TKey Verify k1'⟩ ∧ PUB⟨t, t'⟩ ∧
+        | Sign => PUB⟨TKey Verify k1, TKey Verify k1'⟩ ∧ PUB⟨t, t'⟩ ∧ linked t t' ∧
                   wf_seal_rel (Some (TKey Sign k1, t)) (Some (TKey Sign k1', t'))
-        | AEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧
+        | AEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧ linked t t' ∧
                   wf_seal_rel (Some (TKey ADec k1, t)) (Some (TKey ADec k1', t'))
         | SEnc => (PUB⟨k1, k1'⟩ → PUB⟨t, t'⟩) ∧
+                  ((secret_in_l k1 ∧ secret_in_r k1') ∨ linked t t') ∧
                   wf_seal_rel (Some (TKey SEnc k1, t)) (Some (TKey SEnc k1', t'))
         end
       | _, _ => False
       end)).
 Proof.
 rewrite /=. iSplit.
-- iIntros "#(mk & mk' & [?|(? & ? & ? & #Hbox)])"; first by iLeft.
-  iRight. do 5 (iSplit; first done). iModIntro.
+- iIntros "#(mk & mk' & [?|(? & ? & #Hbox)])"; first by iLeft.
+  iRight. do 4 (iSplit; first done). iModIntro.
   case: k => [n|a b|a|kt k1|k b|s|pt wf nf] //.
   case: k' => [n'|a' b'|a'|kt' k1'|k'' b'|s'|pt' wf' nf'] //.
   iDestruct "Hbox" as "[-> Hbox]". iSplit; first done.
   case: kt' => //.
-  iDestruct "Hbox" as "(Hv & Ht & Hwf)". iSplit; last by iSplit.
+  iDestruct "Hbox" as "(Hv & Ht & Hl & Hwf)". iSplit; last by iFrame "Ht Hl Hwf".
   rewrite minted_TSeal !minted_TKey minted_spec_TSeal !minted_spec_TKey.
   iDestruct "mk" as "[mk1 _]". iDestruct "mk'" as "[mk1' _]".
   by do 3 (iSplit; first done).
-- iIntros "#[[H1 H2]|(mk & mk' & ? & ? & ? & #Hbox)]".
+- iIntros "#[[H1 H2]|(mk & mk' & ? & ? & #Hbox)]".
   { iPoseProof (publicly_related_minted with "H1") as "[? ?]".
     iPoseProof (publicly_related_minted with "H2") as "[? ?]".
     rewrite minted_TSeal minted_spec_TSeal.
     iSplit; first by iSplit. iSplit; first by iSplit. iLeft. by iSplit. }
-  do 2 (iSplit; first done). iRight. do 3 (iSplit; first done). iModIntro.
+  do 2 (iSplit; first done). iRight. do 2 (iSplit; first done). iModIntro.
   case: k => [n|a b|a|kt k1|k b|s|pt wf nf] //.
   case: k' => [n'|a' b'|a'|kt' k1'|k'' b'|s'|pt' wf' nf'] //.
   iDestruct "Hbox" as "[-> Hbox]". iSplit; first done.
   case: kt' => //.
-  iDestruct "Hbox" as "((_ & _ & _ & Hv) & Ht & Hwf)". by iSplit; last iSplit.
+  iDestruct "Hbox" as "((_ & _ & _ & Hv) & Ht & Hl & Hwf)". by iFrame "#".
 Qed.
 
 Lemma publicly_related_THash t t' :
@@ -1280,26 +1281,54 @@ rewrite /= minted_THash minted_spec_THash. iSplit.
   do 2 (iSplit; first done). by iLeft.
 Qed.
 
+(** What keeps a ciphertext out of the attacker's reach: a secret plaintext,
+    or a symmetric key with a secret seed. *)
+Definition seal_secret_in_l k t : iProp :=
+  secret_in_l t ∨ ∃ s, ⌜k = TKey SEnc s⌝ ∧ secret_in_l s.
+
+Definition seal_secret_in_r k' t' : iProp :=
+  secret_in_r t' ∨ ∃ s', ⌜k' = TKey SEnc s'⌝ ∧ secret_in_r s'.
+
+#[global] Instance seal_secret_in_l_persistent k t : Persistent (seal_secret_in_l k t).
+Proof. apply _. Qed.
+
+#[global] Instance seal_secret_in_r_persistent k' t' : Persistent (seal_secret_in_r k' t').
+Proof. apply _. Qed.
+
 Lemma publicly_related_TSeal_term k t (t' : term) :
   PUB⟨TSeal k t, t'⟩ -∗
   (∃ k' t1', ⌜t' = TSeal k' t1'⌝) ∨
-  (publicly_linked (TSeal k t) t' ∧ secret_in_l t).
+  (publicly_linked (TSeal k t) t' ∧ seal_secret_in_l k t).
 Proof.
 case: t' => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
-- iIntros "_". iLeft. by eauto.
-- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
+2: { iIntros "_". iLeft. by eauto. }
+all: iIntros "H"; iRight;
+  first [ iDestruct "H" as "(_ & _ & Hel & _ & #Hbox)"
+        | iDestruct "H" as "(_ & _ & Hel & #Hbox)" ];
+  iSplit; first done.
+all: case: k => [?|? ?|?|kt k1|? ?|?|? ? ?] //=; try by iDestruct "Hbox" as "[]".
+all: case: kt; try by iDestruct "Hbox" as "[]".
+all: rewrite /seal_secret_in_l;
+  first [ iDestruct "Hbox" as "(_ & Hs & _)"; iLeft; iExact "Hs"
+        | iDestruct "Hbox" as "(Hs & _)"; iRight; iExists _; iSplit; [done|iExact "Hs"] ].
 Qed.
 
 Lemma publicly_related_term_TSeal (t : term) k' t' :
   PUB⟨t, TSeal k' t'⟩ -∗
   (∃ k t1, ⌜t = TSeal k t1⌝) ∨
-  (publicly_linked t (TSeal k' t') ∧ secret_in_r t').
+  (publicly_linked t (TSeal k' t') ∧ seal_secret_in_r k' t').
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
-- iIntros "_". iLeft. by eauto.
-- iIntros "(_ & _ & ? & _ & ? & _)". iRight. by iSplit.
+2: { iIntros "_". iLeft. by eauto. }
+all: iIntros "H"; iRight;
+  first [ iDestruct "H" as "(_ & _ & Hel & _ & #Hbox)"
+        | iDestruct "H" as "(_ & _ & Hel & #Hbox)" ];
+  iSplit; first done.
+all: case: k' => [?|? ?|?|kt k1|? ?|?|? ? ?] //=; try by iDestruct "Hbox" as "[]".
+all: case: kt; try by iDestruct "Hbox" as "[]".
+all: rewrite /seal_secret_in_r;
+  first [ iDestruct "Hbox" as "(_ & Hs & _)"; iLeft; iExact "Hs"
+        | iDestruct "Hbox" as "(Hs & _)"; iRight; iExists _; iSplit; [done|iExact "Hs"] ].
 Qed.
 
 Lemma publicly_related_TSeal_term_wf kt k1 t (t' : term) :
@@ -1312,12 +1341,15 @@ Lemma publicly_related_TSeal_term_wf kt k1 t (t' : term) :
   end.
 Proof.
 case: t' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] Hns;
-  first [by case: (Hns k' b') | case: kt => /=; first
-    [ by iIntros "(_ & _ & [])"
-    | by iIntros "(_ & _ & _ & _ & #[_ ?])"
-    | by iIntros "(_ & _ & _ & _ & #[])"
-    | by iIntros "(_ & _ & _ & _ & _ & #[_ ?])"
-    | by iIntros "(_ & _ & _ & _ & _ & #[])" ]].
+  try by case: (Hns k' b').
+all: case: kt => /=; try by iIntros "(_ & _ & [])".
+all: first
+  [ by iIntros "(_ & _ & _ & #[])"
+  | by iIntros "(_ & _ & _ & _ & #[])"
+  | by iIntros "(_ & _ & _ & #(_ & _ & ?))"
+  | by iIntros "(_ & _ & _ & #(_ & ?))"
+  | by iIntros "(_ & _ & _ & _ & #(_ & _ & ?))"
+  | by iIntros "(_ & _ & _ & _ & #(_ & ?))" ].
 Qed.
 
 Lemma publicly_related_term_TSeal_wf (t : term) kt k1' t' :
@@ -1330,12 +1362,15 @@ Lemma publicly_related_term_TSeal_wf (t : term) kt k1' t' :
   end.
 Proof.
 case: t => [n|a b|a|kt0 s|k b|s|pt wf nf] Hns;
-  first [by case: (Hns k b) | case: kt => /=; first
-    [ by iIntros "(_ & _ & [])"
-    | by iIntros "(_ & _ & _ & _ & #[_ ?])"
-    | by iIntros "(_ & _ & _ & _ & #[])"
-    | by iIntros "(_ & _ & _ & _ & _ & #[_ ?])"
-    | by iIntros "(_ & _ & _ & _ & _ & #[])" ]].
+  try by case: (Hns k b).
+all: case: kt => /=; try by iIntros "(_ & _ & [])".
+all: first
+  [ by iIntros "(_ & _ & _ & #[])"
+  | by iIntros "(_ & _ & _ & _ & #[])"
+  | by iIntros "(_ & _ & _ & #(_ & _ & ?))"
+  | by iIntros "(_ & _ & _ & #(_ & ?))"
+  | by iIntros "(_ & _ & _ & _ & #(_ & _ & ?))"
+  | by iIntros "(_ & _ & _ & _ & #(_ & ?))" ].
 Qed.
 
 Lemma publicly_related_THash_term t (t' : term) :
@@ -1356,7 +1391,7 @@ Lemma publicly_related_term_THash (t : term) t' :
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
 - iIntros "(_ & _ & ? & ?)". iRight. by iSplit.
-- iIntros "(_ & _ & ? & _ & ? & _)". iRight. by iSplit.
+- iIntros "(_ & _ & ? & ? & _)". iRight. by iSplit.
 - iIntros "_". iLeft. by eauto.
 Qed.
 
@@ -1374,7 +1409,7 @@ case: t' => // k_t' t'.
 rewrite publicly_related_TSeal.
 case: decide => // k_t_k [<-].
 case: decide => // k_t_k' [<-].
-iIntros "#Hk #[[_ Ht]|(_ & _ & _ & _ & _ & #Hrest)]"; first done.
+iIntros "#Hk #[[_ Ht]|(_ & _ & _ & _ & #Hrest)]"; first done.
 case: k_t k_t' => // kt k1 [] // kt' k1' in k_t_k k_t_k' *.
 iDestruct "Hrest" as "[<- Hrest]".
 case: kt k_t_k k_t_k' => // - [<-] [<-].
@@ -1525,16 +1560,16 @@ rewrite /Spec.enc publicly_related_TSeal.
 rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
 rewrite /Spec.pkey [term_of_aenc_key]unlock /= publicly_related_tag.
 iSplit.
-- iIntros "#[[Hk [_ Ht]]|([Hmk Hmt] & [Hmk' Hmt'] & Hel & Hpk & Hpt & #Hrest)]";
+- iIntros "#[[Hk [_ Ht]]|([Hmk Hmt] & [Hmk' Hmt'] & Hel & Hpk & #Hrest)]";
     first by iLeft; iSplit.
-  iRight. do 7 (iSplit; first done).
-  iDestruct "Hrest" as "[_ [Hrest Hwf]]". iSplit; last done.
+  iDestruct "Hrest" as "[_ (Hrest & Hpt & Hwf)]".
+  iRight. do 7 (iSplit; first done). iSplit; last done.
   iIntros "!> #Hs". by iDestruct ("Hrest" with "Hs") as "[_ ?]".
 - iIntros "#[[Hk Ht]|(Hmk & Hmt & Hmk' & Hmt' & Hel & Hpk & Hpt & #Hrest & #Hwf)]";
     first by iLeft; iSplit; last iSplit.
   iRight. iSplit; first by iSplit. iSplit; first by iSplit.
-  do 3 (iSplit; first done).
-  iIntros "!>". iSplit; first done. iSplit; last done.
+  do 2 (iSplit; first done).
+  iIntros "!>". iSplit; first done. iSplit; last by iSplit.
   iIntros "#Hs". iSplit; first done. by iApply "Hrest".
 Qed.
 
@@ -1706,6 +1741,58 @@ elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
 - by case: t => /= *; iDestruct "Hpub" as "(_ & _ & [])".
 Qed.
 
+#[local] Lemma secret_in_l_publicly_related pub_l flow_l {t t'} :
+  public_rel_Private_l_protected pub_l flow_l →
+  public_rel_flow_l_consistent pub_l flow_l →
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  secret_in_l t -∗ PUB⟨t, t'⟩ -∗ False.
+Proof.
+move=> HPriv Hcons. iIntros "Hmap Hs Ht".
+iDestruct (secret_in_l_lookup with "Hmap Hs") as %Hsec.
+by iApply (publicly_related_protected_l HPriv Hcons
+             (or_introl (ex_intro _ _ (conj Hsec I))) with "Hmap Ht").
+Qed.
+
+#[local] Lemma secret_in_r_publicly_related pub_r flow_r {t t'} :
+  public_rel_Private_r_protected pub_r flow_r →
+  public_rel_flow_r_consistent pub_r flow_r →
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  secret_in_r t' -∗ PUB⟨t, t'⟩ -∗ False.
+Proof.
+move=> HPriv Hcons. iIntros "Hmap Hs Ht".
+iDestruct (secret_in_r_lookup with "Hmap Hs") as %Hsec.
+by iApply (publicly_related_protected_r HPriv Hcons
+             (or_introl (ex_intro _ _ (conj Hsec I))) with "Hmap Ht").
+Qed.
+
+(** A ciphertext kept out of the attacker's reach is not built from related
+    parts. *)
+#[local] Lemma seal_secret_in_l_TSeal pub_l flow_l {k b k' b'} :
+  public_rel_Private_l_protected pub_l flow_l →
+  public_rel_flow_l_consistent pub_l flow_l →
+  own public_rel_map_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_l)) -∗
+  seal_secret_in_l k b -∗ PUB⟨k, k'⟩ -∗ PUB⟨b, b'⟩ -∗ False.
+Proof.
+move=> HPriv Hcons. iIntros "Hmap [Hs|(%s & -> & Hs)] #Hk #Hb".
+- by iApply (secret_in_l_publicly_related HPriv Hcons with "Hmap Hs Hb").
+- iDestruct (publicly_related_TKey_term with "Hk") as %[s' ->].
+  rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk']".
+  by iApply (secret_in_l_publicly_related HPriv Hcons with "Hmap Hs Hk'").
+Qed.
+
+#[local] Lemma seal_secret_in_r_TSeal pub_r flow_r {k b k' b'} :
+  public_rel_Private_r_protected pub_r flow_r →
+  public_rel_flow_r_consistent pub_r flow_r →
+  own public_rel_map_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> pub_r)) -∗
+  seal_secret_in_r k' b' -∗ PUB⟨k, k'⟩ -∗ PUB⟨b, b'⟩ -∗ False.
+Proof.
+move=> HPriv Hcons. iIntros "Hmap [Hs|(%s' & -> & Hs)] #Hk #Hb".
+- by iApply (secret_in_r_publicly_related HPriv Hcons with "Hmap Hs Hb").
+- iDestruct (publicly_related_term_TKey with "Hk") as %[s ->].
+  rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk']".
+  by iApply (secret_in_r_publicly_related HPriv Hcons with "Hmap Hs Hk'").
+Qed.
+
 #[local] Lemma publicly_related_linked_in_l pub_l flow_l :
   public_rel_Private_l_protected pub_l flow_l →
   public_rel_flow_l_consistent pub_l flow_l →
@@ -1780,34 +1867,60 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
             injection Heq as ->) ].
 - iDestruct (publicly_related_TSeal_term with "H1") as "[(%k1' & %b1' & ->)|[Hel1 Hsecret]]";
     last first.
-  { iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
-    iDestruct (publicly_related_TSeal_term with "H2") as "[(%k2' & %b2' & ->)|[Hel2 _]]";
+  { iDestruct (publicly_related_TSeal_term with "H2") as "[(%k2' & %b2' & ->)|[Hel2 _]]";
       last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
     rewrite publicly_related_TSeal.
-    iDestruct "H2" as "[[_ Hb2]|(_ & _ & Hel2 & _)]";
+    iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & _)]";
       last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
-    by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
-                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb2") as "[]". }
+    by iDestruct (seal_secret_in_l_TSeal HPriv_l Hflow_l_cons
+                    with "Hmap_l Hsecret Hk2 Hb2") as "[]". }
   iDestruct (publicly_related_TSeal_term with "H2") as "[(%k2' & %b2' & ->)|[Hel2 Hsecret]]";
     last first.
-  { iDestruct (secret_in_l_lookup with "Hmap_l Hsecret") as %Hb.
-    rewrite publicly_related_TSeal.
-    iDestruct "H1" as "[[_ Hb1]|(_ & _ & Hel1 & _)]";
+  { rewrite publicly_related_TSeal.
+    iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & _)]";
       last by iApply (publicly_linked_agree_l with "Hel1 Hel2").
-    by iPoseProof (publicly_related_protected_l HPriv_l Hflow_l_cons
-                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_l Hb1") as "[]". }
+    by iDestruct (seal_secret_in_l_TSeal HPriv_l Hflow_l_cons
+                    with "Hmap_l Hsecret Hk1 Hb1") as "[]". }
   rewrite !publicly_related_TSeal.
-  iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & [Hpk1 _] & [Hpb1 _] & _)]";
-  iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & [Hpk2 _] & [Hpb2 _] & _)]".
+  iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & [Hpk1 _] & #Hbox1)]";
+  iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & [Hpk2 _] & #Hbox2)]".
   + iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
+  + iAssert (linked_in_l t1 b2' ∨ ∃ s, ⌜k = TKey SEnc s⌝ ∧ secret_in_l s)%I
+      as "#Hpb2c".
+    { case: k k2' => [?|? ?|?|kt s|? ?|?|? ? ?] [?|? ?|?|kt' s'|? ?|?|? ? ?] /=;
+        try by iDestruct "Hbox2" as "[]".
+      iDestruct "Hbox2" as "[-> Hbox2]".
+      case: kt'; try (by iDestruct "Hbox2" as "[]");
+        [ iDestruct "Hbox2" as "(_ & [? _] & _)"; by iLeft
+        | iDestruct "Hbox2" as "(_ & _ & [? _] & _)"; by iLeft
+        | iDestruct "Hbox2" as "(_ & [[? _]|[? _]] & _)";
+          [iRight; iExists s; by iSplit | by iLeft] ]. }
+    iDestruct "Hpb2c" as "[Hpb2|(%s & -> & Hs)]"; last first.
+    { iExFalso. iApply (seal_secret_in_l_TSeal HPriv_l Hflow_l_cons
+                          with "Hmap_l [] Hk1 Hb1").
+      iRight. iExists s. by iSplit. }
+    iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hk1 Hpk2") as "#Hk2".
     iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hb1 Hpb2") as "#Hb2".
     iDestruct ("IH" with "Hmap_l Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_l Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
+  + iAssert (linked_in_l t1 b1' ∨ ∃ s, ⌜k = TKey SEnc s⌝ ∧ secret_in_l s)%I
+      as "#Hpb1c".
+    { case: k k1' => [?|? ?|?|kt s|? ?|?|? ? ?] [?|? ?|?|kt' s'|? ?|?|? ? ?] /=;
+        try by iDestruct "Hbox1" as "[]".
+      iDestruct "Hbox1" as "[-> Hbox1]".
+      case: kt'; try (by iDestruct "Hbox1" as "[]");
+        [ iDestruct "Hbox1" as "(_ & [? _] & _)"; by iLeft
+        | iDestruct "Hbox1" as "(_ & _ & [? _] & _)"; by iLeft
+        | iDestruct "Hbox1" as "(_ & [[? _]|[? _]] & _)";
+          [iRight; iExists s; by iSplit | by iLeft] ]. }
+    iDestruct "Hpb1c" as "[Hpb1|(%s & -> & Hs)]"; last first.
+    { iExFalso. iApply (seal_secret_in_l_TSeal HPriv_l Hflow_l_cons
+                          with "Hmap_l [] Hk2 Hb2").
+      iRight. iExists s. by iSplit. }
+    iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hk2 Hpk1") as "#Hk1".
     iPoseProof (publicly_related_linked_in_l HPriv_l Hflow_l_cons
                   with "Hmap_l Hpub_consistent Hb2 Hpb1") as "#Hb1".
@@ -1916,34 +2029,60 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
             injection Heq as ->) ].
 - iDestruct (publicly_related_term_TSeal with "H1") as "[(%k1 & %b1 & ->)|[Hel1 Hsecret]]";
     last first.
-  { iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
-    iDestruct (publicly_related_term_TSeal with "H2") as "[(%k2 & %b2 & ->)|[Hel2 _]]";
+  { iDestruct (publicly_related_term_TSeal with "H2") as "[(%k2 & %b2 & ->)|[Hel2 _]]";
       last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
     rewrite publicly_related_TSeal.
-    iDestruct "H2" as "[[_ Hb2]|(_ & _ & Hel2 & _)]";
+    iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & _)]";
       last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
-    by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
-                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb2") as "[]". }
+    by iDestruct (seal_secret_in_r_TSeal HPriv_r Hflow_r_cons
+                    with "Hmap_r Hsecret Hk2 Hb2") as "[]". }
   iDestruct (publicly_related_term_TSeal with "H2") as "[(%k2 & %b2 & ->)|[Hel2 Hsecret]]";
     last first.
-  { iDestruct (secret_in_r_lookup with "Hmap_r Hsecret") as %Hb.
-    rewrite publicly_related_TSeal.
-    iDestruct "H1" as "[[_ Hb1]|(_ & _ & Hel1 & _)]";
+  { rewrite publicly_related_TSeal.
+    iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & _)]";
       last by iApply (publicly_linked_agree_r with "Hel1 Hel2").
-    by iPoseProof (publicly_related_protected_r HPriv_r Hflow_r_cons
-                    (or_introl (ex_intro _ _ (conj Hb I))) with "Hmap_r Hb1") as "[]". }
+    by iDestruct (seal_secret_in_r_TSeal HPriv_r Hflow_r_cons
+                    with "Hmap_r Hsecret Hk1 Hb1") as "[]". }
   rewrite !publicly_related_TSeal.
-  iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & [_ Hpk1] & [_ Hpb1] & _)]";
-  iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & [_ Hpk2] & [_ Hpb2] & _)]".
+  iDestruct "H1" as "[[Hk1 Hb1]|(_ & _ & Hel1 & [_ Hpk1] & #Hbox1)]";
+  iDestruct "H2" as "[[Hk2 Hb2]|(_ & _ & Hel2 & [_ Hpk2] & #Hbox2)]".
   + iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
+  + iAssert (linked_in_r b2 t'1 ∨ ∃ s', ⌜k' = TKey SEnc s'⌝ ∧ secret_in_r s')%I
+      as "#Hpb2c".
+    { case: k2 k' => [?|? ?|?|kt s|? ?|?|? ? ?] [?|? ?|?|kt' s'|? ?|?|? ? ?] /=;
+        try by iDestruct "Hbox2" as "[]".
+      iDestruct "Hbox2" as "[-> Hbox2]".
+      case: kt'; try (by iDestruct "Hbox2" as "[]");
+        [ iDestruct "Hbox2" as "(_ & [_ ?] & _)"; by iLeft
+        | iDestruct "Hbox2" as "(_ & _ & [_ ?] & _)"; by iLeft
+        | iDestruct "Hbox2" as "(_ & [[_ ?]|[_ ?]] & _)";
+          [iRight; iExists s'; by iSplit | by iLeft] ]. }
+    iDestruct "Hpb2c" as "[Hpb2|(%s' & -> & Hs)]"; last first.
+    { iExFalso. iApply (seal_secret_in_r_TSeal HPriv_r Hflow_r_cons
+                          with "Hmap_r [] Hk1 Hb1").
+      iRight. iExists s'. by iSplit. }
+    iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hk1 Hpk2") as "#Hk2".
     iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hb1 Hpb2") as "#Hb2".
     iDestruct ("IH" with "Hmap_r Hpub_consistent Hk1 Hk2") as %->.
     by iDestruct ("IH1" with "Hmap_r Hpub_consistent Hb1 Hb2") as %->.
-  + iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
+  + iAssert (linked_in_r b1 t'1 ∨ ∃ s', ⌜k' = TKey SEnc s'⌝ ∧ secret_in_r s')%I
+      as "#Hpb1c".
+    { case: k1 k' => [?|? ?|?|kt s|? ?|?|? ? ?] [?|? ?|?|kt' s'|? ?|?|? ? ?] /=;
+        try by iDestruct "Hbox1" as "[]".
+      iDestruct "Hbox1" as "[-> Hbox1]".
+      case: kt'; try (by iDestruct "Hbox1" as "[]");
+        [ iDestruct "Hbox1" as "(_ & [_ ?] & _)"; by iLeft
+        | iDestruct "Hbox1" as "(_ & _ & [_ ?] & _)"; by iLeft
+        | iDestruct "Hbox1" as "(_ & [[_ ?]|[_ ?]] & _)";
+          [iRight; iExists s'; by iSplit | by iLeft] ]. }
+    iDestruct "Hpb1c" as "[Hpb1|(%s' & -> & Hs)]"; last first.
+    { iExFalso. iApply (seal_secret_in_r_TSeal HPriv_r Hflow_r_cons
+                          with "Hmap_r [] Hk2 Hb2").
+      iRight. iExists s'. by iSplit. }
+    iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hk2 Hpk1") as "#Hk1".
     iPoseProof (publicly_related_linked_in_r HPriv_r Hflow_r_cons Hbij
                   with "Hmap_r Hpub_consistent Hb2 Hpb1") as "#Hb1".
@@ -2170,11 +2309,11 @@ Qed.
   (⌜kt = AEnc ∨ kt = SEnc⌝ ∧ secret_in_l s).
 Proof.
 case: t' => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & _ & _ & #Hbox)". iRight.
+- iIntros "(_ & _ & _ & #Hbox)". iRight.
   case: kt; try (by iDestruct "Hbox" as "[]");
   (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 - iIntros "_". iLeft. by eauto.
-- iIntros "(_ & _ & _ & _ & _ & #Hbox)". iRight.
+- iIntros "(_ & _ & _ & _ & #Hbox)". iRight.
   case: kt; try (by iDestruct "Hbox" as "[]");
   (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 Qed.
@@ -2185,11 +2324,11 @@ Qed.
   (⌜kt' = AEnc ∨ kt' = SEnc⌝ ∧ secret_in_r s').
 Proof.
 case: t => /= *; try by iIntros "(_ & _ & [])".
-- iIntros "(_ & _ & _ & _ & #Hbox)". iRight.
+- iIntros "(_ & _ & _ & #Hbox)". iRight.
   case: kt'; try (by iDestruct "Hbox" as "[]");
   (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 - iIntros "_". iLeft. by eauto.
-- iIntros "(_ & _ & _ & _ & _ & #Hbox)". iRight.
+- iIntros "(_ & _ & _ & _ & #Hbox)". iRight.
   case: kt'; try (by iDestruct "Hbox" as "[]");
   (iDestruct "Hbox" as "[Hs _]"; iSplit; [iPureIntro; auto | done]).
 Qed.
@@ -2202,7 +2341,7 @@ Qed.
   (∃ s', ⌜k_t' = TKey Sign s'⌝ ∧ PUB⟨TKey Verify s, TKey Verify s'⟩).
 Proof.
 rewrite publicly_related_TSeal.
-iIntros "#[[H _]|(_ & _ & _ & _ & _ & Hbox)]"; first by iLeft.
+iIntros "#[[H _]|(_ & _ & _ & _ & Hbox)]"; first by iLeft.
 iRight. case: k_t' => [n'|a' b0|a'|kt' s'|k' b0|s'|pt' wf' nf'] /=;
   try by iDestruct "Hbox" as "[]".
 iDestruct "Hbox" as "[<- [Hv _]]". iExists s'. by iSplit.
@@ -2214,7 +2353,7 @@ Qed.
   (∃ s, ⌜k_t = TKey Sign s⌝ ∧ PUB⟨TKey Verify s, TKey Verify s'⟩).
 Proof.
 rewrite publicly_related_TSeal.
-iIntros "#[[H _]|(_ & _ & _ & _ & _ & Hbox)]"; first by iLeft.
+iIntros "#[[H _]|(_ & _ & _ & _ & Hbox)]"; first by iLeft.
 iRight. case: k_t => [n|a b0|a|kt s|k b0|s|pt wf nf] /=;
   try by iDestruct "Hbox" as "[]".
 iDestruct "Hbox" as "[-> [Hv _]]". iExists s. by iSplit.
@@ -2429,9 +2568,9 @@ case eL: (Spec.open (TKey ADec sA) t) => [u|];
 case eR: (Spec.open (TKey ADec sA') t') => [u'|]; iSimpl.
 - move/Spec.open_aenc_Some: (eL) => ?; subst t.
   move/Spec.open_aenc_Some: (eR) => ?; subst t'.
-  iDestruct (publicly_related_TSeal with "Ht") as "[[_ Hu]|(_ & _ & _ & _ & _ & #Hbox)]".
+  iDestruct (publicly_related_TSeal with "Ht") as "[[_ Hu]|(_ & _ & _ & _ & #Hbox)]".
   { iModIntro. by iLeft. }
-  iSimpl in "Hbox". iDestruct "Hbox" as "(_ & _ & Hwf)".
+  iSimpl in "Hbox". iDestruct "Hbox" as "(_ & _ & _ & Hwf)".
   iModIntro. by iRight.
 - move/Spec.open_aenc_Some: (eL) => ?; subst t.
   case: (Hsh t') => [[k' [u' ?]]|Hns]; last first.
@@ -2441,7 +2580,7 @@ case eR: (Spec.open (TKey ADec sA') t') => [u'|]; iSimpl.
   { move=> ?; subst k'.
     have := proj2 (Spec.open_aenc_Some sA' (TSeal (TKey AEnc sA') u') u') eq_refl.
     by rewrite eR. }
-  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [Hkl _] & _ & _)]".
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [Hkl _] & _)]".
   + iMod (publicly_related_part_bij' with "Hctx Hpk Hk") as %Hiff; first done.
     by case: Hk'; symmetry; apply Hiff.
   + iDestruct (linked_in_l_publicly_linked_in_l with "Hkl Hlink_l") as %?.
@@ -2454,11 +2593,99 @@ case eR: (Spec.open (TKey ADec sA') t') => [u'|]; iSimpl.
   { move=> ?; subst k.
     have := proj2 (Spec.open_aenc_Some sA (TSeal (TKey AEnc sA) u) u) eq_refl.
     by rewrite eL. }
-  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [_ Hkr] & _ & _)]".
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & [_ Hkr] & _)]".
   + iMod (publicly_related_part_bij' with "Hctx Hk Hpk") as %Hiff; first done.
     by case: Hk; apply Hiff.
   + iDestruct (linked_in_r_publicly_linked_in_r with "Hkr Hlink_r") as %?.
     subst k. by case: Hk.
+- by iModIntro.
+Qed.
+
+Lemma secret_in_l_publicly_related_fupd E t t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗ secret_in_l t -∗ PUB⟨t, t'⟩ ={E}=∗ False.
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) #Hs #Ht".
+iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
+                  (([Hmap_l _] & _ & _ & _) & _ & [%HPriv_l _] & _ & _ &
+                   [%Hflow_l_cons _]))".
+by iDestruct (secret_in_l_publicly_related HPriv_l Hflow_l_cons
+                with "Hmap_l Hs Ht") as "[]".
+Qed.
+
+Lemma secret_in_r_publicly_related_fupd E t t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗ secret_in_r t' -∗ PUB⟨t, t'⟩ ={E}=∗ False.
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) #Hs #Ht".
+iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
+                  ((_ & [Hmap_r _] & _ & _) & _ & [_ %HPriv_r] & _ & _ &
+                   [_ %Hflow_r_cons]))".
+by iDestruct (secret_in_r_publicly_related HPriv_r Hflow_r_cons
+                with "Hmap_r Hs Ht") as "[]".
+Qed.
+
+#[local] Lemma open_senc_Some seed t u :
+  Spec.open (TKey SEnc seed) t = Some u ↔ t = TSeal (TKey SEnc seed) u.
+Proof.
+split.
+- rewrite /Spec.open. case: t => // k u0. case: decide => // e [<-].
+  by case: k e => //= - [] //= ? [->].
+- move=> ->. by rewrite /Spec.open decide_True.
+Qed.
+
+(** Decryption under symmetric keys with secret seeds.  The attacker cannot
+    seal under these keys, so a ciphertext that opens is an honest one; when
+    only one run opens, the record pairs it with the other run's ciphertext,
+    which the protocol's seal sets identify. *)
+Lemma publicly_related_open_senc_fupd E (k k' : senc_key) t t' :
+  ↑cryptisN ⊆ E →
+  cryptis_rel_ctx -∗
+  secret_in_l (seed_of_senc_key k) -∗
+  secret_in_r (seed_of_senc_key k') -∗
+  PUB⟨t, t'⟩ ={E}=∗
+  match Spec.open k t, Spec.open k' t' with
+  | Some u, Some u' => wf_seal_rel (Some (k : term, u)) (Some (k' : term, u'))
+  | Some u, None => ∃ s', wf_seal_rel (Some (k : term, u)) s'
+  | None, Some u' => ∃ s, wf_seal_rel s (Some (k' : term, u'))
+  | None, None => True
+  end.
+Proof.
+move=> HE. case: k k' => [s] [s'].
+rewrite [term_of_senc_key]unlock /=.
+iIntros "#Hctx #Hs #Hs' #Ht".
+have Hsh : ∀ t0, (∃ k u, t0 = TSeal k u) ∨ (∀ k u, t0 ≠ TSeal k u).
+{ case=> *; try by right. left; eauto. }
+case eL: (Spec.open (TKey SEnc s) t) => [u|];
+case eR: (Spec.open (TKey SEnc s') t') => [u'|]; iSimpl.
+- move/open_senc_Some: (eL) => ?; subst t.
+  move/open_senc_Some: (eR) => ?; subst t'.
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & _ & #Hbox)]".
+  { rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk]".
+    by iMod (secret_in_l_publicly_related_fupd with "Hctx Hs Hk") as "[]". }
+  iSimpl in "Hbox". iDestruct "Hbox" as "(_ & _ & _ & Hwf)". by iModIntro.
+- move/open_senc_Some: (eL) => ?; subst t.
+  case: (Hsh t') => [[k'' [u'' ->]]|Hns]; last first.
+  { iModIntro. iExists None.
+    by iApply (publicly_related_TSeal_term_wf SEnc _ _ Hns with "Ht"). }
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & _ & #Hbox)]".
+  { iDestruct (publicly_related_TKey_term with "Hk") as %[s'' ->].
+    rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk]".
+    by iMod (secret_in_l_publicly_related_fupd with "Hctx Hs Hk") as "[]". }
+  case: k'' => [?|? ?|?|kt'' s''|? ?|?|? ? ?]; try by iDestruct "Hbox" as "[]".
+  iDestruct "Hbox" as "[<- Hbox]". iSimpl in "Hbox".
+  iDestruct "Hbox" as "(_ & _ & Hwf)". iModIntro. by iExists _.
+- move/open_senc_Some: (eR) => ?; subst t'.
+  case: (Hsh t) => [[k0 [u0 ->]]|Hns]; last first.
+  { iModIntro. iExists None.
+    by iApply (publicly_related_term_TSeal_wf SEnc _ _ Hns with "Ht"). }
+  iDestruct (publicly_related_TSeal with "Ht") as "[[Hk _]|(_ & _ & _ & _ & #Hbox)]".
+  { iDestruct (publicly_related_term_TKey with "Hk") as %[s0 ->].
+    rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk]".
+    by iMod (secret_in_r_publicly_related_fupd with "Hctx Hs' Hk") as "[]". }
+  case: k0 => [?|? ?|?|kt0 s0|? ?|?|? ? ?]; try by iDestruct "Hbox" as "[]".
+  iDestruct "Hbox" as "[-> Hbox]". iSimpl in "Hbox".
+  iDestruct "Hbox" as "(_ & _ & Hwf)". iModIntro. by iExists _.
 - by iModIntro.
 Qed.
 
