@@ -229,6 +229,15 @@ split.
 - move=> ->. by rewrite /open decide_True.
 Qed.
 
+Lemma open_senc_Some seed t u :
+  open (TKey SEnc seed) t = Some u ↔ t = TSeal (TKey SEnc seed) u.
+Proof.
+split.
+- rewrite /open. case: t => // k u0. case: decide => // e [<-].
+  by case: k e => //= - [] //= ? [->].
+- move=> ->. by rewrite /open decide_True.
+Qed.
+
 Lemma open_aenc_key_Some (sk : aenc_key) t u :
   open sk t = Some u ↔ t = TSeal (pkey sk) u.
 Proof. case: sk => seed. rewrite [term_of_aenc_key]unlock. exact: open_aenc_Some. Qed.
