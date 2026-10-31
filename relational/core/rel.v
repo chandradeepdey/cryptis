@@ -804,7 +804,7 @@ Fixpoint publicly_related t t' : iProp :=
     end
   | TSeal k t1, TSeal k' t1' =>
     (publicly_related k k' ∧ publicly_related t1 t1') ∨
-    (publicly_linked t t' ∧ linked k k' ∧ linked t1 t1' ∧
+    (publicly_linked t t' ∧ linked k k' ∧
     □ (match k, k' with
       | TKey kt k1, TKey kt' k1' => ⌜kt = kt'⌝ ∧
         match kt with
@@ -814,34 +814,37 @@ Fixpoint publicly_related t t' : iProp :=
         | Sign => (publicly_related k1 k1' ∨
                   (publicly_linked (TKey Verify k1) (TKey Verify k1') ∧ linked k1 k1')) ∧
                   publicly_related t1 t1' ∧
+                  linked t1 t1' ∧
                   wf_seal_rel (Some (TKey Sign k1, t1)) (Some (TKey Sign k1', t1'))
         | AEnc => (publicly_related k1 k1' → publicly_related t1 t1') ∧
+                  linked t1 t1' ∧
                   wf_seal_rel (Some (TKey ADec k1, t1)) (Some (TKey ADec k1', t1'))
         | SEnc => (publicly_related k1 k1' → publicly_related t1 t1') ∧
+                  ((secret_in_l k1 ∧ secret_in_r k1') ∨ linked t1 t1') ∧
                   wf_seal_rel (Some (TKey SEnc k1, t1)) (Some (TKey SEnc k1', t1'))
         end
       | _, _ => False
       end))
   | THash t1, THash t1' => publicly_related t1 t1' ∨
     (publicly_linked t t' ∧ linked t1 t1')
-  | TNonce a, TSeal k' t1' => publicly_linked t t' ∧ secret_in_r t1' ∧
+  | TNonce a, TSeal k' t1' => publicly_linked t t' ∧
     □ (match k' with
       | TKey kt' k1' =>
         match kt' with
         | ADec | Sign | Verify => False
-        | AEnc => secret_in_r k1' ∧
+        | AEnc => secret_in_r k1' ∧ secret_in_r t1' ∧
                   wf_seal_rel None (Some (TKey ADec k1', t1'))
         | SEnc => secret_in_r k1' ∧
                   wf_seal_rel None (Some (TKey SEnc k1', t1'))
         end
       | _ => False
       end)
-  | TSeal k t1, TNonce a' => publicly_linked t t' ∧ secret_in_l t1 ∧
+  | TSeal k t1, TNonce a' => publicly_linked t t' ∧
     □ (match k with
       | TKey kt k1 =>
         match kt with
         | ADec | Sign | Verify => False
-        | AEnc => secret_in_l k1 ∧
+        | AEnc => secret_in_l k1 ∧ secret_in_l t1 ∧
                   wf_seal_rel (Some (TKey ADec k1, t1)) None
         | SEnc => secret_in_l k1 ∧
                   wf_seal_rel (Some (TKey SEnc k1, t1)) None
@@ -851,12 +854,12 @@ Fixpoint publicly_related t t' : iProp :=
   | TNonce a, THash t1' => publicly_linked t t' ∧ secret_in_r t1'
   | THash t1, TNonce a' => publicly_linked t t' ∧ secret_in_l t1
   | TSeal k t1, THash t1' =>
-    publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
+    publicly_linked t t' ∧ secret_in_r t1' ∧
     □ (match k with
       | TKey kt k1 =>
         match kt with
         | ADec | Sign | Verify => False
-        | AEnc => secret_in_l k1 ∧
+        | AEnc => secret_in_l k1 ∧ secret_in_l t1 ∧
                   wf_seal_rel (Some (TKey ADec k1, t1)) None
         | SEnc => secret_in_l k1 ∧
                   wf_seal_rel (Some (TKey SEnc k1, t1)) None
@@ -864,12 +867,12 @@ Fixpoint publicly_related t t' : iProp :=
       | _ => False
       end)
   | THash t1, TSeal k' t1' =>
-    publicly_linked t t' ∧ secret_in_l t1 ∧ secret_in_r t1' ∧
+    publicly_linked t t' ∧ secret_in_l t1 ∧
     □ (match k' with
       | TKey kt' k1' =>
         match kt' with
         | ADec | Sign | Verify => False
-        | AEnc => secret_in_r k1' ∧
+        | AEnc => secret_in_r k1' ∧ secret_in_r t1' ∧
                   wf_seal_rel None (Some (TKey ADec k1', t1'))
         | SEnc => secret_in_r k1' ∧
                   wf_seal_rel None (Some (TKey SEnc k1', t1'))
