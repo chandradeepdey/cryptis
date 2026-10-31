@@ -154,16 +154,16 @@ Lemma twp_mk_nonce_gen
         (minted t -∗ False) ∧
         (|==> minted t ∗
               □ (public t ↔ ▷ □ P t) ∗
-              □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t')) ={E}=∗
+              □ (∀ t', exp_pred t t' ↔ ▷ □ Q t')) ={E}=∗
         minted t ∗
         □ (public t ↔ ▷ □ P t) ∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') ∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') ∗
         Φ t) -∗
   (∀ t : nonce,
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         Φ t -∗
         Ψ t) -∗
   WP mk_nonce #()%V @ E [{ Ψ }].
@@ -176,7 +176,7 @@ iPoseProof ("mint" with "fresh") as ">(#? & #? & #? & ?)".
 iSpecialize ("post" $! (Nonce a)).
 wp_pures. rewrite [val_of_term]unlock /=.
 iApply ("post" with "[$] [$] [$] [] [$]").
-by iIntros "!> %"; rewrite exp_pred_base_TInv; eauto.
+by iIntros "!> %"; rewrite exp_pred_TInv; eauto.
 Qed.
 
 Lemma wp_mk_nonce_gen
@@ -185,16 +185,16 @@ Lemma wp_mk_nonce_gen
         (minted t -∗ False) ∧
         (|==> minted t ∗
               □ (public t ↔ ▷ □ P t) ∗
-              □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t')) ={E}=∗
+              □ (∀ t', exp_pred t t' ↔ ▷ □ Q t')) ={E}=∗
         minted t ∗
         □ (public t ↔ ▷ □ P t) ∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') ∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') ∗
         Φ t) -∗
   (∀ t : nonce,
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         Φ t -∗
         Ψ t) -∗
   WP mk_nonce #()%V @ E {{ Ψ }}.
@@ -212,8 +212,8 @@ Lemma twp_mk_nonce_freshN
   (∀ t : nonce, ⌜∀ t', t' ∈ T → ¬ subterm t t'⌝ -∗
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         ([∗ set] t' ∈ T' t, term_token t' ⊤) -∗
         Ψ t) -∗
   WP mk_nonce #()%V [{ Ψ }].
@@ -233,7 +233,7 @@ iApply (twp_mk_nonce_gen P Q ⊤ _
   iMod (term_token_alloc (T' t)
           (minted t -∗ False)
           (minted t ∗ □ (public t ↔ ▷ □ P t) ∗
-           □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t'))
+           □ (∀ t', exp_pred t t' ↔ ▷ □ Q t'))
           with "ctx [] [] [fresh]") as "(post & token)" => //.
   - iIntros "%t' %t'_t contra minted_t'". iApply "contra".
     iSpecialize ("minted_T'" $! t).
@@ -261,8 +261,8 @@ Lemma wp_mk_nonce_freshN
   (∀ t : nonce, ⌜∀ t', t' ∈ T → ¬ subterm t t'⌝ -∗
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         ([∗ set] t' ∈ T' t, term_token t' ⊤) -∗
         Ψ t) -∗
   WP mk_nonce #()%V {{ Ψ }}.
@@ -278,8 +278,8 @@ Lemma twp_mk_nonce_fresh
   (∀ t : nonce, ⌜∀ t', t' ∈ T → ¬ subterm t t'⌝ -∗
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         term_token t ⊤ -∗
         Ψ t) -∗
   WP mk_nonce #()%V [{ Ψ }].
@@ -301,8 +301,8 @@ Lemma wp_mk_nonce_fresh
   (∀ t : nonce, ⌜∀ t', t' ∈ T → ¬ subterm t t'⌝ -∗
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         term_token t ⊤ -∗
         Ψ t) -∗
   WP mk_nonce #()%V {{ Ψ }}.
@@ -317,8 +317,8 @@ Lemma twp_mk_nonce
   (∀ t : nonce,
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         term_token t ⊤ -∗
         Ψ t) -∗
   WP mk_nonce #()%V [{ Ψ }].
@@ -334,8 +334,8 @@ Lemma wp_mk_nonce
   (∀ t : nonce,
         minted t -∗
         □ (public t ↔ ▷ □ P t) -∗
-        □ (∀ t', exp_pred_base t t' ↔ ▷ □ Q t') -∗
-        □ (∀ t', exp_pred_base (TInv t) t' ↔ ▷ False) -∗
+        □ (∀ t', exp_pred t t' ↔ ▷ □ Q t') -∗
+        □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False) -∗
         term_token t ⊤ -∗
         Ψ t) -∗
   WP mk_nonce #()%V {{ Ψ }}.
