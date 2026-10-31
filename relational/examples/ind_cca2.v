@@ -1,3 +1,5 @@
+(** IND-CCA2 for randomized asymmetric encryption. *)
+
 From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
@@ -24,18 +26,17 @@ Implicit Types (skA : aenc_key).
 
 Variable N : namespace.
 
-(*
-
+(**
+[[
 A --> *: pkA
 * --> A: msg_0
 * --> A: msg_1
 A --> *: {nonce, msg_b}@pkA
 * --> A: guess
+]]
 
-The oracle answers every query t with the payload of t under skA, except
-for the challenge ciphertext.
-
-*)
+The oracle answers every query [t] with the payload of [t] under [skA],
+except for the challenge ciphertext. *)
 
 Definition oracle : val := rec: "loop" "c" "sk" "chal" :=
   let: "t" := recv "c" in
@@ -211,7 +212,6 @@ rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]"
   [solve_minted_iff.. |].
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
 split_term_tokens. rel_prims.
-(* The seeds never become public. *)
 iMod (public_rel_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
         with "Hctx token_a") as "(#secret_a & seals_a & _ & token_a)".
 rewrite (term_token_difference (seed_of_aenc_key skA) (↑storeN)
@@ -219,13 +219,11 @@ rewrite (term_token_difference (seed_of_aenc_key skA) (↑storeN)
 iDestruct "token_a" as "[token_store _]".
 iMod (public_rel_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
         with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
-(* The public keys are publicly related. *)
 iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
   do 3 (iSplit; first done).
   iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
-(* The challenge cell and the oracle. *)
 rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
 rel_pures.
 iMod (inv_alloc cellN _ (cell_inv skA skA' l l') with "[Hl Hl' seals_a seals_a']") as "#Hcell".
@@ -332,7 +330,6 @@ by move=> Hadv; split;
   iApply rel_alice.
 Qed.
 
-(** The same fact as an adequacy statement for the nondeterministic game. *)
 Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
   attacker_valid adv →
   adequate NotStuck (run_network_rel adv (alice_guess_wrapped N)) σ

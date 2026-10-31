@@ -60,18 +60,15 @@ iMod (urn_inv_insert (E:=⊤) _ _ (random_seal skT skT' (voteN.@"vote") n n' v v
         with "Hurn [upd]") as "#pub_c".
 { iIntros (S S') "seals seals'". iApply ("upd" with "[] seals seals'").
   iPureIntro. solve_ndisj. }
-(* The tagged ciphertexts are publicly related. *)
 iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tt_tgc tts_tgc")
   as "[#elem_tgc #pub_tgc]".
 { iIntros "!> _". rewrite publicly_related_tag. by iSplit. }
-(* The signatures are publicly related. *)
 iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hballot token") as "[#Hsl #Hsr]";
   first solve_ndisj.
 iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tt_sig tts_sig")
   as "[_ #pub_sig]".
 { iIntros "!> #elem_sig".
   by iApply (pub_sign with "mint_V mint_V' secret_V secret_V' pub_pkV pub_tgc elem_tgc Hsl Hsr elem_sig"). }
-(* Run the program. *)
 iModIntro. rel_prims. rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.
 

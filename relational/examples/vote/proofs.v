@@ -1,3 +1,5 @@
+(** Proofs of the voting case study, one file per role. *)
+
 From cryptis.hyper.examples.vote.proofs Require Export base voter arbitrator.
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.

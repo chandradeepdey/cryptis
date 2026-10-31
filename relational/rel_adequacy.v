@@ -6,12 +6,7 @@
     terminates on the left then it has a terminating execution on the right
     whose result is related as specified.  [cryptis_ctx_refinement] turns the
     same refinement into a contextual refinement between the two games run
-    against [adv].  In both, [Σ] is any set of ghost state that contains
-    ReLoC's and [PUB]'s, so that the refinement may use ghost state of its
-    own; the contextual refinement itself does not mention [Σ].
-
-    Dependency position: after [primitives/attacker_spec.v]; used by the
-    relational case studies (e.g. [examples/ind_cpa.v]). *)
+    against [adv]. *)
 
 From reloc Require Import reloc.
 From reloc.typing Require Import types interp.

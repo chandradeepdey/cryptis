@@ -10,17 +10,17 @@
     yet, and gives back the part of the token that later map updates want.
   - Protecting a superterm.  Both lemmas spend the token of the protecting
     term and return the protection fact for the superterm.
-    + [public_rel_protect_nonce_l] is for a protecting term that is a nonce,
+    - [public_rel_protect_nonce_l] is for a protecting term that is a nonce,
       typically the start of a chain nonce → payload → tagged payload.
-    + [public_rel_protect_step_l] is for a protecting term that is itself
+    - [public_rel_protect_step_l] is for a protecting term that is itself
       protected, typically the next link of such a chain.
   - Making a term secret.
-    + [public_rel_secret_seals_l] is for a nonce, typically the seed of a key.
+    - [public_rel_secret_seals_l] is for a nonce, typically the seed of a key.
       Besides marking it secret it allocates its seal set, registers it in
       the flow map so that it can protect the key built from it, and gives
       back the part of the token outside the relational namespaces for other
       uses such as per-protocol metadata.
-    + [public_rel_secret_step_l] is for a term built on top of a secret one,
+    - [public_rel_secret_step_l] is for a term built on top of a secret one,
       typically the signing key built from its seed.  It spends the token of
       the new term and makes it secret in turn; the secret subterm protects
       it, so nothing else is needed.

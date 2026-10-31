@@ -1,3 +1,9 @@
+(** The relation [PUB⟨t, t'⟩] between the terms of the two runs and the
+    invariant [public_rel_inv] behind it: the maps pairing terms across the
+    runs ([Map]), the protection chains that keep secrets out of the
+    attacker's reach ([Flow]), and the per-key sets of honest seal links
+    ([Seals]). *)
+
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
@@ -880,7 +886,7 @@ Fixpoint publicly_related t t' : iProp :=
       | _ => False
       end)
   | _, _ =>
-      False (* WIP *)
+      False
   end.
 
 #[local] Notation "PUB⟨ a , b ⟩" := (publicly_related a b)

@@ -290,7 +290,6 @@ iMod (public_rel_secret_step_l (E:=⊤) (is_immediate_subterm_sign_key skV)
         ltac:(solve_ndisj) with "Hctx secret_s prot_s token_sk") as "(#secret_sk & _ & _)".
 iMod (public_rel_secret_step_r (E:=⊤) (is_immediate_subterm_sign_key skV')
         ltac:(solve_ndisj) with "Hctx secret_s' prot_s' token_sk'") as "(#secret_sk' & _ & _)".
-(* Verification keys: publicly related. *)
 iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] token_pk token_pk'")
   as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". by iApply (pub_verify_key with "mint_sk mint_sk' secret_s secret_s' elem"). }

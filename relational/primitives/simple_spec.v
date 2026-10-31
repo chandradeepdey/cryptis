@@ -1,3 +1,6 @@
+(** Relational specs of the term primitives of [primitives/simple.v], and the
+    [RelPrimL] / [RelPrimR] instances through which [rel_prims] finds them. *)
+
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.core Require Import term.

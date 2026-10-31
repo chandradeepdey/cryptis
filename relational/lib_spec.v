@@ -1,3 +1,7 @@
+(** Relational specs of HeapLang library code.  The spec of a pure function
+    comes from its unary spec, through [pure_twp_rel].  The other specs pick
+    a random boolean, natural number or integer. *)
+
 From iris.heap_lang.lib Require Import nondet_bool.
 From reloc Require Import reloc.
 From cryptis Require Import lib.

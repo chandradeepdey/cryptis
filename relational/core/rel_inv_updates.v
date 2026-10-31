@@ -1,50 +1,53 @@
-(** Some ghost state updates for [public_rel_inv]. The right hand side lemmas
-  are identical, but used primed names and refer to [term_meta_spec] instead of
-  [term_meta] wherever applicable.
+(** * Ghost state updates for [public_rel_inv]
 
-[FlowUpdates]
-  - [public_rel_flow_l_extend] consumes the flow token for [t] and adds it
-    to [flow_l].
-  - The [public_rel_flow_l_grow] family marks [tsup] as protected by [t].
-    + [public_rel_flow_l_grow] is allowed when [t] already protects another term,
-      thus already satisfying the conditions of the invariant.
-    + [public_rel_flow_l_grow_2] is allowed when [t] already maps to [Secret] in
-      [map_l]. The constraints on this [t] allows it to protect [tsub].
-    + [public_rel_flow_l_grow_3] is allowed when [t] is not already in [map_l],
-      has a protector [tsub] to satisfy the protection chain requirement, and has
-      not protected anything before.
-    + [public_rel_flow_l_grow_4] is the same as [public_rel_flow_l_grow_3],
-      except [t] is marked [Private t1'] in [map_l].
-    + [public_rel_flow_l_grow_5] is the same as [public_rel_flow_l_grow_3],
-      except [t] is a nonce, and so does not need a protector.
-    + [public_rel_flow_l_grow_6] is the same as [public_rel_flow_l_grow_5],
-      except [t] is marked [Private t1'] in [map_l].
-  - The [public_rel_flow_l_shrink] family removes [tsup] from the protection of
-    [t].
-    + [public_rel_flow_l_shrink] is allowed when [tsup] has an alternative
-      protector [t1].
-    + [public_rel_flow_l_shrink_2] is allowed when [tsup] itself is not
-      protecting anything above it, and it is not in the map.
-    + [public_rel_flow_l_shrink_3] is allowed when [tsup] has been marked
-      [Public t'] in [map_l].
+The right hand side lemmas are identical, but use primed names and refer to
+[term_meta_spec] instead of [term_meta] wherever applicable.
 
-[MapUpdates]
+** Section [FlowUpdates]
+
+- [public_rel_flow_l_extend] consumes the flow token for [t] and adds it to
+  [flow_l].
+- The [public_rel_flow_l_grow] family marks [tsup] as protected by [t].
+  - [public_rel_flow_l_grow] is allowed when [t] already protects another
+    term, thus already satisfying the conditions of the invariant.
+  - [public_rel_flow_l_grow_2] is allowed when [t] already maps to [Secret] in
+    [map_l]. The constraints on this [t] allow it to protect [tsub].
+  - [public_rel_flow_l_grow_3] is allowed when [t] is not already in [map_l],
+    has a protector [tsub] to satisfy the protection chain requirement, and
+    has not protected anything before.
+  - [public_rel_flow_l_grow_4] is the same as [public_rel_flow_l_grow_3],
+    except [t] is marked [Private t1'] in [map_l].
+  - [public_rel_flow_l_grow_5] is the same as [public_rel_flow_l_grow_3],
+    except [t] is a nonce, and so does not need a protector.
+  - [public_rel_flow_l_grow_6] is the same as [public_rel_flow_l_grow_5],
+    except [t] is marked [Private t1'] in [map_l].
+- The [public_rel_flow_l_shrink] family removes [tsup] from the protection of
+  [t].
+  - [public_rel_flow_l_shrink] is allowed when [tsup] has an alternative
+    protector [t1].
+  - [public_rel_flow_l_shrink_2] is allowed when [tsup] itself is not
+    protecting anything above it, and it is not in the map.
+  - [public_rel_flow_l_shrink_3] is allowed when [tsup] has been marked
+    [Public t'] in [map_l].
+
+** Section [MapUpdates]
+
 - The [public_rel_map_l_extend] family adds [t ↦ Private t'] in [map_l].
-  + [public_rel_map_l_extend] is allowed when [t] is protected by a subterm.
-  + [public_rel_map_l_extend_2] is the same as [public_rel_map_l_extend], except
-    [t] is a nonce, and so does not need a protector.
+  - [public_rel_map_l_extend] is allowed when [t] is protected by a subterm.
+  - [public_rel_map_l_extend_2] is the same as [public_rel_map_l_extend],
+    except [t] is a nonce, and so does not need a protector.
 - The [linked_extend] family provides convenience wrappers around the possible
   combinations of [public_rel_map_l_extend] and [public_rel_map_r_extend].
 - [public_rel_lock_Secret_l] turns [t ↦ Private t'] into [t ↦ Secret].
-- The [public_rel_secret_l] family directly produce [t ↦ Secret].
-  + [public_rel_secret_l] is allowed when [t] is protected by some subterm
+- The [public_rel_secret_l] family directly produces [t ↦ Secret].
+  - [public_rel_secret_l] is allowed when [t] is protected by some subterm
     [tsub], satisfying the protection chain requirement.
-  + [public_rel_secret_l_2] is the same as [public_rel_secret_l], except [t] is a
-    nonce, and so does not require protection.
+  - [public_rel_secret_l_2] is the same as [public_rel_secret_l], except [t]
+    is a nonce, and so does not require protection.
 - The [public_rel_lock_Public] family and [public_rel_extend] produce
   [publicly_linked]. They accept various combinations of not being in the map
-  already and being marked [Private] in the map. See the comment there for more
-  details. *)
+  already and being marked [Private] in the map. See the comment on
+  [public_rel_lock_Public] for more details. *)
 
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
@@ -1791,39 +1794,36 @@ iMod (public_rel_map_r_extend_2 t' Hnonce' with "Hctx Htts") as "[_ Hpend]"=> //
 by iMod (public_rel_lock_Secret_r with "Hctx Hpend") as "#?".
 Qed.
 
-(*
-You will probably need a custom version of this lemma tailored to the
+(** You will probably need a custom version of this lemma tailored to the
 declassification you want to attempt.
 
-Example:
-Say you have (nonce, msg) ↦ Private (nonce', msg'), where
-PUB⟨msg, msg'⟩. flow_l !! nonce = {[ (nonce, msg) ]},
-flow_r !! nonce' = {[ (nonce', msg') ]}.
+For example, say you have [(nonce, msg) ↦ Private (nonce', msg')], where
+[PUB⟨msg, msg'⟩], [flow_l !! nonce = {[ (nonce, msg) ]}] and
+[flow_r !! nonce' = {[ (nonce', msg') ]}].
 
-When trying to change it to (nonce, msg) ↦ Public (nonce', msg'),
-proving the publicly_linked (nonce, msg) (nonce', msg') -∗
-PUB⟨(nonce, msg), (nonce', msg')⟩ precondition will require that
-you have publicly_linked nonce nonce' in the recursive case.
+When trying to change it to [(nonce, msg) ↦ Public (nonce', msg')], proving
+the precondition
+[[
+publicly_linked (nonce, msg) (nonce', msg') -∗ PUB⟨(nonce, msg), (nonce', msg')⟩
+]]
+will require that you have [publicly_linked nonce nonce'] in the recursive
+case.
 
-But to get that, you will need to show that flow_l !! nonce = ∅ and
-flow_r !! nonce' = ∅. Since (nonce, msg) and (nonce', msg') can
-have no other protectors, you will need to transition them to Public,
-which will require you to prove PUB⟨(nonce, msg), (nonce', msg')⟩.
-This is circular.
+But to get that, you will need to show that [flow_l !! nonce = ∅] and
+[flow_r !! nonce' = ∅]. Since [(nonce, msg)] and [(nonce', msg')] can have no
+other protectors, you will need to transition them to [Public], which will
+require you to prove [PUB⟨(nonce, msg), (nonce', msg')⟩]. This is circular.
 
 To get around this, you should open the invariant and do all of the
-transitions at once. This depends on the structure of the terms you
-are trying to declassify and the nature of the recursive flow chain,
-so you need to come up with your own custom lemma. Feel free to use
-these lemmas as templates.
+transitions at once. This depends on the structure of the terms you are trying
+to declassify and the nature of the recursive flow chain, so you need to come
+up with your own custom lemma. Feel free to use these lemmas as templates.
 
-PS: If the declassification is deterministic, you can directly
-construct t ↦ Public t' from the tokens instead of going through
-t ↦ Private t' first (public_rel_extend).
+If the declassification is deterministic, you can directly construct
+[t ↦ Public t'] from the tokens instead of going through [t ↦ Private t']
+first ([public_rel_extend]).
 
-Since publicly_linked t t' → linked t t', you can use it to
-prove PUB.
-*)
+Since [publicly_linked t t' → linked t t'], you can use it to prove [PUB]. *)
 Lemma public_rel_lock_Public E t t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗

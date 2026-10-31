@@ -1,3 +1,6 @@
+(** Versions of [term_token], [term_meta] and [term_own] from
+    [core/term_meta.v] for the terms of the right run. *)
+
 From reloc Require Import reloc.
 From iris.base_logic.lib Require Import ghost_map.
 From cryptis Require Import lib.

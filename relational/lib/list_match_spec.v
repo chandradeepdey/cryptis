@@ -1,11 +1,8 @@
+(** Relational specs of [list_match] from [lib/list_match.v]. *)
+
 From reloc Require Import reloc.
 From cryptis.lib Require Import repr list_match.
 From cryptis.hyper.lib Require Import refines.
-
-(** Relational counterparts of [wp_list_match] in [lib/list_match.v].  The
-    [tp_*] helpers below are only used to derive [rel_list_match_r]: they
-    step the specification thread through [list_match], and are kept local
-    since all clients should go through the [rel_*] lemmas. *)
 
 Section ListLemmas.
 

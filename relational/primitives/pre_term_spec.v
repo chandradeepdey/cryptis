@@ -1,3 +1,5 @@
+(** Relational specs of the comparisons of [primitives/pre_term.v]. *)
+
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.core Require Import pre_term.

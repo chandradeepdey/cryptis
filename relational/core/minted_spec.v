@@ -1,3 +1,6 @@
+(** [minted_spec t] says that the right run has created every nonce in [t].
+    It plays the role of [minted] for the right run. *)
+
 From elpi.apps Require Import locker.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
@@ -68,8 +71,6 @@ Proof. by rewrite unlock nonces_of_termE /=. Qed.
 Lemma minted_spec_TInv t : minted_spec (TInv t) ⊣⊢ minted_spec t.
 Proof. by rewrite unlock nonces_of_termE. Qed.
 
-(* Unconditional: [nonces_of_term_base_exps] holds for every [t], including a
-   product, where [base t = t] and [exps t] is empty. *)
 Lemma minted_spec_base_exps t :
   minted_spec t ⊣⊢
   minted_spec (base t) ∧ [∗ list] t' ∈ elements (exps t), minted_spec t'.

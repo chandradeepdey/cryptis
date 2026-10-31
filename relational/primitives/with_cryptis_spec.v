@@ -1,3 +1,7 @@
+(** Relational specs of the primitives of [primitives/with_cryptis.v]: the
+    network channel, creating nonces and keys, checking the type of a key,
+    and randomized encryption. *)
+
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
@@ -632,26 +636,6 @@ Lemma rel_random_adec_r E K e k N c Ψ :
   REL e << fill K (random_adec k N c) @ E : Ψ.
 Proof. pure_twp_rel twp_random_adec'. Qed.
 
-(** Randomized encryption, [random_aenc], pairs a fresh nonce with the
-  plaintext before encrypting.  The nonce is what makes two ciphertexts of the
-  same key and tag indistinguishable: it is kept secret, so neither run's
-  plaintext can be recomputed and compared.  The two ciphertexts come out
-  publicly related as long as the decryption key on the left is secret.
-
-  Because the nonce is created inside the primitive, [rel_random_aenc] is the
-  one place that hands out the nonce's tokens.  A caller that builds further
-  fresh terms on top of the ciphertext, such as a signature of it, names them
-  through the token sets [T] and [T'], one per side; they must stay clear of
-  the four terms the primitive itself registers (the nonce, the pair, the
-  tagged pair and the ciphertext) and the caller gets their tokens back
-  untouched.
-
-  The ciphertexts are linked only when the caller says so: the continuation
-  receives a view shift that records the seal in the key's seal sets and
-  returns the public relation between the ciphertexts.  Running it right away
-  gives the plain spec; postponing it lets a protocol first store the
-  ciphertext under an invariant, as a decryption oracle needs. *)
-
 Definition random_terms sk (N : namespace) n m : gset term :=
   {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
     Spec.random_aenc (Spec.pkey sk) (Tag N) n m]}.
@@ -753,7 +737,6 @@ iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' [tt_c tts_c]")
     iSplit; first done. iSplit; first done.
     by iApply (wf_seal_rel_aenc_intro with "Hin_l Hin_r"). }
   iModIntro. by iFrame "#∗". }
-(* Run the program. *)
 rel_apply_l rel_tuple_l. rel_apply_l rel_aenc'_l. rel_later.
 rel_apply_r rel_tuple_r. rel_apply_r rel_aenc'_r. by rel_values.
 Qed.

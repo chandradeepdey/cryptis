@@ -15,9 +15,7 @@
     [#1] for the channel, is valid.  These type variables are free, so the
     attacker cannot inspect the representation of a term or of the channel;
     the proof is ReLoC's fundamental theorem with [#0] interpreted as
-    [lrel_term] and [#1] as [lrel_channel].
-
-    Dependency position: after [with_cryptis_spec.v]; used by [rel_adequacy.v]. *)
+    [lrel_term] and [#1] as [lrel_channel]. *)
 
 From reloc Require Import reloc.
 From reloc.typing Require Import types interp fundamental.

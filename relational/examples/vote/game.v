@@ -109,9 +109,6 @@ by split;
   iApply rel_election_of.
 Qed.
 
-(** The same fact as an adequacy statement for the nondeterministic game:
-    whenever a run terminates with a bit [b] and a guess [g], the run with the
-    other assignment can terminate with the same guess. *)
 Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 votes1
     (adv : expr) σ :
   votes0 ≡ₚ votes1 →

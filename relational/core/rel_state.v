@@ -1,3 +1,12 @@
+(** What the invariant of [rel.v] knows about a term.
+
+- [Private t']: the runs treat the term as [t'] in the other run.
+- [Public t']: the same, and the attacker may see the term.
+- [Secret]: the attacker never sees the term.
+
+A [Private t'] term can later become [Public t'] or [Secret].  After that it
+never changes. *)
+
 From iris.algebra Require Import auth.
 From cryptis.core Require Import term.
 

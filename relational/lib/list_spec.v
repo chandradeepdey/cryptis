@@ -1,3 +1,6 @@
+(** Relational specs of the list functions of [lib/list.v] and of insertion
+    sort. *)
+
 From reloc Require Import reloc.
 From stdpp Require Import sorting list lexico.
 From cryptis.lib Require Import repr list list_sort.
@@ -124,17 +127,6 @@ case: (bool_decide_reflect (l1 = l2)) => [->|n_l1l2].
 - by rewrite bool_decide_decide decide_True.
 - by rewrite bool_decide_decide decide_False //; congruence.
 Qed.
-
-(** Higher-order list functions.  The behaviour of the functional argument is
-    specified by a hypothesis of the same [REL]-shape as the conclusion, so
-    that the lemma can be instantiated with any [rel_*] lemma.
-
-    Proof pattern: [rel_rec_l; rel_pures_l] unfolds one iteration and stops
-    at calls of the abstract function and at the (named, hence not
-    [AsRecV]-unfoldable) recursive call.  After [rel_bind_l] + [iApply IH]
-    the goal has the shape [REL fill (Ki :: K) (Val v) << ...], whose next
-    redex is formed together with [Ki]; [rel_pures_l] only searches the
-    expression, so a [rewrite /=] is needed to refold the context first. *)
 
 Lemma rel_scan_list_l E K e φ ψ (f : val) (l : list A) Ψ :
   □ (∀ K (x : A),

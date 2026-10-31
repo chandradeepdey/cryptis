@@ -4,15 +4,12 @@
   one-sided specs through the instances of [proofmode/classes.v]; importing
   the spec files here puts the instances of every primitive in scope.
 
-  - [rel_prims_l] takes the left program as far as it can go on its own: pure
-    steps, the primitives on terms, the list and AVL operations, and list
-    literals.  It stops at the first step that needs the relation, such as a
-    send or a receive.  [rel_prims_r] does the same on the right and
-    [rel_prims] does both.
-  - Each step walks the program once to its next redex and applies the spec
-    that the [rel_prims] database gives for it ([rel_prim_l], [rel_prim_r]);
-    the cost of a step does not depend on how many primitives there are.  A
-    new primitive needs only a [RelPrimL] and a [RelPrimR] instance. *)
+  [rel_prims_l] takes the left program as far as it can go on its own: pure
+  steps, the primitives on terms, the list and AVL operations, and list
+  literals.  It stops at the first step that needs the relation, such as a
+  send or a receive.  [rel_prims_r] does the same on the right and
+  [rel_prims] does both.  A new primitive needs only a [RelPrimL] and a
+  [RelPrimR] instance. *)
 
 From iris.proofmode Require Import environments.
 From reloc Require Import reloc.

@@ -1,3 +1,5 @@
+(** IND-CPA for randomized asymmetric encryption. *)
+
 From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
@@ -20,12 +22,13 @@ Implicit Types (skA : aenc_key).
 
 Variable N : namespace.
 
-(*
-
+(**
+[[
+A --> *: pkA
 * --> A: msg_0
 * --> A: msg_1
 A --> *: if b then {nonce, msg_0}@pkA else {nonce, msg_1}@pkA
-
+]]
 *)
 
 Definition alice (b : bool) : val := λ: "c",
@@ -65,12 +68,10 @@ rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]"
   [solve_minted_iff.. |].
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
 split_term_tokens. rel_prims.
-(* The seeds never become public. *)
 iMod (public_rel_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
         with "Hctx token_a") as "(#secret_a & seals_a & _ & _)".
 iMod (public_rel_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
         with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
-(* The public keys are publicly related. *)
 iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
@@ -156,9 +157,6 @@ by move=> Hadv; split;
   iApply rel_alice.
 Qed.
 
-(** The same fact as an adequacy statement for the nondeterministic game:
-    whenever a run terminates with a bit [b] and a guess [g], the run where
-    Alice picked the other bit can terminate with the same guess. *)
 Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
   attacker_valid adv →
   adequate NotStuck (run_network_rel adv (alice_guess_wrapped N)) σ

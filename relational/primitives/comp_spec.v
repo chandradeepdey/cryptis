@@ -1,3 +1,6 @@
+(** Relational specs of the primitives of [primitives/comp.v]: term equality
+    and the operations on exponentials. *)
+
 From reloc Require Import reloc.
 From cryptis.core Require Import term.
 From cryptis.primitives Require Import pre_term comp.

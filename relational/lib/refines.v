@@ -24,8 +24,7 @@ Qed.
 
 (** Reduce the left-hand side [e] to [e'] using a WP-level implication.
     Unlike [refines_wp_l], [e'] need not be a value and the mask is
-    arbitrary; this lets us reuse unary [wp_*] lemmas whose result is an
-    expression (e.g. [wp_list_match]). *)
+    arbitrary. *)
 Lemma refines_wp_l_gen E K (e e' : expr) t A :
   (∀ Φ, WP e' {{ Φ }} ⊢ WP e {{ Φ }}) →
   (REL fill K e' << t @ E : A) -∗
