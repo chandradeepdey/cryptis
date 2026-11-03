@@ -526,6 +526,18 @@ Definition rel_prim_l_has_key_type (v1 v2 : val) : RelPrimL Σ (has_key_type v1 
 Definition rel_prim_r_has_key_type (v1 v2 : val) : RelPrimR Σ (has_key_type v1 v2) _ :=
   rel_has_key_type_r.
 
+(** Literal lists of terms in programs.  Their cells hold [val_of_term t]
+    rather than [repr t], so the list instances of [list_spec.v] do not match
+    them. *)
+Definition rel_prim_l_cons_term (t : term) (ts : list term) :
+  RelPrimL Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := rel_cons_l (A:=term).
+Definition rel_prim_r_cons_term (t : term) (ts : list term) :
+  RelPrimR Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := rel_cons_r (A:=term).
+Definition rel_prim_l_cons_term_nil (t : term) :
+  RelPrimL Σ (Val t :: Val (InjLV #())) _ := rel_cons_nil_l (A:=term).
+Definition rel_prim_r_cons_term_nil (t : term) :
+  RelPrimR Σ (Val t :: Val (InjLV #())) _ := rel_cons_nil_r (A:=term).
+
 End Proofs.
 
 Global Hint Resolve
@@ -554,4 +566,6 @@ Global Hint Resolve
   rel_prim_l_pkey rel_prim_r_pkey
   rel_prim_l_is_key rel_prim_r_is_key
   rel_prim_l_has_key_type rel_prim_r_has_key_type
+  rel_prim_l_cons_term rel_prim_r_cons_term
+  rel_prim_l_cons_term_nil rel_prim_r_cons_term_nil
   : rel_prims.
