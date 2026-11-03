@@ -212,3 +212,10 @@ relational/examples/vote/proofs/arbitrator.v
 relational/examples/vote/proofs.v
 relational/examples/vote.v
 relational/examples/vote/game.v
+relational/examples/nsl/impl.v
+relational/examples/nsl/proofs/base.v
+relational/examples/nsl/proofs/init.v
+relational/examples/nsl/proofs/resp.v
+relational/examples/nsl/proofs.v
+relational/examples/nsl.v
+relational/examples/nsl/game.v

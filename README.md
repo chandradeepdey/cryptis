@@ -99,6 +99,12 @@ Its case studies live in `relational/examples`:
   tallies them in an AVL map and publishes the in-order listing.  Two
   assignments of votes to voters with the same count per candidate are
   contextually equivalent, although the two runs build different trees.
+- `nsl`: real-or-random secrecy of the Needham–Schroeder–Lowe session key
+  (`nsl/impl.v` + per-role `proofs/`; games are in their own file).  One
+  initiator, whose peer the attacker picks, and one responder run against
+  the attacker; the session key is derived from a hash of the transcript.
+  Revealing the responder's key when its peer is I, or the initiator's key
+  when its peer is R, is contextually equivalent to revealing a fresh key.
 
 ## Building
 
