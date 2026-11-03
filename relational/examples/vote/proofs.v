@@ -49,7 +49,8 @@ iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_apply_l rel_term_of_list_l. rel_apply_r rel_term_of_list_r.
 rel_bind_l (send _ _). rel_bind_r (send _ _).
 iApply refines_bind.
-{ iApply (rel_send with "Hc"). iNext. iApply pub_of_list. by iApply pub_pkeys. }
+{ iApply (rel_send with "Hc"). iNext.
+  iApply publicly_related_of_list. by iApply pub_pkeys. }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_bind_l (fork_voters _ _ _). rel_bind_r (fork_voters _ _ _).
 iApply (refines_bind with "[toks]").

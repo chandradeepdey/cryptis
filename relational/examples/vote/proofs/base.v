@@ -321,19 +321,6 @@ Proof. apply _. Qed.
 Definition voter_tokens ks : iProp :=
   [∗ list] sk ∈ ks, term_token (seed_of_sign_key sk) (↑signedN).
 
-Lemma pub_of_list (ts ts' : list term) :
-  ([∗ list] t; t' ∈ ts; ts', PUB⟨t, t'⟩) -∗ PUB⟨Spec.of_list ts, Spec.of_list ts'⟩.
-Proof.
-rewrite [Spec.of_list]unlock.
-iInduction ts as [|t ts] "IH" forall (ts'); iIntros "H".
-- iDestruct (big_sepL2_nil_inv_l with "H") as %->.
-  rewrite -[foldr TPair (TInt 0) []]/(TInt 0) publicly_related_TInt. by iPureIntro.
-- iDestruct (big_sepL2_cons_inv_l with "H") as (t' ts'' ->) "[Ht H]".
-  rewrite -[foldr TPair (TInt 0) (t :: ts)]/(TPair t (foldr TPair (TInt 0) ts)).
-  rewrite -[foldr TPair (TInt 0) (t' :: ts'')]/(TPair t' (foldr TPair (TInt 0) ts'')).
-  rewrite publicly_related_TPair. iSplit; first done. by iApply "IH".
-Qed.
-
 Lemma pub_pkeys skT skT' ks ks' votes votes' :
   voter_keys skT skT' ks ks' votes votes' -∗
   [∗ list] t; t' ∈ pkeys ks; pkeys ks', PUB⟨t, t'⟩.

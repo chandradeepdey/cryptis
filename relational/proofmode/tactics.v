@@ -31,8 +31,9 @@ From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
 
 Ltac minted_simpl :=
   rewrite /Spec.random_aenc /Spec.enc
-    ?(minted_TSeal, minted_tag, minted_of_list, minted_TPair,
-      minted_spec_TSeal, minted_spec_tag, minted_spec_of_list, minted_spec_TPair) /=.
+    ?(minted_TSeal, minted_tag, minted_of_list, minted_TPair, minted_THash,
+      minted_TInt, minted_spec_TSeal, minted_spec_tag, minted_spec_of_list,
+      minted_spec_TPair, minted_spec_THash, minted_spec_TInt) /=.
 
 Ltac unfold_sets := repeat match goal with x := _ |- _ => subst x end.
 

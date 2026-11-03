@@ -1267,6 +1267,17 @@ case: kt.
              publicly_related_TKey; iSplit.
 Qed.
 
+Lemma publicly_related_has_key_type kt t t' :
+  PUB⟨t, t'⟩ ⊢ ⌜Spec.has_key_type kt t = Spec.has_key_type kt t'⌝.
+Proof.
+iIntros "#H". rewrite /Spec.has_key_type.
+case: (Spec.is_keyP t) => [kt0 s ->|Ht].
+- by iDestruct (publicly_related_TKey_term with "H") as %[s' ->].
+- case: (Spec.is_keyP t') => [kt1 s' ->|] //.
+  iDestruct (publicly_related_term_TKey with "H") as %[s ->].
+  by case: (Ht kt1 s).
+Qed.
+
 Lemma publicly_related_THash t t' :
   PUB⟨THash t, THash t'⟩ ⊣⊢
   PUB⟨t, t'⟩ ∨
@@ -1360,6 +1371,54 @@ rewrite publicly_related_TPair.
 iDestruct "H" as "[H1 H2]".
 iPoseProof (publicly_related_term_Tag with "H1") as "->".
 by iExists t2.
+Qed.
+
+Lemma publicly_related_untag N (u u' : term) :
+  PUB⟨u, u'⟩ ⊢
+  match Spec.untag (Tag N) u, Spec.untag (Tag N) u' with
+  | Some m, Some m' => PUB⟨m, m'⟩
+  | None, None => True
+  | _, _ => False
+  end.
+Proof.
+iIntros "#Hu".
+case: (Spec.untagP (Tag N) u) => [m ->|Hu].
+- iDestruct (publicly_related_tag_term with "Hu") as %[m' ->].
+  rewrite !Spec.tagK publicly_related_tag. by iDestruct "Hu" as "[_ ?]".
+- case: (Spec.untagP (Tag N) u') => [m' ->|] //.
+  iDestruct (publicly_related_term_tag with "Hu") as %[m ->].
+  by case: (Hu m).
+Qed.
+
+Lemma publicly_related_to_list (m m' : term) :
+  PUB⟨m, m'⟩ ⊢
+  match Spec.to_list m, Spec.to_list m' with
+  | Some ts, Some ts' => [∗ list] t; t' ∈ ts; ts', PUB⟨t, t'⟩
+  | None, None => True
+  | _, _ => False
+  end.
+Proof.
+elim/term_ind': m m' => [n|a _ b IH|a|kt k _|k _ t _|t _|pt wf nf] m'; iIntros "#Hm".
+2: { iDestruct (publicly_related_TPair_term with "Hm") as %(a' & b' & ->).
+     rewrite publicly_related_TPair. iDestruct "Hm" as "[Ha Hb]".
+     iPoseProof (IH with "Hb") as "Hb'" => /=.
+     destruct (Spec.to_list b), (Spec.to_list b'); by iFrame "#". }
+1: { iDestruct (publicly_related_TInt_term with "Hm") as %->.
+     case: n => [|p|p] /=; [iEmpIntro | by iPureIntro..]. }
+all: case e: (Spec.to_list m') => [ts'|] //; move/Spec.to_listK: e => ->.
+all: case: ts' => [|t' ts']; rewrite [Spec.of_list]unlock /=.
+all: by iDestruct "Hm" as "(_ & _ & [])".
+Qed.
+
+Lemma publicly_related_of_list (ts ts' : list term) :
+  ([∗ list] t; t' ∈ ts; ts', PUB⟨t, t'⟩) ⊢ PUB⟨Spec.of_list ts, Spec.of_list ts'⟩.
+Proof.
+rewrite [Spec.of_list]unlock.
+elim: ts ts' => [|t ts IH] [|t' ts']; iIntros "H"; cbn [foldr];
+  try by iDestruct (big_sepL2_length with "H") as %?.
+- by rewrite publicly_related_TInt.
+- rewrite big_sepL2_cons publicly_related_TPair. iDestruct "H" as "[Ht H]".
+  iSplit; first done. by iApply IH.
 Qed.
 
 Lemma publicly_related_adec_key' (k k' : aenc_key) :
@@ -1562,6 +1621,14 @@ all: first
   | by iIntros "(_ & _ & _ & #(_ & ?))"
   | by iIntros "(_ & _ & _ & _ & #(_ & _ & ?))"
   | by iIntros "(_ & _ & _ & _ & #(_ & ?))" ].
+Qed.
+
+Lemma publicly_related_enc (k k' : term) N t t' :
+  PUB⟨k, k'⟩ -∗ PUB⟨t, t'⟩ -∗
+  PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩.
+Proof.
+iIntros "#Hk #Ht". rewrite /Spec.enc publicly_related_TSeal. iLeft.
+iSplit; first done. rewrite publicly_related_tag. by iSplit.
 Qed.
 
 Lemma publicly_related_aenc (sk sk' : aenc_key) N (t t' : term) :
