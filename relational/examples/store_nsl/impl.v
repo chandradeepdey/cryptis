@@ -25,11 +25,12 @@ Abbreviation storeN := (nroot.@"store").
 Abbreviation connN := (storeN.@"conn").
 
 Definition conn_new : val := λ: "c" "k" "rl",
-  let: "counters" := AllocN #2 #0 in
-  ("counters", "k", "c", "rl").
+  let: "sent" := ref #0 in
+  let: "received" := ref #0 in
+  ("sent", "received", "k", "c", "rl").
 
-Definition conn_sent : val := λ: "cs", Fst (Fst (Fst "cs")) +ₗ #0.
-Definition conn_received : val := λ: "cs", Fst (Fst (Fst "cs")) +ₗ #1.
+Definition conn_sent : val := λ: "cs", Fst (Fst (Fst (Fst "cs"))).
+Definition conn_received : val := λ: "cs", Snd (Fst (Fst (Fst "cs"))).
 Definition conn_key : val := λ: "cs", Snd (Fst (Fst "cs")).
 Definition conn_channel : val := λ: "cs", Snd (Fst "cs").
 Definition conn_role : val := λ: "cs", Snd "cs".
