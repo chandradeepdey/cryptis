@@ -76,7 +76,7 @@ Ltac solve_minted_iff_elem :=
     solve_subterm ].
 
 Ltac solve_minted_iff :=
-  iIntros (?) "/="; rewrite big_sepS_forall;
+  iIntros (?) "/="; iApply big_sepS_intro; iModIntro;
   let t := fresh "t" in let Ht := fresh "Ht" in
   iIntros (t Ht);
   set_unfold in Ht; destruct_or? Ht; first [by destruct Ht | subst t];
