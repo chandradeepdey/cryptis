@@ -9,8 +9,8 @@
   decrypting with the key use it.
 - [KeyGeneration]: creating an honest key.
 - [Protocol]: what each honest ciphertext of NSL tells its receiver.  R's
-  honest reply also holds the tokens of the session key, which the test
-  claims, and what I needs to send the third message. *)
+  honest reply also holds what the honest session gives both roles
+  ([sess]), and what I needs to send the third message. *)
 
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
@@ -378,12 +378,15 @@ Section Protocol.
 
 Variables skI skI' skR skR' : aenc_key.
 
-(** The right to take the session key's tokens out of the invariant of I's
-    key.  The test uses it once. *)
-Definition claim : iProp := term_token (seed_of_aenc_key skI) (↑claimN).
+(** What an honest session gives both roles.  R makes it out of the tokens
+    of the session key when it builds its reply. *)
+Variable sess : term → term → iProp.
+Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
+Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
 Definition key_tokens s s' : iProp :=
-  term_token (THash s) ⊤ ∗ term_token_spec (THash s') ⊤.
+  term_token (THash s) ⊤ ∗ term_token_spec (THash s') ⊤ ∗
+  term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤.
 
 Definition seed_l nI nR := sess_seed (Spec.pkey skI) (Spec.pkey skR) nI nR.
 Definition seed_r nI' nR' := sess_seed (Spec.pkey skI') (Spec.pkey skR') nI' nR'.
@@ -412,7 +415,8 @@ Definition seals_R_info e : iProp :=
 
 Definition m2_facts nI nI' nR nR' : iProp :=
   nonce_info initN nI nI' ∗ resp_nonce nR nR' ∗
-  secret_in_l (seed_l nI nR) ∗ secret_in_r (seed_r nI' nR').
+  secret_in_l (seed_l nI nR) ∗ secret_in_r (seed_r nI' nR') ∗
+  sess (seed_l nI nR) (seed_r nI' nR').
 
 #[global] Instance m2_facts_persistent nI nI' nR nR' :
   Persistent (m2_facts nI nI' nR nR').
@@ -427,13 +431,11 @@ Definition m3_tokens nR nR' : iProp :=
   term_token (Spec.enc (Spec.pkey skR) (Tag m3N) nR) ⊤ ∗
   term_token_spec (Spec.enc (Spec.pkey skR') (Tag m3N) nR') ⊤.
 
-(** The honest replies of R under I's key.  Each holds the tokens of its
-    session key until the test claims them with [claim], and the tokens of
-    the third message until I claims them with its nonce. *)
+(** The honest replies of R under I's key.  Each holds the tokens of the
+    third message until I claims them with its nonce. *)
 Definition seals_I_info e : iProp :=
   ∃ nI nI' nR nR', ⌜e = m2_seal nI nI' nR nR'⌝ ∗
     m2_facts nI nI' nR nR' ∗
-    (key_tokens (seed_l nI nR) (seed_r nI' nR') ∨ claim) ∗
     (m3_tokens nR nR' ∨ term_token nI (↑m3claimN)).
 
 Definition nsl_ctx : iProp :=
@@ -475,31 +477,27 @@ iIntros (HE) "(_ & _ & #Hinv & _) #Hl".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >HP)".
 iDestruct (seals_elem_of_l _ _ _ HS with "tok Hrec Hl") as %(u0' & Hin & [= <-]).
 iDestruct (big_sepS_elem_of_acc with "HP") as "[He HP]"; first exact: Hin.
-iDestruct "He" as (nI nI' nR nR' e) "(#Hf & slot & slot3)".
-iModIntro. iSplitL "tok tok' HP slot slot3".
+iDestruct "He" as (nI nI' nR nR' e) "(#Hf & slot3)".
+iModIntro. iSplitL "tok tok' HP slot3".
 2: { iModIntro. iExists nI, nI', nR, nR'. by iFrame "Hf". }
 iNext. iExists S, E0, E0'. iFrame "tok tok' Hrec". do 2 (iSplit; first done).
 iApply "HP". iExists nI, nI', nR, nR'. iSplit; first done. by iFrame "#∗".
 Qed.
 
-Lemma claim_key E s s' :
+Lemma session_sess E s s' :
   ↑sealsIN ⊆ E →
-  nsl_ctx -∗ session s s' -∗ claim ={E}=∗
-  key_tokens s s' ∗ secret_in_l s ∗ secret_in_r s'.
+  nsl_ctx -∗ session s s' ={E}=∗
+  ∃ nI nI' nR nR', ⌜s = seed_l nI nR ∧ s' = seed_r nI' nR'⌝ ∗ m2_facts nI nI' nR nR'.
 Proof.
-iIntros (HE) "(_ & _ & #Hinv & _) (%nI & %nI' & %nR & %nR' & -> & -> & #Hl) claim".
+iIntros (HE) "(_ & _ & #Hinv & _) (%nI & %nI' & %nR & %nR' & -> & -> & #Hl)".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >HP)".
 iDestruct (seals_elem_of_l _ _ _ HS with "tok Hrec Hl") as %(u0' & Hin & [= <-]).
 iDestruct (big_sepS_elem_of_acc with "HP") as "[He HP]"; first exact: Hin.
-iDestruct "He" as (nI0 nI0' nR0 nR0' e) "(#Hf & slot & slot3)".
+iDestruct "He" as (nI0 nI0' nR0 nR0' e) "(#Hf & slot3)".
 case/m2_seal_inj: (e) => [<- [<- [<- <-]]].
-iDestruct "slot" as "[toks|claim']"; last first.
-{ iDestruct (term_token_disj with "claim claim'") as %dis.
-  pose proof (nclose_non_empty claimN). set_solver. }
-iPoseProof "Hf" as "(_ & _ & #sec & #sec')".
-iModIntro. iSplitL "tok tok' HP claim slot3"; last by iFrame "toks sec sec'".
+iModIntro. iSplitL "tok tok' HP slot3"; last by iExists nI, nI', nR, nR'; iFrame "Hf".
 iNext. iExists S, E0, E0'. iFrame "tok tok' Hrec". do 2 (iSplit; first done).
-iApply "HP". iExists nI, nI', nR, nR'. iSplit; first done. iFrame "Hf slot3". by iRight.
+iApply "HP". iExists nI, nI', nR, nR'. iSplit; first done. by iFrame "Hf slot3".
 Qed.
 
 Lemma claim_m3 E nI nI' nR nR' :
@@ -514,14 +512,14 @@ iIntros (HE) "(_ & _ & #Hinv & _) #Hl claim".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >HP)".
 iDestruct (seals_elem_of_l _ _ _ HS with "tok Hrec Hl") as %(u0' & Hin & [= <-]).
 iDestruct (big_sepS_elem_of_acc with "HP") as "[He HP]"; first exact: Hin.
-iDestruct "He" as (nI0 nI0' nR0 nR0' e) "(#Hf & slot & slot3)".
+iDestruct "He" as (nI0 nI0' nR0 nR0' e) "(#Hf & slot3)".
 case/m2_seal_inj: (e) => [<- [<- [<- <-]]].
 iDestruct "slot3" as "[toks|claim']"; last first.
 { iDestruct (term_token_disj with "claim claim'") as %dis.
   pose proof (nclose_non_empty m3claimN). set_solver. }
-iModIntro. iSplitL "tok tok' HP claim slot"; last by iFrame "toks".
+iModIntro. iSplitL "tok tok' HP claim"; last by iFrame "toks".
 iNext. iExists S, E0, E0'. iFrame "tok tok' Hrec". do 2 (iSplit; first done).
-iApply "HP". iExists nI, nI', nR, nR'. iSplit; first done. iFrame "Hf slot". by iRight.
+iApply "HP". iExists nI, nI', nR, nR'. iSplit; first done. iFrame "Hf". by iRight.
 Qed.
 
 End Protocol.

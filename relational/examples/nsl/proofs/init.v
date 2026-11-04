@@ -25,10 +25,13 @@ Abbreviation iProp := (iProp Σ).
 Implicit Types (t u m n : term).
 
 Variables skI skI' skR skR' : aenc_key.
+Variable sess : term → term → iProp.
+Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
+Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
-Local Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR').
+Local Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR' sess).
 Local Abbreviation session := (session skI skI' skR skR').
-Local Abbreviation m2_facts := (m2_facts skI skI' skR skR').
+Local Abbreviation m2_facts := (m2_facts skI skI' skR skR' sess).
 Local Abbreviation m2_seal := (m2_seal skR skR').
 Local Abbreviation m1_seal := (m1_seal skI skI').
 Local Abbreviation seed_l := (seed_l skI skR).
