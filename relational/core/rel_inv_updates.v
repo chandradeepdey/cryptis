@@ -83,7 +83,7 @@ iIntros (HE) "#(_ & _ & Hinv) Httf".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   Hmap_inv &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_fresh flow_l t with "Hmeta_flow_l Httf") as "%Hfresh".
 iMod (own_update with "Hflow_l") as "[Hflow_l Hflow_frag_t]".
@@ -104,7 +104,7 @@ iSplitL "Hflow_l Hflow_l_frag Hflow_t_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub Hst.
   destruct (HPriv_l _ _ Hpub Hst) as [? | (t1sub & ts1 & ?)]; first eauto.
@@ -129,7 +129,7 @@ iIntros (HE) "#(_ & _ & Hinv) Httf".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   Hmap_inv &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_fresh flow_r t' with "Hmeta_flow_r Httf") as "%Hfresh".
 iMod (own_update with "Hflow_r") as "[Hflow_r Hflow_frag_t']".
@@ -150,7 +150,7 @@ iSplitL "Hflow_r Hflow_r_frag Hflow_t'_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub Hst.
   destruct (HPriv_r _ _ Hpub Hst) as [? | (t1'sub & ts1 & ?)]; first eauto.
@@ -179,7 +179,7 @@ iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   Hmap &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iDestruct (big_sepM_delete _ _ t _ Hfltts with "Hflow_l_frag") as "[Hl_frac2 Hflow_l_frag]".
@@ -204,7 +204,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite big_sepM_insert_delete.
   iFrame. }
 destruct (Hflow_l_cons _ _ Hfltts Hts) as (Hsubs & Hchain & Hpub).
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
@@ -242,7 +242,7 @@ iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   Hmap &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t' _ Hfrt'ts with "Hflow_r_frag") as "[Hr_frac2 Hflow_r_frag]".
@@ -267,7 +267,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite big_sepM_insert_delete.
   iFrame. }
 destruct (Hflow_r_cons _ _ Hfrt'ts Hts) as (Hsubs & Hchain & Hpub).
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
@@ -305,7 +305,7 @@ iIntros (HE Hni Hsub) "#(_ & _ & Hinv) Hl_frac #Hsec".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (secret_in_l_lookup with "Hmap_l Hsec") as "%Hpub_t".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
@@ -333,7 +333,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite big_sepM_insert_delete.
   iFrame. }
 have Hchain := HPriv_l _ _ Hpub_t I.
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t1sub & ts2 & ? & ?)]; first eauto.
@@ -374,7 +374,7 @@ iIntros (HE Hni Hsub) "#(_ & _ & Hinv) Hr_frac #Hsec".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (secret_in_r_lookup with "Hmap_r Hsec") as "%Hpub_t".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
@@ -402,7 +402,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite big_sepM_insert_delete.
   iFrame. }
 have Hchain := HPriv_r _ _ Hpub_t I.
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t1'sub & ts2 & ? & ?)]; first eauto.
@@ -445,7 +445,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
@@ -471,7 +471,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
@@ -511,7 +511,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
@@ -537,7 +537,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
@@ -577,7 +577,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Hfrag".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hfrag") as "%Hpltts".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
@@ -605,7 +605,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
@@ -645,7 +645,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Hfrag".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hfrag") as "%Hprtst'".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
@@ -673,7 +673,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
@@ -713,7 +713,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l (TNonce a) with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
@@ -738,7 +738,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
@@ -775,7 +775,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r (TNonce a') with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
@@ -800,7 +800,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
@@ -837,7 +837,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Hfrag".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hfrag") as "%Hpltts".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hflt".
@@ -864,7 +864,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t1 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
@@ -901,7 +901,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Hfrag".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hfrag") as "%Hprtst'".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'".
@@ -928,7 +928,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t1' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
@@ -964,7 +964,7 @@ iPoseProof (public_rel_flow_l_ne with "Hprot Hprot1") as "%Hne".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   Hmap &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot1") as "(%ts1 & % & %)".
@@ -989,7 +989,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t2 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
@@ -1037,7 +1037,7 @@ iPoseProof (public_rel_flow_r_ne with "Hprot Hprot1") as "%Hne".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   Hmap &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot1") as "(%ts1 & % & %)".
@@ -1062,7 +1062,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t2' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
@@ -1111,7 +1111,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hl_frac_sup Htt_sup".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l tsup with "Hmeta_map_l Htt_sup") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
@@ -1137,7 +1137,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t2 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
@@ -1183,7 +1183,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hr_frac_sup Htts_sup".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t'sup with "Hmeta_map_r Htts_sup") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
@@ -1209,7 +1209,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t2' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
@@ -1252,7 +1252,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot #Hpub".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (publicly_linked_lookup_l with "Hmap_l Hpub") as "%Hpltsupt'".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hl_frac") as "%Hfltts".
@@ -1281,7 +1281,7 @@ iSplitL "Hflow_l Hflow_l_frag Hl_frac2".
   rewrite /public_rel_flow_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; last done.
   move=> t2 ? Hpub1 Hst1.
   destruct (HPriv_l _ _ Hpub1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
@@ -1324,7 +1324,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot #Hpub".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & Hpub_consistent &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (publicly_linked_lookup_r with "Hmap_r Hpub") as "%Hprtt'sup".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hr_frac") as "%Hfrt'ts".
@@ -1353,7 +1353,7 @@ iSplitL "Hflow_r Hflow_r_frag Hr_frac2".
   rewrite /public_rel_flow_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-iPureIntro. split; last split; [|done|].
+iPureIntro. split.
 - split; first done.
   move=> t2' ? Hpub1 Hst1.
   destruct (HPriv_r _ _ Hpub1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
@@ -1400,7 +1400,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hprot Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_flow_l_lookup with "Hflow_l Hprot") as "%Hprot".
@@ -1425,9 +1425,6 @@ iSplitL "Hmap_l Hmap_l_frag Hmap_t_frag".
 iSplit.
 { iPureIntro. split; last done. move=> ??.
   rewrite lookup_insert; case_decide; naive_solver. }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "Hpub_consistent".
 { iIntros (??) "%Hpub".
   rewrite lookup_insert in Hpub; case_decide; first naive_solver.
@@ -1451,7 +1448,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hprot Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh".
 iPoseProof (public_rel_flow_r_lookup with "Hflow_r Hprot") as "%Hprot".
@@ -1473,12 +1470,14 @@ iSplitL "Hmap_r Hmap_r_frag Hmap_t'_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iPureIntro. split; last split.
-- split; first done. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver.
-- rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver.
-- split; first done.
+iSplit.
+{ iPureIntro. split; first done. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
+iSplitL "Hpub_consistent_r".
+{ iIntros (??) "%Hpub".
+  rewrite lookup_insert in Hpub; case_decide; first naive_solver.
+  by iApply "Hpub_consistent_r". }
+iPureIntro. split; first done.
   move=> t1' ts1 Hflow Hts1.
   destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & ? & ?).
   do 2 (split=> //). rewrite lookup_insert; case_decide; naive_solver.
@@ -1497,7 +1496,7 @@ iIntros (HE) "#(_ & _ & Hinv) Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & Hflow_r & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l (TNonce a) with "Hmeta_map_l Htt") as "%Hfresh".
 iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
@@ -1520,9 +1519,6 @@ iSplitL "Hmap_l Hmap_l_frag Hmap_t_frag".
     iFrame "#". }
 iSplit.
 { iPureIntro. split; last done. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver. }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
   rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "Hpub_consistent".
 { iIntros (??) "%Hpub".
@@ -1547,7 +1543,7 @@ iIntros (HE) "#(_ & _ & Hinv) Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   (Hflow_l & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_fresh pub_r (TNonce a') with "Hmeta_map_r Htts") as "%Hfresh".
 iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
@@ -1568,12 +1564,14 @@ iSplitL "Hmap_r Hmap_r_frag Hmap_t'_frag".
   - rewrite dom_insert_L.
     rewrite big_sepS_insert; last by apply not_elem_of_dom.
     iFrame "#". }
-iPureIntro. split; last split.
-- split; first done. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver.
-- rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver.
-- split; first done.
+iSplit.
+{ iPureIntro. split; first done. move=> ??.
+  rewrite lookup_insert; case_decide; naive_solver. }
+iSplitL "Hpub_consistent_r".
+{ iIntros (??) "%Hpub".
+  rewrite lookup_insert in Hpub; case_decide; first naive_solver.
+  by iApply "Hpub_consistent_r". }
+iPureIntro. split; first done.
   move=> t1' ts1 Hflow Hts1.
   destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & ? & ?).
   do 2 (split=> //). rewrite lookup_insert; case_decide; naive_solver.
@@ -1664,7 +1662,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & Hmap_r & #Hmeta_map_l & #Hmeta_map_r) &
                   Hflow &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hpltt'".
 iDestruct (big_sepM_delete _ _ t _ Hpltt' with "Hmap_l_frag") as "[Hl_frac2 Hmap_l_frag]".
@@ -1688,9 +1686,6 @@ iSplit.
 { iPureIntro. split; last done. move=> t1 st Hpub Hst.
   rewrite lookup_insert in Hpub; case_decide; last by eapply HPriv_l.
   simplify_eq. exact: (HPriv_l _ _ Hpltt' I). }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver. }
 iSplitL "Hpub_consistent".
 { iIntros (??) "%Hpub".
   rewrite lookup_insert in Hpub; case_decide; first naive_solver.
@@ -1711,7 +1706,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   (Hmap_l & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   Hflow &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
 iDestruct (big_sepM_delete _ _ t' _ Hprtt' with "Hmap_r_frag") as "[Hr_frac2 Hmap_r_frag]".
@@ -1735,9 +1730,10 @@ iSplit.
 { iPureIntro. split; first done. move=> t1' st Hpub Hst.
   rewrite lookup_insert in Hpub; case_decide; last by eapply HPriv_r.
   simplify_eq. exact: (HPriv_r _ _ Hprtt' I). }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite lookup_insert; case_decide; naive_solver. }
+iSplitL "Hpub_consistent_r".
+{ iIntros (??) "%Hpub".
+  rewrite lookup_insert in Hpub; case_decide; first naive_solver.
+  by iApply "Hpub_consistent_r". }
 iPureIntro. split; first done.
 move=> t1' ts1 Hflow Hts1.
 destruct (Hflow_r_cons _ _ Hflow Hts1) as (? & ? & ?).
@@ -1838,7 +1834,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Hl_frac Hr_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
@@ -1880,14 +1876,17 @@ iSplit.
 { iPureIntro. split.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver. }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite !lookup_insert; repeat case_decide; naive_solver. }
-iSplitL "Hrel Hpub_consistent".
-{ iIntros (??) "%Hpub".
-  rewrite lookup_insert in Hpub; case_decide; subst.
-  - injection Hpub as <-. iApply "Hrel". iFrame "#".
-  - by iApply "Hpub_consistent". }
+iDestruct ("Hrel" with "[]") as "#Hpub_tt'"; first by iFrame "#".
+iSplitL "Hpub_consistent Hpub_consistent_r".
+{ try rewrite /public_rel_Public_consistent. iSplitL "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent_r". }
 iPureIntro. split.
 - move=> t1 ts1 Hflow Hts1.
   destruct (Hflow_l_cons _ _ Hflow Hts1) as (? & ? & ?).
@@ -1911,7 +1910,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Hl_frac Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_lookup with "Hmap_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh".
@@ -1953,14 +1952,17 @@ iSplit.
 { iPureIntro. split.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver. }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite !lookup_insert; repeat case_decide; naive_solver. }
-iSplitL "Hrel Hpub_consistent".
-{ iIntros (??) "%Hpub".
-  rewrite lookup_insert in Hpub; case_decide; subst.
-  - injection Hpub as <-. iApply "Hrel". iFrame "#".
-  - by iApply "Hpub_consistent". }
+iDestruct ("Hrel" with "[]") as "#Hpub_tt'"; first by iFrame "#".
+iSplitL "Hpub_consistent Hpub_consistent_r".
+{ try rewrite /public_rel_Public_consistent. iSplitL "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent_r". }
 iPureIntro. split.
 - move=> t1 ts1 Hflow Hts1.
   destruct (Hflow_l_cons _ _ Hflow Hts1) as (? & ? & ?).
@@ -1984,7 +1986,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Htt Hr_frac".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh".
 iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
@@ -2026,14 +2028,17 @@ iSplit.
 { iPureIntro. split.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver. }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite !lookup_insert; repeat case_decide; naive_solver. }
-iSplitL "Hrel Hpub_consistent".
-{ iIntros (??) "%Hpub".
-  rewrite lookup_insert in Hpub; case_decide; subst.
-  - injection Hpub as <-. iApply "Hrel". iFrame "#".
-  - by iApply "Hpub_consistent". }
+iDestruct ("Hrel" with "[]") as "#Hpub_tt'"; first by iFrame "#".
+iSplitL "Hpub_consistent Hpub_consistent_r".
+{ try rewrite /public_rel_Public_consistent. iSplitL "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent_r". }
 iPureIntro. split.
 - move=> t1 ts1 Hflow Hts1.
   destruct (Hflow_l_cons _ _ Hflow Hts1) as (? & ? & ?).
@@ -2057,7 +2062,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Htt Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
                   ([Hmap_l Hmap_l_frag] & [Hmap_r Hmap_r_frag] & #Hmeta_map_l & #Hmeta_map_r) &
                   ([Hflow_l Hflow_l_frag] & [Hflow_r Hflow_r_frag] & #Hmeta_flow_l & #Hmeta_flow_r) &
-                  [%HPriv_l %HPriv_r] & %Hbij & Hpub_consistent &
+                  [%HPriv_l %HPriv_r] & [Hpub_consistent Hpub_consistent_r] &
                   [%Hflow_l_cons %Hflow_r_cons])".
 iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh_l".
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh_r".
@@ -2095,14 +2100,17 @@ iSplit.
 { iPureIntro. split.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver.
   - move=> ??. rewrite lookup_insert; case_decide; naive_solver. }
-iSplit.
-{ iPureIntro. rewrite /public_rel_Public_bijection in Hbij. move=> ??.
-  rewrite !lookup_insert; repeat case_decide; naive_solver. }
-iSplitL "Hrel Hpub_consistent".
-{ iIntros (??) "%Hpub".
-  rewrite lookup_insert in Hpub; case_decide; subst.
-  - injection Hpub as <-. iApply "Hrel". iFrame "#".
-  - by iApply "Hpub_consistent". }
+iDestruct ("Hrel" with "[]") as "#Hpub_tt'"; first by iFrame "#".
+iSplitL "Hpub_consistent Hpub_consistent_r".
+{ try rewrite /public_rel_Public_consistent. iSplitL "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent".
+  - iIntros (??) "%Hpub".
+    rewrite lookup_insert in Hpub; case_decide; subst.
+    + by injection Hpub as <-.
+    + by iApply "Hpub_consistent_r". }
 iPureIntro. split.
 - move=> t1 ts1 Hflow Hts1.
   destruct (Hflow_l_cons _ _ Hflow Hts1) as (? & ? & ?).
