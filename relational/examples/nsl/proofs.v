@@ -1,6 +1,6 @@
 (** Proofs of the NSL case study, one file per role, and of the tests.  A
     test creates the honest keys, runs both roles, takes the tested session
-    key out of the seal set of I's key, and reveals it or a fresh key. *)
+    key out of the invariant of I's key, and reveals it or a fresh key. *)
 
 From cryptis.hyper.examples.nsl.proofs Require Export base init resp.
 From cryptis Require Import lib cryptis primitives.
@@ -34,18 +34,22 @@ Proof.
 iIntros "#Hctx #Hc". rewrite /setup. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (rel_mk_honest_key with "Hctx").
-iIntros (skI skI') "#HI sealsI sealsI' tokI" => /=. rel_pures.
+iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (rel_mk_honest_key with "Hctx").
-iIntros (skR skR') "#HR sealsR sealsR' _" => /=. rel_pures.
+iIntros (skR skR') "#HR sealsR _" => /=. rel_pures.
 iMod (inv_alloc sealsIN _ (seals_inv skI skI' (seals_I_info skI skI' skR skR'))
-        with "[sealsI sealsI']") as "#HinvI".
-{ iNext. iExists ∅. iFrame. iSplit; last by rewrite big_sepS_empty.
-  iPureIntro. exact: set_Forall_empty. }
-iMod (inv_alloc sealsRN _ (seals_inv skR skR' (seals_R_info skI skI' skR skR'))
-        with "[sealsR sealsR']") as "#HinvR".
-{ iNext. iExists ∅. iFrame. iSplit; last by rewrite big_sepS_empty.
-  iPureIntro. exact: set_Forall_empty. }
+        with "[sealsI]") as "#HinvI".
+{ iNext. iExists ∅, _, _. iFrame "sealsI".
+  iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
+  iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
+  by rewrite !big_sepS_empty. }
+iMod (inv_alloc sealsRN _ (seals_inv skR skR' (seals_R_info skI skI'))
+        with "[sealsR]") as "#HinvR".
+{ iNext. iExists ∅, _, _. iFrame "sealsR".
+  iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
+  iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
+  by rewrite !big_sepS_empty. }
 rewrite (term_token_difference (seed_of_aenc_key skI) (↑claimN)
            (⊤ ∖ ↑cryptisN.@"public_rel")); last solve_ndisj.
 iDestruct "tokI" as "[claim _]".
@@ -77,7 +81,8 @@ case: b; rel_pures.
   iIntros (k') "%Hk' #mint_k' tok_k' _".
   destruct k' as [n']. simpl in Hk'. case/is_nonceP: Hk' => a' e. subst n'.
   iEval (rewrite minted_spec_senc) in "mint_k'".
-  iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tok tok_k'")
+  iMod (public_rel_publish (E:=⊤) (t:=THash s) (t':=TNonce a') ltac:(solve_ndisj)
+          with "Hctx [] tok tok_k'")
     as "[_ #Hpub]".
   { iIntros "!> #link". rewrite /=. iSplit; first done. iSplit; first done. by iSplit. }
   iAssert (PUB⟨sess_key s, SEncKey (TNonce a')⟩) as "#Hk".
@@ -88,7 +93,8 @@ case: b; rel_pures.
   iIntros (k) "%Hk #mint_k tok_k _".
   destruct k as [n]. simpl in Hk. case/is_nonceP: Hk => a e. subst n.
   iEval (rewrite minted_senc) in "mint_k".
-  iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tok_k tok'")
+  iMod (public_rel_publish (E:=⊤) (t:=TNonce a) (t':=THash s') ltac:(solve_ndisj)
+          with "Hctx [] tok_k tok'")
     as "[_ #Hpub]".
   { iIntros "!> #link". rewrite /=. iSplit; first done. iSplit; first done. by iSplit. }
   iAssert (PUB⟨SEncKey (TNonce a), sess_key s'⟩) as "#Hk".

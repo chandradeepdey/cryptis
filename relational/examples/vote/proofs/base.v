@@ -35,21 +35,29 @@ Section GhostState.
 Definition ballot_ct skT n v : term :=
   Spec.random_aenc (Spec.pkey skT) (Tag (voteN.@"vote")) n v.
 
-Definition ballot_seal skV skV' skT skT' n n' v v' : wf_seal_data * wf_seal_data :=
-  (Some (skV : term, Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT n v)),
-   Some (skV' : term, Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT' n' v'))).
+Definition ballot_body skT n v : term :=
+  Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT n v).
+
+Definition ballot_sig skV skT n v : term :=
+  Spec.enc skV (Tag (voteN.@"ballot")) (ballot_ct skT n v).
 
 Definition ballot_inv skV skV' skT skT' v v' : iProp :=
-  (seals_auth_l (seed_of_sign_key skV) ∅ ∗
-   seals_auth_r (seed_of_sign_key skV') ∅) ∨
+  (term_token (seed_of_sign_key skV) (↑cryptisN.@"public_rel".@"seal") ∗
+   term_token_spec (seed_of_sign_key skV') (↑cryptisN.@"public_rel".@"seal")) ∨
   (∃ n n',
-    seals_auth_l (seed_of_sign_key skV) {[ballot_seal skV skV' skT skT' n n' v v']} ∗
-    seals_auth_r (seed_of_sign_key skV') {[ballot_seal skV skV' skT skT' n n' v v']} ∗
+    term_token (seed_of_sign_key skV)
+      (↑cryptisN.@"public_rel".@"seal" ∖ ↑seal_ns skV (ballot_body skT n v)) ∗
+    term_token_spec (seed_of_sign_key skV')
+      (↑cryptisN.@"public_rel".@"seal" ∖ ↑seal_ns skV' (ballot_body skT' n' v')) ∗
+    sealed_under skV skV' (ballot_body skT n v) (ballot_body skT' n' v') ∗
     term_meta (seed_of_sign_key skV) signedN ()).
 
 Definition urn_inv skT skT' : iProp :=
-  ∃ S S', seals_auth_l (seed_of_aenc_key skT) S ∗
-          seals_auth_r (seed_of_aenc_key skT') S'.
+  ∃ Ek Ek', never_sealed_under (seed_of_aenc_key skT) (seed_of_aenc_key skT') Ek Ek' ∗
+    □ (∀ p, ⌜↑seal_ns (Spec.pkey skT) p ⊆ Ek⌝ ∨
+            term_meta (TSeal (Spec.pkey skT) p) urnN ()) ∗
+    □ (∀ p', ⌜↑seal_ns (Spec.pkey skT') p' ⊆ Ek'⌝ ∨
+             term_meta_spec (TSeal (Spec.pkey skT') p') urnN ()).
 
 Definition arb_key skT skT' : iProp :=
   ⌜is_nonce (seed_of_aenc_key skT)⌝ ∗ ⌜is_nonce (seed_of_aenc_key skT')⌝ ∗
@@ -78,54 +86,80 @@ Lemma voter_key_pkey skV skV' skT skT' v v' :
   voter_key skV skV' skT skT' v v' -∗ PUB⟨Spec.pkey skV, Spec.pkey skV'⟩.
 Proof. by iIntros "(_ & _ & _ & _ & ? & _)". Qed.
 
-Lemma urn_inv_insert E skT skT' e (P : iProp) :
+Lemma urn_inv_seal E skT skT' p p' (P : iProp) :
   ↑urnN ⊆ E →
   inv urnN (urn_inv skT skT') -∗
-  (∀ S S', seals_auth_l (seed_of_aenc_key skT) S -∗
-           seals_auth_r (seed_of_aenc_key skT') S' ={E ∖ ↑urnN}=∗
-           seals_auth_l (seed_of_aenc_key skT) (S ∪ {[e]}) ∗
-           seals_auth_r (seed_of_aenc_key skT') (S' ∪ {[e]}) ∗ P) ={E}=∗ P.
+  term_token (TSeal (Spec.pkey skT) p) (↑urnN) -∗
+  term_token_spec (TSeal (Spec.pkey skT') p') (↑urnN) -∗
+  (∀ Ek Ek', ⌜↑seal_ns (Spec.pkey skT) p ⊆ Ek⌝ -∗
+     ⌜↑seal_ns (Spec.pkey skT') p' ⊆ Ek'⌝ -∗
+     never_sealed_under (seed_of_aenc_key skT) (seed_of_aenc_key skT') Ek Ek'
+       ={E ∖ ↑urnN}=∗
+     never_sealed_under (seed_of_aenc_key skT) (seed_of_aenc_key skT')
+       (Ek ∖ ↑seal_ns (Spec.pkey skT) p) (Ek' ∖ ↑seal_ns (Spec.pkey skT') p') ∗
+     P) ={E}=∗ P.
 Proof.
-iIntros (HE) "#Hinv upd".
-iInv "Hinv" as "(%S & %S' & >seals & >seals')".
-iMod ("upd" with "seals seals'") as "(seals & seals' & HP)".
+iIntros (HE) "#Hinv tc tc' upd".
+iInv "Hinv" as "(%Ek & %Ek' & >ns & >#Hall & >#Hall')".
+iDestruct ("Hall" $! p) as "[%sub|#Hm]"; last first.
+{ by iDestruct (term_meta_token with "tc Hm") as "[]". }
+iDestruct ("Hall'" $! p') as "[%sub'|#Hm']"; last first.
+{ by iDestruct (term_meta_spec_token with "tc' Hm'") as "[]". }
+iMod ("upd" with "[//] [//] ns") as "[ns HP]".
+iMod (term_meta_set urnN () with "tc") as "#Hm"; first done.
+iMod (term_meta_spec_set urnN () with "tc'") as "#Hm'"; first done.
 iModIntro. iSplitR "HP"; last done.
-iNext. iExists _, _. iFrame.
+iNext. iExists _, _. iFrame "ns". iSplit; iIntros "!>".
+- iIntros (q). case: (decide (q = p)) => [->|ne]; first by iRight.
+  iDestruct ("Hall" $! q) as "[%subq|$]". iLeft. iPureIntro.
+  apply subseteq_difference_r; last done.
+  apply ndot_ne_disjoint. congruence.
+- iIntros (q'). case: (decide (q' = p')) => [->|ne]; first by iRight.
+  iDestruct ("Hall'" $! q') as "[%subq|$]". iLeft. iPureIntro.
+  apply subseteq_difference_r; last done.
+  apply ndot_ne_disjoint. congruence.
 Qed.
 
 Lemma ballot_inv_sign E skV skV' skT skT' v v' n n' :
   ↑ballotN ⊆ E →
   inv ballotN (ballot_inv skV skV' skT skT' v v') -∗
-  term_token (seed_of_sign_key skV) (↑signedN) ={E}=∗
-  seals_l (seed_of_sign_key skV) (ballot_seal skV skV' skT skT' n n' v v') ∗
-  seals_r (seed_of_sign_key skV') (ballot_seal skV skV' skT skT' n n' v v').
+  term_token (seed_of_sign_key skV) (↑signedN) -∗
+  □ (sealed_under skV skV' (ballot_body skT n v) (ballot_body skT' n' v') -∗
+     PUB⟨ballot_sig skV skT n v, ballot_sig skV' skT' n' v'⟩) ={E}=∗
+  PUB⟨ballot_sig skV skT n v, ballot_sig skV' skT' n' v'⟩.
 Proof.
-iIntros (HE) "#Hinv token".
-iInv "Hinv" as "[(>seals & >seals')|(%n0 & %n0' & _ & _ & >#Hsigned)]"; last first.
+iIntros (HE) "#Hinv token #Hwand".
+iInv "Hinv" as "[(>tok & >tok')|(%n0 & %n0' & _ & _ & _ & >#Hsigned)]" "Hclose"; last first.
 { by iDestruct (term_meta_token with "token Hsigned") as "[]". }
 iMod (term_meta_set signedN () (↑signedN) (seed_of_sign_key skV) ltac:(done)
         with "token") as "#Hsigned".
-iMod (seals_auth_l_insert _ _ (ballot_seal skV skV' skT skT' n n' v v')
-        with "seals") as "[seals #Hl]".
-iMod (seals_auth_r_insert _ _ (ballot_seal skV skV' skT skT' n n' v v')
-        with "seals'") as "[seals' #Hr]".
-rewrite !left_id_L.
-iModIntro. iSplitL; last by iFrame "#".
-iNext. iRight. iExists n, n'. by iFrame "#∗".
+rewrite /ballot_inv !(sign_key_TKey skV) !(sign_key_TKey skV').
+iMod (sealed_under_set (nclose_subseteq _ _) (nclose_subseteq _ _) with "[$tok $tok']")
+  as "[#Hsu [tok tok']]".
+iMod ("Hclose" with "[tok tok']") as "_".
+{ iNext. iRight. iExists n, n'. by iFrame "#∗". }
+iModIntro. by iApply "Hwand".
 Qed.
 
-Lemma ballot_inv_lookup E skV skV' skT skT' v v' e :
+Lemma ballot_inv_lookup E skV skV' skT skT' v v' w x :
   ↑ballotN ⊆ E →
   inv ballotN (ballot_inv skV skV' skT skT' v v') -∗
-  seals_l (seed_of_sign_key skV) e ={E}=∗
-  ⌜∃ n n', e = ballot_seal skV skV' skT skT' n n' v v'⌝.
+  sealed_under_l skV w x ={E}=∗
+  ⌜∃ n n', w = ballot_body skT n v ∧ x = TSeal skV' (ballot_body skT' n' v')⌝.
 Proof.
 iIntros (HE) "#Hinv #Hl".
-iInv "Hinv" as "[(>seals & >seals')|(%n & %n' & >seals & >seals' & >#Hsigned)]".
-- by iDestruct (seals_auth_l_elem_of with "seals Hl") as %?%not_elem_of_empty.
-- iDestruct (seals_auth_l_elem_of with "seals Hl") as %->%elem_of_singleton.
-  iModIntro. iSplitL; last by eauto.
-  iNext. iRight. iExists n, n'. by iFrame "#∗".
+iInv "Hinv" as "[(>tok & >tok')|(%n & %n' & >tok & >tok' & >#[Hsu Hsu'] & >#Hsigned)]".
+- rewrite (sign_key_TKey skV).
+  iDestruct (sealed_under_l_token with "tok Hl") as "[]". apply nclose_subseteq.
+- case: (decide (w = ballot_body skT n v)) => [ew|ne]; last first.
+  { rewrite (sign_key_TKey skV).
+    iDestruct (sealed_under_l_token with "tok Hl") as "[]".
+    apply subseteq_difference_r; last apply nclose_subseteq.
+    apply ndot_ne_disjoint. by case. }
+  subst w. iDestruct (sealed_under_l_agree with "Hl Hsu") as %->.
+  iModIntro. iSplitL "tok tok'".
+  { iNext. iRight. iExists n, n'. by iFrame "#∗". }
+  iPureIntro. by exists n, n'.
 Qed.
 
 End GhostState.
@@ -151,23 +185,18 @@ Lemma pub_sign skV skV' t t' :
   secret_in_l skV -∗ secret_in_r skV' -∗
   PUB⟨Spec.pkey skV, Spec.pkey skV'⟩ -∗
   PUB⟨t, t'⟩ -∗
-  publicly_linked t t' -∗
-  seals_l (seed_of_sign_key skV) (Some (skV : term, t), Some (skV' : term, t')) -∗
-  seals_r (seed_of_sign_key skV') (Some (skV : term, t), Some (skV' : term, t')) -∗
-  publicly_linked (TSeal skV t) (TSeal skV' t') -∗
+  sealed_under skV skV' t t' -∗
   PUB⟨TSeal skV t, TSeal skV' t'⟩.
 Proof.
 case: skV skV' => [s] [s']. rewrite [term_of_sign_key]unlock.
 rewrite -[Spec.pkey (TKey Sign s)]/(TKey Verify s) -[Spec.pkey (TKey Sign s')]/(TKey Verify s').
-iIntros "#mint #mint' #sec #sec' #Hpk #Ht #Ht_link #Hsl #Hsr #Hlink".
+iIntros "#mint #mint' #sec #sec' #Hpk #Ht #Hsu".
 iPoseProof (publicly_related_minted with "Ht") as "[? ?]".
 rewrite publicly_related_TSeal. iRight.
 rewrite minted_TSeal minted_spec_TSeal.
 iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-iSplit; first by iSplit; [iApply secret_in_l_linked_in_l | iApply secret_in_r_linked_in_r].
-iModIntro. iSplit; first done. iSplit; first done. iSplit; first done.
-iSplit; first by iApply publicly_linked_linked.
-by iSplit.
+iModIntro. iSplit; last by iSplit.
+by iSplit; [iApply secret_in_l_linked_in_l | iApply secret_in_r_linked_in_r].
 Qed.
 
 Lemma pub_sign_inv skV w t' :
@@ -175,22 +204,21 @@ Lemma pub_sign_inv skV w t' :
   secret_in_l (seed_of_sign_key skV) -∗
   PUB⟨TSeal skV w, t'⟩ -∗
   ∃ s' w', ⌜t' = TSeal (TKey Sign s') w'⌝ ∧ PUB⟨w, w'⟩ ∧
-    seals_l (seed_of_sign_key skV) (Some (skV : term, w), Some (TKey Sign s', w')).
+    sealed_under_l skV w t'.
 Proof.
 case: skV => [s] Hnonce. rewrite [term_of_sign_key]unlock.
 iIntros "#sec #Ht".
-have [[k' [w' ->]]|Hns] : (∃ k' w', t' = TSeal k' w') ∨ (∀ k' w', t' ≠ TSeal k' w').
-{ case: t' => *; try by right. left; eauto. }
-- rewrite publicly_related_TSeal.
-  iDestruct "Ht" as "[[Hk _]|(_ & _ & _ & _ & #Hbox)]".
-  + iDestruct (publicly_related_TKey_term with "Hk") as %[s' ->].
-    rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk]".
-    iDestruct (publicly_related_nonce_term _ Hnonce with "Hk") as "[Hl _]".
-    by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
-  + case: k' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf']; try by iDestruct "Hbox" as "[]".
-    iDestruct "Hbox" as "[<- (_ & Hw & _ & [Hl _])]".
-    iExists s', w'. by eauto.
-- by iDestruct (publicly_related_TSeal_term_wf Sign _ _ Hns with "Ht") as "[]".
+iDestruct (publicly_related_TSeal_term with "Ht") as "[(%k' & %w' & ->)|[_ []]]".
+rewrite publicly_related_TSeal.
+iDestruct "Ht" as "[[Hk _]|(_ & _ & [Hsu _] & #Hbox)]".
+- iDestruct (publicly_related_TKey_term with "Hk") as %[s' ->].
+  rewrite publicly_related_TKey. iDestruct "Hk" as "[_ Hk]".
+  iDestruct (publicly_related_nonce_term _ Hnonce with "Hk") as "Hl".
+  by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
+- case: k' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf']; try by iDestruct "Hbox" as "[]".
+  case: kt'; try by iDestruct "Hbox" as "[]".
+  iDestruct "Hbox" as "(_ & _ & Hw)".
+  iExists s', w'. by eauto.
 Qed.
 
 (** The arbitrator's view of a message: either it is not a ballot of this
@@ -211,9 +239,8 @@ iMod (publicly_related_open_fupd (E:=⊤) _ _ t t' ltac:(solve_ndisj)
 rewrite /Spec.dec.
 case: (Spec.openP (Spec.pkey skV) t) Hiff => [k w Hk -> Hiff|Hiff].
 - move/Spec.open_key_signK: Hk => ->.
-  iDestruct (pub_sign_inv _ _ Hnonce with "sec Ht") as "(%s' & %w' & -> & _ & #Hl)".
-  iMod (ballot_inv_lookup with "Hinv Hl") as %(n & n' & e); first solve_ndisj.
-  move: e. rewrite /ballot_seal. case=> -> e' ->. rewrite e'.
+  iDestruct (pub_sign_inv _ _ Hnonce with "sec Ht") as "(%s' & %w' & _ & _ & #Hl)".
+  iMod (ballot_inv_lookup with "Hinv Hl") as %(n & n' & -> & ->); first solve_ndisj.
   iModIntro. iRight. iExists n, n'. by iSplit.
 - have Hnone : Spec.open (Spec.pkey skV') t' = None.
   { case e: (Spec.open _ t') => [w'|] //.
@@ -252,13 +279,14 @@ iMod (public_rel_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx to
   as "(#secret_s & seals & _ & _)".
 iMod (public_rel_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
   as "(#secret_s' & seals' & _ & _)".
-iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] token_pk token_pk'")
-  as "[#elem_pk #pub_pk]".
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+        with "Hctx [] token_pk token_pk'") as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
   do 3 (iSplit; first done).
   iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
 iMod (inv_alloc urnN _ (urn_inv skT skT') with "[seals seals']") as "#Hurn".
-{ iNext. iExists ∅, ∅. iFrame. }
+{ iNext. iExists _, _. iFrame "seals seals'".
+  iSplit; iIntros "!>" (?); iLeft; iPureIntro; apply nclose_subseteq. }
 iApply "post". do 4 (iSplit; first done). by iFrame "#".
 Qed.
 
@@ -298,8 +326,8 @@ iMod (public_rel_secret_step_l (E:=⊤) (is_immediate_subterm_sign_key skV)
         ltac:(solve_ndisj) with "Hctx secret_s prot_s token_sk") as "(#secret_sk & _ & _)".
 iMod (public_rel_secret_step_r (E:=⊤) (is_immediate_subterm_sign_key skV')
         ltac:(solve_ndisj) with "Hctx secret_s' prot_s' token_sk'") as "(#secret_sk' & _ & _)".
-iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] token_pk token_pk'")
-  as "[#elem_pk #pub_pk]".
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+        with "Hctx [] token_pk token_pk'") as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". by iApply (pub_verify_key with "mint_sk mint_sk' secret_s secret_s' elem"). }
 iMod (inv_alloc ballotN _ (ballot_inv skV skV' skT skT' v v') with "[seals seals']")
   as "#Hballot".

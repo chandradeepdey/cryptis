@@ -102,8 +102,10 @@ rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
 { iPureIntro. set_solver. }
 { by iIntros (?); rewrite big_sepS_empty. }
 { by iIntros (?); rewrite big_sepS_empty. }
-iIntros (n n') "_ _ _ _ _ _ upd".
-iMod ("upd" $! ⊤ with "[//] seals_a seals_a'") as "(seals_a & seals_a' & #Hcmsg)".
+iIntros (n n') "_ _ _ _ _ _ _ _ upd".
+iMod ("upd" $! (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal")
+        with "[] [] [$seals_a $seals_a']") as "(_ & _ & #Hcmsg)";
+  [iPureIntro; apply nclose_subseteq..|].
 iModIntro.
 rel_apply (rel_send with "Hc Hcmsg").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.

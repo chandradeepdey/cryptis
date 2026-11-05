@@ -29,9 +29,8 @@ Variables skI skI' skR skR' : aenc_key.
 Local Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR').
 Local Abbreviation session := (session skI skI' skR skR').
 Local Abbreviation m2_facts := (m2_facts skI skI' skR skR').
-Local Abbreviation m2_seal := (m2_seal skI skI' skR skR').
-Local Abbreviation m1_seal := (m1_seal skI skI' skR skR').
-Local Abbreviation m3_seal := (m3_seal skR skR').
+Local Abbreviation m2_seal := (m2_seal skR skR').
+Local Abbreviation m1_seal := (m1_seal skI skI').
 Local Abbreviation seed_l := (seed_l skI skR).
 Local Abbreviation seed_r := (seed_r skI' skR').
 
@@ -42,7 +41,8 @@ Definition m2_comp x1 x1' x2 x2' x3 x3' : iProp :=
   ((PUB⟨x1, x1'⟩ ∗ PUB⟨x2, x2'⟩) ∨
    (⌜x3 = Spec.pkey skR ∧ x3' = Spec.pkey skR'⌝ ∗
     m2_facts x1 x1' x2 x2' ∗
-    seals_l (seed_of_aenc_key skI) (m2_seal x1 x1' x2 x2'))).
+    sealed_under_l (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1
+      (TSeal (Spec.pkey skI') (m2_seal x1 x1' x2 x2').2))).
 
 Lemma m2_open E t t' :
   ↑cryptisN ⊆ E → ↑sealsIN ⊆ E →
@@ -53,7 +53,8 @@ Lemma m2_open E t t' :
      ∃ x1 x1' x2 x2',
        ⌜m = m2_pl x1 x2 (Spec.pkey skR) ∧ m' = m2_pl x1' x2' (Spec.pkey skR')⌝ ∗
        m2_facts x1 x1' x2 x2' ∗
-       seals_l (seed_of_aenc_key skI) (m2_seal x1 x1' x2 x2')).
+       sealed_under_l (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1
+      (TSeal (Spec.pkey skI') (m2_seal x1 x1' x2 x2').2)).
 Proof.
 iIntros (HE HN) "#Hctx #Hnsl #Ht". iPoseProof "Hnsl" as "(#HI & _ & #HinvI & _)".
 rewrite /Spec.dec.
@@ -79,7 +80,8 @@ Lemma m2_decode m m' :
    ∃ x1 x1' x2 x2',
      ⌜m = m2_pl x1 x2 (Spec.pkey skR) ∧ m' = m2_pl x1' x2' (Spec.pkey skR')⌝ ∗
      m2_facts x1 x1' x2 x2' ∗
-     seals_l (seed_of_aenc_key skI) (m2_seal x1 x1' x2 x2')) -∗
+     sealed_under_l (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1
+      (TSeal (Spec.pkey skI') (m2_seal x1 x1' x2 x2').2)) -∗
   ⌜Spec.to_list m = None ∧ Spec.to_list m' = None⌝ ∨
   ∃ ts ts', ⌜Spec.to_list m = Some ts ∧ Spec.to_list m' = Some ts'⌝ ∗
     (⌜length ts ≠ 3 ∧ length ts' ≠ 3⌝ ∨
@@ -181,16 +183,16 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
             with "Hctx by_pl' tts_pl") as "by_tg'".
     iMod (aenc_link (E:=⊤) skR skR' m1N (Spec.of_list [nI; Spec.pkey skI])
             (Spec.of_list [nI'; Spec.pkey skI']) ltac:(solve_ndisj)
-            with "Hctx HR [] [] by_tg by_tg' tt_tg tts_tg tt_c tts_c") as "link".
+            with "Hctx HR [] [] by_tg by_tg' tt_tg tts_tg tt_c tts_c") as "[link [mk mk']]".
     { rewrite minted_of_list /=. by iFrame "#". }
     { rewrite minted_spec_of_list /=. by iFrame "#". }
-    have Hsh : aenc_shape skR skR' (m1_seal nI nI') by eexists _, _.
-    iMod (seals_inv_link (E:=⊤) (N:=sealsRN) _ _ ltac:(solve_ndisj) ltac:(solve_ndisj) Hsh
-      with "HinvR [] link") as "[#Hc1 _]".
+    iMod (seals_inv_link (E:=⊤) (N:=sealsRN) ltac:(solve_ndisj)
+      with "HinvR [] link mk mk'") as "[#Hc1 _]".
     { iLeft. iExists nI, nI'. iSplit; first done. by iFrame "#". }
     iModIntro. iFrame "Hc1". iSplitR; last by iIntros "_".
     iLeft. iSplit; first done. by iFrame "#".
-  - iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tt_n tts_n")
+  - iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+            with "Hctx [] tt_n tts_n")
       as "[_ #Hpub]".
     { iIntros "!> #?". rewrite (publicly_related_nonce HnI HnI').
       by do 2 (iSplit; first done). }
@@ -241,11 +243,12 @@ have e3' := proj1 H3 e3. subst x3 x3'.
 rel_prims.
 (* The third message. *)
 iAssert ((⌜pkX = Spec.pkey skR⌝ ∗ resp_nonce x2 x2' ∗
-          seals_l (seed_of_aenc_key skI) (m2_seal nI nI' x2 x2')) ∨
+          sealed_under_l (Spec.pkey skI) (m2_seal nI nI' x2 x2').1
+            (TSeal (Spec.pkey skI') (m2_seal nI nI' x2 x2').2)) ∨
          (⌜pkX ≠ Spec.pkey skR⌝ ∗ PUB⟨x2, x2'⟩))%I as "#Hcase".
 { iDestruct "HnI" as "[[%eX (_ & _ & _ & _ & #sec & _)]|[%neX _]]";
   iDestruct "Hcomp" as "[[#Hpub #Hx2]|([%eK %eK'] & (_ & #Hx2 & _) & #Hl)]".
-  - iDestruct (publicly_related_nonce_term _ HnI with "Hpub") as "[Hl _]".
+  - iDestruct (publicly_related_nonce_term _ HnI with "Hpub") as "Hl".
     by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
   - iLeft. by iFrame "#".
   - iRight. by iSplit.
@@ -264,10 +267,9 @@ iAssert (|={⊤}=> PUB⟨Spec.enc pkX (Tag m3N) x2, Spec.enc pkX' (Tag m3N) x2'�
             | by iApply (term_meta_spec_minted_spec (L:=term))]. }
   iMod (aenc_link (E:=⊤) skR skR' m3N x2 x2' ltac:(solve_ndisj)
           with "Hctx HR mint_x2 mint_x2' by_tg by_tg' tt_tg tts_tg tt_c tts_c")
-    as "link".
-  have Hsh : aenc_shape skR skR' (m3_seal x2 x2') by eexists _, _.
-  iMod (seals_inv_link (E:=⊤) (N:=sealsRN) _ _ ltac:(solve_ndisj) ltac:(solve_ndisj) Hsh
-    with "HinvR [] link") as "[#Hc3 _]".
+    as "[link [mk mk']]".
+  iMod (seals_inv_link (E:=⊤) (N:=sealsRN) ltac:(solve_ndisj)
+    with "HinvR [] link mk mk'") as "[#Hc3 _]".
   { iRight. iExists x2, x2'. by iSplit. }
   by iModIntro. }
 rel_apply (rel_send with "Hc Hc3").

@@ -1,6 +1,6 @@
 (** The responder.  When its peer is I, its nonce is secret, and it protects
     the session secret and the plaintexts of the reply and of the third
-    message.  The honest reply goes into the seal set of I's key, together
+    message.  The honest reply goes into the invariant of I's key, together
     with the tokens of the session key and what I needs to send the third
     message. *)
 
@@ -221,7 +221,8 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
   (⌜x2 = Spec.pkey skI⌝ → session (seed_l x1 nR) (seed_r x1' nR')))%I
   with "[-]" as ">#(Hinfo & Hc2 & Hsess)".
 { case: (decide (x2 = Spec.pkey skI)) => [eX|neX]; last first.
-  { iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tt_n tts_n")
+  { iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+            with "Hctx [] tt_n tts_n")
       as "[_ #Hpub]".
     { iIntros "!> #?". rewrite (publicly_related_nonce HnR HnR').
       by do 2 (iSplit; first done). }
@@ -312,13 +313,12 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
           with "Hctx by_pl' tts_pl") as "by_tg'".
   iMod (aenc_link (E:=⊤) skI skI' m2N (Spec.of_list [x1; nR; Spec.pkey skR])
           (Spec.of_list [x1'; nR'; Spec.pkey skR']) ltac:(solve_ndisj)
-          with "Hctx HI [] [] by_tg by_tg' tt_tg tts_tg tt_c tts_c") as "link".
+          with "Hctx HI [] [] by_tg by_tg' tt_tg tts_tg tt_c tts_c") as "[link [mk mk']]".
   { rewrite minted_of_list /=. by iFrame "#". }
   { rewrite minted_spec_of_list /=. by iFrame "#". }
-  have Hsh : aenc_shape skI skI' (m2_seal x1 x1' nR nR') by eexists _, _.
-  iMod (seals_inv_link (E:=⊤) (N:=sealsIN) _ _ ltac:(solve_ndisj) ltac:(solve_ndisj) Hsh
-    with "HinvI [tt_h tts_h by_tg3 by_tg3' tt_tg3 tts_tg3 tt_c3 tts_c3] link")
-    as "[#Hc2 #Hl]".
+  iMod (seals_inv_link (E:=⊤) (N:=sealsIN) ltac:(solve_ndisj)
+    with "HinvI [tt_h tts_h by_tg3 by_tg3' tt_tg3 tts_tg3 tt_c3 tts_c3] link mk mk'")
+    as "[#Hc2 [#Hl _]]".
   { iExists x1, x1', nR, nR'. iSplit; first done.
     iSplitR; first by iFrame "#".
     iSplitL "tt_h tts_h"; first by iLeft; iFrame.
