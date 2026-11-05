@@ -228,4 +228,5 @@ relational/examples/store_nsl/proofs/conn.v
 relational/examples/store_nsl/proofs/rpc.v
 relational/examples/store_nsl/proofs/store.v
 relational/examples/store_nsl/proofs.v
+relational/examples/store_nsl.v
 relational/examples/store_nsl/game.v

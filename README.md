@@ -92,6 +92,11 @@ Its case studies live in `relational/examples`:
   Revealing a key derived from a hash of the responder's session key when
   its peer is I, or of the initiator's when its peer is R, is contextually
   equivalent to revealing a fresh key.
+- `store_nsl`: a key-value store over an NSL session (`store_nsl/impl.v`;
+  `proofs/` has one file per layer: connections, remote calls and the store;
+  the game is in its own file).  The client stores values on the server and
+  loads one back, which goes to the attacker.  Two runs whose stores are to
+  distinct keys and differ only in their order are contextually equivalent.
 
 ## Building
 
