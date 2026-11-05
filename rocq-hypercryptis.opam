@@ -16,6 +16,7 @@ tags: [
 
 depends: [
   "rocq-cryptis" {= version}
+  "rocq-cryptis-examples" {= version}
   "coq-reloc" {= "dev"}
 ]
 

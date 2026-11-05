@@ -277,7 +277,7 @@ iAssert (|={⊤}=> PUB⟨Spec.enc pkX (Tag m3N) x2, Spec.enc pkX' (Tag m3N) x2'�
   by iModIntro. }
 rel_apply (rel_send with "Hc Hc3").
 iIntros (? ?) "[-> ->]" => /=.
-rewrite /session_key. rel_prims. rel_values. iModIntro.
+rel_prims. rel_values. iModIntro.
 iRight. iExists _, _. iSplit; first done.
 iIntros (eX).
 iDestruct "Hcase" as "[(_ & _ & #Hl)|[%neX _]]"; last by case: neX.

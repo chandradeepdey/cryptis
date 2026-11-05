@@ -1,7 +1,8 @@
 (** Proofs of the NSL case study, one file per role, and of the tests.  A
     test creates the honest keys, runs both roles, and lets R record its
-    session on I's seed.  It then takes the tested session key out of the
-    test's invariant and reveals it or a fresh key. *)
+    session on I's seed.  It then takes the tokens of the hash of the tested
+    session key out of the test's invariant, and reveals the key derived from
+    the hash or a fresh key. *)
 
 From cryptis.hyper.examples.nsl.proofs Require Export base init resp.
 From cryptis Require Import lib cryptis primitives.
@@ -31,9 +32,16 @@ Abbreviation sess2N := (nslN.@"sess_alloc").
     once. *)
 Definition claim skI : iProp := term_token (seed_of_aenc_key skI) (↑claimN).
 
-(** The session that the test may claim: R records it on I's seed. *)
+(** The session that the test may claim: R records it on I's seed, and makes
+    its key secret. *)
 Definition ror_sess skI s s' : iProp :=
-  term_meta (seed_of_aenc_key skI) sessN (s, s').
+  term_meta (seed_of_aenc_key skI) sessN (s, s') ∗
+  secret_in_l (sess_key s) ∗ secret_in_r (sess_key s').
+
+(** The tokens of the hash of the session key, from which the test derives
+    its key. *)
+Definition hash_tokens s s' : iProp :=
+  term_token (THash (sess_key s)) ⊤ ∗ term_token_spec (THash (sess_key s')) ⊤.
 
 #[global] Instance ror_sess_persistent skI s s' : Persistent (ror_sess skI s s').
 Proof. apply _. Qed.
@@ -42,25 +50,33 @@ Proof. apply _. Qed.
 Proof. apply _. Qed.
 
 (** Before R records its session, the invariant holds the token that does
-    it; afterwards, the session key's tokens until the test claims them. *)
+    it; afterwards, the tokens of the hash until the test claims them. *)
 Definition ror_inv skI : iProp :=
   term_token (seed_of_aenc_key skI) (↑sessN) ∨
   ∃ s s', ror_sess skI s s' ∗ term_token (seed_of_aenc_key skI) (↑sess2N) ∗
-    (key_tokens s s' ∨ claim skI).
+    (hash_tokens s s' ∨ claim skI).
 
 Lemma ror_alloc skI :
+  cryptis_rel_ctx -∗
   inv rorN (ror_inv skI) -∗
   term_token (seed_of_aenc_key skI) (↑sess2N) -∗
   ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
     protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ ror_sess skI s s'.
 Proof.
-iIntros "#Hinv tok2" (s s') "toks _ _ _ _".
+iIntros "#Hctx #Hinv tok2" (s s') "(_ & tt_k & tts_k & toks) #sec #sec' prot prot'".
+iMod (public_rel_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
+        ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
+        with "Hctx sec prot tt_k") as "(#sec_k & _)".
+iMod (public_rel_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
+        ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
+        with "Hctx sec' prot' tts_k") as "(#sec_k' & _)".
 iInv "Hinv" as "[>tok|(%s0 & %s0' & _ & >tok2' & _)]"; last first.
 { iDestruct (term_token_disj with "tok2 tok2'") as %dis.
   pose proof (nclose_non_empty sess2N). set_solver. }
 iMod (term_meta_set sessN (s, s') with "tok") as "#Hm"; first done.
+iAssert (ror_sess skI s s') as "#Hs"; first by iFrame "#".
 iModIntro. iSplitL; last done.
-iNext. iRight. iExists s, s'. iFrame "Hm tok2". by iLeft.
+iNext. iRight. iExists s, s'. iFrame "Hs tok2". by iLeft.
 Qed.
 
 Lemma claim_key E skI skI' skR skR' s s' :
@@ -68,20 +84,20 @@ Lemma claim_key E skI skI' skR skR' s s' :
   nsl_ctx skI skI' skR skR' (ror_sess skI) -∗
   inv rorN (ror_inv skI) -∗
   session skI skI' skR skR' s s' -∗ claim skI ={E}=∗
-  key_tokens s s' ∗ secret_in_l s ∗ secret_in_r s'.
+  hash_tokens s s' ∗ secret_in_l (sess_key s) ∗ secret_in_r (sess_key s').
 Proof.
 iIntros (HE HE') "#Hnsl #Hinv #Hs claim".
-iMod (session_sess with "Hnsl Hs") as (nI nI' nR nR' [Hs1 Hs2]) "(_ & _ & #sec & #sec' & #Hm)";
+iMod (session_sess with "Hnsl Hs") as (nI nI' nR nR' [Hs1 Hs2]) "(_ & _ & _ & _ & #Hss)";
   first done.
-rewrite -Hs1 -Hs2.
-iInv "Hinv" as "[>tok|(%s0 & %s0' & >#Hm0 & >tok2 & >slot)]".
+rewrite -Hs1 -Hs2. iPoseProof "Hss" as "(Hm & sec & sec')".
+iInv "Hinv" as "[>tok|(%s0 & %s0' & >#[Hm0 _] & >tok2 & >slot)]".
 { by iDestruct (term_meta_token with "tok Hm") as "[]". }
 iDestruct (term_meta_agree with "Hm Hm0") as %[= <- <-].
 iDestruct "slot" as "[toks|claim']"; last first.
 { iDestruct (term_token_disj with "claim claim'") as %dis.
   pose proof (nclose_non_empty claimN). set_solver. }
 iModIntro. iSplitR "toks"; last by iFrame "toks sec sec'".
-iNext. iRight. iExists s, s'. iFrame "Hm tok2". by iRight.
+iNext. iRight. iExists s, s'. iFrame "Hss tok2". by iRight.
 Qed.
 
 Lemma rel_setup c c' :
@@ -140,10 +156,10 @@ Qed.
 Lemma rel_reveal b c c' s s' :
   cryptis_rel_ctx -∗
   channel_rel c c' -∗
-  key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
+  hash_tokens s s' -∗ secret_in_l (sess_key s) -∗ secret_in_r (sess_key s') -∗
   REL reveal b c (sess_key s) << reveal (negb b) c' (sess_key s') : ().
 Proof.
-iIntros "#Hctx #Hc (tok & tok' & _ & _) #sec #sec'". rewrite /reveal.
+iIntros "#Hctx #Hc (tok & tok') #sec #sec'". rewrite /reveal.
 iPoseProof (term_token_minted with "tok") as "#mint".
 iPoseProof (term_token_spec_minted_spec with "tok'") as "#mint'".
 case: b; rel_pures.
@@ -152,24 +168,26 @@ case: b; rel_pures.
   iIntros (k') "%Hk' #mint_k' tok_k' _".
   destruct k' as [n']. simpl in Hk'. case/is_nonceP: Hk' => a' e. subst n'.
   iEval (rewrite minted_spec_senc) in "mint_k'".
-  iMod (public_rel_publish (E:=⊤) (t:=THash s) (t':=TNonce a') ltac:(solve_ndisj)
+  iMod (public_rel_publish (E:=⊤) (t:=THash (sess_key s)) (t':=TNonce a') ltac:(solve_ndisj)
           with "Hctx [] tok tok_k'")
     as "[_ #Hpub]".
   { iIntros "!> #link". rewrite /=. iSplit; first done. iSplit; first done. by iSplit. }
-  iAssert (PUB⟨sess_key s, SEncKey (TNonce a')⟩) as "#Hk".
-  { rewrite /sess_key [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
+  iAssert (PUB⟨SEncKey (THash (sess_key s)), SEncKey (TNonce a')⟩) as "#Hk".
+  { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
+  rel_prims.
   by rel_apply (rel_send with "Hc Hk").
 - rel_apply_l (rel_mk_senc_key_l _ _ (λ _, ∅) _ (λ _, not_elem_of_empty _) with "Hctx []").
   { by iIntros (?); rewrite big_sepS_empty. }
   iIntros (k) "%Hk #mint_k tok_k _".
   destruct k as [n]. simpl in Hk. case/is_nonceP: Hk => a e. subst n.
   iEval (rewrite minted_senc) in "mint_k".
-  iMod (public_rel_publish (E:=⊤) (t:=TNonce a) (t':=THash s') ltac:(solve_ndisj)
+  iMod (public_rel_publish (E:=⊤) (t:=TNonce a) (t':=THash (sess_key s')) ltac:(solve_ndisj)
           with "Hctx [] tok_k tok'")
     as "[_ #Hpub]".
   { iIntros "!> #link". rewrite /=. iSplit; first done. iSplit; first done. by iSplit. }
-  iAssert (PUB⟨SEncKey (TNonce a), sess_key s'⟩) as "#Hk".
-  { rewrite /sess_key [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
+  iAssert (PUB⟨SEncKey (TNonce a), SEncKey (THash (sess_key s'))⟩) as "#Hk".
+  { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
+  rel_prims.
   by rel_apply (rel_send with "Hc Hk").
 Qed.
 
@@ -190,7 +208,7 @@ iApply (refines_bind with "[]").
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
 rel_apply (rel_resp with "Hctx Hc Hnsl [tok2]").
-{ by iApply (ror_alloc with "Hror tok2"). }
+{ by iApply (ror_alloc with "Hctx Hror tok2"). }
 iIntros (? ?) "[[-> ->]|(%pkI & %pkI' & %k & %k' & [-> ->] & #HpkI & Hsess)]" => /=.
 { rel_pures. by rel_values. }
 rel_prims.
@@ -221,7 +239,7 @@ rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[tok2]").
 { iApply refines_fork. rel_pures.
   rel_apply (rel_resp with "Hctx Hc Hnsl [tok2]").
-  { by iApply (ror_alloc with "Hror tok2"). }
+  { by iApply (ror_alloc with "Hctx Hror tok2"). }
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
 rel_apply (rel_init with "Hctx Hc Hnsl HpkX").

@@ -47,7 +47,7 @@ Section Messages.
 Definition m1_pl nI pkI : term := Spec.of_list [nI; pkI].
 Definition m2_pl nI nR pkR : term := Spec.of_list [nI; nR; pkR].
 Definition sess_seed pkI pkR nI nR : term := Spec.of_list [pkI; pkR; nI; nR].
-Definition sess_key s : term := SEncKey (THash s).
+Definition sess_key s : term := SEncKey s.
 
 Lemma m1N_m3N : m1N ≠ m3N.
 Proof.
@@ -384,9 +384,12 @@ Variable sess : term → term → iProp.
 Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
 Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
+(** The seal tokens of the session secrets, and the tokens of the session
+    key and of its hash, from which the tests derive their key. *)
 Definition key_tokens s s' : iProp :=
-  term_token (THash s) ⊤ ∗ term_token_spec (THash s') ⊤ ∗
-  term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤.
+  never_sealed_under s s' (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal") ∗
+  term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤ ∗
+  term_token (THash (sess_key s)) ⊤ ∗ term_token_spec (THash (sess_key s')) ⊤.
 
 Definition seed_l nI nR := sess_seed (Spec.pkey skI) (Spec.pkey skR) nI nR.
 Definition seed_r nI' nR' := sess_seed (Spec.pkey skI') (Spec.pkey skR') nI' nR'.
