@@ -5,7 +5,8 @@ From iris.algebra Require Import agree auth csum gset gmap excl frac.
 From iris.algebra Require Import max_prefix_list.
 From iris.heap_lang Require Import notation proofmode.
 From cryptis Require Import lib term cryptis primitives tactics.
-From cryptis Require Import role iso_dh conn.
+From cryptis Require Import role.
+From cryptis.examples Require Import iso_dh conn.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
