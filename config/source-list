@@ -224,3 +224,4 @@ relational/examples/nsl/game.v
 relational/examples/store_nsl/impl.v
 relational/examples/store_nsl/facts.v
 relational/examples/store_nsl/proofs/onesided.v
+relational/examples/store_nsl/proofs/conn.v
