@@ -76,6 +76,12 @@ Proof. rewrite unlock. by case=> [?] [?] [->]. Qed.
 Lemma term_of_senc_key_inj : Inj (=) (=) term_of_senc_key.
 Proof. rewrite unlock. by case=> [?] [?] [->]. Qed.
 
+Lemma sign_key_TKey (sk : sign_key) : (sk : term) = TKey Sign (seed_of_sign_key sk).
+Proof. by case: sk => s; rewrite [term_of_sign_key]unlock. Qed.
+
+Lemma senc_key_TKey (k : senc_key) : (k : term) = TKey SEnc (seed_of_senc_key k).
+Proof. by case: k => s; rewrite [term_of_senc_key]unlock. Qed.
+
 (* We use a different name for the default induction scheme, as it does not
    allow us to recurse under exponentials.  Later, we'll prove term_ind, which
    does allow this. *)

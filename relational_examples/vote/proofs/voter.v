@@ -40,7 +40,6 @@ iIntros "(%HnonceV & %HnonceV' & #mint_V & #mint_V' & #pub_pkV & _ & _ &
 iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_spec_pkey.
 rewrite /ballot. rel_pures.
-(* The ciphertext is randomized; its tagging and signature are fresh on top. *)
 rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
   with "Hctx [//] mint_T mint_T' elem_pkT secret_T mint_v mint_v' [] [] [] []").
 { iPureIntro. set_solver. }

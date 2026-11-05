@@ -92,7 +92,7 @@ Lemma m2_decode m m' :
        m2_comp x1 x1' x2 x2' x3 x3').
 Proof.
 iIntros "#HR [#Hm|(%x1 & %x1' & %x2 & %x2' & [-> ->] & #Hf & #Hl)]".
-- iDestruct (pub_list 3 with "Hm") as "[%Hnone|(%ts & %ts' & %Hsome & [%Hlen|[%Hlen Hts]])]".
+- iDestruct (publicly_related_to_list_length 3 with "Hm") as "[%Hnone|(%ts & %ts' & %Hsome & [%Hlen|[%Hlen Hts]])]".
   + by iLeft.
   + iRight. iExists ts, ts'. iSplit; first done. by iLeft.
   + iRight. iExists ts, ts'. iSplit; first done. iRight.
@@ -133,7 +133,6 @@ iAssert (minted_spec (Spec.pkey skI')) as "#mint_pkI'";
 iMod (publicly_related_part_bij' (E:=⊤) with "Hctx HpkX pub_pkR") as %HX;
   first solve_ndisj.
 rewrite /init /adec. rel_prims.
-(* Tokens for the nonce, the first message and the terms in between. *)
 rel_apply_l (rel_mk_nonce_l _ _ (λ nI,
   {[nI; Spec.of_list [nI; Spec.pkey skI];
     Spec.tag (Tag m1N) (Spec.of_list [nI; Spec.pkey skI]);
@@ -150,7 +149,6 @@ split_term_tokens.
 iDestruct "tok" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
 iDestruct "tok'" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
 rel_prims.
-(* The nonce is secret exactly when the peer is R. *)
 iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
                   (⌜pkX ≠ Spec.pkey skR⌝ ∗ PUB⟨nI, nI'⟩)) ∗
                  (⌜pkX = Spec.pkey skR⌝ -∗ term_token nI (↑m3claimN)) ∗

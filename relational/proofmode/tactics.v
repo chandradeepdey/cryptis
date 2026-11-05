@@ -15,7 +15,6 @@
     occurs in another, looking through tags, encryptions and lists.
 
   Running the programs:
-  - [rel_pures] is [rel_pures_l] followed by [rel_pures_r].
   - [rel_later] strips a later, which the one-sided steps of the primitives
     leave behind.
   - [rel_apply lem] applies a two-sided specification such as [rel_send] or

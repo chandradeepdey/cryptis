@@ -11,12 +11,10 @@ dev-repo: "git+https://github.com/arthuraa/cryptis.git"
 
 tags: [
   "logpath:cryptis.hyper"
-  "logpath:cryptis.hyper.examples"
 ]
 
 depends: [
   "rocq-cryptis" {= version}
-  "rocq-cryptis-examples" {= version}
   "coq-reloc" {= "dev"}
 ]
 

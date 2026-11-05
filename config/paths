@@ -6,3 +6,4 @@ cryptis cryptis
 examples cryptis.examples
 session cryptis.sess
 relational cryptis.hyper
+relational_examples cryptis.hyper.examples

@@ -56,8 +56,8 @@ In the `relational` directory (Rocq namespace `cryptis.hyper`) you will find the
 relational layer, built on [ReLoC](https://iris-project.org/reloc):
 
 - `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs,
-  its invariant, and the per-key sets of honest seal links
-  (`seals_auth_l`, `seals_l`, …) behind honestly linked ciphertexts.
+  its invariant, and the records on each key's seed (`sealed_under`) that
+  relate honest ciphertexts.
 - `primitives/*_spec.v` are the relational specs of the primitives;
   `primitives/attacker_spec.v` models the attacker as a program forked on the
   network channel, calls it valid when it is self-related at the type of
@@ -65,7 +65,8 @@ relational layer, built on [ReLoC](https://iris-project.org/reloc):
   contracts over publicly related terms, and shows that every attacker well
   typed against these contracts is valid (`attacker_valid_typed`), and
   `primitives/with_cryptis_spec.v` relates two randomized encryptions under
-  a secret key, which is what the IND games and the ballots build on.
+  a secret key (for the IND games and the ballots) and two symmetric
+  encryptions under a secret seed (for the store's connections).
 - `rel_adequacy.v` turns a ReLoC refinement into a statement about executions
   (`cryptis_rel_adequacy`) or into a contextual refinement between the games run
   against a valid attacker (`cryptis_ctx_refinement`).
@@ -75,7 +76,7 @@ relational layer, built on [ReLoC](https://iris-project.org/reloc):
   which find the spec of each primitive through the `RelPrimL` / `RelPrimR`
   instances that the spec files declare.
 
-Its case studies live in `relational/examples`:
+Its case studies live in `relational_examples`:
 
 - `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
   encryption.

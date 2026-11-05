@@ -7,7 +7,6 @@ store of [store.v] over a connection under that key.
   session.  Recording it makes the session key secret, and starts the
   connection invariant of [conn.v] with the never-sealed tokens of the
   session secret, which is the key's seed.
-- The session secret is never public: it contains R's nonce.
 - The game creates the keys, starts the server in a new thread, and runs
   the client: the stores, then the load, whose result goes to the
   attacker. *)
@@ -76,18 +75,6 @@ Lemma key_free_sess skI k k' : key_free skI -∗ key_sess skI k k' -∗ False.
 Proof.
 iIntros "tok (%s & %s' & _ & _ & #m & _)".
 by iDestruct (term_meta_token with "tok m") as "[]".
-Qed.
-
-Lemma seed_not_pub skI skI' skR skR' nI nI' nR nR' :
-  resp_nonce nR nR' -∗
-  □ (PUB⟨seed_l skI skR nI nR, seed_r skI' skR' nI' nR'⟩ → False).
-Proof.
-iIntros "#(%HnR & _ & _ & _ & #secR & _) !> #H".
-iPoseProof (publicly_related_to_list with "H") as "H'".
-rewrite /seed_l /seed_r /sess_seed !Spec.of_listK /=.
-iDestruct "H'" as "(_ & _ & _ & HR & _)".
-iDestruct (publicly_related_nonce_term _ HnR with "HR") as "Hl".
-by iApply (secret_in_l_publicly_linked_in_l with "secR Hl").
 Qed.
 
 Section Game.

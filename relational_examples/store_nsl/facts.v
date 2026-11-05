@@ -15,31 +15,12 @@ Unset Printing Implicit Defensive.
 Definition db_of (ops : list (Z * Z)) : AVL.tree :=
   foldl (λ t p, AVL.insert p.1 p.2 t) AVL.Leaf ops.
 
-Lemma bst_foldl_insert ops t :
-  AVL.bst t → AVL.bst (foldl (λ t p, AVL.insert p.1 p.2 t) t ops).
-Proof.
-elim: ops t => [|p ops IH] t Ht //=.
-apply: IH. exact: AVL.bst_insert.
-Qed.
-
 Lemma bst_db_of ops : AVL.bst (db_of ops).
-Proof. apply: bst_foldl_insert. exact: AVL.bst_leaf. Qed.
-
-Lemma to_map_foldl_insert ops t :
-  AVL.bst t →
-  AVL.to_map (foldl (λ t p, AVL.insert p.1 p.2 t) t ops) =
-  list_to_map (reverse ops) ∪ AVL.to_map t.
-Proof.
-elim: ops t => [|p ops IH] t Ht /=.
-- by rewrite left_id_L.
-- rewrite IH; last exact: AVL.bst_insert.
-  rewrite AVL.to_map_insert // reverse_cons list_to_map_app /=.
-  by rewrite -map_union_assoc -insert_union_l left_id_L.
-Qed.
+Proof. apply: AVL.bst_foldl_insert. exact: AVL.bst_leaf. Qed.
 
 Lemma to_map_db_of ops : AVL.to_map (db_of ops) = list_to_map (reverse ops).
 Proof.
-rewrite /db_of to_map_foldl_insert; last exact: AVL.bst_leaf.
+rewrite /db_of AVL.to_map_foldl_insert; last exact: AVL.bst_leaf.
 by rewrite AVL.to_map_leaf right_id_L.
 Qed.
 

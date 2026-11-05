@@ -3,4 +3,4 @@
  (name cryptis.hyper)
  (package rocq-hypercryptis)
  (generate_project_file)
- (theories cryptis cryptis.examples Autosubst reloc))
+ (theories cryptis Autosubst reloc))

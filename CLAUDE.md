@@ -42,11 +42,12 @@ opam repo add rocq-released https://rocq-prover.org/opam/released
 opam install . # or: make builddep && make
 ```
 
-The repository holds four opam packages: `rocq-cryptis` (`cryptis/`),
-`rocq-cryptis-examples` (`examples/`), `rocq-cryptis-session` (`session/`) and
-`rocq-hypercryptis` (`relational/`). Each builds and installs only its own
-directory through `./make-package <dir>`, assuming the packages it depends on
-are installed; `make` alone builds all four.
+The repository holds five opam packages: `rocq-cryptis` (`cryptis/`),
+`rocq-cryptis-examples` (`examples/`), `rocq-cryptis-session` (`session/`),
+`rocq-hypercryptis` (`relational/`) and `rocq-hypercryptis-examples`
+(`relational_examples/`). Each builds and installs only its own directory
+through `./make-package <dir>`, assuming the packages it depends on are
+installed; `make` alone builds all five.
 
 ## Useful Commands
 

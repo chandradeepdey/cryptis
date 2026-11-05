@@ -723,7 +723,7 @@ iAssert (minted_spec tg') as "#mint_tg'".
 { rewrite /tg' minted_spec_tag /pl' minted_spec_TPair. by iSplit. }
 iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") as "post".
 { iIntros (Ek Ek' sub sub') "ns".
-  rewrite !aenc_key_pkey in sub sub' *.
+  rewrite !Spec.aenc_key_pkey in sub sub' *.
   iMod (sealed_under_set sub sub' with "ns") as "[#Hsu $]".
   iModIntro. iSplit; first done.
   rewrite /Spec.random_aenc /Spec.enc publicly_related_TSeal. iRight.

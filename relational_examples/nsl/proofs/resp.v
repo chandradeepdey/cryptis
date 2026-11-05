@@ -38,9 +38,7 @@ Local Abbreviation seals_I_info := (seals_I_info skI skI' skR skR' sess).
 Local Abbreviation seed_l := (seed_l skI skR).
 Local Abbreviation seed_r := (seed_r skI' skR').
 
-(** The terms that contain the responder's nonce: the pairs that build up
-    the session secret, the session key and its hash, the pairs that build up
-    the reply, and the third message. *)
+(** The terms that contain the responder's nonce. *)
 Definition resp_terms pkI pkR nI nR : gset term :=
   {[nR; TPair nR (TInt 0); TPair nI (TPair nR (TInt 0));
     TPair pkR (TPair nI (TPair nR (TInt 0)));
@@ -103,7 +101,7 @@ Lemma m1_decode m m' :
        m1_comp x1 x1' x2 x2').
 Proof.
 iIntros "#HI [#Hm|(%x1 & %x1' & [-> ->] & #Hx1)]".
-- iDestruct (pub_list 2 with "Hm") as "[%Hnone|(%ts & %ts' & %Hsome & [%Hlen|[%Hlen Hts]])]".
+- iDestruct (publicly_related_to_list_length 2 with "Hm") as "[%Hnone|(%ts & %ts' & %Hsome & [%Hlen|[%Hlen Hts]])]".
   + by iLeft.
   + iRight. iExists ts, ts'. iSplit; first done. by iLeft.
   + iRight. iExists ts, ts'. iSplit; first done. iRight.
@@ -220,7 +218,6 @@ iDestruct "tok'" as "((((((((((((tts_n & tts_p1) & tts_p2) & tts_p3) & tts_s) & 
 rel_prims.
 have Htag : ∀ N t, is_immediate_subterm t (Spec.tag (Tag N) t).
 { move=> N0 t0. rewrite [Spec.tag]unlock. exact: SubtermPairR. }
-(* The nonce, and the second message. *)
 iAssert (|={⊤}=> nonce_info respN nR nR' ∗
   PUB⟨Spec.enc x2 (Tag m2N) (Spec.of_list [x1; nR; Spec.pkey skR]),
       Spec.enc x2' (Tag m2N) (Spec.of_list [x1'; nR'; Spec.pkey skR'])⟩ ∗

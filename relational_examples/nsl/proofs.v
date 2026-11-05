@@ -1,8 +1,12 @@
-(** Proofs of the NSL case study, one file per role, and of the tests.  A
-    test creates the honest keys, runs both roles, and lets R record its
-    session on I's seed.  It then takes the tokens of the hash of the tested
-    session key out of the test's invariant, and reveals the key derived from
-    the hash or a fresh key. *)
+(** * Proofs of the NSL case study
+
+Each role has its own file.  A test creates the honest keys, runs both roles,
+and lets R record its session on I's seed.  It then takes the tokens of the
+hash of the tested session key out of the test's invariant, and reveals the
+key derived from the hash or a fresh key.
+
+- [Claim]: the test's invariant, which R fills when it records its session.
+- [Tests]: the setup, the reveal, and the two tests. *)
 
 From cryptis.hyper.examples.nsl.proofs Require Export base init resp.
 From cryptis Require Import lib cryptis primitives.
@@ -28,7 +32,9 @@ Abbreviation rorN := (nslN.@"ror").
 Abbreviation sessN := (nslN.@"sess").
 Abbreviation sess2N := (nslN.@"sess_alloc").
 
-(** The right to take the tested session key's tokens.  The test uses it
+Section Claim.
+
+(** The right to take the tokens of the hash out of the test's invariant,
     once. *)
 Definition claim skI : iProp := term_token (seed_of_aenc_key skI) (↑claimN).
 
@@ -38,8 +44,7 @@ Definition ror_sess skI s s' : iProp :=
   term_meta (seed_of_aenc_key skI) sessN (s, s') ∗
   secret_in_l (sess_key s) ∗ secret_in_r (sess_key s').
 
-(** The tokens of the hash of the session key, from which the test derives
-    its key. *)
+(** The test derives its key from the hash of the session key. *)
 Definition hash_tokens s s' : iProp :=
   term_token (THash (sess_key s)) ⊤ ∗ term_token_spec (THash (sess_key s')) ⊤.
 
@@ -79,7 +84,7 @@ iModIntro. iSplitL; last done.
 iNext. iRight. iExists s, s'. iFrame "Hs tok2". by iLeft.
 Qed.
 
-Lemma claim_key E skI skI' skR skR' s s' :
+Lemma claim_hash E skI skI' skR skR' s s' :
   ↑sealsIN ⊆ E → ↑rorN ⊆ E →
   nsl_ctx skI skI' skR skR' (ror_sess skI) -∗
   inv rorN (ror_inv skI) -∗
@@ -99,6 +104,10 @@ iDestruct "slot" as "[toks|claim']"; last first.
 iModIntro. iSplitR "toks"; last by iFrame "toks sec sec'".
 iNext. iRight. iExists s, s'. iFrame "Hss tok2". by iRight.
 Qed.
+
+End Claim.
+
+Section Tests.
 
 Lemma rel_setup c c' :
   cryptis_rel_ctx -∗
@@ -221,7 +230,7 @@ case: (decide (pkI = Spec.pkey skI)) => [eX|neX]; last first.
 rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
-iMod (claim_key with "Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
+iMod (claim_hash with "Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
 by iApply (rel_reveal with "Hctx Hc toks sec sec'").
 Qed.
 
@@ -255,8 +264,10 @@ case: (decide (pkX = Spec.pkey skR)) => [eX|neX]; last first.
 rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
-iMod (claim_key with "Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
+iMod (claim_hash with "Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
 by iApply (rel_reveal with "Hctx Hc toks sec sec'").
 Qed.
+
+End Tests.
 
 End Proofs.

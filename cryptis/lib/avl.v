@@ -283,6 +283,25 @@ Lemma to_map_insert k v t :
   bst t → to_map (insert k v t) = <[k:=v]> (to_map t).
 Proof. move=> Hb. by rewrite /to_map to_list_insert // list_to_map_ins. Qed.
 
+Lemma bst_foldl_insert kvs t :
+  bst t → bst (foldl (λ t p, insert p.1 p.2 t) t kvs).
+Proof.
+elim: kvs t => [|p kvs IH] t Ht //=.
+apply: IH. exact: bst_insert.
+Qed.
+
+Lemma to_map_foldl_insert kvs t :
+  bst t →
+  to_map (foldl (λ t p, insert p.1 p.2 t) t kvs) =
+  list_to_map (reverse kvs) ∪ to_map t.
+Proof.
+elim: kvs t => [|p kvs IH] t Ht /=.
+- by rewrite left_id_L.
+- rewrite IH; last exact: bst_insert.
+  rewrite to_map_insert // reverse_cons list_to_map_app /=.
+  by rewrite -map_union_assoc -insert_union_l left_id_L.
+Qed.
+
 Lemma to_list_to_map t1 t2 :
   bst t1 → bst t2 → to_map t1 = to_map t2 → to_list t1 = to_list t2.
 Proof. exact: sorted_assoc_unique. Qed.

@@ -39,15 +39,6 @@ Hypothesis free_sess : ∀ k k', free -∗ sess k k' -∗ False.
 Abbreviation handle := (conn_handle γ sess).
 Abbreviation ctx := (conn_ctx γ sess free Φ).
 
-Lemma conn_payload_tag (N : namespace) t t' :
-  conn_payload t t' -∗ conn_payload (Spec.tag (Tag N) t) (Spec.tag (Tag N) t').
-Proof.
-iIntros "#(mt & mt' & %Ht & %Ht')". rewrite /conn_payload minted_tag minted_spec_tag.
-iFrame "mt mt'". iPureIntro.
-rewrite [Spec.tag]unlock [Tag]unlock !(nonces_of_termE' (TPair _ _)).
-by rewrite !(nonces_of_termE' (TInt _)) Ht Ht' !left_id_L.
-Qed.
-
 Lemma rel_rpc_call rl cs cs' n r (N : namespace) t t' :
   cryptis_rel_ctx -∗ ctx -∗ handle rl cs cs' n r -∗
   conn_payload t t' -∗ Φ rl n (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') -∗

@@ -242,6 +242,13 @@ Lemma open_aenc_key_Some (sk : aenc_key) t u :
   open sk t = Some u ↔ t = TSeal (pkey sk) u.
 Proof. case: sk => seed. rewrite [term_of_aenc_key]unlock. exact: open_aenc_Some. Qed.
 
+Lemma open_senc_key_Some (k : senc_key) t u :
+  open k t = Some u ↔ t = TSeal k u.
+Proof. by rewrite senc_key_TKey; apply: open_senc_Some. Qed.
+
+Lemma aenc_key_pkey (sk : aenc_key) : pkey sk = TKey AEnc (seed_of_aenc_key sk).
+Proof. by case: sk => s; rewrite [term_of_aenc_key]unlock. Qed.
+
 Definition is_key t :=
   match t with
   | TKey kt _ => Some kt

@@ -744,15 +744,6 @@ iMod (sealed_under_r_set (TSeal (TKey kt s) t) sub' with "tok'") as "[#Hr $]".
 iModIntro. by iSplit.
 Qed.
 
-Lemma aenc_key_pkey (sk : aenc_key) : Spec.pkey sk = TKey AEnc (seed_of_aenc_key sk).
-Proof. by case: sk => s; rewrite [term_of_aenc_key]unlock. Qed.
-
-Lemma senc_key_TKey (k : senc_key) : (k : term) = TKey SEnc (seed_of_senc_key k).
-Proof. by case: k => s; rewrite [term_of_senc_key]unlock. Qed.
-
-Lemma sign_key_TKey (sk : sign_key) : (sk : term) = TKey Sign (seed_of_sign_key sk).
-Proof. by case: sk => s; rewrite [term_of_sign_key]unlock. Qed.
-
 End Seals.
 
 Section Relation.
@@ -1292,6 +1283,23 @@ elim/term_ind': m m' => [n|a _ b IH|a|kt k _|k _ t _|t _|pt wf nf] m'; iIntros "
 all: case e: (Spec.to_list m') => [ts'|] //; move/Spec.to_listK: e => ->.
 all: case: ts' => [|t' ts']; rewrite [Spec.of_list]unlock /=.
 all: by iDestruct "Hm" as "(_ & _ & [])".
+Qed.
+
+Lemma publicly_related_to_list_length n m m' :
+  PUB⟨m, m'⟩ ⊢
+  ⌜Spec.to_list m = None ∧ Spec.to_list m' = None⌝ ∨
+  ∃ ts ts', ⌜Spec.to_list m = Some ts ∧ Spec.to_list m' = Some ts'⌝ ∗
+    (⌜length ts ≠ n ∧ length ts' ≠ n⌝ ∨
+     ⌜length ts = n⌝ ∗ [∗ list] t; t' ∈ ts; ts', PUB⟨t, t'⟩).
+Proof.
+iIntros "#Hm". iPoseProof (publicly_related_to_list with "Hm") as "Hl".
+destruct (Spec.to_list m) as [ts|], (Spec.to_list m') as [ts'|]; try done.
+- iDestruct (big_sepL2_length with "Hl") as %Hlen.
+  iRight. iExists ts, ts'. iSplit; first done.
+  case: (decide (length ts = n)) => Hn.
+  + iRight. by iSplit.
+  + iLeft. iPureIntro. lia.
+- by iLeft.
 Qed.
 
 Lemma publicly_related_of_list (ts ts' : list term) :

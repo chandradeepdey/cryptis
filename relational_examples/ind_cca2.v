@@ -91,7 +91,7 @@ Lemma cell_unsealed_l skA (u t' : term) :
   term_token (seed_of_aenc_key skA) (↑cryptisN.@"public_rel".@"seal") -∗
   sealed_under_l (Spec.pkey skA) u t' -∗ False.
 Proof.
-rewrite aenc_key_pkey. iIntros "tok rec".
+rewrite Spec.aenc_key_pkey. iIntros "tok rec".
 iApply (sealed_under_l_token with "tok rec"). apply nclose_subseteq.
 Qed.
 
@@ -99,7 +99,7 @@ Lemma cell_unsealed_r skA' (u' t : term) :
   term_token_spec (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"seal") -∗
   sealed_under_r (Spec.pkey skA') u' t -∗ False.
 Proof.
-rewrite aenc_key_pkey. iIntros "tok rec".
+rewrite Spec.aenc_key_pkey. iIntros "tok rec".
 iApply (sealed_under_r_token with "tok rec"). apply nclose_subseteq.
 Qed.
 
@@ -110,7 +110,7 @@ Lemma cell_challenge_l skA pl (u t' : term) :
   ⌜u = Spec.tag (Tag (N.@"m")) pl⌝.
 Proof.
 case: (decide (u = Spec.tag (Tag (N.@"m")) pl)) => [-> | ne]; first by iIntros.
-rewrite aenc_key_pkey. iIntros "tok rec". iExFalso.
+rewrite Spec.aenc_key_pkey. iIntros "tok rec". iExFalso.
 iApply (sealed_under_l_token with "tok rec").
 apply subseteq_difference_r; last apply nclose_subseteq.
 apply ndot_ne_disjoint. by case.
@@ -123,7 +123,7 @@ Lemma cell_challenge_r skA' pl' (u' t : term) :
   ⌜u' = Spec.tag (Tag (N.@"m")) pl'⌝.
 Proof.
 case: (decide (u' = Spec.tag (Tag (N.@"m")) pl')) => [-> | ne]; first by iIntros.
-rewrite aenc_key_pkey. iIntros "tok rec". iExFalso.
+rewrite Spec.aenc_key_pkey. iIntros "tok rec". iExFalso.
 iApply (sealed_under_r_token with "tok rec").
 apply subseteq_difference_r; last apply nclose_subseteq.
 apply ndot_ne_disjoint. by case.

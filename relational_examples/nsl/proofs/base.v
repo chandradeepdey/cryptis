@@ -1,7 +1,7 @@
 (** * Ghost state of the NSL case study
 
-- [Messages]: the plaintexts of the three messages, the session key, what
-  an encryption under an honest key seals, and how related lists decode.
+- [Messages]: the plaintexts of the three messages, the session key, and
+  what an encryption under an honest key seals.
 - [KeysAndNonces]: the long-term keys of I and R, and the nonces of honest
   sessions.
 - [SealSets]: the invariant of an honest key.  It knows every honest
@@ -61,23 +61,6 @@ Definition aenc_seal (N : namespace) m m' : term * term :=
 Lemma aenc_seal_inj N m1 m1' m2 m2' :
   aenc_seal N m1 m1' = aenc_seal N m2 m2' → m1 = m2 ∧ m1' = m2'.
 Proof. rewrite /aenc_seal. by move=> [= /Spec.tag_inj [_ ->] /Spec.tag_inj [_ ->]]. Qed.
-
-Lemma pub_list k m m' :
-  PUB⟨m, m'⟩ ⊢
-  ⌜Spec.to_list m = None ∧ Spec.to_list m' = None⌝ ∨
-  ∃ ts ts', ⌜Spec.to_list m = Some ts ∧ Spec.to_list m' = Some ts'⌝ ∗
-    (⌜length ts ≠ k ∧ length ts' ≠ k⌝ ∨
-     ⌜length ts = k⌝ ∗ [∗ list] t; t' ∈ ts; ts', PUB⟨t, t'⟩).
-Proof.
-iIntros "#Hm". iPoseProof (publicly_related_to_list with "Hm") as "Hl".
-destruct (Spec.to_list m) as [ts|], (Spec.to_list m') as [ts'|]; try done.
-- iDestruct (big_sepL2_length with "Hl") as %Hlen.
-  iRight. iExists ts, ts'. iSplit; first done.
-  case: (decide (length ts = k)) => Hk.
-  + iRight. by iSplit.
-  + iLeft. iPureIntro. lia.
-- by iLeft.
-Qed.
 
 End Messages.
 
@@ -174,7 +157,7 @@ Lemma seals_elem_of_l sk sk' S E u x :
 Proof.
 move=> HS. iIntros "tok #Hrec #Hl".
 case: (HS u) => [sub|[[e1 e2] [He Heq]]]; last (simpl in Heq; subst e1).
-{ rewrite aenc_key_pkey in sub *.
+{ rewrite Spec.aenc_key_pkey in sub *.
   by iDestruct (sealed_under_l_token with "tok Hl") as "[]". }
 iDestruct (big_sepS_elem_of with "Hrec") as "[[Hl' _] _]"; first exact: He.
 iDestruct (sealed_under_l_agree with "Hl Hl'") as %->.
@@ -191,7 +174,7 @@ Lemma seals_elem_of_r sk sk' S E' u' x :
 Proof.
 move=> HS. iIntros "tok #Hrec #Hr".
 case: (HS u') => [sub|[[e1 e2] [He Heq]]]; last (simpl in Heq; subst e2).
-{ rewrite aenc_key_pkey in sub *.
+{ rewrite Spec.aenc_key_pkey in sub *.
   by iDestruct (sealed_under_r_token with "tok Hr") as "[]". }
 iDestruct (big_sepS_elem_of with "Hrec") as "[[_ Hr'] _]"; first exact: He.
 iDestruct (sealed_under_r_agree with "Hr Hr'") as %->.
@@ -272,7 +255,7 @@ iModIntro. iSplitR "tt_c tts_c"; last first.
 { iSplitL "tt_c"; [iApply (term_token_drop with "tt_c") |
                    iApply (term_token_spec_drop with "tts_c")]; solve_ndisj. }
 iIntros (Ek Ek' sub sub') "ns".
-rewrite !aenc_key_pkey in sub sub' *.
+rewrite !Spec.aenc_key_pkey in sub sub' *.
 iMod (sealed_under_set sub sub' with "ns") as "[#Hsu $]".
 iModIntro. iSplit; first done.
 rewrite /Spec.enc publicly_related_TSeal. iRight.
@@ -378,14 +361,13 @@ Section Protocol.
 
 Variables skI skI' skR skR' : aenc_key.
 
-(** What an honest session gives both roles.  R makes it out of the tokens
-    of the session key when it builds its reply. *)
+(** What an honest session gives both roles.  R makes it when it builds its
+    reply, out of [key_tokens]. *)
 Variable sess : term → term → iProp.
 Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
 Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
-(** The seal tokens of the session secrets, and the tokens of the session
-    key and of its hash, from which the tests derive their key. *)
+(** The tests derive their key from the hash of the session key. *)
 Definition key_tokens s s' : iProp :=
   never_sealed_under s s' (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal") ∗
   term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤ ∗
@@ -424,6 +406,18 @@ Definition m2_facts nI nI' nR nR' : iProp :=
 #[global] Instance m2_facts_persistent nI nI' nR nR' :
   Persistent (m2_facts nI nI' nR nR').
 Proof. apply _. Qed.
+
+Lemma seed_not_pub nI nI' nR nR' :
+  resp_nonce nR nR' -∗
+  □ (PUB⟨seed_l nI nR, seed_r nI' nR'⟩ → False).
+Proof.
+iIntros "#(%HnR & _ & _ & _ & #secR & _) !> #H".
+iPoseProof (publicly_related_to_list with "H") as "H'".
+rewrite /seed_l /seed_r /sess_seed !Spec.of_listK /=.
+iDestruct "H'" as "(_ & _ & _ & HR & _)".
+iDestruct (publicly_related_nonce_term _ HnR with "HR") as "Hl".
+by iApply (secret_in_l_publicly_linked_in_l with "secR Hl").
+Qed.
 
 (** What the initiator needs to encrypt the responder's nonce. *)
 Definition m3_tokens nR nR' : iProp :=

@@ -77,12 +77,6 @@ Definition store_Φ rl n p p' : iProp := ⌜store_msg ops ops' k rl n p p'⌝.
 Abbreviation handle := (conn_handle γ sess).
 Abbreviation ctx := (conn_ctx γ sess free store_Φ).
 
-Lemma conn_payload_TInt z : ⊢ conn_payload (TInt z) (TInt z).
-Proof.
-rewrite /conn_payload minted_TInt minted_spec_TInt (nonces_of_termE' (TInt _)).
-by iSplit; [|iSplit; [|iSplit]].
-Qed.
-
 Lemma conn_payload_pair (o o' : Z * Z) :
   ⊢ conn_payload (Spec.of_list [TInt o.1; TInt o.2]) (Spec.of_list [TInt o'.1; TInt o'.2]).
 Proof.
