@@ -13,6 +13,8 @@
     nonce equations and letting [set_solver] finish.
   - [solve_immediate_subterm] and [solve_subterm], which show that one term
     occurs in another, looking through tags, encryptions and lists.
+  - [solve_not_TSeal], which shows that a term is not a ciphertext, so that
+    its own token holds its relational token.
 
   Running the programs:
   - [rel_later] strips a later, which the one-sided steps of the primitives
@@ -55,6 +57,13 @@ Ltac unfold_nonces :=
     let a := fresh "a" in let e := fresh "e" in
     case/is_nonceP: (H) => a e; rewrite e
   end.
+
+Ltac solve_not_TSeal :=
+  unfold_sets;
+  unfold_nonces;
+  rewrite ?[Spec.tag]unlock ?[Spec.of_list]unlock ?[term_of_aenc_key]unlock
+    ?[term_of_sign_key]unlock ?[term_of_senc_key]unlock /=;
+  by move=> ? ?.
 
 Ltac solve_term_disj :=
   unfold_sets;

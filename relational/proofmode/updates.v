@@ -1,10 +1,10 @@
-(** Shortcuts for the ghost state updates of [rel_inv_updates.v], for terms
-  that have just been created and still hold their whole token.  Creating a
-  term through [rel_mk_nonce_l] or [rel_mk_aenc_key_l] hands out one such
-  token per term of the token set; the lemmas below spend it in the ways the
-  case studies need, so that a proof never splits a token by hand.  The right
-  hand side lemmas are identical, but use primed names and tokens of the
-  specification side.
+(** Shortcuts for the ghost state updates of [rel_inv_updates.v].  Each lemma
+  spends the relational token of a term, the part of the ghost state that
+  decides how the two runs treat it.  A fresh term that is not a ciphertext
+  takes it from its own token, through [term_token_rel_token_l]; a ciphertext
+  takes it from the never-sealed tokens of the seed of its key, through
+  [never_sealed_under_rel_token].  The right hand side lemmas are identical,
+  but use primed names and tokens of the specification side.
 
   - [public_rel_fresh_l] registers a term in the flow map, protecting nothing
     yet, and gives back the part of the token that later map updates want.
@@ -16,21 +16,20 @@
       protected, typically the next link of such a chain.
   - Making a term secret.
     - [public_rel_secret_seals_l] is for a nonce, typically the seed of a key.
-      Besides marking it secret it gives back its never-sealed tokens,
-      registers it in the flow map so that it can protect the key built from
-      it, and gives back the part of the token outside the relational
-      namespaces for other uses such as per-protocol metadata.
+      It spends the whole token of the nonce, and besides marking it secret it
+      gives back its never-sealed tokens, registers it in the flow map so that
+      it can protect the key built from it, and gives back the part of the
+      token outside the relational namespaces for other uses such as
+      per-protocol metadata.
     - [public_rel_secret_step_l] is for a term built on top of a secret one,
-      typically the signing key built from its seed.  It spends the token of
-      the new term and makes it secret in turn; the secret subterm protects
-      it, so nothing else is needed.  It also gives back the new term's
-      never-sealed tokens.
+      typically the signing key built from its seed.  The secret subterm
+      protects it, so nothing else is needed.
   - [public_rel_link] links two terms protected on their respective sides,
     which is what the payload of an honest encryption needs.
   - [public_rel_publish] makes two fresh terms publicly linked and publicly
     related, given a proof that linking them is enough for them to be
-    publicly related: public keys, ciphertexts and signatures all go through
-    it. *)
+    publicly related.  [public_rel_seal] does the same for two ciphertexts,
+    spending the never-sealed tokens of the seeds of their keys. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
@@ -49,30 +48,20 @@ Implicit Types (t tsub tsup : term) (E : coPset).
 Lemma public_rel_fresh_l E t :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t ⊤ ={E}=∗
-  protects_superterms_l t ∅ ∗ term_token t (↑cryptisN.@"public_rel".@"map").
+  rel_token_l t ={E}=∗
+  protects_superterms_l t ∅ ∗ map_token_l t.
 Proof.
-iIntros (?) "#ctx tok".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"flow") ⊤) //.
-iDestruct "tok" as "[flow tok]".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tok" as "[map _]". iFrame "map".
+iIntros (?) "#ctx tok". iDestruct (rel_token_l_split with "tok") as "[$ flow]".
 by iApply (public_rel_flow_l_extend with "ctx flow").
 Qed.
 
 Lemma public_rel_fresh_r E t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec t' ⊤ ={E}=∗
-  protects_superterms_r t' ∅ ∗ term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+  rel_token_r t' ={E}=∗
+  protects_superterms_r t' ∅ ∗ map_token_r t'.
 Proof.
-iIntros (?) "#ctx tok".
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"flow") ⊤) //.
-iDestruct "tok" as "[flow tok]".
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tok" as "[map _]". iFrame "map".
+iIntros (?) "#ctx tok". iDestruct (rel_token_r_split with "tok") as "[$ flow]".
 by iApply (public_rel_flow_r_extend with "ctx flow").
 Qed.
 
@@ -81,7 +70,7 @@ Lemma public_rel_protect_nonce_l E t tsup :
   is_immediate_subterm t tsup →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t ⊤ ={E}=∗
+  rel_token_l t ={E}=∗
   protected_by_subterm_l tsup t.
 Proof.
 iIntros (Ht Hsup HE) "#ctx tok".
@@ -94,7 +83,7 @@ Lemma public_rel_protect_nonce_r E t' t'sup :
   is_immediate_subterm t' t'sup →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec t' ⊤ ={E}=∗
+  rel_token_r t' ={E}=∗
   protected_by_subterm_r t'sup t'.
 Proof.
 iIntros (Ht Hsup HE) "#ctx tok".
@@ -107,7 +96,7 @@ Lemma public_rel_protect_step_l E t {tsub} tsup :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
-  term_token t ⊤ ={E}=∗
+  rel_token_l t ={E}=∗
   protected_by_subterm_l tsup t.
 Proof.
 iIntros (Hsup HE) "#ctx by tok".
@@ -121,7 +110,7 @@ Lemma public_rel_protect_step_r E t' {t'sub} t'sup :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token_spec t' ⊤ ={E}=∗
+  rel_token_r t' ={E}=∗
   protected_by_subterm_r t'sup t'.
 Proof.
 iIntros (Hsup HE) "#ctx by tok".
@@ -139,18 +128,9 @@ Lemma public_rel_secret_seals_l E t :
   term_token t (⊤ ∖ ↑cryptisN.@"public_rel").
 Proof.
 iIntros (Ht HE) "#ctx tok".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel") ⊤) //.
-iDestruct "tok" as "[tok $]".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"map")
-           (↑cryptisN.@"public_rel")); last solve_ndisj.
-iDestruct "tok" as "[map tok]".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"flow")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map")); last solve_ndisj.
-iDestruct "tok" as "[flow tok]".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"seal")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map" ∖ ↑cryptisN.@"public_rel".@"flow"));
-  last solve_ndisj.
-iDestruct "tok" as "[$ _]".
+iDestruct (term_token_rel_token_l with "tok") as "(tok & $ & $)";
+  first exact: is_nonce_not_TSeal.
+iDestruct (rel_token_l_split with "tok") as "[map flow]".
 iMod (public_rel_flow_l_extend with "ctx flow") as "$"; first done.
 by iApply (public_rel_secret_l_2 Ht HE with "ctx map").
 Qed.
@@ -160,22 +140,13 @@ Lemma public_rel_secret_seals_r E t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   term_token_spec t' ⊤ ={E}=∗
-  secret_in_r t' ∗ term_token_spec t' (↑cryptisN.@"public_rel".@"seal") ∗ protects_superterms_r t' ∅ ∗
-  term_token_spec t' (⊤ ∖ ↑cryptisN.@"public_rel").
+  secret_in_r t' ∗ term_token_spec t' (↑cryptisN.@"public_rel".@"seal") ∗
+  protects_superterms_r t' ∅ ∗ term_token_spec t' (⊤ ∖ ↑cryptisN.@"public_rel").
 Proof.
 iIntros (Ht HE) "#ctx tok".
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel") ⊤) //.
-iDestruct "tok" as "[tok $]".
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"map")
-           (↑cryptisN.@"public_rel")); last solve_ndisj.
-iDestruct "tok" as "[map tok]".
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"flow")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map")); last solve_ndisj.
-iDestruct "tok" as "[flow tok]".
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"seal")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map" ∖ ↑cryptisN.@"public_rel".@"flow"));
-  last solve_ndisj.
-iDestruct "tok" as "[$ _]".
+iDestruct (term_token_rel_token_r with "tok") as "(tok & $ & $)";
+  first exact: is_nonce_not_TSeal.
+iDestruct (rel_token_r_split with "tok") as "[map flow]".
 iMod (public_rel_flow_r_extend with "ctx flow") as "$"; first done.
 by iApply (public_rel_secret_r_2 Ht HE with "ctx map").
 Qed.
@@ -186,26 +157,13 @@ Lemma public_rel_secret_step_l E t tsup :
   cryptis_rel_ctx -∗
   secret_in_l t -∗
   protects_superterms_l t ∅ -∗
-  term_token tsup ⊤ ={E}=∗
-  secret_in_l tsup ∗ protects_superterms_l tsup ∅ ∗
-  term_token tsup (⊤ ∖ ↑cryptisN.@"public_rel") ∗
-  term_token tsup (↑cryptisN.@"public_rel".@"seal").
+  rel_token_l tsup ={E}=∗
+  secret_in_l tsup ∗ protects_superterms_l tsup ∅.
 Proof.
 iIntros (Hsup HE) "#ctx #sec prot tok".
 iMod (public_rel_flow_l_grow_2 (tsup:=tsup) with "ctx prot sec") as "[_ by]";
   [done | apply not_elem_of_empty | done |].
-rewrite (term_token_difference tsup (↑cryptisN.@"public_rel") ⊤) //.
-iDestruct "tok" as "[tok $]".
-rewrite (term_token_difference tsup (↑cryptisN.@"public_rel".@"map")
-           (↑cryptisN.@"public_rel")); last solve_ndisj.
-iDestruct "tok" as "[map tok]".
-rewrite (term_token_difference tsup (↑cryptisN.@"public_rel".@"flow")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map")); last solve_ndisj.
-iDestruct "tok" as "[flow tok]".
-rewrite (term_token_difference tsup (↑cryptisN.@"public_rel".@"seal")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map"
-              ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tok" as "[seal _]". iFrame "seal".
+iDestruct (rel_token_l_split with "tok") as "[map flow]".
 iMod (public_rel_flow_l_extend with "ctx flow") as "$"; first done.
 by iMod (public_rel_secret_l with "ctx by map") as "[_ $]".
 Qed.
@@ -216,26 +174,13 @@ Lemma public_rel_secret_step_r E t' t'sup :
   cryptis_rel_ctx -∗
   secret_in_r t' -∗
   protects_superterms_r t' ∅ -∗
-  term_token_spec t'sup ⊤ ={E}=∗
-  secret_in_r t'sup ∗ protects_superterms_r t'sup ∅ ∗
-  term_token_spec t'sup (⊤ ∖ ↑cryptisN.@"public_rel") ∗
-  term_token_spec t'sup (↑cryptisN.@"public_rel".@"seal").
+  rel_token_r t'sup ={E}=∗
+  secret_in_r t'sup ∗ protects_superterms_r t'sup ∅.
 Proof.
 iIntros (Hsup HE) "#ctx #sec prot tok".
 iMod (public_rel_flow_r_grow_2 (t'sup:=t'sup) with "ctx prot sec") as "[_ by]";
   [done | apply not_elem_of_empty | done |].
-rewrite (term_token_spec_difference t'sup (↑cryptisN.@"public_rel") ⊤) //.
-iDestruct "tok" as "[tok $]".
-rewrite (term_token_spec_difference t'sup (↑cryptisN.@"public_rel".@"map")
-           (↑cryptisN.@"public_rel")); last solve_ndisj.
-iDestruct "tok" as "[map tok]".
-rewrite (term_token_spec_difference t'sup (↑cryptisN.@"public_rel".@"flow")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map")); last solve_ndisj.
-iDestruct "tok" as "[flow tok]".
-rewrite (term_token_spec_difference t'sup (↑cryptisN.@"public_rel".@"seal")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"map"
-              ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "tok" as "[seal _]". iFrame "seal".
+iDestruct (rel_token_r_split with "tok") as "[map flow]".
 iMod (public_rel_flow_r_extend with "ctx flow") as "$"; first done.
 by iMod (public_rel_secret_r with "ctx by map") as "[_ $]".
 Qed.
@@ -245,14 +190,13 @@ Lemma public_rel_link E {t t' tsub t'sub} :
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token t ⊤ -∗
-  term_token_spec t' ⊤ ={E}=∗
+  rel_token_l t -∗
+  rel_token_r t' ={E}=∗
   linked t t'.
 Proof.
 iIntros (HE) "#ctx by by' tok tok'".
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"map") ⊤) //.
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"map") ⊤) //.
-iDestruct "tok" as "[map _]". iDestruct "tok'" as "[map' _]".
+iDestruct (rel_token_l_split with "tok") as "[map _]".
+iDestruct (rel_token_r_split with "tok'") as "[map' _]".
 by iMod (linked_extend t t' tsub t'sub HE with "ctx by by' map map'") as "(_ & _ & $ & _)".
 Qed.
 
@@ -260,8 +204,8 @@ Lemma public_rel_publish E {t t'} :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   □ (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
-  term_token t ⊤ -∗
-  term_token_spec t' ⊤ ={E}=∗
+  rel_token_l t -∗
+  rel_token_r t' ={E}=∗
   publicly_linked t t' ∗ PUB⟨t, t'⟩.
 Proof.
 iIntros (HE) "#ctx #wand tok tok'".
@@ -269,6 +213,24 @@ iMod (public_rel_fresh_l t HE with "ctx tok") as "[prot map]".
 iMod (public_rel_fresh_r t' HE with "ctx tok'") as "[prot' map']".
 iMod (public_rel_extend t t' HE with "ctx wand prot prot' map map'") as "#link".
 iModIntro. iSplit => //. by iApply "wand".
+Qed.
+
+Lemma public_rel_seal E kt s kt' s' t t' Ek Ek' :
+  ↑cryptisN ⊆ E →
+  ↑seal_ns (TKey kt s) t ⊆ Ek →
+  ↑seal_ns (TKey kt' s') t' ⊆ Ek' →
+  cryptis_rel_ctx -∗
+  □ (publicly_linked (TSeal (TKey kt s) t) (TSeal (TKey kt' s') t') -∗
+     PUB⟨TSeal (TKey kt s) t, TSeal (TKey kt' s') t'⟩) -∗
+  never_sealed_under s s' Ek Ek' ={E}=∗
+  publicly_linked (TSeal (TKey kt s) t) (TSeal (TKey kt' s') t') ∗
+  PUB⟨TSeal (TKey kt s) t, TSeal (TKey kt' s') t'⟩ ∗
+  never_sealed_under s s' (Ek ∖ ↑seal_ns (TKey kt s) t) (Ek' ∖ ↑seal_ns (TKey kt' s') t').
+Proof.
+iIntros (HE sub sub') "#ctx #wand ns".
+rewrite (never_sealed_under_rel_token sub sub').
+iDestruct "ns" as "(tok & tok' & $)".
+by iApply (public_rel_publish HE with "ctx wand tok tok'").
 Qed.
 
 End Updates.

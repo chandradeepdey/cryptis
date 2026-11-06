@@ -20,7 +20,8 @@ From reloc Require Import reloc.
 From reloc.typing Require Import types interp fundamental.
 From cryptis Require Import lib cryptis.
 From cryptis.core Require Import term.
-From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
+From cryptis.hyper.proofmode Require Import updates.
 From cryptis.primitives Require Import pre_term simple comp with_cryptis.
 From cryptis.hyper Require Import lib_spec.
 From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec.
@@ -100,7 +101,8 @@ rel_values. iModIntro.
 case: t => [n|t1 t2|a|kt s|k b|s|pt wf nf].
 all: try (
   iAssert ⌜Spec.untuple t' = None⌝%I as %->;
-  [ case: t' => //= t1' t2'; by iDestruct "Ht" as "(_ & _ & [])"
+  [ case: t' => //= t1' t2';
+    by iDestruct "Ht" as "(_ & _ & [[]|(_ & [[]|[_ []]])])"
   | iExists #(), #(); iLeft; by do 2 (iSplit; first done) ]).
 iDestruct (publicly_related_TPair_term with "Ht") as %(t1' & t2' & ->).
 rewrite publicly_related_TPair. iDestruct "Ht" as "[H1 H2]".
@@ -173,11 +175,11 @@ rel_apply_l rel_open_l. rel_apply_r rel_open_r.
 rel_values.
 iMod (publicly_related_open_fupd (E:=⊤) k k' t t' ltac:(solve_ndisj)
         with "Hctx Hk Ht") as %Hiff.
-iModIntro.
 case e: (Spec.open k t) Hiff => [t1|] Hiff;
-case e': (Spec.open k' t') Hiff => [t1'|] Hiff.
-- iExists t1, t1'. iRight. do 2 (iSplit; first done).
-  iApply lrel_term_intro. by iApply (publicly_related_open e e' with "Hk Ht").
+case e': (Spec.open k' t') Hiff => [t1'|] Hiff; last iModIntro.
+- iMod (publicly_related_open (E:=⊤) ltac:(solve_ndisj) e e' with "Hctx Hk Ht") as "#Ht1".
+  iModIntro. iExists t1, t1'. iRight. do 2 (iSplit; first done).
+  by iApply lrel_term_intro.
 - exfalso. apply: is_Some_None. apply Hiff. by eapply mk_is_Some.
 - exfalso. apply: is_Some_None. apply Hiff. by eapply mk_is_Some.
 - iExists #(), #(). iLeft. by do 2 (iSplit; first done).
@@ -202,25 +204,13 @@ iIntros (n) "%Hn #mint_n Htt". rewrite big_sepS_singleton.
 rel_apply_r (rel_mk_nonce_r _ _ (λ n, {[n]}) with "[//]").
 { iIntros "%t". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
 iIntros (n') "%Hn' #mint_spec_n' Htts". rewrite big_sepS_singleton.
-rewrite (term_token_difference n (↑cryptisN.@"public_rel".@"flow") ⊤) //.
-iDestruct "Htt" as "[Htt_flow Htt]".
-rewrite (term_token_difference n (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "Htt" as "[Htt_map _]".
-rewrite (term_token_spec_difference n' (↑cryptisN.@"public_rel".@"flow") ⊤) //.
-iDestruct "Htts" as "[Htts_flow Htts]".
-rewrite (term_token_spec_difference n' (↑cryptisN.@"public_rel".@"map")
-           (⊤ ∖ ↑cryptisN.@"public_rel".@"flow")); last solve_ndisj.
-iDestruct "Htts" as "[Htts_map _]".
-iMod (public_rel_flow_l_extend (E:=⊤) n ltac:(solve_ndisj)
-        with "Hctx Htt_flow") as "prot_n".
-iMod (public_rel_flow_r_extend (E:=⊤) n' ltac:(solve_ndisj)
-        with "Hctx Htts_flow") as "prot_n'".
-iMod (public_rel_extend (E:=⊤) n n' ltac:(solve_ndisj)
-        with "Hctx [] prot_n prot_n' Htt_map Htts_map") as "#Hel".
-{ iIntros "#Hel". rewrite (publicly_related_nonce Hn Hn'). by iSplit; last iSplit. }
-rel_values. iModIntro. iApply lrel_term_intro.
-rewrite (publicly_related_nonce Hn Hn'). by iSplit; last iSplit.
+iDestruct (term_token_rel_token_l with "Htt") as "(Htt & _ & _)";
+  first exact: is_nonce_not_TSeal.
+iDestruct (term_token_rel_token_r with "Htts") as "(Htts & _ & _)";
+  first exact: is_nonce_not_TSeal.
+iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] Htt Htts") as "[_ #Hpub]".
+{ iIntros "!> #Hel". rewrite (publicly_related_nonce Hn Hn'). by iSplit; last iSplit. }
+rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.
 
 (** Equality tests agree on both sides because [PUB] is a partial

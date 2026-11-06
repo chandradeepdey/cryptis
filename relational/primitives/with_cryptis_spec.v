@@ -657,15 +657,16 @@ Lemma rel_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ
     ([∗ set] t ∈ T' n', term_token_spec t ⊤) -∗
     term_token (Spec.random_aenc (Spec.pkey sk) (Tag N) n m) ⊤ -∗
     term_token_spec (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m') ⊤ -∗
-    (∀ Ek Ek',
+    (∀ E Ek Ek',
+      ⌜↑cryptisN ⊆ E⌝ -∗
       ⌜↑seal_ns (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)) ⊆ Ek⌝ -∗
       ⌜↑seal_ns (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m')) ⊆ Ek'⌝ -∗
-      never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk') Ek Ek' ==∗
+      never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk') Ek Ek' ={E}=∗
       never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
         (Ek ∖ ↑seal_ns (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)))
         (Ek' ∖ ↑seal_ns (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m'))) ∗
-      sealed_under (Spec.pkey sk) (Spec.pkey sk')
-        (Spec.tag (Tag N) (TPair n m)) (Spec.tag (Tag N) (TPair n' m')) ∗
+      publicly_linked (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
+        (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m') ∗
       PUB⟨Spec.random_aenc (Spec.pkey sk) (Tag N) n m,
           Spec.random_aenc (Spec.pkey sk') (Tag N) n' m'⟩) ={⊤}=∗
     Ψ (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
@@ -701,6 +702,12 @@ set pl := TPair n m.
 set tg := Spec.tag (Tag N) pl.
 set pl' := TPair n' m'.
 set tg' := Spec.tag (Tag N) pl'.
+iDestruct (term_token_rel_token_l with "tt_n") as "(tt_n & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_rel_token_l with "tt_pl") as "(tt_pl & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_rel_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_rel_token_r with "tts_n") as "(tts_n & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_rel_token_r with "tts_pl") as "(tts_pl & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_rel_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
 (* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
 iMod (public_rel_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
         ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
@@ -715,46 +722,48 @@ iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
 (* The secret seed can never become publicly related. *)
 iAssert (□ (PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ → PUB⟨tg, tg'⟩))%I as "#Hbox".
 { iIntros "!> #Hs". iExFalso.
-  iDestruct (publicly_related_nonce_term _ Hnonce with "Hs") as "Hl".
+  iDestruct (publicly_related_nonce_term _ Hnonce with "Hs") as "[Hl _]".
   by iDestruct (secret_in_l_publicly_linked_in_l with "secret Hl") as "[]". }
 iAssert (minted tg) as "#mint_tg".
 { rewrite /tg minted_tag /pl minted_TPair. by iSplit. }
 iAssert (minted_spec tg') as "#mint_tg'".
 { rewrite /tg' minted_spec_tag /pl' minted_spec_TPair. by iSplit. }
 iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") as "post".
-{ iIntros (Ek Ek' sub sub') "ns".
-  rewrite !Spec.aenc_key_pkey in sub sub' *.
-  iMod (sealed_under_set sub sub' with "ns") as "[#Hsu $]".
-  iModIntro. iSplit; first done.
-  rewrite /Spec.random_aenc /Spec.enc publicly_related_TSeal. iRight.
+{ iIntros (E Ek Ek' HE sub sub') "ns".
+  rewrite /Spec.random_aenc /Spec.enc !Spec.aenc_key_pkey in sub sub' *.
+  iMod (public_rel_seal HE sub sub' with "Hctx [] ns") as "(#Hpl & #Hpub & $)";
+    last by iFrame "#".
+  iIntros "!> #Hpl". rewrite publicly_related_TSeal. iRight.
   rewrite minted_TSeal minted_spec_TSeal.
   iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-  iModIntro. iSplit; first by iApply publicly_linked_linked.
+  iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro.
   iSplit; first done. by iRight. }
 rel_apply_l rel_tuple_l. rel_apply_l rel_aenc'_l. rel_later.
 rel_apply_r rel_tuple_r. rel_apply_r rel_aenc'_r. by rel_values.
 Qed.
 
-Lemma rel_senc (k k' : senc_key) (N : namespace) t t' Ek Ek' :
+Lemma rel_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
+  ↑cryptisN ⊆ E →
   ↑seal_ns k (Spec.tag (Tag N) t) ⊆ Ek →
   ↑seal_ns k' (Spec.tag (Tag N) t') ⊆ Ek' →
+  cryptis_rel_ctx -∗
   minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
   linked (k : term) (k' : term) -∗
   □ (PUB⟨seed_of_senc_key k, seed_of_senc_key k'⟩ → PUB⟨t, t'⟩) -∗
-  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ==∗
+  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ={E}=∗
   PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
-  sealed_under k k' (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') ∗
+  publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗
   never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
     (Ek ∖ ↑seal_ns k (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_ns k' (Spec.tag (Tag N) t')).
 Proof.
-move=> sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k') in sub sub' *.
-iIntros "#mk #mk' #mt #mt' #Hl #Himpl ns".
-iMod (sealed_under_set sub sub' with "ns") as "[#Hsu $]".
-iModIntro. iSplit; last done.
-rewrite publicly_related_TSeal. iRight.
+move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k') in sub sub' *.
+iIntros "#ctx #mk #mk' #mt #mt' #Hl #Himpl ns".
+iMod (public_rel_seal HE sub sub' with "ctx [] ns") as "(#Hpl & #Hpub & $)";
+  last by iFrame "#".
+iIntros "!> #Hpl". rewrite publicly_related_TSeal. iRight.
 rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
 iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-iModIntro. iSplit; first done.
+iLeft. iSplit; first done. iModIntro.
 iIntros "#Hs". rewrite publicly_related_tag. iSplit; first done. by iApply "Himpl".
 Qed.
 

@@ -55,9 +55,9 @@ tagged-message layer `tag`, the `trusted` wrapper for honest parties, and
 In the `relational` directory (Rocq namespace `cryptis.hyper`) you will find the
 relational layer, built on [ReLoC](https://iris-project.org/reloc):
 
-- `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs,
-  its invariant, and the records on each key's seed (`sealed_under`) that
-  relate honest ciphertexts.
+- `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs
+  and its invariant, which treats every term alike; the ghost state of a
+  ciphertext lives on the seed of its key.
 - `primitives/*_spec.v` are the relational specs of the primitives;
   `primitives/attacker_spec.v` models the attacker as a program forked on the
   network channel, calls it valid when it is self-related at the type of

@@ -76,7 +76,7 @@ Section FlowUpdates.
 Lemma public_rel_flow_l_extend E t :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel".@"flow") -∗
+  flow_token_l t -∗
   |={E}=> protects_superterms_l t ∅.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf".
@@ -92,7 +92,7 @@ iMod (own_update with "Hflow_l") as "[Hflow_l Hflow_frag_t]".
     last by apply auth_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hflow_frag_t" as "[[Hflow_t_frag Hflow_t_frag'] _]".
-iMod (term_meta_set (cryptisN.@"public_rel".@"flow") () with "Httf") as "#Hmeta_flow_t"=> //.
+iMod (flow_meta_l_set with "Httf") as "#Hmeta_flow_t".
 iModIntro. iSplitR "Hflow_t_frag'"; last by iFrame.
 iModIntro. iExists pub_l, pub_r, (<[t := ∅]> flow_l), flow_r.
 iFrame. iFrame "#".
@@ -122,7 +122,7 @@ Qed.
 Lemma public_rel_flow_r_extend E t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"flow") -∗
+  flow_token_r t' -∗
   |={E}=> protects_superterms_r t' ∅.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Httf".
@@ -138,7 +138,7 @@ iMod (own_update with "Hflow_r") as "[Hflow_r Hflow_frag_t']".
     last by apply auth_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hflow_frag_t'" as "[[Hflow_t'_frag Hflow_t'_frag'] _]".
-iMod (term_meta_spec_set (cryptisN.@"public_rel".@"flow") () with "Httf") as "#Hmeta_flow_t'"=> //.
+iMod (flow_meta_r_set with "Httf") as "#Hmeta_flow_t'".
 iModIntro. iSplitR "Hflow_t'_frag'"; last by iFrame.
 iModIntro. iExists pub_l, pub_r, flow_l, (<[t' := ∅]> flow_r).
 iFrame. iFrame "#".
@@ -435,11 +435,11 @@ Lemma public_rel_flow_l_grow_3 E t tsub tsup :
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
   protects_superterms_l t ∅ -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   |={E}=> protects_superterms_l t {[ tsup ]} ∗
           protected_by_subterm_l tsup t ∗
           protected_by_subterm_l t tsub ∗
-          term_token t (↑cryptisN.@"public_rel".@"map").
+          map_token_l t.
 Proof.
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Htt".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -501,11 +501,11 @@ Lemma public_rel_flow_r_grow_3 E t' t'sub t'sup :
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
   protects_superterms_r t' ∅ -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
           protected_by_subterm_r t'sup t' ∗
           protected_by_subterm_r t' t'sub ∗
-          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+          map_token_r t'.
 Proof.
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Htts".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -703,10 +703,10 @@ Lemma public_rel_flow_l_grow_5 E t tsup :
   is_immediate_subterm t tsup →
   cryptis_rel_ctx -∗
   protects_superterms_l t ∅ -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   |={E}=> protects_superterms_l t {[ tsup ]} ∗
           protected_by_subterm_l tsup t ∗
-          term_token t (↑cryptisN.@"public_rel".@"map").
+          map_token_l t.
 Proof.
 move=> /is_nonceP [a ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
@@ -765,10 +765,10 @@ Lemma public_rel_flow_r_grow_5 E t' t'sup :
   is_immediate_subterm t' t'sup →
   cryptis_rel_ctx -∗
   protects_superterms_r t' ∅ -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> protects_superterms_r t' {[ t'sup ]} ∗
           protected_by_subterm_r t'sup t' ∗
-          term_token_spec t' (↑cryptisN.@"public_rel".@"map").
+          map_token_r t'.
 Proof.
 move=> /is_nonceP [a' ->].
 iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
@@ -1102,10 +1102,10 @@ Lemma public_rel_flow_l_shrink_2 E t ts tsup :
   protects_superterms_l t ts -∗
   protected_by_subterm_l tsup t -∗
   protects_superterms_l tsup ∅ -∗
-  term_token tsup (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l tsup -∗
   |={E}=> protects_superterms_l t (ts ∖ {[ tsup ]}) ∗
           protects_superterms_l tsup ∅ ∗
-          term_token tsup (↑cryptisN.@"public_rel".@"map").
+          map_token_l tsup.
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hl_frac_sup Htt_sup".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1174,10 +1174,10 @@ Lemma public_rel_flow_r_shrink_2 E t' ts t'sup :
   protects_superterms_r t' ts -∗
   protected_by_subterm_r t'sup t' -∗
   protects_superterms_r t'sup ∅ -∗
-  term_token_spec t'sup (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t'sup -∗
   |={E}=> protects_superterms_r t' (ts ∖ {[ t'sup ]}) ∗
           protects_superterms_r t'sup ∅ ∗
-          term_token_spec t'sup (↑cryptisN.@"public_rel".@"map").
+          map_token_r t'sup.
 Proof.
 iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hr_frac_sup Htts_sup".
 iInv "Hinv" as ">(%pub_l & %pub_r & %flow_l & %flow_r &
@@ -1391,7 +1391,7 @@ Lemma public_rel_map_l_extend E t t' tsub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   |={E}=> protected_by_subterm_l t tsub ∗
           linked_in_l t t' ∗
           pending_in_l t t'.
@@ -1410,7 +1410,7 @@ iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
     last by apply auth_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hmap_frag_t" as "[[Hmap_t_frag Hmap_t_frag'] Hmap_frag_t]".
-iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_map_t"=> //.
+iMod (map_meta_l_set with "Htt") as "#Hmeta_map_t".
 iModIntro. iSplitR "Hprot Hmap_frag_t Hmap_t_frag'"; last by iFrame.
 iModIntro. iExists (<[t := Private t']> pub_l), pub_r.
 iFrame. iFrame "#".
@@ -1439,7 +1439,7 @@ Lemma public_rel_map_r_extend E t t' t'sub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> protected_by_subterm_r t' t'sub ∗
           linked_in_r t t' ∗
           pending_in_r t t'.
@@ -1458,7 +1458,7 @@ iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
     last by apply auth_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hmap_frag_t'" as "[[Hmap_t'_frag Hmap_t'_frag'] Hmap_frag_t']".
-iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_map_t'"=> //.
+iMod (map_meta_r_set with "Htts") as "#Hmeta_map_t'".
 iModIntro. iSplitR "Hprot Hmap_frag_t' Hmap_t'_frag'"; last by iFrame.
 iModIntro. iExists pub_l, (<[t' := Private t]> pub_r).
 iFrame. iFrame "#".
@@ -1487,7 +1487,7 @@ Lemma public_rel_map_l_extend_2 E t t' :
   is_nonce t →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   |={E}=> linked_in_l t t' ∗
           pending_in_l t t'.
 Proof.
@@ -1505,7 +1505,7 @@ iMod (own_update with "Hmap_l") as "[Hmap_l Hmap_frag_t]".
     last by apply auth_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hmap_frag_t" as "[[Hmap_t_frag Hmap_t_frag'] Hmap_frag_t]".
-iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_map_t"=> //.
+iMod (map_meta_l_set with "Htt") as "#Hmeta_map_t".
 iModIntro. iSplitR "Hmap_frag_t Hmap_t_frag'"; last by iFrame.
 iModIntro. iExists (<[TNonce a := Private t']> pub_l), pub_r, flow_l, flow_r.
 iFrame. iFrame "#".
@@ -1534,7 +1534,7 @@ Lemma public_rel_map_r_extend_2 E t t' :
   is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> linked_in_r t t' ∗
           pending_in_r t t'.
 Proof.
@@ -1552,7 +1552,7 @@ iMod (own_update with "Hmap_r") as "[Hmap_r Hmap_frag_t']".
     last by apply auth_both_valid.
   rewrite lookup_fmap Hfresh //. }
 iDestruct "Hmap_frag_t'" as "[[Hmap_t'_frag Hmap_t'_frag'] Hmap_frag_t']".
-iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_map_t'"=> //.
+iMod (map_meta_r_set with "Htts") as "#Hmeta_map_t'".
 iModIntro. iSplitR "Hmap_frag_t' Hmap_t'_frag'"; last by iFrame.
 iModIntro. iExists pub_l, (<[TNonce a' := Private t]> pub_r), flow_l, flow_r.
 iFrame. iFrame "#".
@@ -1582,8 +1582,8 @@ Lemma linked_extend E t t' tsub t'sub :
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
+  map_token_r t' -∗
   |={E}=> protected_by_subterm_l t tsub ∗ protected_by_subterm_r t' t'sub ∗
           linked t t' ∗
           pending_in_l t t' ∗
@@ -1601,8 +1601,8 @@ Lemma linked_extend_2 E t t' t'sub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
+  map_token_r t' -∗
   |={E}=> protected_by_subterm_r t' t'sub ∗
           linked t t' ∗
           pending_in_l t t' ∗
@@ -1620,8 +1620,8 @@ Lemma linked_extend_3 E t t' tsub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
+  map_token_r t' -∗
   |={E}=> protected_by_subterm_l t tsub ∗
           linked t t' ∗
           pending_in_l t t' ∗
@@ -1639,8 +1639,8 @@ Lemma linked_extend_4 E t t' :
   is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
+  map_token_r t' -∗
   |={E}=> linked t t' ∗
           pending_in_l t t' ∗
           pending_in_r t t'.
@@ -1744,7 +1744,7 @@ Lemma public_rel_secret_l E t tsub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_l t tsub -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   |={E}=> protected_by_subterm_l t tsub ∗ secret_in_l t.
 Proof.
 iIntros (HE) "#Hctx Hprot Htt".
@@ -1757,7 +1757,7 @@ Lemma public_rel_secret_r E t' t'sub :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   protected_by_subterm_r t' t'sub -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> protected_by_subterm_r t' t'sub ∗ secret_in_r t'.
 Proof.
 iIntros (HE) "#Hctx Hprot Htts".
@@ -1770,7 +1770,7 @@ Lemma public_rel_secret_l_2 E t :
   is_nonce t →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   |={E}=> secret_in_l t.
 Proof.
 iIntros (Hnonce HE) "#Hctx Htt".
@@ -1782,7 +1782,7 @@ Lemma public_rel_secret_r_2 E t' :
   is_nonce t' →
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> secret_in_r t'.
 Proof.
 iIntros (Hnonce' HE) "#Hctx Htts".
@@ -1903,7 +1903,7 @@ Lemma public_rel_lock_Public_l E t t' :
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
   pending_in_l t t' -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_r t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Hl_frac Htts".
@@ -1918,7 +1918,7 @@ iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hprot1") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t _ Hpltt' with "Hmap_l_frag") as "[Hl_frac2 Hmap_l_frag]".
 iCombine "Hl_frac Hl_frac2" as "Hl".
-iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_map_t'"=> //.
+iMod (map_meta_r_set with "Htts") as "#Hmeta_map_t'".
 iMod (own_update_2 with "Hmap_l Hl") as "[Hmap_l Hl]".
 { apply auth_update.
   eapply (singleton_local_update _ _ _ _ (● Some (Public t') ⋅ ◯ Some (Public t'))
@@ -1978,7 +1978,7 @@ Lemma public_rel_lock_Public_r E t t' :
   (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
   pending_in_r t t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
@@ -1993,7 +1993,7 @@ iPoseProof (public_rel_map_r_lookup with "Hmap_r Hr_frac") as "%Hprtt'".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hprot1") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t' _ Hprtt' with "Hmap_r_frag") as "[Hr_frac2 Hmap_r_frag]".
-iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_map_t"=> //.
+iMod (map_meta_l_set with "Htt") as "#Hmeta_map_t".
 iCombine "Hr_frac Hr_frac2" as "Hr".
 iMod (own_update with "Hmap_l") as "[Hmap_l Hl]".
 { apply auth_update_alloc.
@@ -2054,8 +2054,8 @@ Lemma public_rel_extend E t t' :
   (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
-  term_token t (↑cryptisN.@"public_rel".@"map") -∗
-  term_token_spec t' (↑cryptisN.@"public_rel".@"map") -∗
+  map_token_l t -∗
+  map_token_r t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) Hrel Hprot Hprot1 Htt Htts".
@@ -2068,8 +2068,8 @@ iPoseProof (public_rel_map_l_fresh pub_l t with "Hmeta_map_l Htt") as "%Hfresh_l
 iPoseProof (public_rel_map_r_fresh pub_r t' with "Hmeta_map_r Htts") as "%Hfresh_r".
 iPoseProof (public_rel_flow_l_lookup_2 with "Hflow_l Hprot") as "%Hfltts".
 iPoseProof (public_rel_flow_r_lookup_2 with "Hflow_r Hprot1") as "%Hfrt'ts".
-iMod (term_meta_set (cryptisN.@"public_rel".@"map") () with "Htt") as "#Hmeta_map_t"=> //.
-iMod (term_meta_spec_set (cryptisN.@"public_rel".@"map") () with "Htts") as "#Hmeta_map_t'"=> //.
+iMod (map_meta_l_set with "Htt") as "#Hmeta_map_t".
+iMod (map_meta_r_set with "Htts") as "#Hmeta_map_t'".
 iMod (own_update with "Hmap_l") as "[Hmap_l Hl]".
 { apply auth_update_alloc.
   apply (alloc_singleton_local_update _ t (● Some (Public t') ⋅ ◯ Some (Public t')));
