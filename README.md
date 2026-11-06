@@ -52,52 +52,31 @@ tagged-message layer `tag`, the `trusted` wrapper for honest parties, and
 
 ## HyperCryptis: Indistinguishability in the Dolev-Yao model
 
-In the `relational` directory (Rocq namespace `cryptis.hyper`) you will find the
-relational layer, built on [ReLoC](https://iris-project.org/reloc):
+In the `relational` directory (Rocq namespace `cryptis.hyper`) you will find a
+relational version of Cryptis, built on [ReLoC](https://iris-project.org/reloc),
+for proving that two runs of a protocol are indistinguishable to the attacker:
 
-- `core/rel.v` defines the relation `PUB⟨t, t'⟩` between the terms of two runs
-  and its invariant, which treats every term alike; the ghost state of a
-  ciphertext lives on the seed of its key.
-- `primitives/*_spec.v` are the relational specs of the primitives;
-  `primitives/attacker_spec.v` models the attacker as a program forked on the
-  network channel, calls it valid when it is self-related at the type of
-  functions from channels to unit, gives the unary primitives type-like
-  contracts over publicly related terms, and shows that every attacker well
-  typed against these contracts is valid (`attacker_valid_typed`), and
-  `primitives/with_cryptis_spec.v` relates two randomized encryptions under
-  a secret key (for the IND games and the ballots) and two symmetric
-  encryptions under a secret seed (for the store's connections).
-- `rel_adequacy.v` turns a ReLoC refinement into a statement about executions
-  (`cryptis_rel_adequacy`) or into a contextual refinement between the games run
-  against a valid attacker (`cryptis_ctx_refinement`).
-- `proofmode/*`, `proofmode`: the ghost state updates for freshly created
-  terms, the tactics that discharge the side conditions of nonce and key
-  creation, and the tactics that run both programs through the primitives,
-  which find the spec of each primitive through the `RelPrimL` / `RelPrimR`
-  instances that the spec files declare.
+- `lib/*`, `lib_spec`: Relational specifications of the list-manipulation
+  programs and AVL maps.
+- `core/*`: The relation `PUB⟨t, t'⟩`, which says that the attacker cannot tell
+  apart a term of one run from a term of the other, and its invariant.
+- `primitives/*`: Relational specifications of the primitives.  Definition of
+  a valid attacker.
+- `rel_adequacy`: Adequacy: a relational proof gives a contextual refinement
+  between games run against any valid attacker.
+- `proofmode/*`, `proofmode`: Ghost-state updates and tactics for relational
+  proofs.
 
 Its case studies live in `relational_examples`:
 
-- `ind_cpa`, `ind_cca2`: relational IND-CPA / IND-CCA2 games for asymmetric
+- `ind_cpa`, `ind_cca2`: IND-CPA and IND-CCA2 for randomized public-key
   encryption.
-- `vote`: vote privacy for an election with any number of voters and
-  candidates (`vote/impl.v` + per-role `proofs/`; game is in its own file).
-  Voters sign encrypted ballots; the arbitrator accepts them in any order,
-  tallies them in an AVL map and publishes the in-order listing.  Two
-  assignments of votes to voters with the same count per candidate are
-  contextually equivalent, although the two runs build different trees.
-- `nsl`: real-or-random secrecy of the Needham–Schroeder–Lowe session key
-  (the programs of `examples/nsl`; `nsl/impl.v` has the tests, with
-  per-role `proofs/`; games are in their own file).  One initiator, whose
-  peer the attacker picks, and one responder run against the attacker.
-  Revealing a key derived from a hash of the responder's session key when
-  its peer is I, or of the initiator's when its peer is R, is contextually
-  equivalent to revealing a fresh key.
-- `store_nsl`: a key-value store over an NSL session (`store_nsl/impl.v`;
-  `proofs/` has one file per layer: connections, remote calls and the store;
-  the game is in its own file).  The client stores values on the server and
-  loads one back, which goes to the attacker.  Two runs whose stores are to
-  distinct keys and differ only in their order are contextually equivalent.
+- `nsl`: Real-or-random secrecy of the Needham–Schroeder–Lowe session key, for
+  the programs of `examples/nsl`.
+- `vote`: Vote privacy for an election with any number of voters and
+  candidates.
+- `store_nsl`: Key-value store over an NSL session; the attacker cannot tell
+  in which order the client writes to distinct keys.
 
 ## Building
 
