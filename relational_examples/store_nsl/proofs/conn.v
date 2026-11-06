@@ -9,10 +9,11 @@ sent, one term from each run.  The protocol on top of the connections says
 what each pair means ([Φ rl n]: the [n]-th pair that role [rl] sends), and
 the receiver of a message learns it.
 
-Encrypting a message records its partner in the other run on the seed of the
-session key.  The invariant keeps the seed's tokens for every message that is
-not sent yet, so a message that decrypts under the key was sent by an honest
-party: both runs decrypt it to a pair of the lists, or both fail to.
+Encrypting a message links its ciphertext to the one of the other run,
+spending a token on the seed of the session key.  The invariant keeps the
+seed's tokens for every message that is not sent yet, so a message that
+decrypts under the key was sent by an honest party: both runs decrypt it to a
+pair of the lists, or both fail to.
 
 The invariant serves a single session, given by [sess].  Until the session
 is known, it holds what recording the session takes ([free]).
@@ -114,7 +115,7 @@ Definition conn_fresh : iProp :=
 
 (** What the invariant knows about a sent pair. *)
 Definition sent_pair k k' rl n t t' : iProp :=
-  sealed_under k k' (conn_body rl n t) (conn_body rl n t') ∗ Φ rl n t t'.
+  publicly_linked (TSeal k (conn_body rl n t)) (TSeal k' (conn_body rl n t')) ∗ Φ rl n t t'.
 
 Definition conn_state k k' : iProp :=
   ∃ L0 L1 Ek Ek',
@@ -219,16 +220,16 @@ rewrite /log_name /log_of /log_snoc => - [->| ->] /=; iIntros "log0 log1".
 Qed.
 
 Lemma conn_seal_send E rl L k k' t t' :
-  ↑connIN ⊆ E →
+  ↑connIN ⊆ E → ↑cryptisN ⊆ E ∖ ↑connIN →
   (rl = 0 ∨ rl = 1)%Z →
-  conn_ctx -∗ conn_keys k k' -∗
+  cryptis_rel_ctx -∗ conn_ctx -∗ conn_keys k k' -∗
   ghost_var (log_name rl) (1/2) L -∗
   minted t -∗ minted_spec t' -∗ Φ rl (length L) t t' ={E}=∗
   ghost_var (log_name rl) (1/2) (L ++ [(t, t')]) ∗
   PUB⟨Spec.enc k (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t]),
       Spec.enc k' (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t'])⟩.
 Proof.
-iIntros (HE Hrl) "#Hinv #(Hs & mk & mk' & sk & sk' & _ & _ & Hno) log #mt #mt' #HΦ".
+iIntros (HN HE Hrl) "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & _ & _ & Hno) log #mt #mt' #HΦ".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & ns & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
 iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
@@ -242,8 +243,8 @@ assert (Hsub' : ↑seal_ns k' (conn_body rl n t') ⊆ Ek').
 { case: (Hcl' (conn_body rl n t')) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
 iMod (rel_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
-        (t':=Spec.of_list [TInt rl; TInt n; t']) Hsub Hsub'
-        with "mk mk' [] [] [] [] ns") as "(#Hpub & #Hsu & ns)".
+        (t':=Spec.of_list [TInt rl; TInt n; t']) HE Hsub Hsub'
+        with "Hctx mk mk' [] [] [] [] ns") as "(#Hpub & #Hsu & ns)".
 { minted_simpl. rewrite !minted_TInt. by iFrame "#". }
 { minted_simpl. rewrite !minted_spec_TInt. by iFrame "#". }
 { iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
@@ -271,7 +272,7 @@ case: (proj1 (logged_snoc Hrl) Hl) => [Hl'|[-> [-> [-> ->]]]]; first by iApply "
 by iFrame "Hsu HΦ".
 Qed.
 
-Arguments conn_seal_send {E rl L k k' t t'} _ _.
+Arguments conn_seal_send {E rl L k k' t t'} _ _ _.
 
 Lemma rel_conn_send rl cs cs' n r t t' :
   cryptis_rel_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
@@ -283,8 +284,8 @@ iIntros "#Hctx #Hinv (%k & %k' & %l1 & %l2 & %l1' & %l2' & %c & %c' & %L & -> & 
   %Hrl & <- & #Hc & #Hk & Hl1 & Hl2 & Hl1' & Hl2' & log) #(mt & mt' & _) #HΦ".
 rewrite /conn_send /conn_sent /conn_role /conn_channel /conn_key. rel_prims.
 rel_load_l. rel_load_r. rel_prims.
-iMod (conn_seal_send (E:=⊤) ltac:(solve_ndisj) Hrl
-        with "Hinv Hk log mt mt' HΦ") as "[log #Hpub]".
+iMod (conn_seal_send (E:=⊤) ltac:(solve_ndisj) ltac:(solve_ndisj) Hrl
+        with "Hctx Hinv Hk log mt mt' HΦ") as "[log #Hpub]".
 rel_apply (rel_send with "Hc Hpub").
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_load_l. rel_load_r. rel_pures. rel_store_l. rel_store_r.
@@ -298,30 +299,42 @@ End Send.
 
 Section Receive.
 
-Lemma conn_sealed_l k Ek u t' (P : Prop) :
+Lemma conn_sealed_l E k Ek u t' (P : Prop) :
+  ↑cryptisN ⊆ E →
   ↑seal_ns k u ⊆ Ek ∨ P →
-  term_token (seed_of_senc_key k) Ek -∗ sealed_under_l k u t' -∗ ⌜P⌝.
+  cryptis_rel_ctx -∗
+  term_token (seed_of_senc_key k) Ek -∗ publicly_linked (TSeal k u) t' ={E}=∗
+  ⌜P⌝ ∗ term_token (seed_of_senc_key k) Ek.
 Proof.
-case=> [|?]; last by iIntros.
-rewrite (senc_key_TKey k) => sub. iIntros "tok rec".
-by iDestruct (sealed_under_l_token t' sub with "tok rec") as "[]".
+move=> HE [sub|?]; last by iIntros "_ $ _".
+rewrite (senc_key_TKey k) in sub *. iIntros "#ctx tok #[Hl _]".
+iMod (linked_in_l_map_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
+- by iApply publicly_linked_in_l_linked_in_l.
+- rewrite /map_token_l /=. iApply (term_token_drop with "tok").
+  etrans; last exact: sub. solve_ndisj.
 Qed.
 
-Arguments conn_sealed_l {k Ek u t' P} _.
+Arguments conn_sealed_l {E k Ek u t' P} _ _.
 
-Lemma conn_sealed_r k' Ek' u' t (P : Prop) :
+Lemma conn_sealed_r E k' Ek' u' t (P : Prop) :
+  ↑cryptisN ⊆ E →
   ↑seal_ns k' u' ⊆ Ek' ∨ P →
-  term_token_spec (seed_of_senc_key k') Ek' -∗ sealed_under_r k' u' t -∗ ⌜P⌝.
+  cryptis_rel_ctx -∗
+  term_token_spec (seed_of_senc_key k') Ek' -∗ publicly_linked t (TSeal k' u') ={E}=∗
+  ⌜P⌝ ∗ term_token_spec (seed_of_senc_key k') Ek'.
 Proof.
-case=> [|?]; last by iIntros.
-rewrite (senc_key_TKey k') => sub. iIntros "tok rec".
-by iDestruct (sealed_under_r_token t sub with "tok rec") as "[]".
+move=> HE [sub|?]; last by iIntros "_ $ _".
+rewrite (senc_key_TKey k') in sub *. iIntros "#ctx tok #[_ Hr]".
+iMod (linked_in_r_map_token_fupd _ _ HE with "ctx [Hr] [tok]") as "[]".
+- by iApply publicly_linked_in_r_linked_in_r.
+- rewrite /map_token_r /=. iApply (term_token_spec_drop with "tok").
+  etrans; last exact: sub. solve_ndisj.
 Qed.
 
-Arguments conn_sealed_r {k' Ek' u' t P} _.
+Arguments conn_sealed_r {E k' Ek' u' t P} _ _.
 
 Lemma conn_open E k k' t t' :
-  ↑cryptisN ⊆ E → ↑connIN ⊆ E →
+  ↑cryptisN ⊆ E ∖ ↑connIN → ↑connIN ⊆ E →
   cryptis_rel_ctx -∗ conn_ctx -∗ conn_keys k k' -∗ PUB⟨t, t'⟩ ={E}=∗
   ⌜Spec.dec k (Tag connN) t = None ∧ Spec.dec k' (Tag connN) t' = None⌝ ∨
   ∃ rl n p p', ⌜(rl = 0 ∨ rl = 1)%Z⌝ ∗
@@ -330,30 +343,41 @@ Lemma conn_open E k k' t t' :
     Φ rl n p p'.
 Proof.
 iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & ss & ss' & Hno) #Ht".
-iMod (publicly_related_open_senc_fupd k k' t t' HE with "Hctx ss ss' Ht") as "Hop".
+iMod (publicly_related_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx ss ss' Ht")
+  as "#Hop".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & [tok tok'] & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
 iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
 rewrite /Spec.dec.
 case eL: (Spec.open k t) => [u|]; case eR: (Spec.open k' t') => [u'|].
-- iDestruct "Hop" as "#[rec _]".
-  iDestruct (conn_sealed_l (Hcl u) with "tok rec") as %(rl & n & p & p' & Hl & ->).
+- iDestruct ("Hop" with "[%]") as "#rec"; first by left.
+  move/Spec.open_senc_key_Some: (eL) => ?; subst t.
+  move/Spec.open_senc_key_Some: (eR) => ?; subst t'.
+  iMod (conn_sealed_l HE (Hcl u) with "Hctx tok rec") as "[%Hu tok]".
+  case: Hu => rl [n [p [p' [Hl ?]]]]; subst u.
   iDestruct ("Hsent" $! rl n p p' with "[//]") as "([rec0 _] & HΦ)".
-  iDestruct (sealed_under_l_agree with "rec rec0") as %[= ->].
+  iDestruct "rec" as "[rec _]".
+  iDestruct (publicly_linked_in_l_agree with "rec rec0") as %[= ->].
   iModIntro. iSplitL "log0 log1 tok tok'".
   { iNext. iRight. iExists k, k'. iFrame "Hs". iExists L0, L1, Ek, Ek'.
     by iFrame (Hcl Hcl') "log0 log1 tok tok' Hsent". }
   iModIntro. iRight. iExists rl, n, p, p'. iFrame "HΦ".
   by rewrite /conn_body !Spec.tagK; case: Hl.
-- iDestruct "Hop" as "#rec".
-  iDestruct (conn_sealed_l (Hcl u) with "tok rec") as %(rl & n & p & p' & Hl & ->).
+- iDestruct ("Hop" with "[%]") as "#rec"; first by left.
+  move/Spec.open_senc_key_Some: (eL) => ?; subst t.
+  iMod (conn_sealed_l HE (Hcl u) with "Hctx tok rec") as "[%Hu _]".
+  case: Hu => rl [n [p [p' [Hl ?]]]]; subst u.
   iDestruct ("Hsent" $! rl n p p' with "[//]") as "([rec0 _] & _)".
-  iDestruct (sealed_under_l_agree with "rec rec0") as %->.
+  iDestruct "rec" as "[rec _]".
+  iDestruct (publicly_linked_in_l_agree with "rec rec0") as %->.
   by rewrite (proj2 (Spec.open_senc_key_Some _ _ _) eq_refl) in eR.
-- iDestruct "Hop" as "#rec'".
-  iDestruct (conn_sealed_r (Hcl' u') with "tok' rec'") as %(rl & n & p & p' & Hl & ->).
+- iDestruct ("Hop" with "[%]") as "#rec'"; first by right.
+  move/Spec.open_senc_key_Some: (eR) => ?; subst t'.
+  iMod (conn_sealed_r HE (Hcl' u') with "Hctx tok' rec'") as "[%Hu _]".
+  case: Hu => rl [n [p [p' [Hl ?]]]]; subst u'.
   iDestruct ("Hsent" $! rl n p p' with "[//]") as "([_ rec0'] & _)".
-  iDestruct (sealed_under_r_agree with "rec' rec0'") as %->.
+  iDestruct "rec'" as "[_ rec']".
+  iDestruct (publicly_linked_in_r_agree with "rec' rec0'") as %->.
   by rewrite (proj2 (Spec.open_senc_key_Some _ _ _) eq_refl) in eL.
 - iModIntro. iSplitL "log0 log1 tok tok'".
   { iNext. iRight. iExists k, k'. iFrame "Hs". iExists L0, L1, Ek, Ek'.

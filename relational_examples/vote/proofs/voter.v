@@ -53,11 +53,12 @@ iMod (urn_inv_seal (E:=⊤) skT skT' _ _ (PUB⟨ballot_ct skT n v, ballot_ct skT
 { iApply (term_token_drop with "tc"). solve_ndisj. }
 { iApply (term_token_spec_drop with "tc'"). solve_ndisj. }
 { iIntros (Ek Ek') "%sub %sub' ns".
-  by iMod ("upd" $! Ek Ek' with "[//] [//] ns") as "($ & _ & $)". }
+  by iMod ("upd" $! (⊤ ∖ ↑urnN) Ek Ek' with "[] [//] [//] ns") as "($ & _ & $)";
+    first (iPureIntro; solve_ndisj). }
 iAssert (PUB⟨ballot_body skT n v, ballot_body skT' n' v'⟩) as "#pub_tgc".
 { rewrite /ballot_body publicly_related_tag. by iSplit. }
-iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hballot token []") as "#pub_sig";
-  first solve_ndisj.
+iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hctx Hballot token []") as "#pub_sig";
+  [solve_ndisj..| |].
 { iIntros "!> #Hsu".
   by iApply (pub_sign with "mint_V mint_V' secret_V secret_V' pub_pkV pub_tgc Hsu"). }
 iModIntro. rel_prims. rel_values. iModIntro. by iApply lrel_term_intro.

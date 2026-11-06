@@ -44,7 +44,7 @@ Definition m2_comp x1 x1' x2 x2' x3 x3' : iProp :=
   ((PUB⟨x1, x1'⟩ ∗ PUB⟨x2, x2'⟩) ∨
    (⌜x3 = Spec.pkey skR ∧ x3' = Spec.pkey skR'⌝ ∗
     m2_facts x1 x1' x2 x2' ∗
-    sealed_under_l (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1
+    publicly_linked (TSeal (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1)
       (TSeal (Spec.pkey skI') (m2_seal x1 x1' x2 x2').2))).
 
 Lemma m2_open E t t' :
@@ -56,20 +56,20 @@ Lemma m2_open E t t' :
      ∃ x1 x1' x2 x2',
        ⌜m = m2_pl x1 x2 (Spec.pkey skR) ∧ m' = m2_pl x1' x2' (Spec.pkey skR')⌝ ∗
        m2_facts x1 x1' x2 x2' ∗
-       sealed_under_l (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1
+       publicly_linked (TSeal (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1)
       (TSeal (Spec.pkey skI') (m2_seal x1 x1' x2 x2').2)).
 Proof.
 iIntros (HE HN) "#Hctx #Hnsl #Ht". iPoseProof "Hnsl" as "(#HI & _ & #HinvI & _)".
 rewrite /Spec.dec.
 iMod (seals_inv_open with "Hctx HI HinvI Ht")
-  as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|done|..].
+  as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|solve_ndisj|..].
 - iModIntro. by iLeft.
 - iPoseProof (publicly_related_untag m2N with "Hu") as "Hp".
   destruct (Spec.untag (Tag m2N) u) as [m|], (Spec.untag (Tag m2N) u') as [m'|];
     try done.
   + iModIntro. iRight. iExists m, m'. iSplit; first done. by iLeft.
   + iModIntro. by iLeft.
-- iMod (seals_I_lookup with "Hnsl Hl") as (x1 x1' x2 x2' e) "#Hf"; first done.
+- iMod (seals_I_lookup with "Hctx Hnsl Hl") as (x1 x1' x2 x2' e) "#Hf"; [done|solve_ndisj|..].
   move: (e); rewrite /m2_seal /base.m2_seal /aenc_seal => - [-> ->].
   rewrite !Spec.tagK.
   iModIntro. iRight. iExists _, _. iSplit; first done.
@@ -83,7 +83,7 @@ Lemma m2_decode m m' :
    ∃ x1 x1' x2 x2',
      ⌜m = m2_pl x1 x2 (Spec.pkey skR) ∧ m' = m2_pl x1' x2' (Spec.pkey skR')⌝ ∗
      m2_facts x1 x1' x2 x2' ∗
-     sealed_under_l (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1
+     publicly_linked (TSeal (Spec.pkey skI) (m2_seal x1 x1' x2 x2').1)
       (TSeal (Spec.pkey skI') (m2_seal x1 x1' x2 x2').2)) -∗
   ⌜Spec.to_list m = None ∧ Spec.to_list m' = None⌝ ∨
   ∃ ts ts', ⌜Spec.to_list m = Some ts ∧ Spec.to_list m' = Some ts'⌝ ∗
@@ -172,6 +172,10 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
     iMod (public_rel_flow_r_grow_2 (E:=⊤) (t'sup:=Spec.of_list [nI'; Spec.pkey skI'])
             with "Hctx prot' sec'") as "[_ by_pl']";
       [solve_ndisj | apply not_elem_of_empty | solve_immediate_subterm |].
+    iDestruct (term_token_rel_token_l with "tt_pl") as "(tt_pl & _ & _)";
+      first solve_not_TSeal.
+    iDestruct (term_token_rel_token_r with "tts_pl") as "(tts_pl & _ & _)";
+      first solve_not_TSeal.
     have Htg : ∀ t, is_immediate_subterm t (Spec.tag (Tag m1N) t).
     { move=> t0. rewrite [Spec.tag]unlock. exact: SubtermPairR. }
     iMod (public_rel_protect_step_l (E:=⊤) (t:=Spec.of_list [nI; Spec.pkey skI])
@@ -187,12 +191,16 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
             with "Hctx HR [] [] by_tg by_tg' tt_tg tts_tg tt_c tts_c") as "[link [mk mk']]".
     { rewrite minted_of_list /=. by iFrame "#". }
     { rewrite minted_spec_of_list /=. by iFrame "#". }
-    iMod (seals_inv_link (E:=⊤) (N:=sealsRN) ltac:(solve_ndisj)
+    iMod (seals_inv_link (E:=⊤) (N:=sealsRN) ltac:(solve_ndisj) ltac:(solve_ndisj)
       with "HinvR [] link mk mk'") as "[#Hc1 _]".
     { iLeft. iExists nI, nI'. iSplit; first done. by iFrame "#". }
     iModIntro. iFrame "Hc1". iSplitR; last by iIntros "_".
     iLeft. iSplit; first done. by iFrame "#".
-  - iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+  - iDestruct (term_token_rel_token_l with "tt_n") as "(tt_n & _ & _)";
+      first solve_not_TSeal.
+    iDestruct (term_token_rel_token_r with "tts_n") as "(tts_n & _ & _)";
+      first solve_not_TSeal.
+    iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
             with "Hctx [] tt_n tts_n")
       as "[_ #Hpub]".
     { iIntros "!> #?". rewrite (publicly_related_nonce HnI HnI').
@@ -244,12 +252,12 @@ have e3' := proj1 H3 e3. subst x3 x3'.
 rel_prims.
 (* The third message. *)
 iAssert ((⌜pkX = Spec.pkey skR⌝ ∗ resp_nonce x2 x2' ∗
-          sealed_under_l (Spec.pkey skI) (m2_seal nI nI' x2 x2').1
+          publicly_linked (TSeal (Spec.pkey skI) (m2_seal nI nI' x2 x2').1)
             (TSeal (Spec.pkey skI') (m2_seal nI nI' x2 x2').2)) ∨
          (⌜pkX ≠ Spec.pkey skR⌝ ∗ PUB⟨x2, x2'⟩))%I as "#Hcase".
 { iDestruct "HnI" as "[[%eX (_ & _ & _ & _ & #sec & _)]|[%neX _]]";
   iDestruct "Hcomp" as "[[#Hpub #Hx2]|([%eK %eK'] & (_ & #Hx2 & _) & #Hl)]".
-  - iDestruct (publicly_related_nonce_term _ HnI with "Hpub") as "Hl".
+  - iDestruct (publicly_related_nonce_term _ HnI with "Hpub") as "[Hl _]".
     by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
   - iLeft. by iFrame "#".
   - iRight. by iSplit.
@@ -260,8 +268,8 @@ iAssert (|={⊤}=> PUB⟨Spec.enc pkX (Tag m3N) x2, Spec.enc pkX' (Tag m3N) x2'�
   { by iApply (publicly_related_enc with "HpkX Hx2"). }
   iSpecialize ("claim3" with "[//]").
   have eX' := proj1 HX eX. subst pkX pkX'.
-  iMod (claim_m3 with "Hnsl Hl claim3")
-    as "(by_tg & by_tg' & tt_tg & tts_tg & tt_c & tts_c)"; first solve_ndisj.
+  iMod (claim_m3 with "Hctx Hnsl Hl claim3")
+    as "(by_tg & by_tg' & tt_tg & tts_tg & tt_c & tts_c)"; [solve_ndisj..|].
   iAssert (minted x2 ∗ minted_spec x2')%I as "#[mint_x2 mint_x2']".
   { iDestruct "Hx2" as "(_ & _ & #mt & #mt' & _)".
     iSplit; [by iApply (term_meta_minted (L:=term))
@@ -269,7 +277,7 @@ iAssert (|={⊤}=> PUB⟨Spec.enc pkX (Tag m3N) x2, Spec.enc pkX' (Tag m3N) x2'�
   iMod (aenc_link (E:=⊤) skR skR' m3N x2 x2' ltac:(solve_ndisj)
           with "Hctx HR mint_x2 mint_x2' by_tg by_tg' tt_tg tts_tg tt_c tts_c")
     as "[link [mk mk']]".
-  iMod (seals_inv_link (E:=⊤) (N:=sealsRN) ltac:(solve_ndisj)
+  iMod (seals_inv_link (E:=⊤) (N:=sealsRN) ltac:(solve_ndisj) ltac:(solve_ndisj)
     with "HinvR [] link mk mk'") as "[#Hc3 _]".
   { iRight. iExists x2, x2'. by iSplit. }
   by iModIntro. }

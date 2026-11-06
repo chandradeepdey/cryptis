@@ -72,6 +72,10 @@ iMod (public_rel_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
         with "Hctx token_a") as "(#secret_a & seals_a & _ & _)".
 iMod (public_rel_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
         with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
+iDestruct (term_token_rel_token_l with "token_pkA") as "(token_pkA & _ & _)";
+  first solve_not_TSeal.
+iDestruct (term_token_rel_token_r with "token_spec_pkA'") as "(token_spec_pkA' & _ & _)";
+  first solve_not_TSeal.
 iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
@@ -103,9 +107,9 @@ rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
 { by iIntros (?); rewrite big_sepS_empty. }
 { by iIntros (?); rewrite big_sepS_empty. }
 iIntros (n n') "_ _ _ _ _ _ _ _ upd".
-iMod ("upd" $! (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal")
-        with "[] [] [$seals_a $seals_a']") as "(_ & _ & #Hcmsg)";
-  [iPureIntro; apply nclose_subseteq..|].
+iMod ("upd" $! ⊤ (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal")
+        with "[] [] [] [$seals_a $seals_a']") as "(_ & _ & #Hcmsg)";
+  [iPureIntro; solve_ndisj | iPureIntro; apply nclose_subseteq..|].
 iModIntro.
 rel_apply (rel_send with "Hc Hcmsg").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.

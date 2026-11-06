@@ -64,15 +64,15 @@ Proof.
 iIntros (HE HN) "#Hctx #Hnsl #Ht". iPoseProof "Hnsl" as "(_ & #HR & _ & #HinvR)".
 rewrite /Spec.dec.
 iMod (seals_inv_open with "Hctx HR HinvR Ht")
-  as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|done|..].
+  as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|solve_ndisj|..].
 - iModIntro. by iLeft.
 - iPoseProof (publicly_related_untag m1N with "Hu") as "Hp".
   destruct (Spec.untag (Tag m1N) u) as [m|], (Spec.untag (Tag m1N) u') as [m'|];
     try done.
   + iModIntro. iRight. iExists m, m'. iSplit; first done. by iLeft.
   + iModIntro. by iLeft.
-- iMod (seals_R_lookup with "Hnsl Hl")
-    as "[(%x1 & %x1' & %e & #Hx1)|(%x2 & %x2' & %e & _)]"; first done.
+- iMod (seals_R_lookup with "Hctx Hnsl Hl")
+    as "[(%x1 & %x1' & %e & #Hx1)|(%x2 & %x2' & %e & _)]"; [done|solve_ndisj|..].
   + move: e; rewrite /base.m1_seal /aenc_seal => - [-> ->].
     rewrite !Spec.tagK.
     iModIntro. iRight. iExists _, _. iSplit; first done.
@@ -126,15 +126,15 @@ Proof.
 iIntros (HE HN) "#Hctx #Hnsl #Ht". iPoseProof "Hnsl" as "(_ & #HR & _ & #HinvR)".
 rewrite /Spec.dec.
 iMod (seals_inv_open with "Hctx HR HinvR Ht")
-  as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|done|..].
+  as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|solve_ndisj|..].
 - iModIntro. by iLeft.
 - iPoseProof (publicly_related_untag m3N with "Hu") as "Hp".
   destruct (Spec.untag (Tag m3N) u) as [m|], (Spec.untag (Tag m3N) u') as [m'|];
     try done.
   + iModIntro. iRight. iExists m, m'. iSplit; first done. by iLeft.
   + iModIntro. by iLeft.
-- iMod (seals_R_lookup with "Hnsl Hl")
-    as "[(%x1 & %x1' & %e & _)|(%x2 & %x2' & %e & #Hx2)]"; first done.
+- iMod (seals_R_lookup with "Hctx Hnsl Hl")
+    as "[(%x1 & %x1' & %e & _)|(%x2 & %x2' & %e & #Hx2)]"; [done|solve_ndisj|..].
   + move: e; rewrite /base.m1_seal /aenc_seal => - [-> ->].
     rewrite !Spec.untag_tag_ne; try by move/Tag_inj => e; apply: m1N_m3N.
     iModIntro. by iLeft.
@@ -224,7 +224,11 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
   (⌜x2 = Spec.pkey skI⌝ → session (seed_l x1 nR) (seed_r x1' nR')))%I
   with "[-]" as ">#(Hinfo & Hc2 & Hsess)".
 { case: (decide (x2 = Spec.pkey skI)) => [eX|neX]; last first.
-  { iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+  { iDestruct (term_token_rel_token_l with "tt_n") as "(tt_n & _ & _)";
+      first solve_not_TSeal.
+    iDestruct (term_token_rel_token_r with "tts_n") as "(tts_n & _ & _)";
+      first solve_not_TSeal.
+    iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
             with "Hctx [] tt_n tts_n")
       as "[_ #Hpub]".
     { iIntros "!> #?". rewrite (publicly_related_nonce HnR HnR').
@@ -234,6 +238,30 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
     iDestruct "Hx1" as "[#H1|[%eX _]]"; last by case: neX; case: eX.
     by iFrame "#". }
   have eX' := proj1 HX eX. subst x2 x2'.
+  iDestruct (term_token_rel_token_l with "tt_p1") as "(tt_p1 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_l with "tt_p2") as "(tt_p2 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_l with "tt_p3") as "(tt_p3 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_l with "tt_q1") as "(tt_q1 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_l with "tt_pl") as "(tt_pl & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tts_p1") as "(tts_p1 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tts_p2") as "(tts_p2 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tts_p3") as "(tts_p3 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tts_q1") as "(tts_q1 & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tts_pl") as "(tts_pl & _ & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_l with "tt_s") as "(tt_s & tt_s_seal & _)";
+    first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tts_s") as "(tts_s & tts_s_seal & _)";
+    first solve_not_TSeal.
   iMod (public_rel_secret_seals_l (E:=⊤) HnR with "Hctx tt_n")
     as "(#sec & _ & prot & tok)"; first solve_ndisj.
   iMod (public_rel_secret_seals_r (E:=⊤) HnR' with "Hctx tts_n")
@@ -274,17 +302,7 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
           (tsup:=Spec.of_list [Spec.pkey skI; Spec.pkey skR; x1; nR])
           ltac:(solve_immediate_subterm) ltac:(solve_ndisj)
           with "Hctx by_p3 tt_p3") as "by_s".
-  rewrite (term_token_difference (Spec.of_list [Spec.pkey skI; Spec.pkey skR; x1; nR])
-             (↑cryptisN.@"public_rel".@"map") ⊤) //.
-  iDestruct "tt_s" as "[tt_s tt_s_rest]".
-  rewrite (term_token_difference (Spec.of_list [Spec.pkey skI; Spec.pkey skR; x1; nR])
-             (↑cryptisN.@"public_rel".@"flow") (⊤ ∖ ↑cryptisN.@"public_rel".@"map"));
-    last solve_ndisj.
-  iDestruct "tt_s_rest" as "[tt_s_flow tt_s_rest]".
-  rewrite (term_token_difference (Spec.of_list [Spec.pkey skI; Spec.pkey skR; x1; nR])
-             (↑cryptisN.@"public_rel".@"seal") (⊤ ∖ ↑cryptisN.@"public_rel".@"map" ∖ ↑cryptisN.@"public_rel".@"flow"));
-    last solve_ndisj.
-  iDestruct "tt_s_rest" as "[tt_s_seal _]".
+  iDestruct (rel_token_l_split with "tt_s") as "[tt_s tt_s_flow]".
   iMod (public_rel_flow_l_extend (E:=⊤) _ ltac:(solve_ndisj) with "Hctx tt_s_flow") as "fl_s".
   iMod (public_rel_secret_l (E:=⊤) _ _ ltac:(solve_ndisj) with "Hctx by_s tt_s")
     as "[_ #sec_s]".
@@ -301,17 +319,7 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
           (t'sup:=Spec.of_list [Spec.pkey skI'; Spec.pkey skR'; x1'; nR'])
           ltac:(solve_immediate_subterm) ltac:(solve_ndisj)
           with "Hctx by_p3' tts_p3") as "by_s'".
-  rewrite (term_token_spec_difference (Spec.of_list [Spec.pkey skI'; Spec.pkey skR'; x1'; nR'])
-             (↑cryptisN.@"public_rel".@"map") ⊤) //.
-  iDestruct "tts_s" as "[tts_s tts_s_rest]".
-  rewrite (term_token_spec_difference (Spec.of_list [Spec.pkey skI'; Spec.pkey skR'; x1'; nR'])
-             (↑cryptisN.@"public_rel".@"flow") (⊤ ∖ ↑cryptisN.@"public_rel".@"map"));
-    last solve_ndisj.
-  iDestruct "tts_s_rest" as "[tts_s_flow tts_s_rest]".
-  rewrite (term_token_spec_difference (Spec.of_list [Spec.pkey skI'; Spec.pkey skR'; x1'; nR'])
-             (↑cryptisN.@"public_rel".@"seal") (⊤ ∖ ↑cryptisN.@"public_rel".@"map" ∖ ↑cryptisN.@"public_rel".@"flow"));
-    last solve_ndisj.
-  iDestruct "tts_s_rest" as "[tts_s_seal _]".
+  iDestruct (rel_token_r_split with "tts_s") as "[tts_s tts_s_flow]".
   iMod (public_rel_flow_r_extend (E:=⊤) _ ltac:(solve_ndisj) with "Hctx tts_s_flow") as "fl_s'".
   iMod (public_rel_secret_r (E:=⊤) _ _ ltac:(solve_ndisj) with "Hctx by_s' tts_s")
     as "[_ #sec_s']".
@@ -341,9 +349,9 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
           with "[tt_s_seal tts_s_seal tt_k tts_k tt_h tts_h] sec_s sec_s' fl_s fl_s'")
     as "#Hss".
   { rewrite /key_tokens /never_sealed_under. iFrame. }
-  iMod (seals_inv_link (E:=⊤) (N:=sealsIN) ltac:(solve_ndisj)
+  iMod (seals_inv_link (E:=⊤) (N:=sealsIN) ltac:(solve_ndisj) ltac:(solve_ndisj)
     with "HinvI [by_tg3 by_tg3' tt_tg3 tts_tg3 tt_c3 tts_c3] link mk mk'")
-    as "[#Hc2 [#Hl _]]".
+    as "[#Hc2 #Hl]".
   { iExists x1, x1', nR, nR'. iSplit; first done.
     iSplitR; first by iFrame "#".
     iLeft. by iFrame. }

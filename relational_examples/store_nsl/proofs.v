@@ -96,12 +96,16 @@ Proof.
 iIntros "#Hctx #Hinv tok" (s s') "(ns & tt_k & tts_k & _) #sec #sec' prot prot'".
 iPoseProof (term_token_minted with "tt_k") as "#mk".
 iPoseProof (term_token_spec_minted_spec with "tts_k") as "#mk'".
+iDestruct (term_token_rel_token_l with "tt_k") as "(tt_k & _ & _)";
+  first (rewrite /sess_key; solve_not_TSeal).
+iDestruct (term_token_rel_token_r with "tts_k") as "(tts_k & _ & _)";
+  first (rewrite /sess_key; solve_not_TSeal).
 iMod (public_rel_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
-        with "Hctx sec prot tt_k") as "(#sec_k & _)".
+        with "Hctx sec prot tt_k") as "[#sec_k _]".
 iMod (public_rel_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
-        with "Hctx sec' prot' tts_k") as "(#sec_k' & _)".
+        with "Hctx sec' prot' tts_k") as "[#sec_k' _]".
 iInv "Hinv" as "[>(free & log0 & log1)|(%k0 & %k0' & >(%s0 & %s0' & _ & #m0 & _) & _)]";
   last by iDestruct (term_meta_token with "tok m0") as "[]".
 iMod (term_meta_set sessN (s, s') with "tok") as "#m1"; first done.
@@ -114,14 +118,15 @@ by iApply (conn_state_init γ Φs (SEncKey s) (SEncKey s') with "ns [$log0 $log1
 Qed.
 
 Lemma session_keys E skI skI' skR skR' s s' :
-  ↑sealsIN ⊆ E →
+  ↑sealsIN ⊆ E → ↑cryptisN ⊆ E ∖ ↑sealsIN →
+  cryptis_rel_ctx -∗
   nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   session skI skI' skR skR' s s' ={E}=∗
   conn_keys (key_sess skI) (SEncKey s) (SEncKey s').
 Proof.
-iIntros (HE) "#Hnsl #Hs".
-iMod (session_sess with "Hnsl Hs") as (nI nI' nR nR' [-> ->]) "(_ & #HnR & #ss & #ss' & #Hss)";
-  first done.
+iIntros (HN HE) "#Hctx #Hnsl #Hs".
+iMod (session_sess with "Hctx Hnsl Hs") as (nI nI' nR nR' [-> ->]) "(_ & #HnR & #ss & #ss' & #Hss)";
+  [done..|].
 iModIntro. iPoseProof "Hss" as "(_ & _ & mk & mk' & sk & sk')".
 iSplit; first by iExists _, _; iSplit; last iFrame "Hss".
 iFrame "mk mk' sk sk' ss ss'".
@@ -141,7 +146,7 @@ rel_apply (rel_init with "Hctx Hc Hnsl pub_pkR").
 iIntros (? ?) "[[-> ->]|(%kk & %kk' & [-> ->] & Hsess)]" => /=.
 { rel_pures. rel_values. }
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
-iMod (session_keys with "Hnsl Hs") as "#Hk"; first solve_ndisj.
+iMod (session_keys with "Hctx Hnsl Hs") as "#Hk"; [solve_ndisj..|].
 rel_pures. rewrite /sess_key.
 rel_apply (rel_conn_new γ (rl:=0) with "Hc Hk log"); first by left.
 iIntros (cs cs') "Hh". rel_pures. rel_values. iModIntro. iRight. iExists cs, cs'. by iFrame.
@@ -168,7 +173,7 @@ case: (decide (pkI = Spec.pkey skI)) => [eX|neX]; last first.
 rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
-iMod (session_keys with "Hnsl Hs") as "#Hk"; first solve_ndisj.
+iMod (session_keys with "Hctx Hnsl Hs") as "#Hk"; [solve_ndisj..|].
 rewrite /sess_key.
 rel_apply (rel_conn_new γ (rl:=1) with "Hc Hk log"); first by right.
 iIntros (cs cs') "Hh". rel_pures.

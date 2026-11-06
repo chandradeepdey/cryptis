@@ -69,12 +69,16 @@ Lemma ror_alloc skI :
     protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ ror_sess skI s s'.
 Proof.
 iIntros "#Hctx #Hinv tok2" (s s') "(_ & tt_k & tts_k & toks) #sec #sec' prot prot'".
+iDestruct (term_token_rel_token_l with "tt_k") as "(tt_k & _ & _)";
+  first (rewrite /sess_key; solve_not_TSeal).
+iDestruct (term_token_rel_token_r with "tts_k") as "(tts_k & _ & _)";
+  first (rewrite /sess_key; solve_not_TSeal).
 iMod (public_rel_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
-        with "Hctx sec prot tt_k") as "(#sec_k & _)".
+        with "Hctx sec prot tt_k") as "[#sec_k _]".
 iMod (public_rel_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
-        with "Hctx sec' prot' tts_k") as "(#sec_k' & _)".
+        with "Hctx sec' prot' tts_k") as "[#sec_k' _]".
 iInv "Hinv" as "[>tok|(%s0 & %s0' & _ & >tok2' & _)]"; last first.
 { iDestruct (term_token_disj with "tok2 tok2'") as %dis.
   pose proof (nclose_non_empty sess2N). set_solver. }
@@ -85,15 +89,16 @@ iNext. iRight. iExists s, s'. iFrame "Hs tok2". by iLeft.
 Qed.
 
 Lemma claim_hash E skI skI' skR skR' s s' :
-  ↑sealsIN ⊆ E → ↑rorN ⊆ E →
+  ↑sealsIN ⊆ E → ↑cryptisN ⊆ E ∖ ↑sealsIN → ↑rorN ⊆ E →
+  cryptis_rel_ctx -∗
   nsl_ctx skI skI' skR skR' (ror_sess skI) -∗
   inv rorN (ror_inv skI) -∗
   session skI skI' skR skR' s s' -∗ claim skI ={E}=∗
   hash_tokens s s' ∗ secret_in_l (sess_key s) ∗ secret_in_r (sess_key s').
 Proof.
-iIntros (HE HE') "#Hnsl #Hinv #Hs claim".
-iMod (session_sess with "Hnsl Hs") as (nI nI' nR nR' [Hs1 Hs2]) "(_ & _ & _ & _ & #Hss)";
-  first done.
+iIntros (HN HE HE') "#Hctx #Hnsl #Hinv #Hs claim".
+iMod (session_sess with "Hctx Hnsl Hs") as (nI nI' nR nR' [Hs1 Hs2]) "(_ & _ & _ & _ & #Hss)";
+  [done..|].
 rewrite -Hs1 -Hs2. iPoseProof "Hss" as "(Hm & sec & sec')".
 iInv "Hinv" as "[>tok|(%s0 & %s0' & >#[Hm0 _] & >tok2 & >slot)]".
 { by iDestruct (term_meta_token with "tok Hm") as "[]". }
@@ -177,10 +182,13 @@ case: b; rel_pures.
   iIntros (k') "%Hk' #mint_k' tok_k' _".
   destruct k' as [n']. simpl in Hk'. case/is_nonceP: Hk' => a' e. subst n'.
   iEval (rewrite minted_spec_senc) in "mint_k'".
+  iDestruct (term_token_rel_token_l with "tok") as "(tok & _ & _)"; first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tok_k'") as "(tok_k' & _ & _)";
+    first solve_not_TSeal.
   iMod (public_rel_publish (E:=⊤) (t:=THash (sess_key s)) (t':=TNonce a') ltac:(solve_ndisj)
           with "Hctx [] tok tok_k'")
     as "[_ #Hpub]".
-  { iIntros "!> #link". rewrite /=. iSplit; first done. iSplit; first done. by iSplit. }
+  { iIntros "!> #link". by iApply (publicly_related_opaque with "mint mint_k' link sec"). }
   iAssert (PUB⟨SEncKey (THash (sess_key s)), SEncKey (TNonce a')⟩) as "#Hk".
   { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
   rel_prims.
@@ -190,10 +198,12 @@ case: b; rel_pures.
   iIntros (k) "%Hk #mint_k tok_k _".
   destruct k as [n]. simpl in Hk. case/is_nonceP: Hk => a e. subst n.
   iEval (rewrite minted_senc) in "mint_k".
+  iDestruct (term_token_rel_token_l with "tok_k") as "(tok_k & _ & _)"; first solve_not_TSeal.
+  iDestruct (term_token_rel_token_r with "tok'") as "(tok' & _ & _)"; first solve_not_TSeal.
   iMod (public_rel_publish (E:=⊤) (t:=TNonce a) (t':=THash (sess_key s')) ltac:(solve_ndisj)
           with "Hctx [] tok_k tok'")
     as "[_ #Hpub]".
-  { iIntros "!> #link". rewrite /=. iSplit; first done. iSplit; first done. by iSplit. }
+  { iIntros "!> #link". by iApply (publicly_related_opaque with "mint_k mint' link"). }
   iAssert (PUB⟨SEncKey (TNonce a), SEncKey (THash (sess_key s'))⟩) as "#Hk".
   { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
   rel_prims.
@@ -230,7 +240,7 @@ case: (decide (pkI = Spec.pkey skI)) => [eX|neX]; last first.
 rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
-iMod (claim_hash with "Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
+iMod (claim_hash with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
 by iApply (rel_reveal with "Hctx Hc toks sec sec'").
 Qed.
 
@@ -264,7 +274,7 @@ case: (decide (pkX = Spec.pkey skR)) => [eX|neX]; last first.
 rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
-iMod (claim_hash with "Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
+iMod (claim_hash with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
 by iApply (rel_reveal with "Hctx Hc toks sec sec'").
 Qed.
 
