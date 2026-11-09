@@ -26,15 +26,7 @@ Abbreviation iProp := (iProp Σ).
 
 Definition gameN := nroot.@"game".
 
-(** The game freezes every ephemeral and tells its peer so. *)
-Definition game_pred si rl : iProp :=
-  exp_frozen g (eph_share (swap_role rl) si).
-
-Definition keep (x : nonce) : iProp := □ (public x ↔ ▷ False).
-
-(** What a role's specification gives the game when it completes: besides the
-    session, its own frozen ephemeral and its peer's, unless the password or
-    the key leaked. *)
+(** What a role's specification gives the game when it completes. *)
 Definition raw_res pw (rl : role) (r : option term) : iProp :=
   match r with
   | None => True
@@ -42,18 +34,15 @@ Definition raw_res pw (rl : role) (r : option term) : iProp :=
       ∃ si, ⌜t = si_result si⌝ ∗
             ⌜session_of rl si⌝ ∗
             public (si_uid si) ∗
-            session pw si ∗
-            release_token (share_of rl si) ∗
-            term_token (share_of rl si) (⊤ ∖ ↑opN) ∗
-            (▷ public pw ∨ exp_frozen g (eph_share rl si)) ∗
-            (public (si_key si) ∨ exp_frozen g (eph_share (swap_role rl) si))
+            session pw (λ _, False)%I rl si ∗
+            term_token (share_of rl si) (↑gameN)
   end.
 
 Definition raw_res' pw rl (x : val) : iProp :=
   ∃ r : option term, ⌜x = repr r⌝ ∗ raw_res pw rl r.
 
 (** What the game keeps: the key stays secret, even after the password leaks,
-    because the game never releases its tokens. *)
+    because the game never releases a session. *)
 Definition session_res (rl : role) (r : option term) : iProp :=
   match r with
   | None => True
@@ -71,40 +60,24 @@ Definition session_secret (r : option term) : iProp :=
   | Some t => ∃ si, ⌜t = si_result si⌝ ∗ □ (public (si_key si) → ▷ False)
   end.
 
-(* The conversion needs the password to be secret at the time; the laters
-   come from the long-term keys' predicate, [▷ □ public pw]. *)
+(* The conversion needs the password, and for the client the file, to be
+   secret at the time. *)
 Lemma raw_res_session_res pw rl r :
-  secret pw -∗ raw_res pw rl r ={⊤}=∗ secret pw ∗ ▷ ▷ ◇ session_res rl r.
+  secret pw -∗
+  (if rl is Init then file_secret pw else True) -∗
+  raw_res pw rl r -∗
+  secret pw ∗ (if rl is Init then file_secret pw else True) ∗
+  ◇ session_res rl r.
 Proof.
-case: r => [t|] /=; iIntros "s_pw Hr";
-  last by iFrame "s_pw"; iIntros "!> !> !> !>".
-iDestruct "Hr" as "(%si & -> & %sh & #p_uid & #sess & rel & tok & keep & gift)".
-iMod (unrelease rl with "rel") as "#un".
-iAssert (▷ ▷ ◇ False ∨
-         exp_frozen g (si_cshare si) ∗ exp_frozen g (si_sshare si))%I
-  as "#frozen".
-{ iDestruct "sess" as "(_ & #st_pw & _ & [[#p_pw _]|#sec])".
-  { iLeft. iNext. iDestruct (secret_not_public with "s_pw p_pw") as "contra".
-    iNext. by iDestruct "contra" as "[]". }
-  iDestruct "keep" as "[#p_pw|#own]".
-  { iLeft. iNext. iDestruct (secret_not_public with "s_pw p_pw") as "contra".
-    iNext. by iDestruct "contra" as "[]". }
-  iDestruct "gift" as "[#p_k|#peer]";
-    last by iRight; clear sh; case: rl; iSplit.
-
-  iLeft. iDestruct ("sec" with "p_k") as "[#rel|#st]".
-  - iNext. by iDestruct ("un" with "rel") as "[]".
-  - iDestruct ("st_pw" with "st") as "#p_pw". iNext.
-    iDestruct (secret_not_public with "s_pw p_pw") as "contra".
-    iNext. by iDestruct "contra" as "[]". }
-iPoseProof (secret_session with "s_pw sess") as "#ok".
-iFrame "s_pw". iIntros "!> !> !>".
-iDestruct "frozen" as "[>[]|[#fr_u #fr_s]]".
-iMod "ok" as "#ok". iModIntro.
-iExists si. iSplit; first by []. iSplit; first by [].
-iSplit; first by [].
-iSplit; first by iApply (frozen_key_secrecy with "un fr_u fr_s ok").
-iApply (term_token_drop with "tok"); solve_ndisj.
+case: r => [t|] /=; iIntros "s_pw s_file Hr"; last by iFrame "s_pw s_file".
+iDestruct "Hr" as "(%si & -> & %sh & #p_uid & #sess & tok)".
+iPoseProof (secret_session with "s_pw s_file sess") as "#nc".
+iFrame "s_pw s_file". iMod "nc" as "#nc".
+iPoseProof (session_ok with "sess nc") as "#ok".
+iModIntro. iExists si. iFrame "tok".
+do 3!(iSplit; first done).
+iIntros "!> #p". iDestruct ("ok" with "p") as "f". iNext.
+by iDestruct "f" as "#[]".
 Qed.
 
 #[global] Instance session_secret_persistent r : Persistent (session_secret r).
@@ -178,22 +151,46 @@ Definition game_round : val := λ: "c" "db" "uid" "pw",
   unguessable_option (Snd "SKs") "c";;
   "SKs".
 
-(** The game: two rounds, each tested while the password is secret; then a
-    password guess, which must fail; then the password leaks, and the last
-    round's keys must still be unguessable. *)
+(** A round after the file is stolen.  The attacker may now impersonate the
+    server to the client, but not the client to the server, so only the
+    server's key is tested. *)
+Definition stolen_round : val := λ: "c" "db" "uid" "pw",
+  let: "SKs" := Server.session "db" "c" ||| Client.session "uid" "c" "pw" in
+  unguessable_option (Fst "SKs") "c";;
+  Fst "SKs".
+
+(** The attacker gets a fresh candidate password and must evaluate the OPRF
+    of the file at it, without querying the server again. *)
+Definition oprf_challenge : val := λ: "c" "file",
+  bind: "file_l" := list_of_term "file" in
+  list_match: [ "k_s"; "p_s"; "P_s"; "P_u"; "envelope" ] := "file_l" in
+  let: "w" := mk_nonce #() in
+  send "c" "w" ;;
+  assert: (~ eq_term (recv "c") (OPRF "k_s" "w")).
+
+(** The game: two rounds, each tested while the password and the file are
+    secret; then the OPRF challenge, which must fail; then the file is stolen,
+    and a third round follows; then a password guess, which must fail; then
+    the password leaks, and the keys of the last two rounds must still be
+    unguessable. *)
 Definition game : val := λ: "c",
   let: "uid" := mk_nonce #() in
   let: "pw" := mk_nonce #() in
   let: "db" := AList.new #() in
-  AList.insert "db" "uid" (Server.make_file "pw") ;;
+  let: "file" := Server.make_file "pw" in
+  AList.insert "db" "uid" "file" ;;
   let: "SK1s" := game_round "c" "db" "uid" "pw" in
   let: "SK2s" := game_round "c" "db" "uid" "pw" in
+  oprf_challenge "c" "file" ;;
+  send "c" "file" ;;
+  let: "SK3" := stolen_round "c" "db" "uid" "pw" in
   assert: (~ eq_term "pw" (recv "c")) ;;
   neq_options (Fst "SK1s") (Fst "SK2s") ;;
   neq_options (Snd "SK1s") (Snd "SK2s") ;;
   send "c" "pw" ;;
   unguessable_option (Fst "SK2s") "c" ;;
   unguessable_option (Snd "SK2s") "c" ;;
+  unguessable_option "SK3" "c" ;;
   #().
 
 (** One round of the game: both roles run in parallel, and both results are
@@ -204,59 +201,53 @@ Lemma wp_game_round c db alist uid pw :
   cryptis_ctx -∗
   channel c -∗
   opaque_ctx -∗
-  opaque_pred game_pred -∗
+  opaque_pred (λ _ _, True)%I (λ _, False)%I -∗
   public uid -∗
   minted pw -∗
   opaque_db (λ _, pw) alist -∗
-  {{{ AList.is_alist db alist ∗ secret pw }}}
+  {{{ AList.is_alist db alist ∗ opaque_logs (λ _, pw) alist ∗ secret pw ∗
+      file_secret pw }}}
     game_round c db uid pw
   {{{ (rs rc : option term), RET (repr rs, repr rc)%V;
-      AList.is_alist db alist ∗
-      secret pw ∗
+      AList.is_alist db alist ∗ opaque_logs (λ _, pw) alist ∗
+      secret pw ∗ file_secret pw ∗
       session_res Resp rs ∗
       session_res Init rc }}}.
 Proof.
-iIntros "#? #Hchannel #ctx #N_φ #p_uid #m_pw #Hdb %Φ !> [Halist s_pw] Hpost".
+iIntros "#? #Hchannel #ctx #N_φ #p_uid #m_pw #Hdb %Φ !>
+         (Halist & Hlogs & s_pw & s_file) Hpost".
 wp_lam. wp_pures.
-wp_apply (wp_par (λ x, raw_res' pw Resp x ∗ AList.is_alist db alist)%I
-                 (λ x, raw_res' pw Init x)%I with "[Halist]").
-- iApply (wp_server_session db c (λ _, pw) alist game_pred keep
-            with "[Halist]") => //.
-  { iFrame "Halist"; do !iSplit => //.
-    iIntros "%si %x_s %e s _". iMod (freeze_secret with "s") as "#s".
-    iModIntro. iSplit => //. rewrite /game_pred /= e.
-    by iApply exp_frozen_intro. }
-  iNext. iIntros "%r [Halist Hres]". iFrame "Halist".
+wp_apply (wp_par (λ x, raw_res' pw Resp x ∗ AList.is_alist db alist ∗
+                       opaque_logs (λ _, pw) alist)%I
+                 (λ x, raw_res' pw Init x)%I with "[Halist Hlogs]").
+- iApply (wp_server_session db c (λ _, pw) alist (λ _ _, True)%I
+            (λ _, False)%I (λ si, term_token (si_sshare si) (↑gameN))
+            with "[Halist Hlogs]") => //.
+  { iFrame "Halist Hlogs"; do !iSplit => //.
+    iIntros "%si tok !>". iSplit => //.
+    iApply (term_token_drop with "tok"). solve_ndisj. }
+  iNext. iIntros "%r (Halist & Hlogs & Hres)". iFrame "Halist Hlogs".
   iExists r. iSplit; first by [].
   iDestruct "Hres"
-    as "[-> | (%si & %x_s & -> & %ss & %eX & (_ & #p_uid' & _ & _ & _)
-              & _ & #sess & rel & tok & #keep & res)]" => //=.
-
-  iExists si. iSplit; first by []. iSplit; first by [].
-  iSplit => //. iSplit => //.
-  rewrite /share_of /=. iFrame "rel tok".
-  iSplitR "res"; last by iDestruct "res" as "[?|?]"; eauto.
-  iRight. rewrite /eph_share /= eX. by iApply exp_frozen_intro.
-- iApply (wp_client_session uid pw c game_pred keep) => //.
+    as "[-> | (%si & -> & %ss & (_ & #p_uid' & _ & _ & _) & _ & #sess & tok
+               & _)]" => //=.
+  iExists si. by iFrame "p_uid' sess tok".
+- iApply (wp_client_session uid pw c (λ _ _, True)%I (λ _, False)%I
+            (λ si, term_token (si_blind si) (↑gameN)) True%I) => //.
   { do !iSplit => //.
-    iIntros "%si %x_u %e s _". iMod (freeze_secret with "s") as "#s".
-    iModIntro. iSplit => //. rewrite /game_pred /= e.
-    by iApply exp_frozen_intro. }
+    iIntros "%si tok !>". iSplit => //.
+    iApply (term_token_drop with "tok"). solve_ndisj. }
   iNext. iIntros "%r Hres".
   iExists r. iSplit; first by [].
-  iDestruct "Hres" as "[-> | (%si & %x_u & -> & (_ & #p_uid' & _ & _ & _)
-                                 & #sess & rel & tok & keep & res)]" => //=.
-  iExists si. iSplit; first by []. iSplit; first by [].
-  iSplit => //. iSplit => //.
-  rewrite /share_of /=. iFrame "rel tok".
-  iSplitL "keep".
-  { iDestruct "keep" as "[#p_pw|[%eX #keep]]"; first by iLeft.
-    iRight. rewrite /eph_share /= eX. by iApply exp_frozen_intro. }
-  by iDestruct "res" as "[?|?]"; eauto.
-- iIntros "%vs %vc [[(%rs & -> & Hs) Halist] (%rc & -> & Hc)]".
+  iDestruct "Hres" as "[[-> _] | (%si & -> & (_ & #p_uid' & _ & _ & _)
+                                    & #sess & tok & _)]" => //=.
+  iExists si. by iFrame "p_uid' sess tok".
+- iIntros "%vs %vc [((%rs & -> & Hs) & Halist & Hlogs) (%rc & -> & Hc)]".
   iNext.
-  iMod (raw_res_session_res with "s_pw Hs") as "[s_pw Hs]".
-  iMod (raw_res_session_res with "s_pw Hc") as "[s_pw Hc]".
+  iDestruct (raw_res_session_res pw Resp with "s_pw [//] Hs")
+    as "(s_pw & _ & Hs)".
+  iDestruct (raw_res_session_res pw Init with "s_pw s_file Hc")
+    as "(s_pw & s_file & Hc)".
   wp_pures.
   iMod "Hs" as "Hs". iMod "Hc" as "Hc".
   iDestruct (session_res_secret with "Hs") as "#sec_s".
@@ -270,11 +261,105 @@ wp_apply (wp_par (λ x, raw_res' pw Resp x ∗ AList.is_alist db alist)%I
   iModIntro. iApply "Hpost". iFrame.
 Qed.
 
+Lemma wp_stolen_round c db alist uid pw :
+  cryptis_ctx -∗
+  channel c -∗
+  opaque_ctx -∗
+  opaque_pred (λ _ _, True)%I (λ _, False)%I -∗
+  public uid -∗
+  minted pw -∗
+  opaque_db (λ _, pw) alist -∗
+  {{{ AList.is_alist db alist ∗ opaque_logs (λ _, pw) alist ∗ secret pw }}}
+    stolen_round c db uid pw
+  {{{ (rs : option term), RET (repr rs);
+      AList.is_alist db alist ∗ opaque_logs (λ _, pw) alist ∗
+      secret pw ∗ session_secret rs }}}.
+Proof.
+iIntros "#? #Hchannel #ctx #N_φ #p_uid #m_pw #Hdb %Φ !>
+         (Halist & Hlogs & s_pw) Hpost".
+wp_lam. wp_pures.
+wp_apply (wp_par (λ x, raw_res' pw Resp x ∗ AList.is_alist db alist ∗
+                       opaque_logs (λ _, pw) alist)%I
+                 (λ _, True)%I with "[Halist Hlogs]").
+- iApply (wp_server_session db c (λ _, pw) alist (λ _ _, True)%I
+            (λ _, False)%I (λ si, term_token (si_sshare si) (↑gameN))
+            with "[Halist Hlogs]") => //.
+  { iFrame "Halist Hlogs"; do !iSplit => //.
+    iIntros "%si tok !>". iSplit => //.
+    iApply (term_token_drop with "tok"). solve_ndisj. }
+  iNext. iIntros "%r (Halist & Hlogs & Hres)". iFrame "Halist Hlogs".
+  iExists r. iSplit; first by [].
+  iDestruct "Hres"
+    as "[-> | (%si & -> & %ss & (_ & #p_uid' & _ & _ & _) & _ & #sess & tok
+               & _)]" => //=.
+  iExists si. by iFrame "p_uid' sess tok".
+- iApply (wp_client_session uid pw c (λ _ _, True)%I (λ _, False)%I
+            (λ _, True)%I True%I) => //.
+  { do !iSplit => //. by iIntros "%si _ !>". }
+  by iIntros "!> %r _".
+- iIntros "%vs %vc [((%rs & -> & Hs) & Halist & Hlogs) _]".
+  iNext.
+  iDestruct (raw_res_session_res pw Resp with "s_pw [//] Hs")
+    as "(s_pw & _ & Hs)".
+  wp_pures.
+  iMod "Hs" as "Hs".
+  iDestruct (session_res_secret with "Hs") as "#sec_s".
+  wp_bind (unguessable_option _ _).
+  iApply wp_wand; first by iApply (wp_unguessable_option with "Hchannel sec_s").
+  iIntros "% _". wp_pures.
+  iModIntro. iApply "Hpost". by iFrame.
+Qed.
+
+Lemma wp_oprf_challenge c pw file B :
+  cryptis_ctx -∗
+  channel c -∗
+  opaque_ctx -∗
+  opaque_file pw file -∗
+  {{{ oprf_log pw B ∗ file_secret pw }}}
+    oprf_challenge c file
+  {{{ v, RET v; oprf_log pw B ∗ file_secret pw }}}.
+Proof.
+iIntros "#? #Hchannel #(HpredH & _) #Hfile %Φ !> [[auth #m_B] s_file] Hpost".
+iDestruct "Hfile"
+  as "(%k_s & %p_s & %p_u & %envelope & -> & _ & #s_k & #e_k & _)".
+wp_lam. wp_pures.
+wp_apply wp_list_of_term. rewrite Spec.of_listK. wp_pures.
+rewrite subst_list_match /=.
+wp_list_match => [k_s' p_s' P_s' P_u' envelope' e' | ]; last by [].
+symmetry in e'; inversion e'; subst; clear e'.
+(* The candidate is fresh with respect to the bases the server evaluated. *)
+wp_apply (wp_mk_nonce_freshN B (λ _, True)%I (λ _, False)%I (λ _, ∅)) => //.
+- iIntros "%t %t_B". by iApply (big_sepS_elem_of with "m_B").
+- by iIntros "%t"; rewrite big_sepS_empty.
+iIntros "%w %fresh #m_w #p_w _ _ _".
+wp_pures. wp_apply wp_send => //.
+  by iApply "p_w"; iIntros "!> !>".
+wp_pures. wp_apply wp_assert.
+rewrite /OPRF. wp_pures.
+wp_apply wp_H'; wp_apply wp_texp; wp_list; wp_apply wp_H.
+wp_apply wp_recv => //. iIntros "%y #p_y".
+wp_eq_term Hy.
+- subst y.
+  iDestruct (public_THashE with "HpredH p_y") as "[p | [_ contra]]";
+    last by wp_pures; iDestruct "contra" as "[]".
+  iEval (rewrite public_of_list /=) in "p".
+  iDestruct "p" as "(_ & p & _)".
+  have Nx : negb (is_exp (hash_result "H" w)) by [].
+  have Nm : negb (is_gmul (hash_result "H" w)) by [].
+  iPoseProof (public_oprf pw _ Nx Nm with "s_k e_k p") as "q".
+  wp_pures.
+  iDestruct "q" as "[st | q]".
+  + by iDestruct (file_secret_stolen with "s_file st") as "[]".
+  + iDestruct (oprf_log_queried with "[$auth $m_B] q") as %w_B.
+    case: (fresh _ w_B). apply: STHash. exact: subterm_tag.
+- wp_pures. iModIntro. iSplit => //. iApply "Hpost". by iFrame.
+Qed.
+
 Lemma wp_game c :
   cryptis_ctx -∗
   channel c -∗
   opaque_ctx -∗
-  opaque_pred game_pred -∗
+  opaque_pred (λ _ _, True)%I (λ _, False)%I -∗
   WP game c {{ _, True }}.
 Proof.
 iIntros "#Hcryptis #Hchannel #ctx #N_φ".
@@ -288,7 +373,11 @@ wp_pures.
 (* The password is a secret that the game itself leaks later. *)
 iMod pending_alloc as (γ) "pend".
 wp_apply (wp_mk_nonce (fun _ => shot γ 1)%I (fun _ => False)%I) => //.
-iIntros "%pw #Hminpw #Hpw_shot #Hdhpw _ _".
+iIntros "%pw #Hminpw #Hpw_shot #Hdhpw _ tok_pw".
+iDestruct (term_token_difference pw (↑opN.@"log") with "tok_pw")
+  as "[tok_log tok_pw]"; first solve_ndisj.
+iDestruct (term_token_drop (↑opN.@"stolen") with "tok_pw") as "s_file";
+  first solve_ndisj.
 iAssert (□ (public pw ↔ ▷ shot γ 1))%I as "#Hpw_shot'".
 { iModIntro; iSplit.
   - iIntros "#p". iDestruct ("Hpw_shot" with "p") as "#s". iNext.
@@ -301,9 +390,9 @@ iApply AList.wp_empty => //.
 iNext.
 iIntros "%db Halist".
 wp_pures.
-wp_apply (wp_make_file pw).
-do !iSplit => //.
-iIntros "%file #Hopaquefile" => /=.
+wp_apply (wp_make_file pw with "[$tok_log]"); first by iFrame "#".
+iIntros "%file [#Hopaquefile log]" => /=.
+wp_pures.
 wp_bind (AList.insert db uid file).
 iApply (AList.wp_insert with "Halist").
 iNext.
@@ -312,15 +401,38 @@ wp_pures.
 iAssert (opaque_db (λ _, pw) (<[TNonce uid:=file]> ∅ : gmap term val)) as "#Hdb".
   iApply big_sepM_insert => //.
   by do !iSplit => //.
+iAssert (opaque_logs (λ _, pw) (<[TNonce uid:=file]> ∅ : gmap term val))
+  with "[log]" as "Hlogs".
+{ iApply big_sepM_insert => //. iSplitL "log"; last done. by iExists ∅. }
 wp_apply (wp_game_round
-            with "Hcryptis Hchannel ctx N_φ Hpubuid' Hminpw Hdb [$Halist $s_pw]").
-iIntros "%SKs1 %SKc1 (Halist & s_pw & Hs1 & Hc1)".
+            with "Hcryptis Hchannel ctx N_φ Hpubuid' Hminpw Hdb
+                  [$Halist $Hlogs $s_pw $s_file]").
+iIntros "%SKs1 %SKc1 (Halist & Hlogs & s_pw & s_file & Hs1 & Hc1)".
 wp_pures.
 wp_apply (wp_game_round
-            with "Hcryptis Hchannel ctx N_φ Hpubuid' Hminpw Hdb [$Halist $s_pw]").
-iIntros "%SKs2 %SKc2 (Halist & s_pw & Hs2 & Hc2)".
+            with "Hcryptis Hchannel ctx N_φ Hpubuid' Hminpw Hdb
+                  [$Halist $Hlogs $s_pw $s_file]").
+iIntros "%SKs2 %SKc2 (Halist & Hlogs & s_pw & s_file & Hs2 & Hc2)".
 iDestruct (session_res_secret with "Hs2") as "#sec_s".
 iDestruct (session_res_secret with "Hc2") as "#sec_c".
+wp_pures.
+iDestruct (big_sepM_insert with "Hlogs") as "[[%B log] Hlogs]"; first done.
+wp_apply (wp_oprf_challenge with "Hcryptis Hchannel ctx Hopaquefile
+                                  [$log $s_file]").
+iIntros "%v [log s_file]".
+iAssert (opaque_logs (λ _, pw) (<[TNonce uid:=file]> ∅ : gmap term val))
+  with "[log Hlogs]" as "Hlogs".
+{ iApply big_sepM_insert => //. iFrame "Hlogs". by iExists B. }
+wp_pures.
+(* The file is stolen. *)
+iMod (steal_file with "s_file") as "#stolen".
+iDestruct (public_opaque_file with "Hopaquefile stolen") as "(%t & -> & #p_t)".
+wp_apply wp_send => //.
+wp_pures.
+wp_apply (wp_stolen_round
+            with "Hcryptis Hchannel ctx N_φ Hpubuid' Hminpw Hdb
+                  [$Halist $Hlogs $s_pw]").
+iIntros "%SK3 (Halist & Hlogs & s_pw & #sec_3)".
 wp_pures.
 wp_apply wp_assert.
 wp_apply wp_recv => //.
@@ -351,8 +463,12 @@ iApply wp_wand; first by iApply (wp_unguessable_option with "Hchannel sec_s").
 iIntros "% _". wp_pures.
 wp_bind (unguessable_option _ _).
 iApply wp_wand; first by iApply (wp_unguessable_option with "Hchannel sec_c").
+iIntros "% _". wp_pures.
+wp_bind (unguessable_option _ _).
+iApply wp_wand; first by iApply (wp_unguessable_option with "Hchannel sec_3").
 iIntros "% _". by wp_pures.
 Qed.
+
 
 End Game.
 
@@ -368,7 +484,7 @@ apply (adequate_not_stuck NotStuck _ _ (λ v _, True)) => //.
 apply: cryptis_adequacy.
 iIntros (? ? c) "#ctx #chan (_ & _ & senc & hash)".
 iMod (opaqueGS_alloc with "hash senc") as (?) "(#? & tok & _ & _)"; eauto.
-iMod (opaque_pred_set game_pred with "tok") as "[#? _]"; eauto.
+iMod (opaque_pred_set (λ _ _, True)%I (λ _, False)%I with "tok") as "#?".
 
 by iApply (wp_game with "ctx chan [//] [//]").
 Qed.
