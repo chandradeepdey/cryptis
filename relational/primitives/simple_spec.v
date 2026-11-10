@@ -21,51 +21,51 @@ Implicit Types t : term.
 Implicit Types x : Z.
 Implicit Types Ψ : val → val → iProp Σ.
 
-Lemma rel_tint_l E K e x Ψ :
+Lemma refines_tint_l E K e x Ψ :
   (REL fill K (TInt x : expr) << e @ E : Ψ) -∗
   REL fill K (tint #x) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tint. Qed.
 
-Lemma rel_tint_r E K e x Ψ :
+Lemma refines_tint_r E K e x Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TInt x : expr) @ E : Ψ) -∗
   REL e << fill K (tint #x) @ E : Ψ.
 Proof. pure_twp_rel twp_tint. Qed.
 
-Lemma rel_to_int_l E K e t Ψ :
+Lemma refines_to_int_l E K e t Ψ :
   (REL fill K (repr (Spec.to_int t) : expr) << e @ E : Ψ) -∗
   REL fill K (to_int t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_to_int. Qed.
 
-Lemma rel_to_int_r E K e t Ψ :
+Lemma refines_to_int_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.to_int t) : expr) @ E : Ψ) -∗
   REL e << fill K (to_int t) @ E : Ψ.
 Proof. pure_twp_rel twp_to_int. Qed.
 
-Lemma rel_tuple_l E K e t1 t2 Ψ :
+Lemma refines_tuple_l E K e t1 t2 Ψ :
   (REL fill K (TPair t1 t2 : expr) << e @ E : Ψ) -∗
   REL fill K (tuple t1 t2) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tuple. Qed.
 
-Lemma rel_tuple_r E K e t1 t2 Ψ :
+Lemma refines_tuple_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TPair t1 t2 : expr) @ E : Ψ) -∗
   REL e << fill K (tuple t1 t2) @ E : Ψ.
 Proof. pure_twp_rel twp_tuple. Qed.
 
-Lemma rel_untuple_l E K e t Ψ :
+Lemma refines_untuple_l E K e t Ψ :
   (REL fill K (repr (Spec.untuple t) : expr) << e @ E : Ψ) -∗
   REL fill K (untuple t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_untuple. Qed.
 
-Lemma rel_untuple_r E K e t Ψ :
+Lemma refines_untuple_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.untuple t) : expr) @ E : Ψ) -∗
   REL e << fill K (untuple t) @ E : Ψ.
 Proof. pure_twp_rel twp_untuple. Qed.
 
-Lemma rel_term_of_list_l E K e ts Ψ :
+Lemma refines_term_of_list_l E K e ts Ψ :
   (REL fill K (repr (Spec.of_list ts) : expr) << e @ E : Ψ) -∗
   REL fill K (term_of_list (repr ts)) << e @ E : Ψ.
 Proof.
@@ -78,7 +78,7 @@ rewrite andb_True; split; first by apply term_pure.
 done.
 Qed.
 
-Lemma rel_term_of_list_r E K e ts Ψ :
+Lemma refines_term_of_list_r E K e ts Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.of_list ts) : expr) @ E : Ψ) -∗
   REL e << fill K (term_of_list (repr ts)) @ E : Ψ.
@@ -93,206 +93,206 @@ rewrite andb_True; split; first by apply term_pure.
 done.
 Qed.
 
-Lemma rel_list_of_term_l E K e t Ψ :
+Lemma refines_list_of_term_l E K e t Ψ :
   (REL fill K (repr (Spec.to_list t) : expr) << e @ E : Ψ) -∗
   REL fill K (list_of_term t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_list_of_term. Qed.
 
-Lemma rel_list_of_term_r E K e t Ψ :
+Lemma refines_list_of_term_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.to_list t) : expr) @ E : Ψ) -∗
   REL e << fill K (list_of_term t) @ E : Ψ.
 Proof. pure_twp_rel twp_list_of_term. Qed.
 
-Lemma rel_list_l `{!Repr A} E K e (xs : list A) Ψ :
+Lemma refines_list_l `{!Repr A} E K e (xs : list A) Ψ :
   (REL fill K (repr xs : expr) << e @ E : Ψ) -∗
   REL fill K (list_to_expr xs) << e @ E : Ψ.
 Proof.
 elim: xs K => [|x xs IH] /= K; iIntros "post".
-  by rel_apply_l rel_nil_l.
+  by rel_apply_l refines_nil_l.
 rel_bind_l (list_to_expr _); iApply IH.
-by rel_apply_l rel_cons_l.
+by rel_apply_l refines_cons_l.
 Qed.
 
-Lemma rel_list_r `{!Repr A} E K e (xs : list A) Ψ :
+Lemma refines_list_r `{!Repr A} E K e (xs : list A) Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr xs : expr) @ E : Ψ) -∗
   REL e << fill K (list_to_expr xs) @ E : Ψ.
 Proof.
 move=> ?.
 elim: xs K => [|x xs IH] /= K; iIntros "H".
-  by rel_apply_r rel_nil_r.
+  by rel_apply_r refines_nil_r.
 rel_bind_r (list_to_expr _); iApply IH.
-by rel_apply_r rel_cons_r.
+by rel_apply_r refines_cons_r.
 Qed.
 
-Lemma rel_tag_l E K e (N : term) t Ψ :
+Lemma refines_tag_l E K e (N : term) t Ψ :
   (REL fill K (repr (Spec.tag N t) : expr) << e @ E : Ψ) -∗
   REL fill K (tag N t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_tag. Qed.
 
-Lemma rel_tag_r E K e (N : term) t Ψ :
+Lemma refines_tag_r E K e (N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.tag N t) : expr) @ E : Ψ) -∗
   REL e << fill K (tag N t) @ E : Ψ.
 Proof. pure_twp_rel twp_tag. Qed.
 
-Lemma rel_untag_l E K e (N : term) t Ψ :
+Lemma refines_untag_l E K e (N : term) t Ψ :
   (REL fill K (repr (Spec.untag N t) : expr) << e @ E : Ψ) -∗
   REL fill K (untag N t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_untag. Qed.
 
-Lemma rel_untag_r E K e (N : term) t Ψ :
+Lemma refines_untag_r E K e (N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.untag N t) : expr) @ E : Ψ) -∗
   REL e << fill K (untag N t) @ E : Ψ.
 Proof. pure_twp_rel twp_untag. Qed.
 
-Lemma rel_key_l E K e kt (k : term) Ψ :
+Lemma refines_key_l E K e kt (k : term) Ψ :
   (REL fill K (TKey kt k : expr) << e @ E : Ψ) -∗
   REL fill K (key kt k) << e @ E : Ψ.
 Proof. pure_twp_rel twp_key. Qed.
 
-Lemma rel_key_r E K e kt (k : term) Ψ :
+Lemma refines_key_r E K e kt (k : term) Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TKey kt k : expr) @ E : Ψ) -∗
   REL e << fill K (key kt k) @ E : Ψ.
 Proof. pure_twp_rel twp_key. Qed.
 
-Lemma rel_seal_l E K e t1 t2 Ψ :
+Lemma refines_seal_l E K e t1 t2 Ψ :
   (REL fill K (TSeal t1 t2 : expr) << e @ E : Ψ) -∗
   REL fill K (seal t1 t2) << e @ E : Ψ.
 Proof. pure_twp_rel twp_seal. Qed.
 
-Lemma rel_seal_r E K e t1 t2 Ψ :
+Lemma refines_seal_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (TSeal t1 t2 : expr) @ E : Ψ) -∗
   REL e << fill K (seal t1 t2) @ E : Ψ.
 Proof. pure_twp_rel twp_seal. Qed.
 
-Lemma rel_hash_l E K e t Ψ :
+Lemma refines_hash_l E K e t Ψ :
   (REL fill K (THash t : expr) << e @ E : Ψ) -∗
   REL fill K (hash t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_hash. Qed.
 
-Lemma rel_hash_r E K e t Ψ :
+Lemma refines_hash_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (THash t : expr) @ E : Ψ) -∗
   REL e << fill K (hash t) @ E : Ψ.
 Proof. pure_twp_rel twp_hash. Qed.
 
-Lemma rel_derive_aenc_key_l K e t Ψ :
+Lemma refines_derive_aenc_key_l K e t Ψ :
   ▷ (REL fill K (AEncKey t : expr) << e : Ψ) -∗
   REL fill K (derive_aenc_key t) << e : Ψ.
 Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_aenc_key. Qed.
 
-Lemma rel_derive_aenc_key_r E K e t Ψ :
+Lemma refines_derive_aenc_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (AEncKey t : expr) @ E : Ψ) -∗
   REL e << fill K (derive_aenc_key t) @ E : Ψ.
 Proof.
-iIntros (?) "post". rel_rec_r. rel_apply_r rel_key_r.
+iIntros (?) "post". rel_rec_r. rel_apply_r refines_key_r.
 have <- : AEncKey t = TKey ADec t :> term by rewrite [term_of_aenc_key]unlock.
 by iApply "post".
 Qed.
 
-Lemma rel_derive_senc_key_l K e t Ψ :
+Lemma refines_derive_senc_key_l K e t Ψ :
   ▷ (REL fill K (SEncKey t : expr) << e : Ψ) -∗
   REL fill K (derive_senc_key t) << e : Ψ.
 Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_senc_key. Qed.
 
-Lemma rel_derive_senc_key_r E K e t Ψ :
+Lemma refines_derive_senc_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (SEncKey t : expr) @ E : Ψ) -∗
   REL e << fill K (derive_senc_key t) @ E : Ψ.
 Proof.
-iIntros (?) "post". rel_rec_r. rel_apply_r rel_key_r.
+iIntros (?) "post". rel_rec_r. rel_apply_r refines_key_r.
 have <- : SEncKey t = TKey SEnc t :> term by rewrite [term_of_senc_key]unlock.
 by iApply "post".
 Qed.
 
-Lemma rel_derive_sign_key_l K e t Ψ :
+Lemma refines_derive_sign_key_l K e t Ψ :
   ▷ (REL fill K (SignKey t : expr) << e : Ψ) -∗
   REL fill K (derive_sign_key t) << e : Ψ.
 Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_sign_key. Qed.
 
-Lemma rel_derive_sign_key_r E K e t Ψ :
+Lemma refines_derive_sign_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (SignKey t : expr) : Ψ) -∗
   REL e << fill K (derive_sign_key t) : Ψ.
 Proof.
-iIntros (?) "post". rel_rec_r. rel_apply_r rel_key_r.
+iIntros (?) "post". rel_rec_r. rel_apply_r refines_key_r.
 have <- : SignKey t = TKey Sign t :> term by rewrite [term_of_sign_key]unlock.
 by iApply "post".
 Qed.
 
-Lemma rel_to_key_l E K e t Ψ :
+Lemma refines_to_key_l E K e t Ψ :
   (REL fill K (repr (Spec.to_key t) : expr) << e @ E : Ψ) -∗
   REL fill K (to_key t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_to_key. Qed.
 
-Lemma rel_to_key_r E K e t Ψ :
+Lemma refines_to_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.to_key t) : expr) @ E : Ψ) -∗
   REL e << fill K (to_key t) @ E : Ψ.
 Proof. pure_twp_rel twp_to_key. Qed.
 
-Lemma rel_open_key_l E K e t Ψ :
+Lemma refines_open_key_l E K e t Ψ :
   (REL fill K (repr (Spec.open_key t) : expr) << e @ E : Ψ) -∗
   REL fill K (open_key t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_open_key. Qed.
 
-Lemma rel_open_key_r E K e t Ψ :
+Lemma refines_open_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.open_key t) : expr) @ E : Ψ) -∗
   REL e << fill K (open_key t) @ E : Ψ.
 Proof. pure_twp_rel twp_open_key. Qed.
 
-Lemma rel_open_l E K e t1 t2 Ψ :
+Lemma refines_open_l E K e t1 t2 Ψ :
   (REL fill K (repr (Spec.open t1 t2) : expr) << e @ E : Ψ) -∗
   REL fill K (open t1 t2) << e @ E : Ψ.
 Proof. pure_twp_rel twp_open. Qed.
 
-Lemma rel_open_r E K e t1 t2 Ψ :
+Lemma refines_open_r E K e t1 t2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.open t1 t2) : expr) @ E : Ψ) -∗
   REL e << fill K (open t1 t2) @ E : Ψ.
 Proof. pure_twp_rel twp_open. Qed.
 
-Lemma rel_enc_l E K e k N t Ψ :
+Lemma refines_enc_l E K e k N t Ψ :
   (REL fill K (Spec.enc k N t : expr) << e @ E : Ψ) -∗
   REL fill K (enc k N t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_enc. Qed.
 
-Lemma rel_enc_r E K e k N t Ψ :
+Lemma refines_enc_r E K e k N t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (enc k N t) @ E : Ψ.
 Proof. pure_twp_rel twp_enc. Qed.
 
-Lemma rel_dec_l E K e (k N : term) t Ψ :
+Lemma refines_dec_l E K e (k N : term) t Ψ :
   (REL fill K (repr (Spec.dec k N t) : expr) << e @ E : Ψ) -∗
   REL fill K (dec k N t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_dec. Qed.
 
-Lemma rel_dec_r E K e (k N : term) t Ψ :
+Lemma refines_dec_r E K e (k N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.dec k N t) : expr) @ E : Ψ) -∗
   REL e << fill K (dec k N t) @ E : Ψ.
 Proof. pure_twp_rel twp_dec. Qed.
 
-Lemma rel_aenc'_l K e pk N t Ψ :
+Lemma refines_aenc'_l K e pk N t Ψ :
   ▷ (REL fill K (Spec.enc pk N t : expr) << e : Ψ) -∗
   REL fill K (aenc pk N t) << e : Ψ.
 Proof. iIntros "?". iApply refines_wp_l; by wp_apply wp_aenc'. Qed.
 
-Lemma rel_aenc'_r E K e pk N t Ψ :
+Lemma refines_aenc'_r E K e pk N t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc pk N t : expr) @ E : Ψ) -∗
   REL e << fill K (aenc pk N t) @ E : Ψ.
 Proof. pure_twp_rel twp_aenc'. Qed.
 
-Lemma rel_adec'_l K e (sk : aenc_key) N t Ψ :
+Lemma refines_adec'_l K e (sk : aenc_key) N t Ψ :
   ▷ ((∀ t', ⌜t = TSeal (Spec.pkey sk) (Spec.tag N t')⌝ -∗
             ⌜Spec.dec sk N t = Some t'⌝ -∗
             REL fill K (SOMEV t' : expr) << e : Ψ) ∧
@@ -300,7 +300,7 @@ Lemma rel_adec'_l K e (sk : aenc_key) N t Ψ :
   REL fill K (adec sk N t) << e : Ψ.
 Proof. iIntros "?". iApply refines_wp_l; by wp_apply wp_adec'. Qed.
 
-Lemma rel_adec'_r E K e (sk : aenc_key) N t Ψ :
+Lemma refines_adec'_r E K e (sk : aenc_key) N t Ψ :
   ↑specN ⊆ E →
   (∀ t', ⌜t = TSeal (Spec.pkey sk) (Spec.tag N t')⌝ -∗
          ⌜Spec.dec sk N t = Some t'⌝ -∗
@@ -317,18 +317,18 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ (repr (Spec.dec sk N t)) with "[post]") => //
   + iDestruct "post" as "[_ post]". by iApply "post".
 Qed.
 
-Lemma rel_senc'_l K e (k N : term) t Ψ :
+Lemma refines_senc'_l K e (k N : term) t Ψ :
   ▷ (REL fill K (Spec.enc k N t : expr) << e : Ψ) -∗
   REL fill K (senc k N t) << e : Ψ.
 Proof. iIntros "?". iApply refines_wp_l; by wp_apply wp_senc'. Qed.
 
-Lemma rel_senc'_r E K e (k N : term) t Ψ :
+Lemma refines_senc'_r E K e (k N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (senc k N t) @ E : Ψ.
 Proof. pure_twp_rel twp_senc'. Qed.
 
-Lemma rel_sdec'_l K e (k : senc_key) N t Ψ :
+Lemma refines_sdec'_l K e (k : senc_key) N t Ψ :
   ▷ ((∀ t', ⌜t = TSeal k (Spec.tag N t')⌝ -∗
             ⌜Spec.dec k N t = Some t'⌝ -∗
             REL fill K (SOMEV t' : expr) << e : Ψ) ∧
@@ -336,7 +336,7 @@ Lemma rel_sdec'_l K e (k : senc_key) N t Ψ :
   REL fill K (sdec k N t) << e : Ψ.
 Proof. iIntros "?". iApply refines_wp_l; by wp_apply wp_sdec'. Qed.
 
-Lemma rel_sdec'_r E K e (k : senc_key) N t Ψ :
+Lemma refines_sdec'_r E K e (k : senc_key) N t Ψ :
   ↑specN ⊆ E →
   (∀ t', ⌜t = TSeal k (Spec.tag N t')⌝ -∗
          ⌜Spec.dec k N t = Some t'⌝ -∗
@@ -353,18 +353,18 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ (repr (Spec.dec k N t)) with "[post]") => //=
   + iDestruct "post" as "[_ post]". by iApply "post".
 Qed.
 
-Lemma rel_sign'_l K e (k N : term) t Ψ :
+Lemma refines_sign'_l K e (k N : term) t Ψ :
   ▷ (REL fill K (Spec.enc k N t : expr) << e : Ψ) -∗
   REL fill K (sign k N t) << e : Ψ.
 Proof. iIntros "?". iApply refines_wp_l; by wp_apply wp_sign'. Qed.
 
-Lemma rel_sign'_r E K e (k N : term) t Ψ :
+Lemma refines_sign'_r E K e (k N : term) t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.enc k N t : expr) @ E : Ψ) -∗
   REL e << fill K (sign k N t) @ E : Ψ.
 Proof. pure_twp_rel twp_sign'. Qed.
 
-Lemma rel_verify'_l K e (sk : sign_key) N t Ψ :
+Lemma refines_verify'_l K e (sk : sign_key) N t Ψ :
   ▷ ((∀ t', ⌜t = TSeal sk (Spec.tag N t')⌝ -∗
             ⌜Spec.dec (Spec.pkey sk) N t = Some t'⌝ -∗
             REL fill K (SOMEV t' : expr) << e : Ψ) ∧
@@ -373,7 +373,7 @@ Lemma rel_verify'_l K e (sk : sign_key) N t Ψ :
   REL fill K (verify (Spec.pkey sk) N t) << e : Ψ.
 Proof. iIntros "?". iApply refines_wp_l; by wp_apply wp_verify'. Qed.
 
-Lemma rel_verify'_r E K e (sk : sign_key) N t Ψ :
+Lemma refines_verify'_r E K e (sk : sign_key) N t Ψ :
   ↑specN ⊆ E →
   (∀ t', ⌜t = TSeal sk (Spec.tag N t')⌝ -∗
          ⌜Spec.dec (Spec.pkey sk) N t = Some t'⌝ -∗
@@ -392,151 +392,151 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ (repr (Spec.dec (Spec.pkey sk) N t))
   + iDestruct "post" as "[_ post]". by iApply "post".
 Qed.
 
-Lemma rel_pkey_l E K e k Ψ :
+Lemma refines_pkey_l E K e k Ψ :
   (REL fill K (Spec.pkey k : expr) << e @ E : Ψ) -∗
   REL fill K (pkey k) << e @ E : Ψ.
 Proof. pure_twp_rel twp_pkey. Qed.
 
-Lemma rel_pkey_r E K e k Ψ :
+Lemma refines_pkey_r E K e k Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (Spec.pkey k : expr) @ E : Ψ) -∗
   REL e << fill K (pkey k) @ E : Ψ.
 Proof. pure_twp_rel twp_pkey. Qed.
 
-Lemma rel_is_key_l E K e t Ψ :
+Lemma refines_is_key_l E K e t Ψ :
   (REL fill K (repr (Spec.is_key t) : expr) << e @ E : Ψ) -∗
   REL fill K (is_key t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_is_key. Qed.
 
-Lemma rel_is_key_r E K e t Ψ :
+Lemma refines_is_key_r E K e t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.is_key t) : expr) @ E : Ψ) -∗
   REL e << fill K (is_key t) @ E : Ψ.
 Proof. pure_twp_rel twp_is_key. Qed.
 
-Lemma rel_has_key_type_l E K e kt t Ψ :
+Lemma refines_has_key_type_l E K e kt t Ψ :
   (REL fill K (#(Spec.has_key_type kt t) : expr) << e @ E : Ψ) -∗
   REL fill K (has_key_type (repr kt) t) << e @ E : Ψ.
 Proof. pure_twp_rel twp_has_key_type. Qed.
 
-Lemma rel_has_key_type_r E K e kt t Ψ :
+Lemma refines_has_key_type_r E K e kt t Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (#(Spec.has_key_type kt t) : expr) @ E : Ψ) -∗
   REL e << fill K (has_key_type (repr kt) t) @ E : Ψ.
 Proof. pure_twp_rel twp_has_key_type. Qed.
 
 Definition rel_prim_l_tint (v1 : val) : RelPrimL Σ (tint v1) _ :=
-  rel_tint_l.
+  refines_tint_l.
 Definition rel_prim_r_tint (v1 : val) : RelPrimR Σ (tint v1) _ :=
-  rel_tint_r.
+  refines_tint_r.
 Definition rel_prim_l_to_int (v1 : val) : RelPrimL Σ (to_int v1) _ :=
-  rel_to_int_l.
+  refines_to_int_l.
 Definition rel_prim_r_to_int (v1 : val) : RelPrimR Σ (to_int v1) _ :=
-  rel_to_int_r.
+  refines_to_int_r.
 Definition rel_prim_l_tuple (v1 v2 : val) : RelPrimL Σ (tuple v1 v2) _ :=
-  rel_tuple_l.
+  refines_tuple_l.
 Definition rel_prim_r_tuple (v1 v2 : val) : RelPrimR Σ (tuple v1 v2) _ :=
-  rel_tuple_r.
+  refines_tuple_r.
 Definition rel_prim_l_untuple (v1 : val) : RelPrimL Σ (untuple v1) _ :=
-  rel_untuple_l.
+  refines_untuple_l.
 Definition rel_prim_r_untuple (v1 : val) : RelPrimR Σ (untuple v1) _ :=
-  rel_untuple_r.
+  refines_untuple_r.
 Definition rel_prim_l_term_of_list (v1 : val) : RelPrimL Σ (term_of_list v1) _ :=
-  rel_term_of_list_l.
+  refines_term_of_list_l.
 Definition rel_prim_r_term_of_list (v1 : val) : RelPrimR Σ (term_of_list v1) _ :=
-  rel_term_of_list_r.
+  refines_term_of_list_r.
 Definition rel_prim_l_list_of_term (v1 : val) : RelPrimL Σ (list_of_term v1) _ :=
-  rel_list_of_term_l.
+  refines_list_of_term_l.
 Definition rel_prim_r_list_of_term (v1 : val) : RelPrimR Σ (list_of_term v1) _ :=
-  rel_list_of_term_r.
+  refines_list_of_term_r.
 Definition rel_prim_l_tag (v1 v2 : val) : RelPrimL Σ (tag v1 v2) _ :=
-  rel_tag_l.
+  refines_tag_l.
 Definition rel_prim_r_tag (v1 v2 : val) : RelPrimR Σ (tag v1 v2) _ :=
-  rel_tag_r.
+  refines_tag_r.
 Definition rel_prim_l_untag (v1 v2 : val) : RelPrimL Σ (untag v1 v2) _ :=
-  rel_untag_l.
+  refines_untag_l.
 Definition rel_prim_r_untag (v1 v2 : val) : RelPrimR Σ (untag v1 v2) _ :=
-  rel_untag_r.
+  refines_untag_r.
 Definition rel_prim_l_key kt (v1 : val) : RelPrimL Σ (key kt v1) _ :=
-  rel_key_l.
+  refines_key_l.
 Definition rel_prim_r_key kt (v1 : val) : RelPrimR Σ (key kt v1) _ :=
-  rel_key_r.
+  refines_key_r.
 Definition rel_prim_l_seal (v1 v2 : val) : RelPrimL Σ (seal v1 v2) _ :=
-  rel_seal_l.
+  refines_seal_l.
 Definition rel_prim_r_seal (v1 v2 : val) : RelPrimR Σ (seal v1 v2) _ :=
-  rel_seal_r.
+  refines_seal_r.
 Definition rel_prim_l_hash (v1 : val) : RelPrimL Σ (hash v1) _ :=
-  rel_hash_l.
+  refines_hash_l.
 Definition rel_prim_r_hash (v1 : val) : RelPrimR Σ (hash v1) _ :=
-  rel_hash_r.
+  refines_hash_r.
 Definition rel_prim_l_derive_aenc_key (v1 : val) : RelPrimL Σ (derive_aenc_key v1) _ :=
-  rel_derive_aenc_key_l.
+  refines_derive_aenc_key_l.
 Definition rel_prim_r_derive_aenc_key (v1 : val) : RelPrimR Σ (derive_aenc_key v1) _ :=
-  rel_derive_aenc_key_r.
+  refines_derive_aenc_key_r.
 Definition rel_prim_l_derive_senc_key (v1 : val) : RelPrimL Σ (derive_senc_key v1) _ :=
-  rel_derive_senc_key_l.
+  refines_derive_senc_key_l.
 Definition rel_prim_r_derive_senc_key (v1 : val) : RelPrimR Σ (derive_senc_key v1) _ :=
-  rel_derive_senc_key_r.
+  refines_derive_senc_key_r.
 Definition rel_prim_l_derive_sign_key (v1 : val) : RelPrimL Σ (derive_sign_key v1) _ :=
-  rel_derive_sign_key_l.
+  refines_derive_sign_key_l.
 Definition rel_prim_r_derive_sign_key (v1 : val) : RelPrimR Σ (derive_sign_key v1) _ :=
-  rel_derive_sign_key_r.
+  refines_derive_sign_key_r.
 Definition rel_prim_l_to_key (v1 : val) : RelPrimL Σ (to_key v1) _ :=
-  rel_to_key_l.
+  refines_to_key_l.
 Definition rel_prim_r_to_key (v1 : val) : RelPrimR Σ (to_key v1) _ :=
-  rel_to_key_r.
+  refines_to_key_r.
 Definition rel_prim_l_open_key (v1 : val) : RelPrimL Σ (open_key v1) _ :=
-  rel_open_key_l.
+  refines_open_key_l.
 Definition rel_prim_r_open_key (v1 : val) : RelPrimR Σ (open_key v1) _ :=
-  rel_open_key_r.
+  refines_open_key_r.
 Definition rel_prim_l_open (v1 v2 : val) : RelPrimL Σ (open v1 v2) _ :=
-  rel_open_l.
+  refines_open_l.
 Definition rel_prim_r_open (v1 v2 : val) : RelPrimR Σ (open v1 v2) _ :=
-  rel_open_r.
+  refines_open_r.
 Definition rel_prim_l_enc (v1 v2 v3 : val) : RelPrimL Σ (enc v1 v2 v3) _ :=
-  rel_enc_l.
+  refines_enc_l.
 Definition rel_prim_r_enc (v1 v2 v3 : val) : RelPrimR Σ (enc v1 v2 v3) _ :=
-  rel_enc_r.
+  refines_enc_r.
 Definition rel_prim_l_dec (v1 v2 v3 : val) : RelPrimL Σ (dec v1 v2 v3) _ :=
-  rel_dec_l.
+  refines_dec_l.
 Definition rel_prim_r_dec (v1 v2 v3 : val) : RelPrimR Σ (dec v1 v2 v3) _ :=
-  rel_dec_r.
+  refines_dec_r.
 Definition rel_prim_l_aenc (v1 v2 v3 : val) : RelPrimL Σ (aenc v1 v2 v3) _ :=
-  rel_aenc'_l.
+  refines_aenc'_l.
 Definition rel_prim_r_aenc (v1 v2 v3 : val) : RelPrimR Σ (aenc v1 v2 v3) _ :=
-  rel_aenc'_r.
+  refines_aenc'_r.
 Definition rel_prim_l_senc (v1 v2 v3 : val) : RelPrimL Σ (senc v1 v2 v3) _ :=
-  rel_senc'_l.
+  refines_senc'_l.
 Definition rel_prim_r_senc (v1 v2 v3 : val) : RelPrimR Σ (senc v1 v2 v3) _ :=
-  rel_senc'_r.
+  refines_senc'_r.
 Definition rel_prim_l_sign (v1 v2 v3 : val) : RelPrimL Σ (sign v1 v2 v3) _ :=
-  rel_sign'_l.
+  refines_sign'_l.
 Definition rel_prim_r_sign (v1 v2 v3 : val) : RelPrimR Σ (sign v1 v2 v3) _ :=
-  rel_sign'_r.
+  refines_sign'_r.
 Definition rel_prim_l_pkey (v1 : val) : RelPrimL Σ (pkey v1) _ :=
-  rel_pkey_l.
+  refines_pkey_l.
 Definition rel_prim_r_pkey (v1 : val) : RelPrimR Σ (pkey v1) _ :=
-  rel_pkey_r.
+  refines_pkey_r.
 Definition rel_prim_l_is_key (v1 : val) : RelPrimL Σ (is_key v1) _ :=
-  rel_is_key_l.
+  refines_is_key_l.
 Definition rel_prim_r_is_key (v1 : val) : RelPrimR Σ (is_key v1) _ :=
-  rel_is_key_r.
+  refines_is_key_r.
 Definition rel_prim_l_has_key_type (v1 v2 : val) : RelPrimL Σ (has_key_type v1 v2) _ :=
-  rel_has_key_type_l.
+  refines_has_key_type_l.
 Definition rel_prim_r_has_key_type (v1 v2 : val) : RelPrimR Σ (has_key_type v1 v2) _ :=
-  rel_has_key_type_r.
+  refines_has_key_type_r.
 
 (** Literal lists of terms in programs.  Their cells hold [val_of_term t]
     rather than [repr t], so the list instances of [list_spec.v] do not match
     them. *)
 Definition rel_prim_l_cons_term (t : term) (ts : list term) :
-  RelPrimL Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := rel_cons_l (A:=term).
+  RelPrimL Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := refines_cons_l (A:=term).
 Definition rel_prim_r_cons_term (t : term) (ts : list term) :
-  RelPrimR Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := rel_cons_r (A:=term).
+  RelPrimR Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := refines_cons_r (A:=term).
 Definition rel_prim_l_cons_term_nil (t : term) :
-  RelPrimL Σ (Val t :: Val (InjLV #())) _ := rel_cons_nil_l (A:=term).
+  RelPrimL Σ (Val t :: Val (InjLV #())) _ := refines_cons_nil_l (A:=term).
 Definition rel_prim_r_cons_term_nil (t : term) :
-  RelPrimR Σ (Val t :: Val (InjLV #())) _ := rel_cons_nil_r (A:=term).
+  RelPrimR Σ (Val t :: Val (InjLV #())) _ := refines_cons_nil_r (A:=term).
 
 End Proofs.
 

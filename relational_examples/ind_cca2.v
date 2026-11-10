@@ -170,7 +170,7 @@ iMod (linked_in_r_map_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
 - rewrite /map_token_r /=. by iApply (term_token_spec_drop with "tok").
 Qed.
 
-Lemma rel_oracle_open skA skA' (l l' : loc) t t' :
+Lemma oracle_open_refinement skA skA' (l l' : loc) t t' :
   cryptis_rel_ctx -∗
   inv cellN (cell_inv skA skA' l l') -∗
   PUB⟨Spec.pkey skA, Spec.pkey skA'⟩ -∗
@@ -205,14 +205,14 @@ case eR: (Spec.open skA' t') => [u'|]; iSimpl in "Ho".
 - iModIntro. iLeft. by iPureIntro; split.
 Qed.
 
-Lemma rel_send_fail c c' :
+Lemma send_fail_refinement c c' :
   lrel_channel c c' -∗
   REL send c (TInt 0) << send c' (TInt 0) : ().
 Proof.
-iIntros "#Hc". iApply (rel_send with "Hc"). iNext. by rewrite publicly_related_TInt.
+iIntros "#Hc". iApply (refines_send with "Hc"). iNext. by rewrite publicly_related_TInt.
 Qed.
 
-Lemma rel_oracle c c' skA skA' (l l' : loc) :
+Lemma oracle_refinement c c' skA skA' (l l' : loc) :
   cryptis_rel_ctx -∗
   inv cellN (cell_inv skA skA' l l') -∗
   lrel_channel c c' -∗
@@ -223,13 +223,13 @@ Proof.
 iIntros "#Hctx #Hcell #Hc #Hpk #Hlink".
 iLöb as "IH".
 rel_rec_l. rel_rec_r. rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (t t') "#Ht"=> /=.
 rel_prims.
-iMod (rel_oracle_open with "Hctx Hcell Hpk Hlink Ht")
+iMod (oracle_open_refinement with "Hctx Hcell Hpk Hlink Ht")
   as "[[-> ->]|(%u & %u' & [%eL %eR] & #Hu)]".
 - rel_pures.
-  rel_apply (rel_send_fail with "Hc").
+  rel_apply (send_fail_refinement with "Hc").
   iIntros (? ?) "[-> ->]"=> /=.
   rel_pures. by iApply "IH".
 - rewrite eL eR. rel_pures.
@@ -242,7 +242,7 @@ iMod (rel_oracle_open with "Hctx Hcell Hpk Hlink Ht")
     iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
     { iNext. iLeft. iFrame. }
     rel_pures.
-    rel_apply (rel_send with "Hc Hu").
+    rel_apply (refines_send with "Hc Hu").
     iIntros (? ?) "[-> ->]"=> /=.
     rel_pures. by iApply "IH".
   + set ct := Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl.
@@ -268,18 +268,18 @@ iMod (rel_oracle_open with "Hctx Hcell Hpk Hlink Ht")
     * have e' : ct' = t' by apply Hiff.
       rewrite !bool_decide_eq_true_2 //.
       rel_pures.
-      rel_apply (rel_send_fail with "Hc").
+      rel_apply (send_fail_refinement with "Hc").
       iIntros (? ?) "[-> ->]"=> /=.
       rel_pures. by iApply "IH".
     * have ne' : ct' ≠ t' by rewrite -Hiff.
       rewrite !bool_decide_eq_false_2 //.
       rel_pures.
-      rel_apply (rel_send with "Hc Hu'").
+      rel_apply (refines_send with "Hc Hu'").
       iIntros (? ?) "[-> ->]"=> /=.
       rel_pures. by iApply "IH".
 Qed.
 
-Lemma rel_alice c c' (b b' : bool) :
+Lemma alice_refinement c c' (b b' : bool) :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
@@ -295,10 +295,10 @@ have Hdisj : ∀ sk : aenc_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skA) "%Hnonce_a #mint_skA token_a _ token_pkA".
-rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
 split_term_tokens. rel_prims.
@@ -323,16 +323,16 @@ rel_pures.
 iMod (inv_alloc cellN _ (cell_inv skA skA' l l') with "[Hl Hl' seals_a seals_a']") as "#Hcell".
 { iNext. iLeft. iFrame. }
 rel_apply refines_fork.
-{ iApply (rel_oracle with "Hctx Hcell Hc Hpub elem_pkA"). }
+{ iApply (oracle_refinement with "Hctx Hcell Hc Hpub elem_pkA"). }
 iIntros (? ?) "_" => /=.
 rel_pures.
-rel_apply (rel_send with "Hc Hpub").
+rel_apply (refines_send with "Hc Hpub").
 iIntros (? ?) "[-> ->]"=> /=.
 rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (msg_0 msg_0') "#Hmsg_0"=> /=.
 rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (msg_1 msg_1') "#Hmsg_1"=> /=.
 rel_pures.
 rel_bind_l (if: _ then _ else _)%E.
@@ -348,7 +348,7 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
+rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
   with "Hctx [//] mint_skA mint_spec_skA' elem_pkA secret_a mint_msg mint_spec_msg' [] [] [] []").
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
@@ -371,10 +371,10 @@ rel_store_r.
 iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
 { iNext. iRight. iExists (TPair n msg), (TPair n' msg'). by iFrame "#∗". }
 rel_pures.
-rel_apply (rel_send with "Hc Hct").
+rel_apply (refines_send with "Hc Hct").
 iIntros (? ?) "[-> ->]"=> /=.
 rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (guess guess') "#Hguess"=> /=.
 rel_prims.
 rel_values.
@@ -386,7 +386,7 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma rel_alice_guess_wrapped c c' :
+Lemma alice_guess_wrapped_refinement c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
@@ -395,14 +395,14 @@ Lemma rel_alice_guess_wrapped c c' :
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice_guess_wrapped.
 rel_pures.
-rel_apply_l rel_nondet_bool_l. iIntros (choice).
-rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
+rel_apply_l refines_nondet_bool_l. iIntros (choice).
+rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
-- rel_apply (rel_alice with "Hctx Hc").
+- rel_apply (alice_refinement with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
-- rel_apply (rel_alice with "Hctx Hc").
+- rel_apply (alice_refinement with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -422,7 +422,7 @@ Theorem ind_cca2_ctx_equiv N b b' adv :
 Proof.
 by move=> Hadv; split;
   apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iApply rel_alice.
+  iApply alice_refinement.
 Qed.
 
 Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
@@ -435,5 +435,5 @@ Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) 
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iApply rel_alice_guess_wrapped.
+iApply alice_guess_wrapped_refinement.
 Qed.

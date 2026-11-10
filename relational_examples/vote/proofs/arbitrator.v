@@ -190,41 +190,41 @@ End PublicTerms.
 
 Section OneSided.
 
-Lemma rel_tally_vote_l K e skT p m t Ψ :
+Lemma refines_tally_vote_l K e skT p m t Ψ :
   is_avl m t -∗
   (is_avl m (tally_step skT p t) -∗ REL fill K (#() : expr) << e : Ψ) -∗
   REL fill K (tally_vote skT (repr p) m) << e : Ψ.
 Proof.
 iIntros "Hm post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_l; last by iApply ("post" with "Hm").
-rel_apply_l rel_random_adec_l. rewrite /vote_of.
+rel_apply_l refines_random_adec_l. rewrite /vote_of.
 case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_l;
   last by iApply ("post" with "Hm").
-rel_apply_l rel_to_int_l.
+rel_apply_l refines_to_int_l.
 case: (Spec.to_int v) => [k|] /=; rel_pures_l; last by iApply ("post" with "Hm").
-rel_apply_l (rel_avl_lookup_l with "Hm"). iIntros "Hm". rewrite /incr.
+rel_apply_l (refines_avl_lookup_l with "Hm"). iIntros "Hm". rewrite /incr.
 case: (AVL.lookup k t) => [n|] /=; rel_pures_l;
-  by rel_apply_l (rel_avl_insert_l with "Hm").
+  by rel_apply_l (refines_avl_insert_l with "Hm").
 Qed.
 
-Lemma rel_tally_vote_r K e skT p m t Ψ :
+Lemma refines_tally_vote_r K e skT p m t Ψ :
   is_avl_spec m t -∗
   (is_avl_spec m (tally_step skT p t) -∗ REL e << fill K (#() : expr) : Ψ) -∗
   REL e << fill K (tally_vote skT (repr p) m) : Ψ.
 Proof.
 iIntros "Hm post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_r; last by iApply ("post" with "Hm").
-rel_apply_r rel_random_adec_r. rewrite /vote_of.
+rel_apply_r refines_random_adec_r. rewrite /vote_of.
 case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_r;
   last by iApply ("post" with "Hm").
-rel_apply_r rel_to_int_r.
+rel_apply_r refines_to_int_r.
 case: (Spec.to_int v) => [k|] /=; rel_pures_r; last by iApply ("post" with "Hm").
-rel_apply_r (rel_avl_lookup_r with "Hm"). iIntros "Hm". rewrite /incr.
+rel_apply_r (refines_avl_lookup_r with "Hm"). iIntros "Hm". rewrite /incr.
 case: (AVL.lookup k t) => [n|] /=; rel_pures_r;
-  by rel_apply_r (rel_avl_insert_r with "Hm").
+  by rel_apply_r (refines_avl_insert_r with "Hm").
 Qed.
 
-Lemma rel_tally_slots_l K e skT (slots : list (term * option term)) m t Ψ :
+Lemma refines_tally_slots_l K e skT (slots : list (term * option term)) m t Ψ :
   is_avl m t -∗
   (is_avl m (foldr (tally_step skT) t slots) -∗ REL fill K (#() : expr) << e : Ψ) -∗
   REL fill K (tally_slots skT (repr slots) m) << e : Ψ.
@@ -234,10 +234,10 @@ elim: slots K => [|p slots IH] K /=; iIntros "Hm post"; rel_rec_l; rel_pures_l;
   first by iApply ("post" with "Hm").
 rel_bind_l (tally_slots _ _ _). iApply (IH with "Hm"). iIntros "Hm".
 rewrite /=. rel_pures_l.
-by rel_apply_l (rel_tally_vote_l with "Hm").
+by rel_apply_l (refines_tally_vote_l with "Hm").
 Qed.
 
-Lemma rel_tally_slots_r K e skT (slots : list (term * option term)) m t Ψ :
+Lemma refines_tally_slots_r K e skT (slots : list (term * option term)) m t Ψ :
   is_avl_spec m t -∗
   (is_avl_spec m (foldr (tally_step skT) t slots) -∗ REL e << fill K (#() : expr) : Ψ) -∗
   REL e << fill K (tally_slots skT (repr slots) m) : Ψ.
@@ -247,10 +247,10 @@ elim: slots K => [|p slots IH] K /=; iIntros "Hm post"; rel_rec_r; rel_pures_r;
   first by iApply ("post" with "Hm").
 rel_bind_r (tally_slots _ _ _). iApply (IH with "Hm"). iIntros "Hm".
 rewrite /=. rel_pures_r.
-by rel_apply_r (rel_tally_vote_r with "Hm").
+by rel_apply_r (refines_tally_vote_r with "Hm").
 Qed.
 
-Lemma rel_seed_l K e cands m Ψ :
+Lemma refines_seed_l K e cands m Ψ :
   is_avl m AVL.Leaf -∗
   (is_avl m (seed cands) -∗ REL fill K (#() : expr) << e : Ψ) -∗
   REL fill K (seed_candidates (repr cands) m) << e : Ψ.
@@ -260,10 +260,10 @@ elim: cands K => [|k cands IH] K /=; iIntros "Hm post"; rel_rec_l; rel_pures_l;
   first by iApply ("post" with "Hm").
 rel_bind_l (seed_candidates _ _). iApply (IH with "Hm"). iIntros "Hm".
 rewrite /=. rel_pures_l.
-by rel_apply_l (rel_avl_insert_l with "Hm").
+by rel_apply_l (refines_avl_insert_l with "Hm").
 Qed.
 
-Lemma rel_seed_r K e cands m Ψ :
+Lemma refines_seed_r K e cands m Ψ :
   is_avl_spec m AVL.Leaf -∗
   (is_avl_spec m (seed cands) -∗ REL e << fill K (#() : expr) : Ψ) -∗
   REL e << fill K (seed_candidates (repr cands) m) : Ψ.
@@ -273,104 +273,104 @@ elim: cands K => [|k cands IH] K /=; iIntros "Hm post"; rel_rec_r; rel_pures_r;
   first by iApply ("post" with "Hm").
 rel_bind_r (seed_candidates _ _). iApply (IH with "Hm"). iIntros "Hm".
 rewrite /=. rel_pures_r.
-by rel_apply_r (rel_avl_insert_r with "Hm").
+by rel_apply_r (refines_avl_insert_r with "Hm").
 Qed.
 
-Lemma rel_result_l K e m t Ψ :
+Lemma refines_result_l K e m t Ψ :
   is_avl m t -∗
   (REL fill K (result t : expr) << e : Ψ) -∗
   REL fill K (term_of_list (map_list pair_term (avl_to_list m))) << e : Ψ.
 Proof.
-iIntros "Hm post". rel_apply_l (rel_avl_to_list_l with "Hm"). iIntros "_".
+iIntros "Hm post". rel_apply_l (refines_avl_to_list_l with "Hm"). iIntros "_".
 rel_bind_l (map_list _ _).
-iApply (rel_map_list_l _ _ _ pair_of pair_term (AVL.to_list t) with "[post]").
+iApply (refines_map_list_l _ _ _ pair_of pair_term (AVL.to_list t) with "[post]").
 - move=> K' [k v] _. iIntros "post". rewrite /pair_term /=. rel_pures_l.
   by rel_prims_l.
-- rewrite /=. by rel_apply_l rel_term_of_list_l.
+- rewrite /=. by rel_apply_l refines_term_of_list_l.
 Qed.
 
-Lemma rel_result_r K e m t Ψ :
+Lemma refines_result_r K e m t Ψ :
   is_avl_spec m t -∗
   (REL e << fill K (result t : expr) : Ψ) -∗
   REL e << fill K (term_of_list (map_list pair_term (avl_to_list m))) : Ψ.
 Proof.
-iIntros "Hm post". rel_apply_r (rel_avl_to_list_r with "Hm"). iIntros "_".
+iIntros "Hm post". rel_apply_r (refines_avl_to_list_r with "Hm"). iIntros "_".
 rel_bind_r (map_list _ _).
-iApply (rel_map_list_r _ _ _ pair_of pair_term (AVL.to_list t) with "[post]");
+iApply (refines_map_list_r _ _ _ pair_of pair_term (AVL.to_list t) with "[post]");
   first solve_ndisj.
 - move=> K' [k v] _. iIntros "post". rewrite /pair_term /=. rel_pures_r.
   by rel_prims_r.
-- rewrite /=. by rel_apply_r rel_term_of_list_r.
+- rewrite /=. by rel_apply_r refines_term_of_list_r.
 Qed.
 
-Lemma rel_init_slots_l K e (pks : list term) Ψ :
+Lemma refines_init_slots_l K e (pks : list term) Ψ :
   (REL fill K (repr (slots_l pks (replicate (length pks) None)) : expr) << e : Ψ) -∗
   REL fill K (map_list (λ: "pk", ("pk", NONE))%V (repr pks)) << e : Ψ.
 Proof.
 iIntros "post". rewrite /slots_l zip_replicate_None.
-iApply (rel_map_list_l _ _ _ (λ pk, (pk, None)) _ pks with "post").
+iApply (refines_map_list_l _ _ _ (λ pk, (pk, None)) _ pks with "post").
 move=> K' pk _. iIntros "post". rel_pures_l. by iApply "post".
 Qed.
 
-Lemma rel_init_slots_r K e (pks : list term) Ψ :
+Lemma refines_init_slots_r K e (pks : list term) Ψ :
   (REL e << fill K (repr (slots_r pks (replicate (length pks) None)) : expr) : Ψ) -∗
   REL e << fill K (map_list (λ: "pk", ("pk", NONE))%V (repr pks)) : Ψ.
 Proof.
 iIntros "post". rewrite /slots_r zip_replicate_None.
-iApply (rel_map_list_r _ _ _ (λ pk, (pk, None)) _ pks with "post"); first solve_ndisj.
+iApply (refines_map_list_r _ _ _ (λ pk, (pk, None)) _ pks with "post"); first solve_ndisj.
 move=> K' pk _. iIntros "post". rel_pures_r. by iApply "post".
 Qed.
 
-Lemma rel_find_empty_l K e (slots : list (term * option term)) Ψ :
+Lemma refines_find_empty_l K e (slots : list (term * option term)) Ψ :
   (REL fill K (repr (find slot_empty slots) : expr) << e : Ψ) -∗
   REL fill K (find_list is_empty_slot (repr slots)) << e : Ψ.
 Proof.
 iIntros "post".
-iApply (rel_find_list_l _ _ _ slot_empty is_empty_slot slots with "post").
+iApply (refines_find_list_l _ _ _ slot_empty is_empty_slot slots with "post").
 move=> K' [pk o] _. iIntros "post". rewrite /is_empty_slot /=. rel_pures_l.
 case: o => [ct|] /=; rel_pures_l; by iApply "post".
 Qed.
 
-Lemma rel_find_empty_r K e (slots : list (term * option term)) Ψ :
+Lemma refines_find_empty_r K e (slots : list (term * option term)) Ψ :
   (REL e << fill K (repr (find slot_empty slots) : expr) : Ψ) -∗
   REL e << fill K (find_list is_empty_slot (repr slots)) : Ψ.
 Proof.
 iIntros "post".
-iApply (rel_find_list_r _ _ _ slot_empty is_empty_slot slots with "post");
+iApply (refines_find_list_r _ _ _ slot_empty is_empty_slot slots with "post");
   first solve_ndisj.
 move=> K' [pk o] _. iIntros "post". rewrite /is_empty_slot /=. rel_pures_r.
 case: o => [ct|] /=; rel_pures_r; by iApply "post".
 Qed.
 
-Lemma rel_pkeys_l K e ks votes Ψ :
+Lemma refines_pkeys_l K e ks votes Ψ :
   length ks ≤ length votes →
   (REL fill K (repr (pkeys ks) : expr) << e : Ψ) -∗
   REL fill K (map_list (λ: "p", pkey (Fst "p"))%V (repr (zip ks votes))) << e : Ψ.
 Proof.
 iIntros (Hlen) "post". rewrite -(pkeys_zip Hlen).
-iApply (rel_map_list_l _ _ _ (λ p : sign_key * Z, Spec.pkey (p.1 : term)) _ (zip ks votes)
+iApply (refines_map_list_l _ _ _ (λ p : sign_key * Z, Spec.pkey (p.1 : term)) _ (zip ks votes)
           with "post").
 move=> K' [sk v] _. iIntros "post". rewrite /=. rel_pures_l.
-rel_apply_l rel_pkey_l. by iApply "post".
+rel_apply_l refines_pkey_l. by iApply "post".
 Qed.
 
-Lemma rel_pkeys_r K e ks votes Ψ :
+Lemma refines_pkeys_r K e ks votes Ψ :
   length ks ≤ length votes →
   (REL e << fill K (repr (pkeys ks) : expr) : Ψ) -∗
   REL e << fill K (map_list (λ: "p", pkey (Fst "p"))%V (repr (zip ks votes))) : Ψ.
 Proof.
 iIntros (Hlen) "post". rewrite -(pkeys_zip Hlen).
-iApply (rel_map_list_r _ _ _ (λ p : sign_key * Z, Spec.pkey (p.1 : term)) _ (zip ks votes)
+iApply (refines_map_list_r _ _ _ (λ p : sign_key * Z, Spec.pkey (p.1 : term)) _ (zip ks votes)
           with "post"); first solve_ndisj.
 move=> K' [sk v] _. iIntros "post". rewrite /=. rel_pures_r.
-rel_apply_r rel_pkey_r. by iApply "post".
+rel_apply_r refines_pkey_r. by iApply "post".
 Qed.
 
 End OneSided.
 
 Section TwoSided.
 
-Lemma rel_record_ballot skT skT' ks ks' votes votes' st m m' :
+Lemma record_ballot_refinement skT skT' ks ks' votes votes' st m m' :
   length st = length ks → length votes = length ks → length votes' = length ks' →
   slots_ok skT skT' votes votes' st →
   cryptis_rel_ctx -∗ voter_keys skT skT' ks ks' votes votes' -∗ PUB⟨m, m'⟩ -∗
@@ -391,10 +391,10 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
   case: votes votes' Hv Hv' => [|v votes] [|v' votes'] //= [Hv] [Hv'] [Ho Hok].
   rel_rec_l. rel_rec_r. rel_pures.
   iMod (pub_verify_cases with "Hctx HV Hm") as "[[%HnL %HnR]|(%n & %n' & -> & ->)]".
-  + rel_apply_l rel_verify'_l. iModIntro. iSplit.
+  + rel_apply_l refines_verify'_l. iModIntro. iSplit.
     { iIntros (u _ Hdec). by rewrite HnL in Hdec. }
     iIntros "_". rel_pures_l.
-    rel_apply_r rel_verify'_r. iSplit.
+    rel_apply_r refines_verify'_r. iSplit.
     { iIntros (u' _ Hdec). by rewrite HnR in Hdec. }
     iIntros "_". rel_pures_r.
     rel_bind_l (record_ballot _ _). rel_bind_r (record_ballot _ _).
@@ -404,10 +404,10 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
     rel_pures. rel_values. iModIntro.
     iExists (o :: st'). iPureIntro. do 2 (split; first done).
     split; [by rewrite /= Hlen' | by split].
-  + rel_apply_l rel_verify'_l. iModIntro. iSplit; last first.
+  + rel_apply_l refines_verify'_l. iModIntro. iSplit; last first.
     { iIntros (Hdec). by rewrite Spec.dec_sign_key in Hdec. }
     iIntros (u e _). case: e => /Spec.tag_inj [_ <-].
-    rel_apply_r rel_verify'_r. iSplit; last first.
+    rel_apply_r refines_verify'_r. iSplit; last first.
     { iIntros (Hdec). by rewrite Spec.dec_sign_key in Hdec. }
     iIntros (u' e' _). case: e' => /Spec.tag_inj [_ <-].
     rel_pures. rel_values. iModIntro.
@@ -416,7 +416,7 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
     by exists n, n'.
 Qed.
 
-Lemma rel_collect c c' skT skT' ks ks' votes votes' st :
+Lemma collect_refinement c c' skT skT' ks ks' votes votes' st :
   length st = length ks → length votes = length ks → length votes' = length ks' →
   length ks = length ks' →
   slots_ok skT skT' votes votes' st →
@@ -432,7 +432,7 @@ have Hlen_l : length (pkeys ks) = length st by rewrite /pkeys length_map.
 have Hlen_r : length (pkeys ks') = length st by rewrite /pkeys length_map; lia.
 iLöb as "IH" forall (st Hst Hok Hlen_l Hlen_r).
 rel_rec_l. rel_rec_r. rel_pures.
-rel_apply_l rel_find_empty_l. rel_apply_r rel_find_empty_r.
+rel_apply_l refines_find_empty_l. rel_apply_r refines_find_empty_r.
 case eL: (find slot_empty (slots_l (pkeys ks) st)) => [p|].
 - have [p' eR] : ∃ p', find slot_empty (slots_r (pkeys ks') st) = Some p'.
   { case e: (find _ _) => [p'|]; first by eauto.
@@ -440,11 +440,11 @@ case eL: (find slot_empty (slots_l (pkeys ks) st)) => [p|].
     by have := proj2 (find_slot_empty_None fst Hlen_l) Hall; rewrite eL. }
   rewrite eR /=. rel_pures.
   rel_bind_l (recv _). rel_bind_r (recv _).
-  iApply refines_bind'. iApply rel_recv => //.
+  iApply refines_bind'. iApply refines_recv => //.
   iIntros (m m') "#Hm" => /=.
   rel_bind_l (record_ballot _ _). rel_bind_r (record_ballot _ _).
   iApply (refines_bind with "[]").
-  { by iApply (rel_record_ballot _ _ Hst Hv Hv' Hok with "Hctx Hkeys Hm"). }
+  { by iApply (record_ballot_refinement _ _ Hst Hv Hv' Hok with "Hctx Hkeys Hm"). }
   iIntros (? ?) "(%st' & -> & -> & %Hlen' & %Hok')" => /=.
   rel_pures.
   rewrite -Hlen'. iApply ("IH" $! st' with "[%] [%] [%] [%]"); try lia; try done.
@@ -453,7 +453,7 @@ case eL: (find slot_empty (slots_l (pkeys ks) st)) => [p|].
   rel_pures. rel_values.
 Qed.
 
-Lemma rel_arbitrator c c' skT skT' ks ks' cands votes votes' :
+Lemma arbitrator_refinement c c' skT skT' ks ks' cands votes votes' :
   votes ≡ₚ votes' →
   length votes = length ks → length votes' = length ks' → length ks = length ks' →
   cryptis_rel_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
@@ -462,33 +462,33 @@ Lemma rel_arbitrator c c' skT skT' ks ks' cands votes votes' :
 Proof.
 iIntros (Hperm Hv Hv' Hkk) "#Hctx #Hc #Hkeys".
 rewrite /arbitrator. rel_pures.
-rel_apply_l rel_init_slots_l. rel_apply_r rel_init_slots_r.
+rel_apply_l refines_init_slots_l. rel_apply_r refines_init_slots_r.
 rewrite /pkeys !length_map -/(pkeys ks) -/(pkeys ks') -Hkk.
 rel_bind_l (collect _ _). rel_bind_r (collect _ _).
 iApply (refines_bind with "[]").
-{ iApply (rel_collect with "Hctx Hc Hkeys") => //.
+{ iApply (collect_refinement with "Hctx Hc Hkeys") => //.
   - by rewrite length_replicate.
   - by apply: slots_ok_replicate; lia. }
 iIntros (? ?) "(%st & -> & -> & %Hlen & %Hok & %Hall)" => /=.
 rewrite length_replicate in Hlen.
 rel_pures.
-rel_apply_l rel_avl_new_l. iIntros (m) "Hm".
-rel_apply_r rel_avl_new_r. iIntros (m') "Hm'". rel_pures.
-rel_apply_l (rel_seed_l with "Hm"). iIntros "Hm".
-rel_apply_r (rel_seed_r with "Hm'"). iIntros "Hm'". rel_pures.
-rel_apply_l (rel_tally_slots_l with "Hm"). iIntros "Hm".
-rel_apply_r (rel_tally_slots_r with "Hm'"). iIntros "Hm'".
+rel_apply_l refines_avl_new_l. iIntros (m) "Hm".
+rel_apply_r refines_avl_new_r. iIntros (m') "Hm'". rel_pures.
+rel_apply_l (refines_seed_l with "Hm"). iIntros "Hm".
+rel_apply_r (refines_seed_r with "Hm'"). iIntros "Hm'". rel_pures.
+rel_apply_l (refines_tally_slots_l with "Hm"). iIntros "Hm".
+rel_apply_r (refines_tally_slots_r with "Hm'"). iIntros "Hm'".
 rewrite (tally_slots_l_eq (seed cands) Hlen Hv Hok Hall).
 rewrite (tally_slots_r_eq (seed cands) (eq_trans Hlen Hkk) Hv' Hok Hall).
 rel_pures.
-rel_apply_l (rel_result_l with "Hm"). rel_apply_r (rel_result_r with "Hm'").
+rel_apply_l (refines_result_l with "Hm"). rel_apply_r (refines_result_r with "Hm'").
 have [HbL HmL] := to_map_foldr_incr votes (bst_seed cands).
 have [HbR HmR] := to_map_foldr_incr votes' (bst_seed cands).
 have Heq : AVL.to_list (foldr incr (seed cands) votes) =
            AVL.to_list (foldr incr (seed cands) votes').
 { apply: AVL.to_list_to_map => //. rewrite HmL HmR. exact: foldr_incr_map_perm. }
 rewrite /result Heq.
-iApply (rel_send with "Hc"). iNext. iApply pub_pair_terms.
+iApply (refines_send with "Hc"). iNext. iApply pub_pair_terms.
 Qed.
 
 End TwoSided.

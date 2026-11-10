@@ -50,7 +50,7 @@ Definition channelN : namespace := cryptisN.@"channel".
 Definition channel_inv l l' : iProp Σ :=
   ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ PUB⟨t, t'⟩.
 
-#[local] Lemma rel_sender (l l': loc) t t' :
+#[local] Lemma sender_refinement (l l': loc) t t' :
   inv channelN (channel_inv l l') -∗
   PUB⟨t, t'⟩ -∗
   REL (sender #l t) << (sender #l' t') : ().
@@ -71,7 +71,7 @@ by iFrame.
 done.
 Qed.
 
-Lemma rel_mk_channel :
+Lemma mk_channel_refinement :
   ⊢ REL mk_channel #() << mk_channel #() : lrel_channel.
 Proof.
 rewrite /mk_channel.
@@ -88,7 +88,7 @@ iSplit.
 - iIntros "!> %v %v' (%t & %t' & -> & -> & #H)".
   rel_pures_l. rel_pures_r.
   iApply refines_fork.
-  by iApply rel_sender.
+  by iApply sender_refinement.
 - iIntros "!> %v %v' [-> ->]".
   rel_pures_l. rel_pures_r.
   rel_load_l_atomic.
@@ -104,7 +104,7 @@ iSplit.
   by iApply lrel_term_intro.
 Qed.
 
-Lemma rel_send c c' t t' :
+Lemma refines_send c c' t t' :
   lrel_channel c c' -∗
   (▷ PUB⟨t, t'⟩) -∗
   REL send c t << send c' t' : ().
@@ -114,7 +114,7 @@ iIntros "#?"; rewrite /send; rel_pures_l; rel_pures_r.
 iApply "H". by iApply lrel_term_intro.
 Qed.
 
-Lemma rel_recv c c' Ψ :
+Lemma refines_recv c c' Ψ :
   lrel_channel c c' -∗
   (∀ t t', PUB⟨t, t'⟩ -∗ Ψ t t') -∗
   REL recv c << recv c' : Ψ.
@@ -125,7 +125,7 @@ iApply (refines_wand with "[]"); first by iApply "H".
 iIntros "%v %v' (%t & %t' & -> & -> & #Ht) !>". by iApply "HΨ".
 Qed.
 
-Lemma rel_mk_nonce_l K e (T': term → gset term) Ψ :
+Lemma refines_mk_nonce_l K e (T': term → gset term) Ψ :
   cryptis_rel_ctx -∗
   (∀ t, [∗ set] t' ∈ T' t, □ (minted t ↔ minted t')) -∗
   (∀ t, ⌜is_nonce t⌝ -∗
@@ -154,7 +154,7 @@ rel_pures_l. rewrite [val_of_term]unlock.
 iApply ("mint" $! (TNonce (Nonce l)))=> //=.
 Qed.
 
-Lemma rel_mk_nonce_r K e (T': term → gset term) Ψ :
+Lemma refines_mk_nonce_r K e (T': term → gset term) Ψ :
   cryptis_rel_ctx -∗
   (∀ t, [∗ set] t' ∈ T' t, □ (minted_spec t ↔ minted_spec t')) -∗
   (∀ t, ⌜is_nonce t⌝ -∗
@@ -183,7 +183,7 @@ rel_pures_r. rewrite [val_of_term]unlock.
 iApply ("mint" $! (TNonce (Nonce l)))=> //=.
 Qed.
 
-Lemma rel_mk_aenc_key_l K e (T_sk T_pk : term → gset term) Ψ :
+Lemma refines_mk_aenc_key_l K e (T_sk T_pk : term → gset term) Ψ :
   (∀ sk : aenc_key,
      seed_of_aenc_key sk ∉ T_sk sk ∧
      seed_of_aenc_key sk ∉ T_pk (Spec.pkey sk) ∧
@@ -202,7 +202,7 @@ Lemma rel_mk_aenc_key_l K e (T_sk T_pk : term → gset term) Ψ :
 Proof.
 iIntros (Hdisj) "#Hctx #minted_sk #minted_pk mint"; rewrite /mk_aenc_key.
 rel_pures_l.
-rel_apply_l (rel_mk_nonce_l _ _
+rel_apply_l (refines_mk_nonce_l _ _
   (λ t, {[t]} ∪ T_sk (AEncKey t) ∪ T_pk (Spec.pkey (AEncKey t))))=> //.
 { iIntros "%t".
   case: (Hdisj (AEncKey t)) => [Hseed_sk [Hseed_pk Hsk_pk]].
@@ -224,12 +224,12 @@ rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htt" as "[[Htt_seed Htt_sk] Htt_pk]".
-rel_pures_l. rel_apply_l rel_derive_aenc_key_l.
+rel_pures_l. rel_apply_l refines_derive_aenc_key_l.
 iApply ("mint" $! (AEncKey t) with "[//] [] Htt_seed Htt_sk Htt_pk").
 by iApply minted_aenc.
 Qed.
 
-Lemma rel_mk_aenc_key_r K e (T_sk T_pk : term → gset term) Ψ :
+Lemma refines_mk_aenc_key_r K e (T_sk T_pk : term → gset term) Ψ :
   (∀ sk : aenc_key,
      seed_of_aenc_key sk ∉ T_sk sk ∧
      seed_of_aenc_key sk ∉ T_pk (Spec.pkey sk) ∧
@@ -248,7 +248,7 @@ Lemma rel_mk_aenc_key_r K e (T_sk T_pk : term → gset term) Ψ :
 Proof.
 iIntros (Hdisj) "#Hctx #minted_sk #minted_pk mint"; rewrite /mk_aenc_key.
 rel_pures_r.
-rel_apply_r (rel_mk_nonce_r _ _
+rel_apply_r (refines_mk_nonce_r _ _
   (λ t, {[t]} ∪ T_sk (AEncKey t) ∪ T_pk (Spec.pkey (AEncKey t))))=> //.
 { iIntros "%t".
   case: (Hdisj (AEncKey t)) => [Hseed_sk [Hseed_pk Hsk_pk]].
@@ -270,12 +270,12 @@ rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htts" as "[[Htts_seed Htts_sk] Htts_pk]".
-rel_pures_r. rel_apply_r rel_derive_aenc_key_r.
+rel_pures_r. rel_apply_r refines_derive_aenc_key_r.
 iApply ("mint" $! (AEncKey t) with "[//] [] Htts_seed Htts_sk Htts_pk").
 by iApply minted_spec_aenc.
 Qed.
 
-Lemma rel_mk_sign_key_l K e (T_sk T_pk : term → gset term) Ψ :
+Lemma refines_mk_sign_key_l K e (T_sk T_pk : term → gset term) Ψ :
   (∀ sk : sign_key,
      seed_of_sign_key sk ∉ T_sk sk ∧
      seed_of_sign_key sk ∉ T_pk (Spec.pkey sk) ∧
@@ -294,7 +294,7 @@ Lemma rel_mk_sign_key_l K e (T_sk T_pk : term → gset term) Ψ :
 Proof.
 iIntros (Hdisj) "#Hctx #minted_sk #minted_pk mint"; rewrite /mk_sign_key.
 rel_pures_l.
-rel_apply_l (rel_mk_nonce_l _ _
+rel_apply_l (refines_mk_nonce_l _ _
   (λ t, {[t]} ∪ T_sk (SignKey t) ∪ T_pk (Spec.pkey (SignKey t))))=> //.
 { iIntros "%t".
   case: (Hdisj (SignKey t)) => [Hseed_sk [Hseed_pk Hsk_pk]].
@@ -316,12 +316,12 @@ rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htt" as "[[Htt_seed Htt_sk] Htt_pk]".
-rel_pures_l. rel_apply_l rel_derive_sign_key_l.
+rel_pures_l. rel_apply_l refines_derive_sign_key_l.
 iApply ("mint" $! (SignKey t) with "[//] [] Htt_seed Htt_sk Htt_pk").
 by iApply minted_sign.
 Qed.
 
-Lemma rel_mk_sign_key_r K e (T_sk T_pk : term → gset term) Ψ :
+Lemma refines_mk_sign_key_r K e (T_sk T_pk : term → gset term) Ψ :
   (∀ sk : sign_key,
      seed_of_sign_key sk ∉ T_sk sk ∧
      seed_of_sign_key sk ∉ T_pk (Spec.pkey sk) ∧
@@ -340,7 +340,7 @@ Lemma rel_mk_sign_key_r K e (T_sk T_pk : term → gset term) Ψ :
 Proof.
 iIntros (Hdisj) "#Hctx #minted_sk #minted_pk mint"; rewrite /mk_sign_key.
 rel_pures_r.
-rel_apply_r (rel_mk_nonce_r _ _
+rel_apply_r (refines_mk_nonce_r _ _
   (λ t, {[t]} ∪ T_sk (SignKey t) ∪ T_pk (Spec.pkey (SignKey t))))=> //.
 { iIntros "%t".
   case: (Hdisj (SignKey t)) => [Hseed_sk [Hseed_pk Hsk_pk]].
@@ -362,12 +362,12 @@ rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htts" as "[[Htts_seed Htts_sk] Htts_pk]".
-rel_pures_r. rel_apply_r rel_derive_sign_key_r.
+rel_pures_r. rel_apply_r refines_derive_sign_key_r.
 iApply ("mint" $! (SignKey t) with "[//] [] Htts_seed Htts_sk Htts_pk").
 by iApply minted_spec_sign.
 Qed.
 
-Lemma rel_mk_senc_key_l K e (T_k : term → gset term) Ψ :
+Lemma refines_mk_senc_key_l K e (T_k : term → gset term) Ψ :
   (∀ k : senc_key, seed_of_senc_key k ∉ T_k k) →
   cryptis_rel_ctx -∗
   (∀ k : senc_key, [∗ set] t' ∈ T_k k, □ (minted k ↔ minted t')) -∗
@@ -380,7 +380,7 @@ Lemma rel_mk_senc_key_l K e (T_k : term → gset term) Ψ :
 Proof.
 iIntros (Hdisj) "#Hctx #minted_k mint"; rewrite /mk_senc_key.
 rel_pures_l.
-rel_apply_l (rel_mk_nonce_l _ _ (λ t, {[t]} ∪ T_k (SEncKey t)))=> //.
+rel_apply_l (refines_mk_nonce_l _ _ (λ t, {[t]} ∪ T_k (SEncKey t)))=> //.
 { iIntros "%t".
   have Hseed_k := Hdisj (SEncKey t).
   have Hseed : seed_of_senc_key (SEncKey t) = t by [].
@@ -397,12 +397,12 @@ rewrite Hseed in Hseed_k.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htt" as "[Htt_seed Htt_k]".
-rel_pures_l. rel_apply_l rel_derive_senc_key_l.
+rel_pures_l. rel_apply_l refines_derive_senc_key_l.
 iApply ("mint" $! (SEncKey t) with "[//] [] Htt_seed Htt_k").
 by iApply minted_senc.
 Qed.
 
-Lemma rel_mk_senc_key_r K e (T_k : term → gset term) Ψ :
+Lemma refines_mk_senc_key_r K e (T_k : term → gset term) Ψ :
   (∀ k : senc_key, seed_of_senc_key k ∉ T_k k) →
   cryptis_rel_ctx -∗
   (∀ k : senc_key, [∗ set] t' ∈ T_k k, □ (minted_spec k ↔ minted_spec t')) -∗
@@ -415,7 +415,7 @@ Lemma rel_mk_senc_key_r K e (T_k : term → gset term) Ψ :
 Proof.
 iIntros (Hdisj) "#Hctx #minted_k mint"; rewrite /mk_senc_key.
 rel_pures_r.
-rel_apply_r (rel_mk_nonce_r _ _ (λ t, {[t]} ∪ T_k (SEncKey t)))=> //.
+rel_apply_r (refines_mk_nonce_r _ _ (λ t, {[t]} ∪ T_k (SEncKey t)))=> //.
 { iIntros "%t".
   have Hseed_k := Hdisj (SEncKey t).
   have Hseed : seed_of_senc_key (SEncKey t) = t by [].
@@ -432,12 +432,12 @@ rewrite Hseed in Hseed_k.
 rewrite big_sepS_union; last set_solver.
 rewrite big_sepS_singleton.
 iDestruct "Htts" as "[Htts_seed Htts_k]".
-rel_pures_r. rel_apply_r rel_derive_senc_key_r.
+rel_pures_r. rel_apply_r refines_derive_senc_key_r.
 iApply ("mint" $! (SEncKey t) with "[//] [] Htts_seed Htts_k").
 by iApply minted_spec_senc.
 Qed.
 
-Lemma rel_is_aenc_key_l E K e (pk : term) Ψ :
+Lemma refines_is_aenc_key_l E K e (pk : term) Ψ :
   minted pk -∗
   (∀ sk : aenc_key, ⌜pk = Spec.pkey sk⌝ -∗ minted sk -∗
      REL fill K (#true : expr) << e @ E : Ψ) ∧
@@ -456,7 +456,7 @@ iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type AEnc pk)
   rewrite [term_of_aenc_key]unlock // !minted_TKey.
 Qed.
 
-Lemma rel_is_aenc_key_r E K e (pk : term) Ψ :
+Lemma refines_is_aenc_key_r E K e (pk : term) Ψ :
   ↑specN ⊆ E →
   minted_spec pk -∗
   (∀ sk : aenc_key, ⌜pk = Spec.pkey sk⌝ -∗ minted_spec sk -∗
@@ -476,7 +476,7 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type AEnc pk)
   rewrite [term_of_aenc_key]unlock // !minted_spec_TKey.
 Qed.
 
-Lemma rel_is_adec_key_l E K e (sk : term) Ψ :
+Lemma refines_is_adec_key_l E K e (sk : term) Ψ :
   minted sk -∗
   (∀ sk' : aenc_key, ⌜sk = sk'⌝ -∗ REL fill K (#true : expr) << e @ E : Ψ) ∧
   (REL fill K (#false : expr) << e @ E : Ψ) -∗
@@ -494,7 +494,7 @@ iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type ADec sk)
   rewrite [term_of_aenc_key]unlock.
 Qed.
 
-Lemma rel_is_adec_key_r E K e (sk : term) Ψ :
+Lemma refines_is_adec_key_r E K e (sk : term) Ψ :
   ↑specN ⊆ E →
   minted_spec sk -∗
   (∀ sk' : aenc_key, ⌜sk = sk'⌝ -∗ REL e << fill K (#true : expr) @ E : Ψ) ∧
@@ -513,7 +513,7 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type ADec sk)
   rewrite [term_of_aenc_key]unlock.
 Qed.
 
-Lemma rel_is_senc_key_l E K e (k : term) Ψ :
+Lemma refines_is_senc_key_l E K e (k : term) Ψ :
   minted k -∗
   (∀ k' : senc_key, ⌜k = k'⌝ -∗ REL fill K (#true : expr) << e @ E : Ψ) ∧
   (REL fill K (#false : expr) << e @ E : Ψ) -∗
@@ -531,7 +531,7 @@ iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type SEnc k)
   rewrite [term_of_senc_key]unlock.
 Qed.
 
-Lemma rel_is_senc_key_r E K e (k : term) Ψ :
+Lemma refines_is_senc_key_r E K e (k : term) Ψ :
   ↑specN ⊆ E →
   minted_spec k -∗
   (∀ k' : senc_key, ⌜k = k'⌝ -∗ REL e << fill K (#true : expr) @ E : Ψ) ∧
@@ -550,7 +550,7 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type SEnc k)
   rewrite [term_of_senc_key]unlock.
 Qed.
 
-Lemma rel_is_verify_key_l E K e (pk : term) Ψ :
+Lemma refines_is_verify_key_l E K e (pk : term) Ψ :
   minted pk -∗
   (∀ sk : sign_key, ⌜pk = Spec.pkey sk⌝ -∗ minted sk -∗
      REL fill K (#true : expr) << e @ E : Ψ) ∧
@@ -569,7 +569,7 @@ iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type Verify pk)
   rewrite [term_of_sign_key]unlock // !minted_TKey.
 Qed.
 
-Lemma rel_is_verify_key_r E K e (pk : term) Ψ :
+Lemma refines_is_verify_key_r E K e (pk : term) Ψ :
   ↑specN ⊆ E →
   minted_spec pk -∗
   (∀ sk : sign_key, ⌜pk = Spec.pkey sk⌝ -∗ minted_spec sk -∗
@@ -589,7 +589,7 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type Verify pk)
   rewrite [term_of_sign_key]unlock // !minted_spec_TKey.
 Qed.
 
-Lemma rel_is_sign_key_l E K e (sk : term) Ψ :
+Lemma refines_is_sign_key_l E K e (sk : term) Ψ :
   minted sk -∗
   (∀ sk' : sign_key, ⌜sk = sk'⌝ -∗ REL fill K (#true : expr) << e @ E : Ψ) ∧
   (REL fill K (#false : expr) << e @ E : Ψ) -∗
@@ -607,7 +607,7 @@ iApply (pure_twp_rel_l _ _ _ _ _ _ #(Spec.has_key_type Sign sk)
   rewrite [term_of_sign_key]unlock.
 Qed.
 
-Lemma rel_is_sign_key_r E K e (sk : term) Ψ :
+Lemma refines_is_sign_key_r E K e (sk : term) Ψ :
   ↑specN ⊆ E →
   minted_spec sk -∗
   (∀ sk' : sign_key, ⌜sk = sk'⌝ -∗ REL e << fill K (#true : expr) @ E : Ψ) ∧
@@ -626,12 +626,12 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type Sign sk)
   rewrite [term_of_sign_key]unlock.
 Qed.
 
-Lemma rel_random_adec_l E K e k N c Ψ :
+Lemma refines_random_adec_l E K e k N c Ψ :
   (REL fill K (repr (Spec.random_adec k N c) : expr) << e @ E : Ψ) -∗
   REL fill K (random_adec k N c) << e @ E : Ψ.
 Proof. pure_twp_rel twp_random_adec'. Qed.
 
-Lemma rel_random_adec_r E K e k N c Ψ :
+Lemma refines_random_adec_r E K e k N c Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (repr (Spec.random_adec k N c) : expr) @ E : Ψ) -∗
   REL e << fill K (random_adec k N c) @ E : Ψ.
@@ -641,7 +641,7 @@ Definition random_term_chain sk (N : namespace) n m : gset term :=
   {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
     Spec.random_aenc (Spec.pkey sk) (Tag N) n m]}.
 
-Lemma rel_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
+Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
   cryptis_rel_ctx -∗
   ⌜is_nonce (seed_of_aenc_key sk)⌝ -∗
   minted sk -∗
@@ -681,13 +681,13 @@ iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
   first by rewrite minted_spec_pkey.
 rewrite /random_aenc. rel_pures.
-rel_apply_l (rel_mk_nonce_l _ _ (λ n, random_term_chain sk N n m ∪ T n) with "[//]").
+rel_apply_l (refines_mk_nonce_l _ _ (λ n, random_term_chain sk N n m ∪ T n) with "[//]").
 { iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
   - rewrite /random_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
       solve_minted_iff_elem.
   - iSpecialize ("mintT" $! t). rewrite big_sepS_forall. by iApply "mintT". }
 iIntros (n) "%Hn #mint_n Htt".
-rel_apply_r (rel_mk_nonce_r _ _ (λ n', random_term_chain sk' N n' m' ∪ T' n') with "[//]").
+rel_apply_r (refines_mk_nonce_r _ _ (λ n', random_term_chain sk' N n' m' ∪ T' n') with "[//]").
 { iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
   - rewrite /random_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
       solve_minted_iff_elem.
@@ -739,11 +739,11 @@ iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") 
   iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
   iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro.
   iSplit; first done. by iRight. }
-rel_apply_l rel_tuple_l. rel_apply_l rel_aenc'_l. rel_later.
-rel_apply_r rel_tuple_r. rel_apply_r rel_aenc'_r. by rel_values.
+rel_apply_l refines_tuple_l. rel_apply_l refines_aenc'_l. rel_later.
+rel_apply_r refines_tuple_r. rel_apply_r refines_aenc'_r. by rel_values.
 Qed.
 
-Lemma rel_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
+Lemma refines_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
   ↑cryptisN ⊆ E →
   ↑seal_ns k (Spec.tag (Tag N) t) ⊆ Ek →
   ↑seal_ns k' (Spec.tag (Tag N) t') ⊆ Ek' →
@@ -769,9 +769,9 @@ iIntros "#Hs". rewrite publicly_related_tag. iSplit; first done. by iApply "Himp
 Qed.
 
 Definition rel_prim_l_random_adec (v1 v2 v3 : val) : RelPrimL Σ (random_adec v1 v2 v3) _ :=
-  rel_random_adec_l.
+  refines_random_adec_l.
 Definition rel_prim_r_random_adec (v1 v2 v3 : val) : RelPrimR Σ (random_adec v1 v2 v3) _ :=
-  rel_random_adec_r.
+  refines_random_adec_r.
 
 End Proofs.
 
@@ -780,9 +780,9 @@ Global Hint Resolve
   : rel_prims.
 
 Arguments lrel_channel {Σ _ _}.
-Arguments rel_mk_aenc_key_l {Σ _ _} K e T_sk T_pk Ψ.
-Arguments rel_mk_aenc_key_r {Σ _ _} K e T_sk T_pk Ψ.
-Arguments rel_mk_sign_key_l {Σ _ _} K e T_sk T_pk Ψ.
-Arguments rel_mk_sign_key_r {Σ _ _} K e T_sk T_pk Ψ.
-Arguments rel_mk_senc_key_l {Σ _ _} K e T_k Ψ.
-Arguments rel_mk_senc_key_r {Σ _ _} K e T_k Ψ.
+Arguments refines_mk_aenc_key_l {Σ _ _} K e T_sk T_pk Ψ.
+Arguments refines_mk_aenc_key_r {Σ _ _} K e T_sk T_pk Ψ.
+Arguments refines_mk_sign_key_l {Σ _ _} K e T_sk T_pk Ψ.
+Arguments refines_mk_sign_key_r {Σ _ _} K e T_sk T_pk Ψ.
+Arguments refines_mk_senc_key_l {Σ _ _} K e T_k Ψ.
+Arguments refines_mk_senc_key_r {Σ _ _} K e T_k Ψ.

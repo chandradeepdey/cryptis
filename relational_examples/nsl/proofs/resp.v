@@ -152,7 +152,7 @@ Definition resp_post : val → val → iProp := λ v v',
      (⌜pkI = Spec.pkey skI⌝ →
       ∃ s s', ⌜k = sess_key s ∧ k' = sess_key s'⌝ ∗ session s s'))%I.
 
-Lemma rel_resp c c' :
+Lemma resp_refinement c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   nsl_ctx -∗
@@ -169,7 +169,7 @@ iAssert (minted_spec (Spec.pkey skR')) as "#mint_pkR'";
   first by rewrite minted_spec_pkey.
 rewrite /resp /adec. rel_prims.
 (* The first message. *)
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (t t') "#Ht" => /=.
 iMod (m1_open with "Hctx Hnsl Ht") as "[[%eL %eR]|(%m & %m' & [%eL %eR] & #Hm)]";
   [solve_ndisj..| |].
@@ -179,15 +179,15 @@ iDestruct (m1_decode with "HI Hm")
   as "[[%eL2 %eR2]|(%ts & %ts' & [%eL2 %eR2] & [[%Hl %Hl']|Hcomp])]".
 { rewrite eL2 eR2. rel_pures. rel_values. iModIntro. by iLeft. }
 { rewrite eL2 eR2. rel_pures. rewrite !subst_list_match /=.
-  rel_apply_l (rel_list_match_l (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
-  rel_apply_r (rel_list_match_r (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
+  rel_apply_l (refines_list_match_l (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
+  rel_apply_r (refines_list_match_r (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
   rel_pures. rel_values. iModIntro. by iLeft. }
 iDestruct "Hcomp" as (x1 x2 x1' x2' [-> ->]) "#[Hx2 Hx1]".
 rewrite eL2 eR2. rel_pures. rewrite !subst_list_match /=.
-rel_apply_l (rel_list_match_l (A:=term)). rewrite /= ?decide_True //=.
-rel_apply_r (rel_list_match_r (A:=term)). rewrite /= ?decide_True //=.
+rel_apply_l (refines_list_match_l (A:=term)). rewrite /= ?decide_True //=.
+rel_apply_r (refines_list_match_r (A:=term)). rewrite /= ?decide_True //=.
 rewrite /is_aenc_key. rel_pures.
-rel_apply_l (rel_has_key_type_l _ _ _ AEnc). rel_apply_r (rel_has_key_type_r _ _ AEnc).
+rel_apply_l (refines_has_key_type_l _ _ _ AEnc). rel_apply_r (refines_has_key_type_r _ _ AEnc).
 iDestruct (publicly_related_has_key_type AEnc with "Hx2") as %->.
 case: (Spec.has_key_type AEnc x2'); last first.
 { rel_pures. rel_values. iModIntro. by iLeft. }
@@ -203,10 +203,10 @@ iPoseProof (publicly_related_minted with "Hx2") as "#[mint_x2 mint_x2']".
 iMod (publicly_related_part_bij' (E:=⊤) with "Hctx Hx2 pub_pkI") as %HX;
   first solve_ndisj.
 (* The responder's nonce. *)
-rel_apply_l (rel_mk_nonce_l _ _ (λ nR, resp_terms x2 (Spec.pkey skR) x1 nR)
+rel_apply_l (refines_mk_nonce_l _ _ (λ nR, resp_terms x2 (Spec.pkey skR) x1 nR)
   with "[//]"); first solve_minted_iff.
 iIntros (nR) "%HnR #mint_nR tok".
-rel_apply_r (rel_mk_nonce_r _ _ (λ nR, resp_terms x2' (Spec.pkey skR') x1' nR)
+rel_apply_r (refines_mk_nonce_r _ _ (λ nR, resp_terms x2' (Spec.pkey skR') x1' nR)
   with "[//]"); first solve_minted_iff.
 iIntros (nR') "%HnR' #mint_nR' tok'".
 rewrite /resp_terms. split_term_tokens.
@@ -357,10 +357,10 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
     iLeft. by iFrame. }
   iModIntro. iSplit; first by iRight. iFrame "Hc2".
   iIntros "_". iExists x1, x1', nR, nR'. by do 2 (iSplit; first done). }
-rel_apply (rel_send with "Hc Hc2").
+rel_apply (refines_send with "Hc Hc2").
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 (* The third message. *)
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (t3 t3') "#Ht3" => /=.
 iMod (m3_open with "Hctx Hnsl Ht3") as "[[%eL3 %eR3]|(%m3 & %m3' & [%eL3 %eR3] & #Hm3)]";
   [solve_ndisj..| |].

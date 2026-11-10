@@ -97,7 +97,7 @@ iApply (tp_close_vars with "Hj") => //.
 by rewrite length_map.
 Qed.
 
-Lemma rel_list_match_l E K e vars (vs : list A) k Ψ :
+Lemma refines_list_match_l E K e vars (vs : list A) k Ψ :
   (if decide (length vars = length vs) then
      REL fill K (nsubst vars (map repr vs) k) << e @ E : Ψ
    else REL fill K (NONEV : expr) << e @ E : Ψ) -∗
@@ -111,7 +111,7 @@ iIntros "post". case: decide => Hlen.
   iApply wp_fupd. iApply wp_list_match. by rewrite decide_False.
 Qed.
 
-Lemma rel_list_match_r E K e vars (vs : list A) k Ψ :
+Lemma refines_list_match_r E K e vars (vs : list A) k Ψ :
   ↑specN ⊆ E →
   (if decide (length vars = length vs) then
      REL e << fill K (nsubst vars (map repr vs) k) @ E : Ψ

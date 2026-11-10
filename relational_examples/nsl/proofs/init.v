@@ -115,7 +115,7 @@ Definition init_post pkX : val → val → iProp := λ v v',
      (⌜pkX = Spec.pkey skR⌝ →
       ∃ s s', ⌜k = sess_key s ∧ k' = sess_key s'⌝ ∗ session s s'))%I.
 
-Lemma rel_init c c' pkX pkX' :
+Lemma init_refinement c c' pkX pkX' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   nsl_ctx -∗
@@ -133,13 +133,13 @@ iAssert (minted_spec (Spec.pkey skI')) as "#mint_pkI'";
 iMod (publicly_related_part_bij' (E:=⊤) with "Hctx HpkX pub_pkR") as %HX;
   first solve_ndisj.
 rewrite /init /adec. rel_prims.
-rel_apply_l (rel_mk_nonce_l _ _ (λ nI,
+rel_apply_l (refines_mk_nonce_l _ _ (λ nI,
   {[nI; Spec.of_list [nI; Spec.pkey skI];
     Spec.tag (Tag m1N) (Spec.of_list [nI; Spec.pkey skI]);
     Spec.enc pkX (Tag m1N) (Spec.of_list [nI; Spec.pkey skI])]})
   with "[//]"); first solve_minted_iff.
 iIntros (nI) "%HnI #mint_nI tok".
-rel_apply_r (rel_mk_nonce_r _ _ (λ nI',
+rel_apply_r (refines_mk_nonce_r _ _ (λ nI',
   {[nI'; Spec.of_list [nI'; Spec.pkey skI'];
     Spec.tag (Tag m1N) (Spec.of_list [nI'; Spec.pkey skI']);
     Spec.enc pkX' (Tag m1N) (Spec.of_list [nI'; Spec.pkey skI'])]})
@@ -211,10 +211,10 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
     iApply publicly_related_of_list. by iFrame "#". }
 iAssert (nonce_info initN nI nI') as "#Hinfo".
 { by iDestruct "HnI" as "[[_ ?]|[_ ?]]"; [iRight|iLeft]. }
-rel_apply (rel_send with "Hc Hc1").
+rel_apply (refines_send with "Hc Hc1").
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 (* The second message. *)
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (t t') "#Ht" => /=.
 iMod (m2_open with "Hctx Hnsl Ht") as "[[%eL %eR]|(%m & %m' & [%eL %eR] & #Hm)]";
   [solve_ndisj..| |].
@@ -224,13 +224,13 @@ iDestruct (m2_decode with "HR Hm")
   as "[[%eL2 %eR2]|(%ts & %ts' & [%eL2 %eR2] & [[%Hl %Hl']|Hcomp])]".
 { rewrite eL2 eR2. rel_pures. rel_values. iModIntro. by iLeft. }
 { rewrite eL2 eR2. rel_pures. rewrite !subst_list_match /=.
-  rel_apply_l (rel_list_match_l (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
-  rel_apply_r (rel_list_match_r (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
+  rel_apply_l (refines_list_match_l (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
+  rel_apply_r (refines_list_match_r (A:=term)). rewrite decide_False; last by move=> /= ?; lia.
   rel_pures. rel_values. iModIntro. by iLeft. }
 iDestruct "Hcomp" as (x1 x2 x3 x1' x2' x3' [-> ->]) "#[Hx3 Hcomp]".
 rewrite eL2 eR2. rel_pures. rewrite !subst_list_match /=.
-rel_apply_l (rel_list_match_l (A:=term)). rewrite /= ?decide_True //=.
-rel_apply_r (rel_list_match_r (A:=term)). rewrite /= ?decide_True //=.
+rel_apply_l (refines_list_match_l (A:=term)). rewrite /= ?decide_True //=.
+rel_apply_r (refines_list_match_r (A:=term)). rewrite /= ?decide_True //=.
 rel_prims.
 (* Both runs pass the checks, or both fail. *)
 iAssert (nonce_info initN x1 x1') as "#Hx1".
@@ -281,7 +281,7 @@ iAssert (|={⊤}=> PUB⟨Spec.enc pkX (Tag m3N) x2, Spec.enc pkX' (Tag m3N) x2'�
     with "HinvR [] link mk mk'") as "[#Hc3 _]".
   { iRight. iExists x2, x2'. by iSplit. }
   by iModIntro. }
-rel_apply (rel_send with "Hc Hc3").
+rel_apply (refines_send with "Hc Hc3").
 iIntros (? ?) "[-> ->]" => /=.
 rel_prims. rel_values. iModIntro.
 iRight. iExists _, _. iSplit; first done.

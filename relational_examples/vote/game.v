@@ -36,7 +36,7 @@ Definition election_guess_wrapped cands votes0 votes1 : val := λ: "c",
   ("b", if: "b" then election_guess cands votes1 "c"
         else election_guess cands votes0 "c").
 
-Lemma rel_election_guess c c' cands votes votes' :
+Lemma election_guess_refinement c c' cands votes votes' :
   votes ≡ₚ votes' →
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
@@ -45,14 +45,14 @@ Proof.
 iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess.
 rel_pures.
 rel_bind_l (election_of _ _ _). rel_bind_r (election_of _ _ _).
-iApply refines_bind; first by iApply rel_election_of.
+iApply refines_bind; first by iApply election_of_refinement.
 iIntros (? ?) "[-> ->]"=> /=.
 rel_pures.
 rel_bind_l (recv _). rel_bind_r (recv _).
-iApply refines_bind'. iApply rel_recv=> //.
+iApply refines_bind'. iApply refines_recv=> //.
 iIntros (guess guess') "#Hguess"=> /=.
 rel_pures.
-rel_apply_l rel_eq_term_l. rel_apply_r rel_eq_term_r.
+rel_apply_l refines_eq_term_l. rel_apply_r refines_eq_term_r.
 rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
         ltac:(solve_ndisj)
@@ -62,7 +62,7 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma rel_election_guess_wrapped c c' cands votes0 votes1 :
+Lemma election_guess_wrapped_refinement c c' cands votes0 votes1 :
   votes0 ≡ₚ votes1 →
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
@@ -73,17 +73,17 @@ Lemma rel_election_guess_wrapped c c' cands votes0 votes1 :
 Proof.
 iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess_wrapped.
 rel_pures.
-rel_apply_l rel_nondet_bool_l. iIntros (choice).
-rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
+rel_apply_l refines_nondet_bool_l. iIntros (choice).
+rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
 - rel_bind_l (election_guess _ votes1 _). rel_bind_r (election_guess _ votes0 _).
   iApply refines_bind;
-    first by iApply (rel_election_guess _ _ _ (Permutation_sym Hperm) with "Hctx Hc").
+    first by iApply (election_guess_refinement _ _ _ (Permutation_sym Hperm) with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
 - rel_bind_l (election_guess _ votes0 _). rel_bind_r (election_guess _ votes1 _).
-  iApply refines_bind; first by iApply (rel_election_guess _ _ _ Hperm with "Hctx Hc").
+  iApply refines_bind; first by iApply (election_guess_refinement _ _ _ Hperm with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -106,7 +106,7 @@ Proof.
 move=> Hperm Hadv.
 by split;
   apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iApply rel_election_of.
+  iApply election_of_refinement.
 Qed.
 
 Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 votes1
@@ -122,5 +122,5 @@ Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 vo
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hperm Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-by iApply rel_election_guess_wrapped.
+by iApply election_guess_wrapped_refinement.
 Qed.

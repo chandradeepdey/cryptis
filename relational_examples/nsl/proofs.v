@@ -114,7 +114,7 @@ End Claim.
 
 Section Tests.
 
-Lemma rel_setup c c' :
+Lemma setup_refinement c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL setup c << setup c' : λ v v',
@@ -126,10 +126,10 @@ Lemma rel_setup c c' :
 Proof.
 iIntros "#Hctx #Hc". rewrite /setup. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
-iApply (rel_mk_honest_key with "Hctx").
+iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
-iApply (rel_mk_honest_key with "Hctx").
+iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skR skR') "#HR sealsR _" => /=. rel_pures.
 iMod (inv_alloc sealsIN _ (seals_inv skI skI' (seals_I_info skI skI' skR skR' (ror_sess skI)))
         with "[sealsI]") as "#HinvI".
@@ -155,19 +155,19 @@ iDestruct "tokI" as "[tok_sess2 _]".
 iMod (inv_alloc rorN _ (ror_inv skI) with "[tok_sess]") as "#Hror".
 { iNext. by iLeft. }
 rel_prims.
-rel_apply (rel_send with "Hc []").
+rel_apply (refines_send with "Hc []").
 { iNext. by iDestruct "HI" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_prims.
-rel_apply (rel_send with "Hc []").
+rel_apply (refines_send with "Hc []").
 { iNext. by iDestruct "HR" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (pkX pkX') "#HpkX" => /=. rel_pures. rel_values. iModIntro.
 iExists skI, skI', skR, skR', pkX, pkX'. do 2 (iSplit; first done).
 iFrame "claim tok_sess2 HpkX". by iFrame "#".
 Qed.
 
-Lemma rel_reveal b c c' s s' :
+Lemma reveal_refinement b c c' s s' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   hash_tokens s s' -∗ secret_in_l (sess_key s) -∗ secret_in_r (sess_key s') -∗
@@ -177,7 +177,7 @@ iIntros "#Hctx #Hc (tok & tok') #sec #sec'". rewrite /reveal.
 iPoseProof (term_token_minted with "tok") as "#mint".
 iPoseProof (term_token_spec_minted_spec with "tok'") as "#mint'".
 case: b; rel_pures.
-- rel_apply_r (rel_mk_senc_key_r _ _ (λ _, ∅) _ (λ _, not_elem_of_empty _) with "Hctx []").
+- rel_apply_r (refines_mk_senc_key_r _ _ (λ _, ∅) _ (λ _, not_elem_of_empty _) with "Hctx []").
   { by iIntros (?); rewrite big_sepS_empty. }
   iIntros (k') "%Hk' #mint_k' tok_k' _".
   destruct k' as [n']. simpl in Hk'. case/is_nonceP: Hk' => a' e. subst n'.
@@ -192,8 +192,8 @@ case: b; rel_pures.
   iAssert (PUB⟨SEncKey (THash (sess_key s)), SEncKey (TNonce a')⟩) as "#Hk".
   { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
   rel_prims.
-  by rel_apply (rel_send with "Hc Hk").
-- rel_apply_l (rel_mk_senc_key_l _ _ (λ _, ∅) _ (λ _, not_elem_of_empty _) with "Hctx []").
+  by rel_apply (refines_send with "Hc Hk").
+- rel_apply_l (refines_mk_senc_key_l _ _ (λ _, ∅) _ (λ _, not_elem_of_empty _) with "Hctx []").
   { by iIntros (?); rewrite big_sepS_empty. }
   iIntros (k) "%Hk #mint_k tok_k _".
   destruct k as [n]. simpl in Hk. case/is_nonceP: Hk => a e. subst n.
@@ -207,26 +207,26 @@ case: b; rel_pures.
   iAssert (PUB⟨SEncKey (TNonce a), SEncKey (THash (sess_key s'))⟩) as "#Hk".
   { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
   rel_prims.
-  by rel_apply (rel_send with "Hc Hk").
+  by rel_apply (refines_send with "Hc Hk").
 Qed.
 
-Lemma rel_resp_test b c c' :
+Lemma resp_test_refinement b c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL resp_test b c << resp_test (negb b) c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /resp_test. rel_pures.
-rel_apply (rel_setup with "Hctx Hc").
+rel_apply (setup_refinement with "Hctx Hc").
 iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
 rel_pures.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[]").
 { iApply refines_fork. rel_pures.
-  rel_apply (rel_init with "Hctx Hc Hnsl HpkX").
+  rel_apply (init_refinement with "Hctx Hc Hnsl HpkX").
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
-rel_apply (rel_resp with "Hctx Hc Hnsl [tok2]").
+rel_apply (resp_refinement with "Hctx Hc Hnsl [tok2]").
 { by iApply (ror_alloc with "Hctx Hror tok2"). }
 iIntros (? ?) "[[-> ->]|(%pkI & %pkI' & %k & %k' & [-> ->] & #HpkI & Hsess)]" => /=.
 { rel_pures. by rel_values. }
@@ -241,27 +241,27 @@ rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (claim_hash with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
-by iApply (rel_reveal with "Hctx Hc toks sec sec'").
+by iApply (reveal_refinement with "Hctx Hc toks sec sec'").
 Qed.
 
-Lemma rel_init_test b c c' :
+Lemma init_test_refinement b c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL init_test b c << init_test (negb b) c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /init_test. rel_pures.
-rel_apply (rel_setup with "Hctx Hc").
+rel_apply (setup_refinement with "Hctx Hc").
 iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
 rel_pures.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[tok2]").
 { iApply refines_fork. rel_pures.
-  rel_apply (rel_resp with "Hctx Hc Hnsl [tok2]").
+  rel_apply (resp_refinement with "Hctx Hc Hnsl [tok2]").
   { by iApply (ror_alloc with "Hctx Hror tok2"). }
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
-rel_apply (rel_init with "Hctx Hc Hnsl HpkX").
+rel_apply (init_refinement with "Hctx Hc Hnsl HpkX").
 iIntros (? ?) "[[-> ->]|(%k & %k' & [-> ->] & Hsess)]" => /=.
 { rel_pures. by rel_values. }
 rel_prims.
@@ -275,7 +275,7 @@ rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (claim_hash with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
-by iApply (rel_reveal with "Hctx Hc toks sec sec'").
+by iApply (reveal_refinement with "Hctx Hc toks sec sec'").
 Qed.
 
 End Tests.

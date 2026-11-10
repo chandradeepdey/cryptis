@@ -39,7 +39,7 @@ Hypothesis free_sess : ∀ k k', free -∗ sess k k' -∗ False.
 Abbreviation handle := (conn_handle γ sess).
 Abbreviation ctx := (conn_ctx γ sess free Φ).
 
-Lemma rel_rpc_call rl cs cs' n r (N : namespace) t t' :
+Lemma rpc_call_refinement rl cs cs' n r (N : namespace) t t' :
   cryptis_rel_ctx -∗ ctx -∗ handle rl cs cs' n r -∗
   conn_payload t t' -∗ Φ rl n (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') -∗
   REL rpc_call cs (Tag N) t << rpc_call cs' (Tag N) t' :
@@ -47,13 +47,13 @@ Lemma rel_rpc_call rl cs cs' n r (N : namespace) t t' :
       handle rl cs cs' (S n) (S r) ∗ Φ (1 - rl) r p p')%I.
 Proof.
 iIntros "#Hctx #Hinv Hh #Ht #HΦ". rewrite /rpc_call. rel_prims.
-rel_apply (rel_conn_send γ sess_agree free_sess with "Hctx Hinv Hh [] HΦ").
+rel_apply (conn_send_refinement γ sess_agree free_sess with "Hctx Hinv Hh [] HΦ").
 { by iApply conn_payload_tag. }
 iIntros (? ?) "[[-> ->] Hh]". rel_pures.
-by iApply (rel_conn_recv γ sess_agree free_sess with "Hctx Hinv Hh").
+by iApply (conn_recv_refinement γ sess_agree free_sess with "Hctx Hinv Hh").
 Qed.
 
-Lemma rel_rpc_server (I : nat → nat → val → val → iProp) (f f' : val) cs cs' n r st st' :
+Lemma rpc_server_refinement (I : nat → nat → val → val → iProp) (f f' : val) cs cs' n r st st' :
   cryptis_rel_ctx -∗ ctx -∗
   □ (∀ n r st st' p p', I n r st st' -∗ Φ 0 r p p' -∗
       REL f st p << f' st' p' : λ v v',
@@ -66,14 +66,14 @@ Lemma rel_rpc_server (I : nat → nat → val → val → iProp) (f f' : val) cs
 Proof.
 iIntros "#Hctx #Hinv #Hf". iLöb as "IH" forall (n r st st').
 iIntros "Hh HI". rel_rec_l. rel_rec_r. rel_pures.
-rel_apply (rel_conn_recv γ sess_agree free_sess with "Hctx Hinv Hh").
+rel_apply (conn_recv_refinement γ sess_agree free_sess with "Hctx Hinv Hh").
 iIntros (? ?) "(%p & %p' & [-> ->] & Hh & #HΦ)" => /=. rel_pures.
 rel_bind_l (f st p). rel_bind_r (f' st' p').
 iApply (refines_bind with "[HI]"); first by iApply ("Hf" with "HI HΦ").
 iIntros (v v') "[[[-> ->] HI]|(%q & %q' & %st2 & %st2' & [-> ->] & #Hq & #HΦq & HI)]" => /=.
 { rel_pures. by iApply ("IH" with "Hh HI"). }
 rel_pures.
-rel_apply (rel_conn_send γ sess_agree free_sess with "Hctx Hinv Hh Hq HΦq").
+rel_apply (conn_send_refinement γ sess_agree free_sess with "Hctx Hinv Hh Hq HΦq").
 iIntros (? ?) "[[-> ->] Hh]". rel_pures.
 by iApply ("IH" with "Hh HI").
 Qed.

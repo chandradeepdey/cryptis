@@ -55,7 +55,7 @@ Implicit Types m n : nat.
 Implicit Types x : Z.
 Implicit Types Ψ : val → val → iProp Σ.
 
-Lemma rel_nondet_bool_l K e Ψ :
+Lemma refines_nondet_bool_l K e Ψ :
   (∀ b, REL fill K (#b : expr) << e : Ψ) -∗
   REL fill K (nondet_bool #()) << e : Ψ.
 Proof.
@@ -64,7 +64,7 @@ wp_apply nondet_bool_spec=> //.
 eauto.
 Qed.
 
-Lemma rel_nondet_bool_r K e b Ψ :
+Lemma refines_nondet_bool_r K e b Ψ :
   (REL e << fill K (#b : expr) : Ψ) -∗
   REL e << fill K (nondet_bool #()) : Ψ.
 Proof.
@@ -77,22 +77,22 @@ case: b; last tp_store j.
 all: rel_load_r=> //.
 Qed.
 
-#[local] Lemma rel_nondet_nat_loop_r K e m n Ψ :
+#[local] Lemma refines_nondet_nat_loop_r K e m n Ψ :
   (REL e << fill K (#(n + m)%nat : expr) : Ψ) -∗
   REL e << fill K (nondet_nat_loop #m) : Ψ.
 Proof.
 elim : n m => [|n' IHn'] m /=; iIntros "H";
 rel_rec_r.
-- rel_apply_r (rel_nondet_bool_r _ _ true).
+- rel_apply_r (refines_nondet_bool_r _ _ true).
   by rel_pures_r.
-- rel_apply_r (rel_nondet_bool_r _ _ false).
+- rel_apply_r (refines_nondet_bool_r _ _ false).
   rel_pures_r.
   have ->: (m + 1)%Z = m + 1 by lia.
   have <-: n' + (m + 1) = S (n' + m) by lia.
   by iPoseProof (IHn' with "H") as "H".
 Qed.
 
-Lemma rel_nondet_nat_l K e Ψ :
+Lemma refines_nondet_nat_l K e Ψ :
   (∀ n, REL fill K (#n : expr) << e : Ψ) -∗
   REL fill K (nondet_nat #()) << e : Ψ.
 Proof.
@@ -100,17 +100,17 @@ iIntros "H". iApply refines_wp_l.
 by wp_apply wp_nondet_nat.
 Qed.
 
-Lemma rel_nondet_nat_r K e n Ψ :
+Lemma refines_nondet_nat_r K e n Ψ :
   (REL e << fill K (#n: expr) : Ψ) -∗
   REL e << fill K (nondet_nat #()) : Ψ.
 Proof.
 iIntros "H". rel_rec_r.
-rel_apply_r (rel_nondet_nat_loop_r _ _ 0 n).
+rel_apply_r (refines_nondet_nat_loop_r _ _ 0 n).
 have ->: n + 0 = n by lia.
 done.
 Qed.
 
-Lemma rel_nondet_int_l K e Ψ :
+Lemma refines_nondet_int_l K e Ψ :
   (∀ n : Z, REL fill K (#n : expr) << e : Ψ) -∗
   REL fill K (nondet_int #()) << e : Ψ.
 Proof.
@@ -118,15 +118,15 @@ iIntros "H". iApply refines_wp_l.
 by wp_apply wp_nondet_int.
 Qed.
 
-Lemma rel_nondet_int_r K e (n : Z) Ψ :
+Lemma refines_nondet_int_r K e (n : Z) Ψ :
   (REL fill K e << fill K (#n : expr) : Ψ) -∗
   REL fill K e << fill K (nondet_int #()) : Ψ.
 Proof.
 iIntros "H". rel_rec_r.
 pose n' := if (0 <=? n)%Z then Z.to_nat n else Z.to_nat (-n).
-rel_apply_r (rel_nondet_nat_r _ _ n').
+rel_apply_r (refines_nondet_nat_r _ _ n').
 rel_pures_r.
-rel_apply_r (rel_nondet_bool_r _ _ (0 <=? n)%Z).
+rel_apply_r (refines_nondet_bool_r _ _ (0 <=? n)%Z).
 case Hn: (0 <=? n)%Z in n' *; rel_pures_r.
 - by have ->: n = n' by lia.
 - by have ->: n = (- n')%Z by lia.

@@ -18,23 +18,23 @@ Implicit Types E : coPset.
 Implicit Types pt : PreTerm.pre_term.
 Implicit Types Ψ : val → val → iProp Σ.
 
-Lemma rel_eq_pre_term_l E K e pt1 pt2 Ψ :
+Lemma refines_eq_pre_term_l E K e pt1 pt2 Ψ :
   (REL fill K (#(bool_decide (pt1 = pt2)) : expr) << e @ E : Ψ) -∗
   REL fill K (eq_term (repr pt1) (repr pt2)) << e @ E : Ψ.
 Proof. pure_twp_rel twp_eq_pre_term. Qed.
 
-Lemma rel_eq_pre_term_r E K e pt1 pt2 Ψ :
+Lemma refines_eq_pre_term_r E K e pt1 pt2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (#(bool_decide (pt1 = pt2)) : expr) @ E : Ψ) -∗
   REL e << fill K (eq_term (repr pt1) (repr pt2)) @ E : Ψ.
 Proof. pure_twp_rel twp_eq_pre_term. Qed.
 
-Lemma rel_leq_pre_term_l E K e pt1 pt2 Ψ :
+Lemma refines_leq_pre_term_l E K e pt1 pt2 Ψ :
   (REL fill K (#(bool_decide (pt_order pt1 pt2)) : expr) << e @ E : Ψ) -∗
   REL fill K (leq_term (repr pt1) (repr pt2)) << e @ E : Ψ.
 Proof. pure_twp_rel twp_leq_pre_term. Qed.
 
-Lemma rel_leq_pre_term_r E K e pt1 pt2 Ψ :
+Lemma refines_leq_pre_term_r E K e pt1 pt2 Ψ :
   ↑specN ⊆ E →
   (REL e << fill K (#(bool_decide (pt_order pt1 pt2)) : expr) @ E : Ψ) -∗
   REL e << fill K (leq_term (repr pt1) (repr pt2)) @ E : Ψ.

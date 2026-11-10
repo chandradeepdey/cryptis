@@ -25,7 +25,7 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-Lemma rel_ballot skT skT' skV skV' v v' :
+Lemma ballot_refinement skT skT' skV skV' v v' :
   cryptis_rel_ctx -∗
   arb_key skT skT' -∗
   voter_key skV skV' skT skT' v v' -∗
@@ -40,7 +40,7 @@ iIntros "(%HnonceV & %HnonceV' & #mint_V & #mint_V' & #pub_pkV & _ & _ &
 iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_spec_pkey.
 rewrite /ballot. rel_pures.
-rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
+rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
   with "Hctx [//] mint_T mint_T' elem_pkT secret_T mint_v mint_v' [] [] [] []").
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
@@ -64,7 +64,7 @@ iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hctx Hballot token []") as "#pub_si
 iModIntro. rel_prims. rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.
 
-Lemma rel_voter c c' skT skT' skV skV' (v v' : Z) :
+Lemma voter_refinement c c' skT skT' skV skV' (v v' : Z) :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   arb_key skT skT' -∗
@@ -76,13 +76,13 @@ iIntros "#Hctx #Hc #HT #HV token".
 rewrite /voter. rel_prims.
 rel_bind_l (ballot _ _ _). rel_bind_r (ballot _ _ _).
 iApply (refines_bind with "[token]").
-{ iApply (rel_ballot with "Hctx HT HV [] [] token"); by rewrite ?minted_TInt ?minted_spec_TInt. }
+{ iApply (ballot_refinement with "Hctx HT HV [] [] token"); by rewrite ?minted_TInt ?minted_spec_TInt. }
 iIntros (? ?) "(%s & %s' & -> & -> & #Hs)" => /=.
-by iApply rel_send.
+by iApply refines_send.
 Qed.
 
 
-Lemma rel_mk_voters skT skT' votes votes' :
+Lemma mk_voters_refinement skT skT' votes votes' :
   length votes = length votes' →
   cryptis_rel_ctx -∗
   REL mk_voters (repr votes) << mk_voters (repr votes') : λ v v',
@@ -96,7 +96,7 @@ elim: votes votes' => [|v votes IH] [|v' votes'] //= Hlen; iIntros "#Hctx".
   iExists [], []. rewrite /voter_keys /voter_tokens /=. by eauto.
 - rel_rec_l. rel_rec_r. rel_pures.
   rel_bind_l (mk_sign_key #()). rel_bind_r (mk_sign_key #()).
-  iApply (rel_mk_voter_key _ _ skT skT' (TInt v) (TInt v') with "Hctx").
+  iApply (mk_voter_key_refinement _ _ skT skT' (TInt v) (TInt v') with "Hctx").
   iIntros (sk sk') "#HV tok" => /=.
   rel_pures.
   rel_bind_l (mk_voters _). rel_bind_r (mk_voters _).
@@ -107,7 +107,7 @@ elim: votes votes' => [|v votes IH] [|v' votes'] //= Hlen; iIntros "#Hctx".
   iFrame "#∗". iPureIntro. by split; last split; last lia.
 Qed.
 
-Lemma rel_fork_voters c c' skT skT' ks ks' votes votes' :
+Lemma fork_voters_refinement c c' skT skT' ks ks' votes votes' :
   length votes = length ks → length votes' = length ks' →
   cryptis_rel_ctx -∗ lrel_channel c c' -∗ arb_key skT skT' -∗
   voter_keys skT skT' ks ks' votes votes' -∗ voter_tokens ks -∗
@@ -127,7 +127,7 @@ elim: ks ks' votes votes' => [|sk ks IH] ks' votes votes' Hl Hl';
   rel_bind_l (Fork _). rel_bind_r (Fork _).
   iApply (refines_bind with "[tok]").
   { iApply refines_fork. rel_pures.
-    by iApply (rel_voter with "Hctx Hc HT HV tok"). }
+    by iApply (voter_refinement with "Hctx Hc HT HV tok"). }
   iIntros (? ?) "_" => /=. rel_pures.
   by iApply (IH _ votes votes' Hl Hl' with "Hctx Hc HT Hkeys' toks").
 Qed.

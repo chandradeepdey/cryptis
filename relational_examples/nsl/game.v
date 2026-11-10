@@ -28,7 +28,7 @@ Section Game.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
-Lemma rel_guess (test test' : val) c c' :
+Lemma guess_refinement (test test' : val) c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   (REL test c << test' c' : ()) -∗
@@ -38,7 +38,7 @@ iIntros "#Hctx #Hc Htest". rewrite /guess. rel_pures.
 rel_bind_l (test c). rel_bind_r (test' c').
 iApply (refines_bind with "Htest").
 iIntros (? ?) "_" => /=. rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (g g') "#Hg" => /=.
 rel_prims. rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) g g'
@@ -48,7 +48,7 @@ iModIntro. iExists (bool_decide (TInt 1 = g)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma rel_guess_wrapped (test : bool → val) c c' :
+Lemma guess_wrapped_refinement (test : bool → val) c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   (∀ b, REL test b c << test (negb b) c' : ()) -∗
@@ -58,14 +58,14 @@ Lemma rel_guess_wrapped (test : bool → val) c c' :
 Proof.
 iIntros "#Hctx #Hc Htest". rewrite /guess_wrapped.
 rel_pures.
-rel_apply_l rel_nondet_bool_l. iIntros (choice).
-rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
+rel_apply_l refines_nondet_bool_l. iIntros (choice).
+rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
-- rel_apply (rel_guess with "Hctx Hc Htest").
+- rel_apply (guess_refinement with "Hctx Hc Htest").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
-- rel_apply (rel_guess with "Hctx Hc Htest").
+- rel_apply (guess_refinement with "Hctx Hc Htest").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -85,8 +85,8 @@ Theorem nsl_resp_ror_ctx_equiv adv :
 Proof.
 move=> Hadv; split;
   apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iIntros "#Hctx #Hc"; iApply (rel_guess with "Hctx Hc");
-  [iApply (rel_resp_test true) | iApply (rel_resp_test false)]; by iFrame "#".
+  iIntros "#Hctx #Hc"; iApply (guess_refinement with "Hctx Hc");
+  [iApply (resp_test_refinement true) | iApply (resp_test_refinement false)]; by iFrame "#".
 Qed.
 
 (** The same fact for the initiator's session key, when I's peer is R. *)
@@ -96,8 +96,8 @@ Theorem nsl_init_ror_ctx_equiv adv :
 Proof.
 move=> Hadv; split;
   apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iIntros "#Hctx #Hc"; iApply (rel_guess with "Hctx Hc");
-  [iApply (rel_init_test true) | iApply (rel_init_test false)]; by iFrame "#".
+  iIntros "#Hctx #Hc"; iApply (guess_refinement with "Hctx Hc");
+  [iApply (init_test_refinement true) | iApply (init_test_refinement false)]; by iFrame "#".
 Qed.
 
 Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr) σ :
@@ -110,8 +110,8 @@ Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iIntros "#Hctx #Hc". iApply (rel_guess_wrapped with "Hctx Hc").
-iIntros (b). by iApply rel_resp_test.
+iIntros "#Hctx #Hc". iApply (guess_wrapped_refinement with "Hctx Hc").
+iIntros (b). by iApply resp_test_refinement.
 Qed.
 
 Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr) σ :
@@ -124,6 +124,6 @@ Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iIntros "#Hctx #Hc". iApply (rel_guess_wrapped with "Hctx Hc").
-iIntros (b). by iApply rel_init_test.
+iIntros "#Hctx #Hc". iApply (guess_wrapped_refinement with "Hctx Hc").
+iIntros (b). by iApply init_test_refinement.
 Qed.

@@ -57,68 +57,68 @@ Section OneSided.
 
 Context `{!relocG Σ}.
 
-Lemma rel_store_handle_l K e st db m Ψ :
+Lemma refines_store_handle_l K e st db m Ψ :
   is_avl st db -∗
   (is_avl st (handle_db db m) -∗
    REL fill K (handle_val st (handle_model db m) : expr) << e : Ψ) -∗
   REL fill K (store_handle st m) << e : Ψ.
 Proof.
 iIntros "Hdb post". rewrite /store_handle /handle_db /handle_model. rel_pures_l.
-rel_apply_l rel_untag_l.
+rel_apply_l refines_untag_l.
 case: (Spec.untag _ m) => [req|] /=; rel_pures_l.
 - rewrite /store_handle_store /handle_store_model. rel_pures_l.
-  rel_apply_l rel_list_of_term_l.
+  rel_apply_l refines_list_of_term_l.
   case: (Spec.to_list req) => [ts|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
-  rewrite ?subst_list_match /=. rel_apply_l (rel_list_match_l (A:=term)).
+  rewrite ?subst_list_match /=. rel_apply_l (refines_list_match_l (A:=term)).
   case: decide => len.
   + destruct ts as [|k [|v [|? ?]]] => //=. rel_pures_l.
-    rel_apply_l rel_to_int_l.
+    rel_apply_l refines_to_int_l.
     case: (Spec.to_int k) => [k'|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
-    rel_apply_l rel_to_int_l.
+    rel_apply_l refines_to_int_l.
     case: (Spec.to_int v) => [v'|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
-    rel_apply_l (rel_avl_insert_l with "Hdb"). iIntros "Hdb". rel_pures_l.
+    rel_apply_l (refines_avl_insert_l with "Hdb"). iIntros "Hdb". rel_pures_l.
     by iApply ("post" with "Hdb").
   + destruct ts as [|k [|v [|? ?]]] => //=; rel_pures_l; by iApply ("post" with "Hdb").
-- rel_apply_l rel_untag_l.
+- rel_apply_l refines_untag_l.
   case: (Spec.untag _ m) => [k|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
   rewrite /store_handle_load /handle_load_model. rel_pures_l.
-  rel_apply_l rel_to_int_l.
+  rel_apply_l refines_to_int_l.
   case: (Spec.to_int k) => [k'|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
-  rel_apply_l (rel_avl_lookup_l with "Hdb"). iIntros "Hdb".
+  rel_apply_l (refines_avl_lookup_l with "Hdb"). iIntros "Hdb".
   case: (AVL.lookup k' db) => [v|] /=; rel_pures_l;
-    rel_apply_l rel_tint_l; rel_pures_l; by iApply ("post" with "Hdb").
+    rel_apply_l refines_tint_l; rel_pures_l; by iApply ("post" with "Hdb").
 Qed.
 
-Lemma rel_store_handle_r K e st db m Ψ :
+Lemma refines_store_handle_r K e st db m Ψ :
   is_avl_spec st db -∗
   (is_avl_spec st (handle_db db m) -∗
    REL e << fill K (handle_val st (handle_model db m) : expr) : Ψ) -∗
   REL e << fill K (store_handle st m) : Ψ.
 Proof.
 iIntros "Hdb post". rewrite /store_handle /handle_db /handle_model. rel_pures_r.
-rel_apply_r rel_untag_r.
+rel_apply_r refines_untag_r.
 case: (Spec.untag _ m) => [req|] /=; rel_pures_r.
 - rewrite /store_handle_store /handle_store_model. rel_pures_r.
-  rel_apply_r rel_list_of_term_r.
+  rel_apply_r refines_list_of_term_r.
   case: (Spec.to_list req) => [ts|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
-  rewrite ?subst_list_match /=. rel_apply_r (rel_list_match_r (A:=term)).
+  rewrite ?subst_list_match /=. rel_apply_r (refines_list_match_r (A:=term)).
   case: decide => len.
   + destruct ts as [|k [|v [|? ?]]] => //=. rel_pures_r.
-    rel_apply_r rel_to_int_r.
+    rel_apply_r refines_to_int_r.
     case: (Spec.to_int k) => [k'|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
-    rel_apply_r rel_to_int_r.
+    rel_apply_r refines_to_int_r.
     case: (Spec.to_int v) => [v'|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
-    rel_apply_r (rel_avl_insert_r with "Hdb"). iIntros "Hdb". rel_pures_r.
+    rel_apply_r (refines_avl_insert_r with "Hdb"). iIntros "Hdb". rel_pures_r.
     by iApply ("post" with "Hdb").
   + destruct ts as [|k [|v [|? ?]]] => //=; rel_pures_r; by iApply ("post" with "Hdb").
-- rel_apply_r rel_untag_r.
+- rel_apply_r refines_untag_r.
   case: (Spec.untag _ m) => [k|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
   rewrite /store_handle_load /handle_load_model. rel_pures_r.
-  rel_apply_r rel_to_int_r.
+  rel_apply_r refines_to_int_r.
   case: (Spec.to_int k) => [k'|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
-  rel_apply_r (rel_avl_lookup_r with "Hdb"). iIntros "Hdb".
+  rel_apply_r (refines_avl_lookup_r with "Hdb"). iIntros "Hdb".
   case: (AVL.lookup k' db) => [v|] /=; rel_pures_r;
-    rel_apply_r rel_tint_r; rel_pures_r; by iApply ("post" with "Hdb").
+    rel_apply_r refines_tint_r; rel_pures_r; by iApply ("post" with "Hdb").
 Qed.
 
 End OneSided.

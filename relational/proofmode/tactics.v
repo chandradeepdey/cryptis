@@ -1,6 +1,6 @@
 (** Tactics for relational proofs.
 
-  Creating a nonce or a key with [rel_mk_nonce_l] or [rel_mk_aenc_key_l]
+  Creating a nonce or a key with [refines_mk_nonce_l] or [refines_mk_aenc_key_l]
   leaves side conditions about the token set, the set of terms whose tokens
   the proof wants to receive along with the fresh term.  These are discharged
   by:
@@ -19,7 +19,7 @@
   Running the programs:
   - [rel_later] strips a later, which the one-sided steps of the primitives
     leave behind.
-  - [rel_apply lem] applies a two-sided specification such as [rel_send] or
+  - [rel_apply lem] applies a two-sided specification such as [refines_send] or
     a protocol lemma to the subexpressions both programs are about to run,
     binding the continuations when the specification covers only part of the
     programs. *)

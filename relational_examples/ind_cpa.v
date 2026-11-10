@@ -46,7 +46,7 @@ Definition alice_guess_wrapped : val := λ: "c",
   let: "b" := nondet_bool #() in
   ("b", if: "b" then alice true "c" else alice false "c").
 
-Lemma rel_alice c c' (b b' : bool) :
+Lemma alice_refinement c c' (b b' : bool) :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
@@ -61,10 +61,10 @@ have Hdisj : ∀ sk : aenc_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skA) "%Hnonce_a #mint_skA token_a _ token_pkA".
-rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
 split_term_tokens. rel_prims.
@@ -81,11 +81,11 @@ iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
 { iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
   do 3 (iSplit; first done).
   iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
-rel_apply (rel_send with "Hc Hpub").
+rel_apply (refines_send with "Hc Hpub").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (msg_0 msg_0') "#Hmsg_0"=> /=. rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (msg_1 msg_1') "#Hmsg_1"=> /=. rel_pures.
 rel_bind_l (if: _ then _ else _)%E.
 rel_bind_r (if: _ then _ else _)%E.
@@ -100,7 +100,7 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (rel_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
+rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
   with "Hctx [//] mint_skA mint_spec_skA' elem_pkA secret_a mint_msg mint_spec_msg' [] [] [] []").
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
@@ -111,9 +111,9 @@ iMod ("upd" $! ⊤ (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel
         with "[] [] [] [$seals_a $seals_a']") as "(_ & _ & #Hcmsg)";
   [iPureIntro; solve_ndisj | iPureIntro; apply nclose_subseteq..|].
 iModIntro.
-rel_apply (rel_send with "Hc Hcmsg").
+rel_apply (refines_send with "Hc Hcmsg").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.
-rel_apply (rel_recv with "Hc").
+rel_apply (refines_recv with "Hc").
 iIntros (guess guess') "#Hguess"=> /=.
 rel_prims. rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
@@ -124,7 +124,7 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma rel_alice_guess_wrapped c c' :
+Lemma alice_guess_wrapped_refinement c c' :
   cryptis_rel_ctx -∗
   lrel_channel c c' -∗
   REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
@@ -133,14 +133,14 @@ Lemma rel_alice_guess_wrapped c c' :
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice_guess_wrapped.
 rel_pures.
-rel_apply_l rel_nondet_bool_l. iIntros (choice).
-rel_apply_r (rel_nondet_bool_r _ _ (negb choice)).
+rel_apply_l refines_nondet_bool_l. iIntros (choice).
+rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
-- rel_apply (rel_alice with "Hctx Hc").
+- rel_apply (alice_refinement with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
-- rel_apply (rel_alice with "Hctx Hc").
+- rel_apply (alice_refinement with "Hctx Hc").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -160,7 +160,7 @@ Theorem ind_cpa_ctx_equiv N b b' adv :
 Proof.
 by move=> Hadv; split;
   apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iApply rel_alice.
+  iApply alice_refinement.
 Qed.
 
 Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
@@ -173,5 +173,5 @@ Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) �
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iApply rel_alice_guess_wrapped.
+iApply alice_guess_wrapped_refinement.
 Qed.

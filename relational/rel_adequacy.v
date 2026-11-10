@@ -36,7 +36,7 @@ apply: (refines_adequate Σ (λ _, LRel (λ v v', ⌜P v v'⌝)%I)).
 - by move=> ? v v'; iIntros "%".
 - move=> ?.
   iMod (public_relGS_alloc ⊤ _) as (Hpub) "#Hctx".
-  iApply (rel_run_network with "[] []").
+  iApply (refines_run_network with "[] []").
   + by iApply (Hadv with "Hctx").
   + iIntros (c c') "#Hc". by iApply (Hf with "Hctx Hc").
 Qed.
@@ -53,7 +53,7 @@ Proof.
 move=> Hadv Hf.
 apply: (refines_sound Σ) => Hreloc Δ.
 iMod (public_relGS_alloc ⊤ _) as (Hpub) "#Hctx".
-iApply (rel_run_network with "[] []").
+iApply (refines_run_network with "[] []").
 - by iApply (Hadv with "Hctx").
 - iIntros (c c') "#Hc". by iApply (Hf with "Hctx Hc").
 Qed.

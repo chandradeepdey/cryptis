@@ -265,7 +265,7 @@ End Signatures.
 
 Section KeyGeneration.
 
-Lemma rel_mk_arb_key K K' Ψ :
+Lemma mk_arb_key_refinement K K' Ψ :
   cryptis_rel_ctx -∗
   (∀ skT skT', arb_key skT skT' -∗
      REL fill K (skT : expr) << fill K' (skT' : expr) : Ψ) -∗
@@ -281,10 +281,10 @@ have Hdisj : ∀ sk : aenc_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skT) "%Hnonce #mint_sk token_s _ token_pk".
-rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skT') "%Hnonce' #mint_sk' token_s' _ token_pk'".
 split_term_tokens.
@@ -307,7 +307,7 @@ iMod (inv_alloc urnN _ (urn_inv skT skT') with "[seals seals']") as "#Hurn".
 iApply "post". do 4 (iSplit; first done). by iFrame "#".
 Qed.
 
-Lemma rel_mk_voter_key K K' skT skT' v v' Ψ :
+Lemma mk_voter_key_refinement K K' skT skT' v v' Ψ :
   cryptis_rel_ctx -∗
   (∀ skV skV', voter_key skV skV' skT skT' v v' -∗
      term_token (seed_of_sign_key skV) (↑signedN) -∗
@@ -324,10 +324,10 @@ have Hdisj : ∀ sk : sign_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_sign_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_sign_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skV) "%Hnonce #mint_sk token_s token_sk token_pk".
-rel_apply_r (rel_mk_sign_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_r (refines_mk_sign_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (skV') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.

@@ -5,7 +5,7 @@ valid ([attacker_valid]) when it is related to itself, as a function from
 related channels to related computations.  The security theorems of
 [rel_adequacy.v] hold for every valid attacker.
 
-- [Network] runs the attacker on a fresh channel ([rel_run_network]).
+- [Network] runs the attacker on a fresh channel ([refines_run_network]).
   - [Contracts] gives each primitive a contract in the style of a type.  A
     proof that an attacker is valid uses them whenever the attacker calls a
     primitive.
@@ -46,18 +46,18 @@ Definition lrel_attacker : lrel Σ := (lrel_channel → ())%lrel.
 
 Section Contracts.
 
-Lemma rel_prim_tint : ⊢ (lrel_int → lrel_term)%lrel tint tint.
+Lemma tint_refinement : ⊢ (lrel_int → lrel_term)%lrel tint tint.
 Proof.
 iIntros "!> %v %v' (%n & %e & %e')". subst v v'.
-rel_apply_l rel_tint_l. rel_apply_r rel_tint_r.
+rel_apply_l refines_tint_l. rel_apply_r refines_tint_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 by rewrite publicly_related_TInt.
 Qed.
 
-Lemma rel_prim_to_int : ⊢ (lrel_term → () + lrel_int)%lrel to_int to_int.
+Lemma to_int_refinement : ⊢ (lrel_term → () + lrel_int)%lrel to_int to_int.
 Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-rel_apply_l rel_to_int_l. rel_apply_r rel_to_int_r.
+rel_apply_l refines_to_int_l. rel_apply_r refines_to_int_r.
 rel_values. iModIntro.
 case: (Spec.to_intP t) => [n ->|Hne].
 - iDestruct (publicly_related_TInt_term with "Ht") as %->.
@@ -68,7 +68,7 @@ case: (Spec.to_intP t) => [n ->|Hne].
   iExists #(), #(). iLeft. by do 2 (iSplit; first done).
 Qed.
 
-Lemma rel_prim_tuple :
+Lemma tuple_refinement :
   ⊢ (lrel_term → lrel_term → lrel_term)%lrel
       (λ: "t1" "t2", tuple "t1" "t2")%V (λ: "t1" "t2", tuple "t1" "t2")%V.
 Proof.
@@ -76,16 +76,16 @@ iIntros "!> %v1 %v1' (%t1 & %t1' & -> & -> & #H1)".
 rel_pures_l. rel_pures_r. rel_arrow_val.
 iIntros "%v2 %v2' (%t2 & %t2' & -> & -> & #H2)".
 rel_pures_l. rel_pures_r.
-rel_apply_l rel_tuple_l. rel_apply_r rel_tuple_r.
+rel_apply_l refines_tuple_l. rel_apply_r refines_tuple_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 rewrite publicly_related_TPair. by iSplit.
 Qed.
 
-Lemma rel_prim_untuple :
+Lemma untuple_refinement :
   ⊢ (lrel_term → () + lrel_term * lrel_term)%lrel untuple untuple.
 Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-rel_apply_l rel_untuple_l. rel_apply_r rel_untuple_r.
+rel_apply_l refines_untuple_l. rel_apply_r refines_untuple_r.
 rel_values. iModIntro.
 case: t => [n|t1 t2|a|kt s|k b|s|pt wf nf].
 all: try (
@@ -100,45 +100,45 @@ iExists t1, t1', t2, t2'. do 2 (iSplit; first done).
 iSplit; by iApply lrel_term_intro.
 Qed.
 
-Lemma rel_prim_key kt : ⊢ (lrel_term → lrel_term)%lrel (key kt) (key kt).
+Lemma key_refinement kt : ⊢ (lrel_term → lrel_term)%lrel (key kt) (key kt).
 Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-rel_apply_l rel_key_l. rel_apply_r rel_key_r.
+rel_apply_l refines_key_l. rel_apply_r refines_key_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 rewrite publicly_related_TKey. iSplit; first done.
 case: kt; try (by iLeft); done.
 Qed.
 
-Lemma rel_prim_derive_aenc_key :
+Lemma derive_aenc_key_refinement :
   ⊢ (lrel_term → lrel_term)%lrel derive_aenc_key derive_aenc_key.
 Proof.
 iIntros "!> %v %v' Hv". rel_rec_l. rel_rec_r.
-iApply (refines_app with "[] [Hv]"); [rel_values; iApply rel_prim_key|by rel_values].
+iApply (refines_app with "[] [Hv]"); [rel_values; iApply key_refinement|by rel_values].
 Qed.
 
-Lemma rel_prim_derive_sign_key :
+Lemma derive_sign_key_refinement :
   ⊢ (lrel_term → lrel_term)%lrel derive_sign_key derive_sign_key.
 Proof.
 iIntros "!> %v %v' Hv". rel_rec_l. rel_rec_r.
-iApply (refines_app with "[] [Hv]"); [rel_values; iApply rel_prim_key|by rel_values].
+iApply (refines_app with "[] [Hv]"); [rel_values; iApply key_refinement|by rel_values].
 Qed.
 
-Lemma rel_prim_derive_senc_key :
+Lemma derive_senc_key_refinement :
   ⊢ (lrel_term → lrel_term)%lrel derive_senc_key derive_senc_key.
 Proof.
 iIntros "!> %v %v' Hv". rel_rec_l. rel_rec_r.
-iApply (refines_app with "[] [Hv]"); [rel_values; iApply rel_prim_key|by rel_values].
+iApply (refines_app with "[] [Hv]"); [rel_values; iApply key_refinement|by rel_values].
 Qed.
 
-Lemma rel_prim_pkey : ⊢ (lrel_term → lrel_term)%lrel pkey pkey.
+Lemma pkey_refinement : ⊢ (lrel_term → lrel_term)%lrel pkey pkey.
 Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-rel_apply_l rel_pkey_l. rel_apply_r rel_pkey_r.
+rel_apply_l refines_pkey_l. rel_apply_r refines_pkey_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 by iApply publicly_related_pkey.
 Qed.
 
-Lemma rel_prim_seal :
+Lemma seal_refinement :
   ⊢ (lrel_term → lrel_term → lrel_term)%lrel
       (λ: "k" "t", seal "k" "t")%V (λ: "k" "t", seal "k" "t")%V.
 Proof.
@@ -146,12 +146,12 @@ iIntros "!> %v1 %v1' (%k & %k' & -> & -> & #Hk)".
 rel_pures_l. rel_pures_r. rel_arrow_val.
 iIntros "%v2 %v2' (%t & %t' & -> & -> & #Ht)".
 rel_pures_l. rel_pures_r.
-rel_apply_l rel_seal_l. rel_apply_r rel_seal_r.
+rel_apply_l refines_seal_l. rel_apply_r refines_seal_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 rewrite publicly_related_TSeal. iLeft. by iSplit.
 Qed.
 
-Lemma rel_prim_open :
+Lemma open_refinement :
   cryptis_rel_ctx -∗
   (lrel_term → lrel_term → () + lrel_term)%lrel
     (λ: "k" "t", open "k" "t")%V (λ: "k" "t", open "k" "t")%V.
@@ -160,7 +160,7 @@ iIntros "#Hctx !> %v1 %v1' (%k & %k' & -> & -> & #Hk)".
 rel_pures_l. rel_pures_r. rel_arrow_val.
 iIntros "%v2 %v2' (%t & %t' & -> & -> & #Ht)".
 rel_pures_l. rel_pures_r.
-rel_apply_l rel_open_l. rel_apply_r rel_open_r.
+rel_apply_l refines_open_l. rel_apply_r refines_open_r.
 rel_values.
 iMod (publicly_related_open_fupd (E:=⊤) k k' t t' ltac:(solve_ndisj)
         with "Hctx Hk Ht") as %Hiff.
@@ -174,23 +174,23 @@ case e': (Spec.open k' t') Hiff => [t1'|] Hiff; last iModIntro.
 - iExists #(), #(). iLeft. by do 2 (iSplit; first done).
 Qed.
 
-Lemma rel_prim_hash : ⊢ (lrel_term → lrel_term)%lrel hash hash.
+Lemma hash_refinement : ⊢ (lrel_term → lrel_term)%lrel hash hash.
 Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-rel_apply_l rel_hash_l. rel_apply_r rel_hash_r.
+rel_apply_l refines_hash_l. rel_apply_r refines_hash_r.
 rel_values. iModIntro. iApply lrel_term_intro.
 rewrite publicly_related_THash. by iLeft.
 Qed.
 
 (** Attacker nonces are fresh on both sides and publicly related. *)
-Lemma rel_prim_mk_nonce :
+Lemma mk_nonce_refinement :
   cryptis_rel_ctx -∗ (() → lrel_term)%lrel mk_nonce mk_nonce.
 Proof.
 iIntros "#Hctx !> %v %v' [-> ->]".
-rel_apply_l (rel_mk_nonce_l _ _ (λ n, {[n]}) with "[//]").
+rel_apply_l (refines_mk_nonce_l _ _ (λ n, {[n]}) with "[//]").
 { iIntros "%t". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
 iIntros (n) "%Hn #mint_n Htt". rewrite big_sepS_singleton.
-rel_apply_r (rel_mk_nonce_r _ _ (λ n, {[n]}) with "[//]").
+rel_apply_r (refines_mk_nonce_r _ _ (λ n, {[n]}) with "[//]").
 { iIntros "%t". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
 iIntros (n') "%Hn' #mint_spec_n' Htts". rewrite big_sepS_singleton.
 iDestruct (term_token_rel_token_l with "Htt") as "(Htt & _ & _)";
@@ -204,7 +204,7 @@ Qed.
 
 (** Equality tests agree on both sides because [PUB] is a partial
     bijection. *)
-Lemma rel_prim_eq_term :
+Lemma eq_term_refinement :
   cryptis_rel_ctx -∗
   (lrel_term → lrel_term → lrel_bool)%lrel
     (λ: "t1" "t2", eq_term "t1" "t2")%V (λ: "t1" "t2", eq_term "t1" "t2")%V.
@@ -213,7 +213,7 @@ iIntros "#Hctx !> %v1 %v1' (%t1 & %t1' & -> & -> & #H1)".
 rel_pures_l. rel_pures_r. rel_arrow_val.
 iIntros "%v2 %v2' (%t2 & %t2' & -> & -> & #H2)".
 rel_pures_l. rel_pures_r.
-rel_apply_l rel_eq_term_l. rel_apply_r rel_eq_term_r.
+rel_apply_l refines_eq_term_l. rel_apply_r refines_eq_term_r.
 rel_values.
 iMod (publicly_related_part_bij' (E:=⊤) t1 t1' t2 t2' ltac:(solve_ndisj)
         with "Hctx H1 H2") as %Hiff.
@@ -221,7 +221,7 @@ iModIntro. iExists (bool_decide (t1 = t2)). iPureIntro. split; first done.
 do 2 f_equal. apply bool_decide_ext. by rewrite Hiff.
 Qed.
 
-Lemma rel_prim_send :
+Lemma send_refinement :
   ⊢ (lrel_channel → lrel_term → ())%lrel send send.
 Proof.
 iIntros "!> %c %c' Hc".
@@ -229,16 +229,16 @@ iDestruct "Hc" as (sf sf' rf rf') "(-> & -> & #Hs & _)".
 rewrite /send. rel_pures_l. rel_pures_r. rel_values.
 Qed.
 
-Lemma rel_prim_recv :
+Lemma recv_refinement :
   ⊢ (lrel_channel → lrel_term)%lrel recv recv.
 Proof.
 iIntros "!> %c %c' Hc".
-iApply (rel_recv with "Hc"). iIntros "%t %t' #Ht". by iApply lrel_term_intro.
+iApply (refines_recv with "Hc"). iIntros "%t %t' #Ht". by iApply lrel_term_intro.
 Qed.
 
 End Contracts.
 
-Lemma rel_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
+Lemma refines_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
   (REL adv << adv' : lrel_attacker) -∗
   (∀ c c', lrel_channel c c' -∗ REL f c << f' c' : A) -∗
   REL run_network adv f << run_network adv' f' : A.
@@ -248,7 +248,7 @@ rel_bind_l adv. rel_bind_r adv'.
 iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
 rel_pures_l. rel_pures_r. rewrite /init_network. rel_pures_l. rel_pures_r.
 rel_bind_l (mk_channel #()). rel_bind_r (mk_channel #()).
-iApply refines_bind; first iApply rel_mk_channel.
+iApply refines_bind; first iApply mk_channel_refinement.
 iIntros (c c') "#Hc /=". rel_pures_l. rel_pures_r.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply refines_bind.
@@ -313,25 +313,25 @@ Lemma attacker_prims_env :
 Proof.
 iIntros "#Hctx".
 rewrite /attacker_prims_ty /attacker_prims !fmap_insert !fmap_empty /env_ltyped2.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_tint.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_to_int.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_tuple.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_untuple.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_derive_aenc_key.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_derive_sign_key.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_derive_senc_key.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_pkey.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_seal.
-iApply (big_sepM2_insert_2 with "[]"); first by iApply rel_prim_open.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_hash.
-iApply (big_sepM2_insert_2 with "[]"); first by iApply rel_prim_mk_nonce.
-iApply (big_sepM2_insert_2 with "[]"); first by iApply rel_prim_eq_term.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_send.
-iApply (big_sepM2_insert_2 with "[]"); first iApply rel_prim_recv.
+iApply (big_sepM2_insert_2 with "[]"); first iApply tint_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply to_int_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply tuple_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply untuple_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply derive_aenc_key_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply derive_sign_key_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply derive_senc_key_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply pkey_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply seal_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first by iApply open_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply hash_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first by iApply mk_nonce_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first by iApply eq_term_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply send_refinement.
+iApply (big_sepM2_insert_2 with "[]"); first iApply recv_refinement.
 by rewrite big_sepM2_empty.
 Qed.
 
-Lemma rel_attacker_typed e :
+Lemma refines_attacker_typed e :
   attacker_prims_ty ⊢ₜ e : attacker_ty →
   cryptis_rel_ctx -∗
   REL subst_map attacker_prims e << subst_map attacker_prims e : lrel_attacker.
@@ -346,4 +346,4 @@ End Typed.
 Lemma attacker_valid_typed e :
   attacker_prims_ty ⊢ₜ e : attacker_ty →
   attacker_valid (subst_map attacker_prims e).
-Proof. move=> He Σ ? ?. by iApply rel_attacker_typed. Qed.
+Proof. move=> He Σ ? ?. by iApply refines_attacker_typed. Qed.

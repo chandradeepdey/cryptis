@@ -91,7 +91,7 @@ Definition server_inv n r (st st' : val) : iProp :=
   ⌜n = r⌝ ∗ is_avl st (db_of (take r ops)) ∗
   is_avl_spec st' (db_of (take r ops')).
 
-Lemma rel_store_handle n r st st' p p' :
+Lemma store_handle_refinement n r st st' p p' :
   server_inv n r st st' -∗ store_Φ 0 r p p' -∗
   REL store_handle st p << store_handle st' p' : λ v v',
     ((⌜v = NONEV ∧ v' = NONEV⌝ ∗ server_inv n (S r) st st') ∨
@@ -102,15 +102,15 @@ Proof.
 iIntros "(-> & Hdb & Hdb') %Hmsg". move: Hmsg. rewrite /store_msg. case: decide => // _.
 have Hlen := Permutation_length ops_perm.
 case=> [[o [o' [Ho [Ho' [-> ->]]]]]|[-> [-> ->]]].
-- rel_apply_l (rel_store_handle_l with "Hdb"). iIntros "Hdb".
-  rel_apply_r (rel_store_handle_r with "Hdb'"). iIntros "Hdb'".
+- rel_apply_l (refines_store_handle_l with "Hdb"). iIntros "Hdb".
+  rel_apply_r (refines_store_handle_r with "Hdb'"). iIntros "Hdb'".
   rewrite /handle_db !handle_model_store /=. rel_values. iModIntro. iRight.
   iExists (TInt 0), (TInt 0), _, _. iSplit; first done.
   iSplit; first by iApply conn_payload_TInt.
   iSplit; first by iPureIntro; exists 0%Z.
   rewrite /server_inv (db_of_take_S Ho) (db_of_take_S Ho'). by iFrame.
-- rel_apply_l (rel_store_handle_l with "Hdb"). iIntros "Hdb".
-  rel_apply_r (rel_store_handle_r with "Hdb'"). iIntros "Hdb'".
+- rel_apply_l (refines_store_handle_l with "Hdb"). iIntros "Hdb".
+  rel_apply_r (refines_store_handle_r with "Hdb'"). iIntros "Hdb'".
   rewrite /handle_db !handle_model_load /=.
   rewrite !take_ge; try lia.
   rewrite (lookup_db_of_perm k ops_nodup ops_perm).
@@ -121,7 +121,7 @@ case=> [[o [o' [Ho [Ho' [-> ->]]]]]|[-> [-> ->]]].
   rewrite /server_inv !take_ge; try lia. by iFrame.
 Qed.
 
-Lemma rel_store_all cs cs' i :
+Lemma store_all_refinement cs cs' i :
   i ≤ length ops →
   cryptis_rel_ctx -∗ ctx -∗ handle 0 cs cs' i i -∗
   REL store_all cs (repr (map op_val (drop i ops))) <<
@@ -139,7 +139,7 @@ have [o' Ho'] : is_Some (ops' !! i).
 { apply: lookup_lt_is_Some_2. have := lookup_lt_Some _ _ _ Ho. lia. }
 rewrite (drop_S _ _ _ Ho) (drop_S _ _ _ Ho') !repr_listE /=.
 rel_rec_l. rel_rec_r. rel_pures. rewrite /store_store. rel_prims.
-rel_apply (rel_rpc_call γ sess_agree free_sess 0 cs cs' i i (storeN.@"store")
+rel_apply (rpc_call_refinement γ sess_agree free_sess 0 cs cs' i i (storeN.@"store")
              (Spec.of_list [TInt o.1; TInt o.2]) (Spec.of_list [TInt o'.1; TInt o'.2])
              with "Hctx Hinv Hh [] []").
 - by iApply conn_payload_pair.

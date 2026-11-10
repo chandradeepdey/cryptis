@@ -134,7 +134,7 @@ iFrame "mk mk' sk sk' ss ss'".
 by iApply (seed_not_pub with "HnR").
 Qed.
 
-Lemma rel_store_client skI skI' skR skR' γ c c' :
+Lemma store_client_refinement skI skI' skR skR' γ c c' :
   cryptis_rel_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   conn_start γ 0 -∗
   REL client c skI (Spec.pkey skR) << client c' skI' (Spec.pkey skR') : λ v v',
@@ -143,24 +143,24 @@ Lemma rel_store_client skI skI' skR skR' γ c c' :
 Proof.
 iIntros "#Hctx #Hc #Hnsl log". rewrite /client. rel_pures.
 iPoseProof "Hnsl" as "(_ & (_ & _ & _ & _ & #pub_pkR & _) & _)".
-rel_apply (rel_init with "Hctx Hc Hnsl pub_pkR").
+rel_apply (init_refinement with "Hctx Hc Hnsl pub_pkR").
 iIntros (? ?) "[[-> ->]|(%kk & %kk' & [-> ->] & Hsess)]" => /=.
 { rel_pures. rel_values. }
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (session_keys with "Hctx Hnsl Hs") as "#Hk"; [solve_ndisj..|].
 rel_pures. rewrite /sess_key.
-rel_apply (rel_conn_new γ (rl:=0) with "Hc Hk log"); first by left.
+rel_apply (conn_new_refinement γ (rl:=0) with "Hc Hk log"); first by left.
 iIntros (cs cs') "Hh". rel_pures. rel_values. iModIntro. iRight. iExists cs, cs'. by iFrame.
 Qed.
 
-Lemma rel_store_server skI skI' skR skR' γ c c' :
+Lemma store_server_refinement skI skI' skR skR' γ c c' :
   cryptis_rel_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   store_ctx skI γ -∗ term_token (seed_of_aenc_key skI) (↑sessN) -∗
   conn_start γ 1 -∗
   REL server c skR (Spec.pkey skI) << server c' skR' (Spec.pkey skI') : ().
 Proof.
 iIntros "#Hctx #Hc #Hnsl #Hinv tok log". rewrite /server. rel_pures.
-rel_apply (rel_resp with "Hctx Hc Hnsl [tok]").
+rel_apply (resp_refinement with "Hctx Hc Hnsl [tok]").
 { by iApply (store_alloc with "Hctx Hinv tok"). }
 iIntros (? ?) "[[-> ->]|(%pkI & %pkI' & %kk & %kk' & [-> ->] & #HpkI & Hsess)]" => /=.
 { rel_pures. by rel_values. }
@@ -176,27 +176,27 @@ rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (session_keys with "Hctx Hnsl Hs") as "#Hk"; [solve_ndisj..|].
 rewrite /sess_key.
-rel_apply_l rel_avl_new_l. iIntros (db) "Hdb".
-rel_apply_r rel_avl_new_r. iIntros (db') "Hdb'". rel_pures.
-rel_apply (rel_conn_new γ (rl:=1) with "Hc Hk log"); first by right.
+rel_apply_l refines_avl_new_l. iIntros (db) "Hdb".
+rel_apply_r refines_avl_new_r. iIntros (db') "Hdb'". rel_pures.
+rel_apply (conn_new_refinement γ (rl:=1) with "Hc Hk log"); first by right.
 iIntros (cs cs') "Hh". rel_pures.
-iApply (rel_rpc_server γ (key_sess_agree skI) (key_free_sess skI) (server_inv ops ops')
+iApply (rpc_server_refinement γ (key_sess_agree skI) (key_free_sess skI) (server_inv ops ops')
           with "Hctx Hinv [] Hh [Hdb Hdb']").
 - iIntros "!>" (n r st st' p p') "HI HΦ".
-  by iApply (rel_store_handle k ops_nodup ops_perm with "HI HΦ").
+  by iApply (store_handle_refinement k ops_nodup ops_perm with "HI HΦ").
 - by iFrame.
 Qed.
 
-Lemma rel_store_game c c' :
+Lemma store_game_refinement c c' :
   cryptis_rel_ctx -∗ lrel_channel c c' -∗
   REL game ops k c << game ops' k c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /game. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
-iApply (rel_mk_honest_key with "Hctx").
+iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
-iApply (rel_mk_honest_key with "Hctx").
+iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skR skR') "#HR sealsR _" => /=. rel_pures.
 iMod (inv_alloc sealsIN _ (seals_inv skI skI' (seals_I_info skI skI' skR skR' (store_sess skI)))
         with "[sealsI]") as "#HinvI".
@@ -222,25 +222,25 @@ iMod (inv_alloc connIN _ (conn_inv γ (key_sess skI) (key_free skI) Φs)
 { iNext. iLeft. iFrame. }
 iAssert (nsl_ctx skI skI' skR skR' (store_sess skI)) as "#Hnsl"; first by iFrame "#".
 rel_prims.
-rel_apply (rel_send with "Hc []").
+rel_apply (refines_send with "Hc []").
 { iNext. by iDestruct "HI" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_prims.
-rel_apply (rel_send with "Hc []").
+rel_apply (refines_send with "Hc []").
 { iNext. by iDestruct "HR" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[tok_sess log1]").
 { iApply refines_fork. rel_prims.
-  by iApply (rel_store_server with "Hctx Hc Hnsl Hinv tok_sess log1"). }
+  by iApply (store_server_refinement with "Hctx Hc Hnsl Hinv tok_sess log1"). }
 iIntros (? ?) "_" => /=. rel_prims.
-rel_apply (rel_store_client skI skI' skR skR' γ with "Hctx Hc Hnsl log0").
+rel_apply (store_client_refinement skI skI' skR skR' γ with "Hctx Hc Hnsl log0").
 iIntros (? ?) "[[-> ->]|(%cs & %cs' & [-> ->] & Hh)]" => /=.
 { rel_pures. by rel_values. }
 rel_pures.
-rel_apply (rel_store_all γ (key_sess_agree skI) (key_free_sess skI) k ops_perm
+rel_apply (store_all_refinement γ (key_sess_agree skI) (key_free_sess skI) k ops_perm
              cs cs' (i:=0) ltac:(lia) with "Hctx Hinv Hh").
 iIntros (? ?) "[[-> ->] Hh]". rel_pures. rewrite /store_load. rel_prims.
-rel_apply (rel_rpc_call γ (key_sess_agree skI) (key_free_sess skI)
+rel_apply (rpc_call_refinement γ (key_sess_agree skI) (key_free_sess skI)
              0 cs cs' (length ops) (length ops) (storeN.@"load") (TInt k) (TInt k)
              with "Hctx Hinv Hh [] []").
 { iApply conn_payload_TInt. }
@@ -248,7 +248,7 @@ rel_apply (rel_rpc_call γ (key_sess_agree skI) (key_free_sess skI)
 iIntros (? ?) "(%p & %p' & [-> ->] & Hh & %Hp)" => /=.
 move: Hp. rewrite /store_msg. case: decide => // _ [z [-> ->]].
 iAssert (PUB⟨TInt z, TInt z⟩) as "#Hz"; first by rewrite publicly_related_TInt.
-by rel_apply (rel_send with "Hc Hz").
+by rel_apply (refines_send with "Hc Hz").
 Qed.
 
 End Game.

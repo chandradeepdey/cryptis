@@ -335,7 +335,7 @@ End SealSets.
 
 Section KeyGeneration.
 
-Lemma rel_mk_honest_key K K' Ψ :
+Lemma mk_honest_key_refinement K K' Ψ :
   cryptis_rel_ctx -∗
   (∀ sk sk', honest_key sk sk' -∗
      never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
@@ -354,10 +354,10 @@ have Hdisj : ∀ sk : aenc_key,
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
   set_solver. }
-rel_apply_l (rel_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (sk) "%Hnonce #mint_sk token_s _ token_pk".
-rel_apply_r (rel_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
 iIntros (sk') "%Hnonce' #mint_sk' token_s' _ token_pk'".
 split_term_tokens.

@@ -187,7 +187,7 @@ iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
 iIntros "!>" (rl n t t' [_ Hl]). rewrite /log_of in Hl. by case: decide Hl.
 Qed.
 
-Lemma rel_conn_new rl c c' k k' :
+Lemma conn_new_refinement rl c c' k k' :
   (rl = 0 ∨ rl = 1)%Z →
   lrel_channel c c' -∗ conn_keys k k' -∗ conn_start rl -∗
   REL conn_new c (k : term) #rl << conn_new c' (k' : term) #rl :
@@ -242,7 +242,7 @@ assert (Hsub : ↑seal_ns k (conn_body rl n t) ⊆ Ek).
 assert (Hsub' : ↑seal_ns k' (conn_body rl n t') ⊆ Ek').
 { case: (Hcl' (conn_body rl n t')) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
-iMod (rel_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
+iMod (refines_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
         (t':=Spec.of_list [TInt rl; TInt n; t']) HE Hsub Hsub'
         with "Hctx mk mk' [] [] [] [] ns") as "(#Hpub & #Hsu & ns)".
 { minted_simpl. rewrite !minted_TInt. by iFrame "#". }
@@ -274,7 +274,7 @@ Qed.
 
 Arguments conn_seal_send {E rl L k k' t t'} _ _ _.
 
-Lemma rel_conn_send rl cs cs' n r t t' :
+Lemma conn_send_refinement rl cs cs' n r t t' :
   cryptis_rel_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
   conn_payload t t' -∗ Φ rl n t t' -∗
   REL conn_send cs t << conn_send cs' t' :
@@ -286,7 +286,7 @@ rewrite /conn_send /conn_sent /conn_role /conn_channel /conn_key. rel_prims.
 rel_load_l. rel_load_r. rel_prims.
 iMod (conn_seal_send (E:=⊤) ltac:(solve_ndisj) ltac:(solve_ndisj) Hrl
         with "Hctx Hinv Hk log mt mt' HΦ") as "[log #Hpub]".
-rel_apply (rel_send with "Hc Hpub").
+rel_apply (refines_send with "Hc Hpub").
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_load_l. rel_load_r. rel_pures. rel_store_l. rel_store_r.
 rel_values. iModIntro. iSplit; first done.
@@ -387,18 +387,18 @@ Qed.
 
 Arguments conn_open {E k k' t t'} _ _.
 
-Lemma rel_conn_recv rl cs cs' n r :
+Lemma conn_recv_refinement rl cs cs' n r :
   cryptis_rel_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
   REL conn_recv cs << conn_recv cs' :
     λ v v', (∃ p p' : term, ⌜v = p ∧ v' = p'⌝ ∗
       conn_handle rl cs cs' n (S r) ∗ Φ (1 - rl) r p p')%I.
 Proof.
 iIntros "#Hctx #Hinv Hh". rewrite /conn_recv /sdec. rel_pures.
-iApply (rel_do_until _ _ (conn_handle rl cs cs' n r) with "[] Hh").
+iApply (refines_do_until _ _ (conn_handle rl cs cs' n r) with "[] Hh").
 iIntros "!> (%k & %k' & %l1 & %l2 & %l1' & %l2' & %c & %c' & %L & -> & -> &
   %Hrl & %HL & #Hc & #Hk & Hl1 & Hl2 & Hl1' & Hl2' & log)".
 rewrite /conn_channel /conn_received /conn_role /conn_key. rel_pures.
-rel_apply (rel_recv with "Hc"). iIntros (t t') "#Ht" => /=. rel_pures.
+rel_apply (refines_recv with "Hc"). iIntros (t t') "#Ht" => /=. rel_pures.
 iMod (conn_open with "Hctx Hinv Hk Ht")
   as "[[%eL %eR]|(%rl2 & %m & %p & %p' & %Hrl2 & %eL & %eR & #HΦ)]";
   [solve_ndisj..| |].
@@ -406,10 +406,10 @@ iMod (conn_open with "Hctx Hinv Hk Ht")
   do 2 (iSplit; first done). iExists k, k', l1, l2, l1', l2', c, c', L. by iFrame "#∗". }
 rel_prims. rewrite eL eR. rel_prims. rewrite !Spec.of_listK /=.
 rel_pures. rewrite ?subst_list_match /=.
-rel_apply_l (rel_list_match_l (A:=term)). rewrite /=.
-rel_apply_r (rel_list_match_r (A:=term)). rewrite /=.
-rel_apply_l rel_to_int_l. rel_apply_r rel_to_int_r. rewrite /=. rel_pures.
-rel_apply_l rel_to_int_l. rel_apply_r rel_to_int_r. rewrite /=. rel_pures.
+rel_apply_l (refines_list_match_l (A:=term)). rewrite /=.
+rel_apply_r (refines_list_match_r (A:=term)). rewrite /=.
+rel_apply_l refines_to_int_l. rel_apply_r refines_to_int_r. rewrite /=. rel_pures.
+rel_apply_l refines_to_int_l. rel_apply_r refines_to_int_r. rewrite /=. rel_pures.
 case: (decide (rl = rl2)) => [<-|ne].
 { rewrite bool_decide_eq_true_2 //=. rel_pures. rel_values. iModIntro. iLeft.
   do 2 (iSplit; first done). iExists k, k', l1, l2, l1', l2', c, c', L. by iFrame "#∗". }
