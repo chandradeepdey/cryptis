@@ -66,7 +66,7 @@ Qed.
 
 Lemma rel_voter c c' skT skT' skV skV' (v v' : Z) :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   arb_key skT skT' -∗
   voter_key skV skV' skT skT' (TInt v) (TInt v') -∗
   term_token (seed_of_sign_key skV) (↑signedN) -∗
@@ -109,7 +109,7 @@ Qed.
 
 Lemma rel_fork_voters c c' skT skT' ks ks' votes votes' :
   length votes = length ks → length votes' = length ks' →
-  cryptis_rel_ctx -∗ channel_rel c c' -∗ arb_key skT skT' -∗
+  cryptis_rel_ctx -∗ lrel_channel c c' -∗ arb_key skT skT' -∗
   voter_keys skT skT' ks ks' votes votes' -∗ voter_tokens ks -∗
   REL fork_voters c (Spec.pkey skT) (repr (zip ks votes))
    << fork_voters c' (Spec.pkey skT') (repr (zip ks' votes')) : ().

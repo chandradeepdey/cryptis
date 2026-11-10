@@ -172,7 +172,7 @@ Definition conn_handle rl (cs cs' : val) n r : iProp :=
     ⌜cs = (#l1, #l2, (k : term), c, #rl)%V⌝ ∗
     ⌜cs' = (#l1', #l2', (k' : term), c', #rl)%V⌝ ∗
     ⌜(rl = 0 ∨ rl = 1)%Z⌝ ∗ ⌜length L = n⌝ ∗
-    channel_rel c c' ∗ conn_keys k k' ∗
+    lrel_channel c c' ∗ conn_keys k k' ∗
     l1 ↦ #n ∗ l2 ↦ #r ∗ l1' ↦ₛ #n ∗ l2' ↦ₛ #r ∗
     ghost_var (log_name rl) (1/2) L.
 
@@ -189,7 +189,7 @@ Qed.
 
 Lemma rel_conn_new rl c c' k k' :
   (rl = 0 ∨ rl = 1)%Z →
-  channel_rel c c' -∗ conn_keys k k' -∗ conn_start rl -∗
+  lrel_channel c c' -∗ conn_keys k k' -∗ conn_start rl -∗
   REL conn_new c (k : term) #rl << conn_new c' (k' : term) #rl :
     λ cs cs', conn_handle rl cs cs' 0 0.
 Proof.

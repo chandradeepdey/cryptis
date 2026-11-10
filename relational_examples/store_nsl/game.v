@@ -18,7 +18,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Definition store_game (ops : list (Z * Z)) (k : Z) (adv : expr) : expr :=
-  (run_network_rel adv (guess (game ops k)))%E.
+  (run_network adv (guess (game ops k)))%E.
 
 Theorem store_nsl_ctx_equiv ops ops' k adv :
   attacker_valid adv → NoDup ops.*1 → ops ≡ₚ ops' →

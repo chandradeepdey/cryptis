@@ -25,7 +25,7 @@ Implicit Types (st : list (option (term * term))).
 Lemma rel_election_of c c' cands votes votes' :
   votes ≡ₚ votes' →
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL election_of cands votes c << election_of cands votes' c' : ().
 Proof.
 iIntros (Hperm) "#Hctx #Hc".

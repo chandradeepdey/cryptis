@@ -206,8 +206,8 @@ case eR: (Spec.open skA' t') => [u'|]; iSimpl in "Ho".
 Qed.
 
 Lemma rel_send_fail c c' :
-  channel_rel c c' -∗
-  REL send c (TInt 0) << send c' (TInt 0) : lrel_unit.
+  lrel_channel c c' -∗
+  REL send c (TInt 0) << send c' (TInt 0) : ().
 Proof.
 iIntros "#Hc". iApply (rel_send with "Hc"). iNext. by rewrite publicly_related_TInt.
 Qed.
@@ -215,10 +215,10 @@ Qed.
 Lemma rel_oracle c c' skA skA' (l l' : loc) :
   cryptis_rel_ctx -∗
   inv cellN (cell_inv skA skA' l l') -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   PUB⟨Spec.pkey skA, Spec.pkey skA'⟩ -∗
   publicly_linked (Spec.pkey skA) (Spec.pkey skA') -∗
-  REL oracle c skA #l << oracle c' skA' #l' : lrel_unit.
+  REL oracle c skA #l << oracle c' skA' #l' : ().
 Proof.
 iIntros "#Hctx #Hcell #Hc #Hpk #Hlink".
 iLöb as "IH".
@@ -281,7 +281,7 @@ Qed.
 
 Lemma rel_alice c c' (b b' : bool) :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice.
@@ -388,7 +388,7 @@ Qed.
 
 Lemma rel_alice_guess_wrapped c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
@@ -411,7 +411,7 @@ Qed.
 End CCA2.
 
 Definition ind_cca2_game N (b : bool) (adv : expr) : expr :=
-  (run_network_rel adv (alice N b))%E.
+  (run_network adv (alice N b))%E.
 
 (** IND-CCA2 as a contextual equivalence: against any valid attacker with a
     decryption oracle for every ciphertext but the challenge, no well-typed
@@ -427,9 +427,9 @@ Qed.
 
 Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
   attacker_valid adv →
-  adequate NotStuck (run_network_rel adv (alice_guess_wrapped N)) σ
+  adequate NotStuck (run_network adv (alice_guess_wrapped N)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network_rel adv (alice_guess_wrapped N)], σ)
+       rtc erased_step ([run_network adv (alice_guess_wrapped N)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').

@@ -117,7 +117,7 @@ Definition init_post pkX : val → val → iProp := λ v v',
 
 Lemma rel_init c c' pkX pkX' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   nsl_ctx -∗
   PUB⟨pkX, pkX'⟩ -∗
   REL init c skI pkX << init c' skI' pkX' : init_post pkX.

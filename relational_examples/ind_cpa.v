@@ -48,7 +48,7 @@ Definition alice_guess_wrapped : val := λ: "c",
 
 Lemma rel_alice c c' (b b' : bool) :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
 Proof.
 iIntros "#Hctx #Hc". rewrite /alice. rel_pures.
@@ -126,7 +126,7 @@ Qed.
 
 Lemma rel_alice_guess_wrapped c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
@@ -149,7 +149,7 @@ Qed.
 End CPA.
 
 Definition ind_cpa_game N (b : bool) (adv : expr) : expr :=
-  (run_network_rel adv (alice N b))%E.
+  (run_network adv (alice N b))%E.
 
 (** IND-CPA as a contextual equivalence: against any valid attacker, no
     well-typed context can tell which of the attacker's two messages Alice
@@ -165,9 +165,9 @@ Qed.
 
 Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
   attacker_valid adv →
-  adequate NotStuck (run_network_rel adv (alice_guess_wrapped N)) σ
+  adequate NotStuck (run_network adv (alice_guess_wrapped N)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network_rel adv (alice_guess_wrapped N)], σ)
+       rtc erased_step ([run_network adv (alice_guess_wrapped N)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').

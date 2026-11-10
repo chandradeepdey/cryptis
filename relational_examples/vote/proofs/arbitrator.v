@@ -420,7 +420,7 @@ Lemma rel_collect c c' skT skT' ks ks' votes votes' st :
   length st = length ks → length votes = length ks → length votes' = length ks' →
   length ks = length ks' →
   slots_ok skT skT' votes votes' st →
-  cryptis_rel_ctx -∗ channel_rel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
+  cryptis_rel_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
   REL collect c (repr (slots_l (pkeys ks) st))
    << collect c' (repr (slots_r (pkeys ks') st)) : λ v v',
     (∃ st', ⌜v = repr (slots_l (pkeys ks) st')⌝ ∗ ⌜v' = repr (slots_r (pkeys ks') st')⌝ ∗
@@ -456,7 +456,7 @@ Qed.
 Lemma rel_arbitrator c c' skT skT' ks ks' cands votes votes' :
   votes ≡ₚ votes' →
   length votes = length ks → length votes' = length ks' → length ks = length ks' →
-  cryptis_rel_ctx -∗ channel_rel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
+  cryptis_rel_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
   REL arbitrator c skT (repr cands) (repr (pkeys ks))
    << arbitrator c' skT' (repr cands) (repr (pkeys ks')) : ().
 Proof.

@@ -135,7 +135,7 @@ by iApply (seed_not_pub with "HnR").
 Qed.
 
 Lemma rel_store_client skI skI' skR skR' γ c c' :
-  cryptis_rel_ctx -∗ channel_rel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
+  cryptis_rel_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   conn_start γ 0 -∗
   REL client c skI (Spec.pkey skR) << client c' skI' (Spec.pkey skR') : λ v v',
     (⌜v = NONEV ∧ v' = NONEV⌝ ∨
@@ -154,7 +154,7 @@ iIntros (cs cs') "Hh". rel_pures. rel_values. iModIntro. iRight. iExists cs, cs'
 Qed.
 
 Lemma rel_store_server skI skI' skR skR' γ c c' :
-  cryptis_rel_ctx -∗ channel_rel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
+  cryptis_rel_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   store_ctx skI γ -∗ term_token (seed_of_aenc_key skI) (↑sessN) -∗
   conn_start γ 1 -∗
   REL server c skR (Spec.pkey skI) << server c' skR' (Spec.pkey skI') : ().
@@ -188,7 +188,7 @@ iApply (rel_rpc_server γ (key_sess_agree skI) (key_free_sess skI) (server_inv o
 Qed.
 
 Lemma rel_store_game c c' :
-  cryptis_rel_ctx -∗ channel_rel c c' -∗
+  cryptis_rel_ctx -∗ lrel_channel c c' -∗
   REL game ops k c << game ops' k c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /game. rel_pures.

@@ -1,17 +1,14 @@
 (** * The attacker
 
-The attacker is a program [adv] that runs on a fresh network channel, as
-[init_network] does in the unary development.  It is valid
-([attacker_valid]) when it is related to itself, as a function from related
-channels to related computations.  The security theorems of [rel_adequacy.v]
-hold for every valid attacker.
+The attacker is a program [adv] that runs on a fresh network channel.  It is
+valid ([attacker_valid]) when it is related to itself, as a function from
+related channels to related computations.  The security theorems of
+[rel_adequacy.v] hold for every valid attacker.
 
-- [Network] relates terms ([lrel_term]) and channels ([lrel_channel]) across
-  the runs, and runs the attacker on a fresh channel
-  ([rel_run_network_rel]).
-  - [Contracts] gives each primitive a contract in the style of a type over
-    these relations.  A proof that an attacker is valid uses them whenever
-    the attacker calls a primitive.
+- [Network] runs the attacker on a fresh channel ([rel_run_network]).
+  - [Contracts] gives each primitive a contract in the style of a type.  A
+    proof that an attacker is valid uses them whenever the attacker calls a
+    primitive.
 - [Typed]: every well-typed attacker is valid ([attacker_valid_typed]).  Its
   types keep terms and the channel abstract, so the attacker cannot look
   inside them. *)
@@ -30,13 +27,13 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Definition init_network_rel : val := λ: "adv",
-  let: "c" := mk_channel_rel #() in
+Definition init_network : val := λ: "adv",
+  let: "c" := mk_channel #() in
   Fork ("adv" "c");;
   "c".
 
-Definition run_network_rel : val := λ: "adv" "f",
-  "f" (init_network_rel "adv").
+Definition run_network : val := λ: "adv" "f",
+  "f" (init_network "adv").
 
 Section Network.
 
@@ -45,15 +42,7 @@ Context `{!relocG Σ, !public_relGS Σ}.
 Implicit Types t : term.
 Implicit Types v : val.
 
-Definition lrel_term : lrel Σ := LRel (λ v v',
-  ∃ t t' : term, ⌜v = t⌝ ∗ ⌜v' = t'⌝ ∗ PUB⟨t, t'⟩)%I.
-
-Definition lrel_channel : lrel Σ := LRel channel_rel.
-
-Definition attacker_rel : lrel Σ := (lrel_channel → ())%lrel.
-
-Lemma lrel_term_intro t t' : PUB⟨t, t'⟩ -∗ lrel_term t t'.
-Proof. iIntros "#H". iExists t, t'. by eauto. Qed.
+Definition lrel_attacker : lrel Σ := (lrel_channel → ())%lrel.
 
 Section Contracts.
 
@@ -236,10 +225,8 @@ Lemma rel_prim_send :
   ⊢ (lrel_channel → lrel_term → ())%lrel send send.
 Proof.
 iIntros "!> %c %c' Hc".
-iDestruct "Hc" as (sf rf sf' rf') "(-> & -> & #Hs & _)".
-rewrite /send. rel_pures_l. rel_pures_r. rel_values. iModIntro.
-iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
-by iApply ("Hs" with "Ht").
+iDestruct "Hc" as (sf sf' rf rf') "(-> & -> & #Hs & _)".
+rewrite /send. rel_pures_l. rel_pures_r. rel_values.
 Qed.
 
 Lemma rel_prim_recv :
@@ -251,17 +238,17 @@ Qed.
 
 End Contracts.
 
-Lemma rel_run_network_rel (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
-  (REL adv << adv' : attacker_rel) -∗
-  (∀ c c', channel_rel c c' -∗ REL f c << f' c' : A) -∗
-  REL run_network_rel adv f << run_network_rel adv' f' : A.
+Lemma rel_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
+  (REL adv << adv' : lrel_attacker) -∗
+  (∀ c c', lrel_channel c c' -∗ REL f c << f' c' : A) -∗
+  REL run_network adv f << run_network adv' f' : A.
 Proof.
-iIntros "Hadv Hf". rewrite /run_network_rel.
+iIntros "Hadv Hf". rewrite /run_network.
 rel_bind_l adv. rel_bind_r adv'.
 iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
-rel_pures_l. rel_pures_r. rewrite /init_network_rel. rel_pures_l. rel_pures_r.
-rel_bind_l (mk_channel_rel #()). rel_bind_r (mk_channel_rel #()).
-iApply refines_bind; first iApply rel_mk_channel_rel.
+rel_pures_l. rel_pures_r. rewrite /init_network. rel_pures_l. rel_pures_r.
+rel_bind_l (mk_channel #()). rel_bind_r (mk_channel #()).
+iApply refines_bind; first iApply rel_mk_channel.
 iIntros (c c') "#Hc /=". rel_pures_l. rel_pures_r.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply refines_bind.
@@ -275,7 +262,7 @@ End Network.
 
 Definition attacker_valid (adv : expr) : Prop :=
   ∀ Σ (Hreloc : relocG Σ) (Hpub : public_relGS Σ),
-    ⊢ cryptis_rel_ctx -∗ REL adv << adv : attacker_rel.
+    ⊢ cryptis_rel_ctx -∗ REL adv << adv : lrel_attacker.
 
 Section Typed.
 
@@ -347,7 +334,7 @@ Qed.
 Lemma rel_attacker_typed e :
   attacker_prims_ty ⊢ₜ e : attacker_ty →
   cryptis_rel_ctx -∗
-  REL subst_map attacker_prims e << subst_map attacker_prims e : attacker_rel.
+  REL subst_map attacker_prims e << subst_map attacker_prims e : lrel_attacker.
 Proof.
 move=> /(fundamental [lrel_term; lrel_channel]) He. iIntros "#Hctx".
 iPoseProof (He with "[]") as "H"; first by iApply attacker_prims_env.

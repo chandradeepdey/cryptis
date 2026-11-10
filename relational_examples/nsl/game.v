@@ -30,7 +30,7 @@ Context `{!relocG Σ, !public_relGS Σ}.
 
 Lemma rel_guess (test test' : val) c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   (REL test c << test' c' : ()) -∗
   REL guess test c << guess test' c' : lrel_bool.
 Proof.
@@ -50,7 +50,7 @@ Qed.
 
 Lemma rel_guess_wrapped (test : bool → val) c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   (∀ b, REL test b c << test (negb b) c' : ()) -∗
   REL guess_wrapped test c << guess_wrapped test c' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
@@ -74,7 +74,7 @@ Qed.
 End Game.
 
 Definition ror_game (test : bool → val) (b : bool) (adv : expr) : expr :=
-  (run_network_rel adv (guess (test b)))%E.
+  (run_network adv (guess (test b)))%E.
 
 (** Real-or-random secrecy of the responder's session key as a contextual
     equivalence: against any valid attacker, when R's peer is I, no
@@ -102,9 +102,9 @@ Qed.
 
 Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr) σ :
   attacker_valid adv →
-  adequate NotStuck (run_network_rel adv (guess_wrapped resp_test)) σ
+  adequate NotStuck (run_network adv (guess_wrapped resp_test)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network_rel adv (guess_wrapped resp_test)], σ)
+       rtc erased_step ([run_network adv (guess_wrapped resp_test)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
@@ -116,9 +116,9 @@ Qed.
 
 Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr) σ :
   attacker_valid adv →
-  adequate NotStuck (run_network_rel adv (guess_wrapped init_test)) σ
+  adequate NotStuck (run_network adv (guess_wrapped init_test)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network_rel adv (guess_wrapped init_test)], σ)
+       rtc erased_step ([run_network adv (guess_wrapped init_test)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').

@@ -154,7 +154,7 @@ Definition resp_post : val → val → iProp := λ v v',
 
 Lemma rel_resp c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   nsl_ctx -∗
   (∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
      protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ sess s s') -∗

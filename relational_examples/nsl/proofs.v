@@ -116,7 +116,7 @@ Section Tests.
 
 Lemma rel_setup c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL setup c << setup c' : λ v v',
     (∃ (skI skI' skR skR' : aenc_key) (pkX pkX' : term),
       ⌜v = (skI : term, skR : term, pkX)%V⌝ ∗
@@ -169,7 +169,7 @@ Qed.
 
 Lemma rel_reveal b c c' s s' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   hash_tokens s s' -∗ secret_in_l (sess_key s) -∗ secret_in_r (sess_key s') -∗
   REL reveal b c (sess_key s) << reveal (negb b) c' (sess_key s') : ().
 Proof.
@@ -212,7 +212,7 @@ Qed.
 
 Lemma rel_resp_test b c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL resp_test b c << resp_test (negb b) c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /resp_test. rel_pures.
@@ -246,7 +246,7 @@ Qed.
 
 Lemma rel_init_test b c c' :
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL init_test b c << init_test (negb b) c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /init_test. rel_pures.

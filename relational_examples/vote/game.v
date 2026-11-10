@@ -39,7 +39,7 @@ Definition election_guess_wrapped cands votes0 votes1 : val := λ: "c",
 Lemma rel_election_guess c c' cands votes votes' :
   votes ≡ₚ votes' →
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL election_guess cands votes c << election_guess cands votes' c' : lrel_bool.
 Proof.
 iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess.
@@ -65,7 +65,7 @@ Qed.
 Lemma rel_election_guess_wrapped c c' cands votes0 votes1 :
   votes0 ≡ₚ votes1 →
   cryptis_rel_ctx -∗
-  channel_rel c c' -∗
+  lrel_channel c c' -∗
   REL election_guess_wrapped cands votes0 votes1 c
    << election_guess_wrapped cands votes0 votes1 c' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
@@ -92,7 +92,7 @@ Qed.
 End Game.
 
 Definition election_game (cands votes : list Z) (adv : expr) : expr :=
-  (run_network_rel adv (election_of cands votes))%E.
+  (run_network adv (election_of cands votes))%E.
 
 (** Vote privacy as a contextual equivalence: against any valid attacker,
     two assignments of votes to voters with the same number of votes for
@@ -113,10 +113,10 @@ Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 vo
     (adv : expr) σ :
   votes0 ≡ₚ votes1 →
   attacker_valid adv →
-  adequate NotStuck (run_network_rel adv (election_guess_wrapped cands votes0 votes1)) σ
+  adequate NotStuck (run_network adv (election_guess_wrapped cands votes0 votes1)) σ
     (λ v _, ∃ thp' h v',
        rtc erased_step
-         ([run_network_rel adv (election_guess_wrapped cands votes0 votes1)], σ)
+         ([run_network adv (election_guess_wrapped cands votes0 votes1)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
