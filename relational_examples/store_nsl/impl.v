@@ -79,7 +79,8 @@ Definition store_handle_store : val := λ: "db" "req",
   list_match: ["k"; "v"] := "req" in
   bind: "k" := to_int "k" in
   bind: "v" := to_int "v" in
-  SOME (TInt 0, avl_insert "k" "v" "db").
+  avl_insert "k" "v" "db";;
+  SOME (TInt 0, "db").
 
 Definition store_handle_load : val := λ: "db" "k",
   bind: "k" := to_int "k" in
@@ -104,7 +105,7 @@ Definition server : val := λ: "c" "skR" "pkI",
   match: resp "c" "skR" with
     SOME "res" =>
     if: eq_term (Fst "res") "pkI" then
-      rpc_server (conn_new "c" (Snd "res") #1) store_handle avl_empty
+      rpc_server (conn_new "c" (Snd "res") #1) store_handle (avl_new #())
     else #()
   | NONE => #()
   end.

@@ -44,9 +44,12 @@ Definition handle_model (db : AVL.tree) (m : term) : option (term * AVL.tree) :=
     end
   end.
 
-Definition handle_val (r : option (term * AVL.tree)) : val :=
+Definition handle_db (db : AVL.tree) (m : term) : AVL.tree :=
+  from_option snd db (handle_model db m).
+
+Definition handle_val (st : val) (r : option (term * AVL.tree)) : val :=
   match r with
-  | Some (t, db) => SOMEV (t : val, repr db)%V
+  | Some (t, _) => SOMEV (t : val, st)%V
   | None => NONEV
   end.
 
@@ -54,62 +57,68 @@ Section OneSided.
 
 Context `{!relocG Σ}.
 
-Lemma rel_store_handle_l K e db m Ψ :
-  (REL fill K (handle_val (handle_model db m) : expr) << e : Ψ) -∗
-  REL fill K (store_handle (repr db) m) << e : Ψ.
+Lemma rel_store_handle_l K e st db m Ψ :
+  is_avl st db -∗
+  (is_avl st (handle_db db m) -∗
+   REL fill K (handle_val st (handle_model db m) : expr) << e : Ψ) -∗
+  REL fill K (store_handle st m) << e : Ψ.
 Proof.
-iIntros "post". rewrite /store_handle /handle_model. rel_pures_l.
+iIntros "Hdb post". rewrite /store_handle /handle_db /handle_model. rel_pures_l.
 rel_apply_l rel_untag_l.
 case: (Spec.untag _ m) => [req|] /=; rel_pures_l.
 - rewrite /store_handle_store /handle_store_model. rel_pures_l.
   rel_apply_l rel_list_of_term_l.
-  case: (Spec.to_list req) => [ts|] /=; rel_pures_l; last by iApply "post".
+  case: (Spec.to_list req) => [ts|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
   rewrite ?subst_list_match /=. rel_apply_l (rel_list_match_l (A:=term)).
   case: decide => len.
   + destruct ts as [|k [|v [|? ?]]] => //=. rel_pures_l.
     rel_apply_l rel_to_int_l.
-    case: (Spec.to_int k) => [k'|] /=; rel_pures_l; last by iApply "post".
+    case: (Spec.to_int k) => [k'|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
     rel_apply_l rel_to_int_l.
-    case: (Spec.to_int v) => [v'|] /=; rel_pures_l; last by iApply "post".
-    rel_apply_l rel_avl_insert_l. rel_pures_l. by iApply "post".
-  + destruct ts as [|k [|v [|? ?]]] => //=; rel_pures_l; by iApply "post".
+    case: (Spec.to_int v) => [v'|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
+    rel_apply_l (rel_avl_insert_l with "Hdb"). iIntros "Hdb". rel_pures_l.
+    by iApply ("post" with "Hdb").
+  + destruct ts as [|k [|v [|? ?]]] => //=; rel_pures_l; by iApply ("post" with "Hdb").
 - rel_apply_l rel_untag_l.
-  case: (Spec.untag _ m) => [k|] /=; rel_pures_l; last by iApply "post".
+  case: (Spec.untag _ m) => [k|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
   rewrite /store_handle_load /handle_load_model. rel_pures_l.
   rel_apply_l rel_to_int_l.
-  case: (Spec.to_int k) => [k'|] /=; rel_pures_l; last by iApply "post".
-  rel_apply_l rel_avl_lookup_l.
+  case: (Spec.to_int k) => [k'|] /=; rel_pures_l; last by iApply ("post" with "Hdb").
+  rel_apply_l (rel_avl_lookup_l with "Hdb"). iIntros "Hdb".
   case: (AVL.lookup k' db) => [v|] /=; rel_pures_l;
-    rel_apply_l rel_tint_l; rel_pures_l; by iApply "post".
+    rel_apply_l rel_tint_l; rel_pures_l; by iApply ("post" with "Hdb").
 Qed.
 
-Lemma rel_store_handle_r K e db m Ψ :
-  (REL e << fill K (handle_val (handle_model db m) : expr) : Ψ) -∗
-  REL e << fill K (store_handle (repr db) m) : Ψ.
+Lemma rel_store_handle_r K e st db m Ψ :
+  is_avl_spec st db -∗
+  (is_avl_spec st (handle_db db m) -∗
+   REL e << fill K (handle_val st (handle_model db m) : expr) : Ψ) -∗
+  REL e << fill K (store_handle st m) : Ψ.
 Proof.
-iIntros "post". rewrite /store_handle /handle_model. rel_pures_r.
+iIntros "Hdb post". rewrite /store_handle /handle_db /handle_model. rel_pures_r.
 rel_apply_r rel_untag_r.
 case: (Spec.untag _ m) => [req|] /=; rel_pures_r.
 - rewrite /store_handle_store /handle_store_model. rel_pures_r.
   rel_apply_r rel_list_of_term_r.
-  case: (Spec.to_list req) => [ts|] /=; rel_pures_r; last by iApply "post".
+  case: (Spec.to_list req) => [ts|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
   rewrite ?subst_list_match /=. rel_apply_r (rel_list_match_r (A:=term)).
   case: decide => len.
   + destruct ts as [|k [|v [|? ?]]] => //=. rel_pures_r.
     rel_apply_r rel_to_int_r.
-    case: (Spec.to_int k) => [k'|] /=; rel_pures_r; last by iApply "post".
+    case: (Spec.to_int k) => [k'|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
     rel_apply_r rel_to_int_r.
-    case: (Spec.to_int v) => [v'|] /=; rel_pures_r; last by iApply "post".
-    rel_apply_r rel_avl_insert_r. rel_pures_r. by iApply "post".
-  + destruct ts as [|k [|v [|? ?]]] => //=; rel_pures_r; by iApply "post".
+    case: (Spec.to_int v) => [v'|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
+    rel_apply_r (rel_avl_insert_r with "Hdb"). iIntros "Hdb". rel_pures_r.
+    by iApply ("post" with "Hdb").
+  + destruct ts as [|k [|v [|? ?]]] => //=; rel_pures_r; by iApply ("post" with "Hdb").
 - rel_apply_r rel_untag_r.
-  case: (Spec.untag _ m) => [k|] /=; rel_pures_r; last by iApply "post".
+  case: (Spec.untag _ m) => [k|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
   rewrite /store_handle_load /handle_load_model. rel_pures_r.
   rel_apply_r rel_to_int_r.
-  case: (Spec.to_int k) => [k'|] /=; rel_pures_r; last by iApply "post".
-  rel_apply_r rel_avl_lookup_r.
+  case: (Spec.to_int k) => [k'|] /=; rel_pures_r; last by iApply ("post" with "Hdb").
+  rel_apply_r (rel_avl_lookup_r with "Hdb"). iIntros "Hdb".
   case: (AVL.lookup k' db) => [v|] /=; rel_pures_r;
-    rel_apply_r rel_tint_r; rel_pures_r; by iApply "post".
+    rel_apply_r rel_tint_r; rel_pures_r; by iApply ("post" with "Hdb").
 Qed.
 
 End OneSided.

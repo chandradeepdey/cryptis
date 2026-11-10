@@ -190,80 +190,98 @@ End PublicTerms.
 
 Section OneSided.
 
-Lemma rel_tally_vote_l K e skT p t Ψ :
-  (REL fill K (repr (tally_step skT p t) : expr) << e : Ψ) -∗
-  REL fill K (tally_vote skT (repr p) (repr t)) << e : Ψ.
+Lemma rel_tally_vote_l K e skT p m t Ψ :
+  is_avl m t -∗
+  (is_avl m (tally_step skT p t) -∗ REL fill K (#() : expr) << e : Ψ) -∗
+  REL fill K (tally_vote skT (repr p) m) << e : Ψ.
 Proof.
-iIntros "post". rewrite /tally_vote /tally_step.
-case: p => [pk [ct|]] /=; rel_pures_l; last by iApply "post".
+iIntros "Hm post". rewrite /tally_vote /tally_step.
+case: p => [pk [ct|]] /=; rel_pures_l; last by iApply ("post" with "Hm").
 rel_apply_l rel_random_adec_l. rewrite /vote_of.
-case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_l; last by iApply "post".
+case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_l;
+  last by iApply ("post" with "Hm").
 rel_apply_l rel_to_int_l.
-case: (Spec.to_int v) => [k|] /=; rel_pures_l; last by iApply "post".
-rel_apply_l rel_avl_lookup_l. rewrite /incr.
-case: (AVL.lookup k t) => [n|] /=; rel_pures_l; by rel_apply_l rel_avl_insert_l.
+case: (Spec.to_int v) => [k|] /=; rel_pures_l; last by iApply ("post" with "Hm").
+rel_apply_l (rel_avl_lookup_l with "Hm"). iIntros "Hm". rewrite /incr.
+case: (AVL.lookup k t) => [n|] /=; rel_pures_l;
+  by rel_apply_l (rel_avl_insert_l with "Hm").
 Qed.
 
-Lemma rel_tally_vote_r K e skT p t Ψ :
-  (REL e << fill K (repr (tally_step skT p t) : expr) : Ψ) -∗
-  REL e << fill K (tally_vote skT (repr p) (repr t)) : Ψ.
+Lemma rel_tally_vote_r K e skT p m t Ψ :
+  is_avl_spec m t -∗
+  (is_avl_spec m (tally_step skT p t) -∗ REL e << fill K (#() : expr) : Ψ) -∗
+  REL e << fill K (tally_vote skT (repr p) m) : Ψ.
 Proof.
-iIntros "post". rewrite /tally_vote /tally_step.
-case: p => [pk [ct|]] /=; rel_pures_r; last by iApply "post".
+iIntros "Hm post". rewrite /tally_vote /tally_step.
+case: p => [pk [ct|]] /=; rel_pures_r; last by iApply ("post" with "Hm").
 rel_apply_r rel_random_adec_r. rewrite /vote_of.
-case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_r; last by iApply "post".
+case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_r;
+  last by iApply ("post" with "Hm").
 rel_apply_r rel_to_int_r.
-case: (Spec.to_int v) => [k|] /=; rel_pures_r; last by iApply "post".
-rel_apply_r rel_avl_lookup_r. rewrite /incr.
-case: (AVL.lookup k t) => [n|] /=; rel_pures_r; by rel_apply_r rel_avl_insert_r.
+case: (Spec.to_int v) => [k|] /=; rel_pures_r; last by iApply ("post" with "Hm").
+rel_apply_r (rel_avl_lookup_r with "Hm"). iIntros "Hm". rewrite /incr.
+case: (AVL.lookup k t) => [n|] /=; rel_pures_r;
+  by rel_apply_r (rel_avl_insert_r with "Hm").
 Qed.
 
-Lemma rel_tally_slots_l K e skT (slots : list (term * option term)) t Ψ :
-  (REL fill K (repr (foldr (tally_step skT) t slots) : expr) << e : Ψ) -∗
-  REL fill K (tally_slots skT (repr slots) (repr t)) << e : Ψ.
+Lemma rel_tally_slots_l K e skT (slots : list (term * option term)) m t Ψ :
+  is_avl m t -∗
+  (is_avl m (foldr (tally_step skT) t slots) -∗ REL fill K (#() : expr) << e : Ψ) -∗
+  REL fill K (tally_slots skT (repr slots) m) << e : Ψ.
 Proof.
 rewrite /= [@repr_list]unlock.
-elim: slots K => [|p slots IH] K /=; iIntros "post"; rel_rec_l; rel_pures_l;
-  first by iApply "post".
-rel_bind_l (tally_slots _ _ _). iApply IH. rewrite /=. rel_pures_l.
-by iApply rel_tally_vote_l.
+elim: slots K => [|p slots IH] K /=; iIntros "Hm post"; rel_rec_l; rel_pures_l;
+  first by iApply ("post" with "Hm").
+rel_bind_l (tally_slots _ _ _). iApply (IH with "Hm"). iIntros "Hm".
+rewrite /=. rel_pures_l.
+by rel_apply_l (rel_tally_vote_l with "Hm").
 Qed.
 
-Lemma rel_tally_slots_r K e skT (slots : list (term * option term)) t Ψ :
-  (REL e << fill K (repr (foldr (tally_step skT) t slots) : expr) : Ψ) -∗
-  REL e << fill K (tally_slots skT (repr slots) (repr t)) : Ψ.
+Lemma rel_tally_slots_r K e skT (slots : list (term * option term)) m t Ψ :
+  is_avl_spec m t -∗
+  (is_avl_spec m (foldr (tally_step skT) t slots) -∗ REL e << fill K (#() : expr) : Ψ) -∗
+  REL e << fill K (tally_slots skT (repr slots) m) : Ψ.
 Proof.
 rewrite /= [@repr_list]unlock.
-elim: slots K => [|p slots IH] K /=; iIntros "post"; rel_rec_r; rel_pures_r;
-  first by iApply "post".
-rel_bind_r (tally_slots _ _ _). iApply IH. rewrite /=. rel_pures_r.
-by iApply rel_tally_vote_r.
+elim: slots K => [|p slots IH] K /=; iIntros "Hm post"; rel_rec_r; rel_pures_r;
+  first by iApply ("post" with "Hm").
+rel_bind_r (tally_slots _ _ _). iApply (IH with "Hm"). iIntros "Hm".
+rewrite /=. rel_pures_r.
+by rel_apply_r (rel_tally_vote_r with "Hm").
 Qed.
 
-Lemma rel_seed_l K e cands Ψ :
-  (REL fill K (repr (seed cands) : expr) << e : Ψ) -∗
-  REL fill K (seed_candidates (repr cands)) << e : Ψ.
+Lemma rel_seed_l K e cands m Ψ :
+  is_avl m AVL.Leaf -∗
+  (is_avl m (seed cands) -∗ REL fill K (#() : expr) << e : Ψ) -∗
+  REL fill K (seed_candidates (repr cands) m) << e : Ψ.
 Proof.
-iIntros "post". rewrite /seed_candidates. rel_pures_l.
-iApply (rel_foldr_list_l _ _ _ (λ k t, AVL.insert k 0%Z t) _ cands AVL.Leaf with "post").
-move=> K' k t _. iIntros "post". rel_pures_l. by rel_apply_l rel_avl_insert_l.
+rewrite /= [@repr_list]unlock.
+elim: cands K => [|k cands IH] K /=; iIntros "Hm post"; rel_rec_l; rel_pures_l;
+  first by iApply ("post" with "Hm").
+rel_bind_l (seed_candidates _ _). iApply (IH with "Hm"). iIntros "Hm".
+rewrite /=. rel_pures_l.
+by rel_apply_l (rel_avl_insert_l with "Hm").
 Qed.
 
-Lemma rel_seed_r K e cands Ψ :
-  (REL e << fill K (repr (seed cands) : expr) : Ψ) -∗
-  REL e << fill K (seed_candidates (repr cands)) : Ψ.
+Lemma rel_seed_r K e cands m Ψ :
+  is_avl_spec m AVL.Leaf -∗
+  (is_avl_spec m (seed cands) -∗ REL e << fill K (#() : expr) : Ψ) -∗
+  REL e << fill K (seed_candidates (repr cands) m) : Ψ.
 Proof.
-iIntros "post". rewrite /seed_candidates. rel_pures_r.
-iApply (rel_foldr_list_r _ _ _ (λ k t, AVL.insert k 0%Z t) _ cands AVL.Leaf with "post");
-  first solve_ndisj.
-move=> K' k t _. iIntros "post". rel_pures_r. by rel_apply_r rel_avl_insert_r.
+rewrite /= [@repr_list]unlock.
+elim: cands K => [|k cands IH] K /=; iIntros "Hm post"; rel_rec_r; rel_pures_r;
+  first by iApply ("post" with "Hm").
+rel_bind_r (seed_candidates _ _). iApply (IH with "Hm"). iIntros "Hm".
+rewrite /=. rel_pures_r.
+by rel_apply_r (rel_avl_insert_r with "Hm").
 Qed.
 
-Lemma rel_result_l K e t Ψ :
+Lemma rel_result_l K e m t Ψ :
+  is_avl m t -∗
   (REL fill K (result t : expr) << e : Ψ) -∗
-  REL fill K (term_of_list (map_list pair_term (avl_to_list (repr t)))) << e : Ψ.
+  REL fill K (term_of_list (map_list pair_term (avl_to_list m))) << e : Ψ.
 Proof.
-iIntros "post". rel_apply_l rel_avl_to_list_l.
+iIntros "Hm post". rel_apply_l (rel_avl_to_list_l with "Hm"). iIntros "_".
 rel_bind_l (map_list _ _).
 iApply (rel_map_list_l _ _ _ pair_of pair_term (AVL.to_list t) with "[post]").
 - move=> K' [k v] _. iIntros "post". rewrite /pair_term /=. rel_pures_l.
@@ -271,11 +289,12 @@ iApply (rel_map_list_l _ _ _ pair_of pair_term (AVL.to_list t) with "[post]").
 - rewrite /=. by rel_apply_l rel_term_of_list_l.
 Qed.
 
-Lemma rel_result_r K e t Ψ :
+Lemma rel_result_r K e m t Ψ :
+  is_avl_spec m t -∗
   (REL e << fill K (result t : expr) : Ψ) -∗
-  REL e << fill K (term_of_list (map_list pair_term (avl_to_list (repr t)))) : Ψ.
+  REL e << fill K (term_of_list (map_list pair_term (avl_to_list m))) : Ψ.
 Proof.
-iIntros "post". rel_apply_r rel_avl_to_list_r.
+iIntros "Hm post". rel_apply_r (rel_avl_to_list_r with "Hm"). iIntros "_".
 rel_bind_r (map_list _ _).
 iApply (rel_map_list_r _ _ _ pair_of pair_term (AVL.to_list t) with "[post]");
   first solve_ndisj.
@@ -453,12 +472,16 @@ iApply (refines_bind with "[]").
 iIntros (? ?) "(%st & -> & -> & %Hlen & %Hok & %Hall)" => /=.
 rewrite length_replicate in Hlen.
 rel_pures.
-rel_apply_l rel_seed_l. rel_apply_r rel_seed_r.
-rel_apply_l rel_tally_slots_l. rel_apply_r rel_tally_slots_r.
+rel_apply_l rel_avl_new_l. iIntros (m) "Hm".
+rel_apply_r rel_avl_new_r. iIntros (m') "Hm'". rel_pures.
+rel_apply_l (rel_seed_l with "Hm"). iIntros "Hm".
+rel_apply_r (rel_seed_r with "Hm'"). iIntros "Hm'". rel_pures.
+rel_apply_l (rel_tally_slots_l with "Hm"). iIntros "Hm".
+rel_apply_r (rel_tally_slots_r with "Hm'"). iIntros "Hm'".
 rewrite (tally_slots_l_eq (seed cands) Hlen Hv Hok Hall).
 rewrite (tally_slots_r_eq (seed cands) (eq_trans Hlen Hkk) Hv' Hok Hall).
 rel_pures.
-rel_apply_l rel_result_l. rel_apply_r rel_result_r.
+rel_apply_l (rel_result_l with "Hm"). rel_apply_r (rel_result_r with "Hm'").
 have [HbL HmL] := to_map_foldr_incr votes (bst_seed cands).
 have [HbR HmR] := to_map_foldr_incr votes' (bst_seed cands).
 have Heq : AVL.to_list (foldr incr (seed cands) votes) =

@@ -50,13 +50,13 @@ Definition collect : val := rec: "loop" "c" "slots" :=
 
 Definition tally_vote : val := λ: "skT" "p" "t",
   match: Snd "p" with
-    NONE => "t"
+    NONE => #()
   | SOME "ct" =>
     match: random_adec "skT" (Tag $ voteN.@"vote") "ct" with
-      NONE => "t"
+      NONE => #()
     | SOME "v" =>
       match: to_int "v" with
-        NONE => "t"
+        NONE => #()
       | SOME "k" =>
         let: "n" := match: avl_lookup "k" "t" with NONE => #0 | SOME "n" => "n" end in
         avl_insert "k" ("n" + #1) "t"
@@ -66,18 +66,23 @@ Definition tally_vote : val := λ: "skT" "p" "t",
 
 Definition tally_slots : val := rec: "loop" "skT" "slots" "t" :=
   match: "slots" with
-    NONE => "t"
-  | SOME "p" => tally_vote "skT" (Fst "p") ("loop" "skT" (Snd "p") "t")
+    NONE => #()
+  | SOME "p" => "loop" "skT" (Snd "p") "t";; tally_vote "skT" (Fst "p") "t"
   end.
 
-Definition seed_candidates : val := λ: "cands",
-  foldr_list (λ: "k" "t", avl_insert "k" #0 "t") avl_empty "cands".
+Definition seed_candidates : val := rec: "loop" "cands" "t" :=
+  match: "cands" with
+    NONE => #()
+  | SOME "p" => "loop" (Snd "p") "t";; avl_insert (Fst "p") #0 "t"
+  end.
 
 Definition pair_term : val := λ: "p", tuple (tint (Fst "p")) (tint (Snd "p")).
 
 Definition arbitrator : val := λ: "c" "skT" "cands" "pks",
   let: "slots" := collect "c" (map_list (λ: "pk", ("pk", NONE)) "pks") in
-  let: "t" := tally_slots "skT" "slots" (seed_candidates "cands") in
+  let: "t" := avl_new #() in
+  seed_candidates "cands" "t";;
+  tally_slots "skT" "slots" "t";;
   send "c" (term_of_list (map_list pair_term (avl_to_list "t"))).
 
 Definition mk_voters : val := rec: "loop" "votes" :=

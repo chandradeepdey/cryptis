@@ -14,6 +14,7 @@ From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.
 From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.lib Require Import avl_spec.
 From cryptis.hyper.core Require Import minted_spec rel.
 From cryptis.hyper.primitives Require Import simple_spec with_cryptis_spec.
 From cryptis.hyper Require Import proofmode.
@@ -87,7 +88,8 @@ by iSplit; [|iSplit; [|iSplit]].
 Qed.
 
 Definition server_inv n r (st st' : val) : iProp :=
-  ⌜n = r ∧ st = repr (db_of (take r ops)) ∧ st' = repr (db_of (take r ops'))⌝.
+  ⌜n = r⌝ ∗ is_avl st (db_of (take r ops)) ∗
+  is_avl_spec st' (db_of (take r ops')).
 
 Lemma rel_store_handle n r st st' p p' :
   server_inv n r st st' -∗ store_Φ 0 r p p' -∗
@@ -97,24 +99,26 @@ Lemma rel_store_handle n r st st' p p' :
          ⌜v = SOMEV (q : val, st2)%V ∧ v' = SOMEV (q' : val, st2')%V⌝ ∗
          conn_payload q q' ∗ store_Φ 1 n q q' ∗ server_inv (S n) (S r) st2 st2'))%I.
 Proof.
-iIntros ([-> [-> ->]] Hmsg). move: Hmsg. rewrite /store_msg. case: decide => // _.
+iIntros "(-> & Hdb & Hdb') %Hmsg". move: Hmsg. rewrite /store_msg. case: decide => // _.
 have Hlen := Permutation_length ops_perm.
 case=> [[o [o' [Ho [Ho' [-> ->]]]]]|[-> [-> ->]]].
-- rel_apply_l rel_store_handle_l. rel_apply_r rel_store_handle_r.
-  rewrite !handle_model_store /=. rel_values. iModIntro. iRight.
+- rel_apply_l (rel_store_handle_l with "Hdb"). iIntros "Hdb".
+  rel_apply_r (rel_store_handle_r with "Hdb'"). iIntros "Hdb'".
+  rewrite /handle_db !handle_model_store /=. rel_values. iModIntro. iRight.
   iExists (TInt 0), (TInt 0), _, _. iSplit; first done.
   iSplit; first by iApply conn_payload_TInt.
-  iPureIntro. split; first by exists 0%Z.
-  by rewrite (db_of_take_S Ho) (db_of_take_S Ho').
-- rel_apply_l rel_store_handle_l. rel_apply_r rel_store_handle_r.
-  rewrite !handle_model_load /=.
+  iSplit; first by iPureIntro; exists 0%Z.
+  rewrite /server_inv (db_of_take_S Ho) (db_of_take_S Ho'). by iFrame.
+- rel_apply_l (rel_store_handle_l with "Hdb"). iIntros "Hdb".
+  rel_apply_r (rel_store_handle_r with "Hdb'"). iIntros "Hdb'".
+  rewrite /handle_db !handle_model_load /=.
   rewrite !take_ge; try lia.
   rewrite (lookup_db_of_perm k ops_nodup ops_perm).
   rel_values. iModIntro. iRight.
   iExists _, _, _, _. iSplit; first done.
   iSplit; first by iApply conn_payload_TInt.
-  iPureIntro. split; first by eexists.
-  by rewrite !take_ge; try lia.
+  iSplit; first by iPureIntro; eexists.
+  rewrite /server_inv !take_ge; try lia. by iFrame.
 Qed.
 
 Lemma rel_store_all cs cs' i :

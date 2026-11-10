@@ -124,9 +124,9 @@ Inductive tree := Leaf | Node (l : tree) (k v h : Z) (r : tree).
 
 Definition height t : Z := match t with Leaf => 0 | Node _ _ _ h _ => h end.
 
-#[local] Definition node l k v r := Node l k v (1 + Z.max (height l) (height r)) r.
+Definition node l k v r := Node l k v (1 + Z.max (height l) (height r)) r.
 
-#[local] Definition bal l k v r :=
+Definition bal l k v r :=
   if bool_decide (height r + 1 < height l) then
     match l with
     | Node ll lk lv _ lr =>
@@ -169,7 +169,7 @@ Fixpoint lookup k t :=
     else Some v'
   end.
 
-#[local] Fixpoint to_list_acc t acc :=
+Fixpoint to_list_acc t acc :=
   match t with
   | Leaf => acc
   | Node l k v _ r => to_list_acc l ((k, v) :: to_list_acc r acc)
@@ -393,96 +393,114 @@ End Balance.
 
 End AVL.
 
-#[local] Fixpoint repr_tree (t : AVL.tree) : val :=
+Section Repr.
+
+Context {Σ : gFunctors} (pt : loc → val → iProp Σ).
+
+Fixpoint avl_tree_at (t : AVL.tree) (w : val) : iProp Σ :=
   match t with
-  | AVL.Leaf => NONEV
-  | AVL.Node l k v h r => SOMEV (repr_tree l, #k, #v, #h, repr_tree r)
+  | AVL.Leaf => ⌜w = NONEV⌝
+  | AVL.Node l k v h r =>
+    ∃ (p : loc) (wl wr : val),
+      ⌜w = SOMEV #p⌝ ∗ pt p (wl, #k, #v, #h, wr)%V ∗
+      avl_tree_at l wl ∗ avl_tree_at r wr
   end.
 
-#[global] Instance repr_tree_inst : Repr AVL.tree := repr_tree.
-Arguments repr_tree_inst !_ /.
+Definition avl_at (m : val) (t : AVL.tree) : iProp Σ :=
+  ∃ (p : loc) (w : val), ⌜m = #p⌝ ∗ pt p w ∗ avl_tree_at t w.
 
-Lemma tree_pure (t : AVL.tree) : pure_val (repr t).
-Proof. elim: t => [|l IHl k v h r IHr] //=. rewrite !andb_True. by repeat split. Qed.
+End Repr.
 
-Definition avl_empty : val := NONEV.
+Section Impl.
 
-#[local] Definition avl_height : val := λ: "t",
-  match: "t" with NONE => #0 | SOME "n" => Snd (Fst "n") end.
+Definition avl_new : val := λ: <>, ref NONE.
 
-#[local] Definition avl_node : val := λ: "l" "k" "v" "r",
+Definition avl_height : val := λ: "t",
+  match: "t" with NONE => #0 | SOME "p" => Snd (Fst !"p") end.
+
+Definition avl_set_node : val := λ: "p" "l" "k" "v" "r",
   let: "hl" := avl_height "l" in
   let: "hr" := avl_height "r" in
   let: "h" := if: "hl" < "hr" then "hr" else "hl" in
-  SOME ("l", "k", "v", #1 + "h", "r").
+  "p" <- ("l", "k", "v", #1 + "h", "r");;
+  SOME "p".
 
-#[local] Definition avl_bal : val := λ: "l" "k" "v" "r",
+Definition avl_bal : val := λ: "p" "l" "k" "v" "r",
   let: "hl" := avl_height "l" in
   let: "hr" := avl_height "r" in
   if: "hr" + #1 < "hl" then
     match: "l" with
-      NONE => avl_node "l" "k" "v" "r"
-    | SOME "n" =>
+      NONE => avl_set_node "p" "l" "k" "v" "r"
+    | SOME "pl" =>
+      let: "n" := !"pl" in
       let: "ll" := Fst (Fst (Fst (Fst "n"))) in
       let: "lk" := Snd (Fst (Fst (Fst "n"))) in
       let: "lv" := Snd (Fst (Fst "n")) in
       let: "lr" := Snd "n" in
       if: avl_height "lr" ≤ avl_height "ll" then
-        avl_node "ll" "lk" "lv" (avl_node "lr" "k" "v" "r")
+        avl_set_node "pl" "ll" "lk" "lv" (avl_set_node "p" "lr" "k" "v" "r")
       else
         match: "lr" with
-          NONE => avl_node "l" "k" "v" "r"
-        | SOME "m" =>
+          NONE => avl_set_node "p" "l" "k" "v" "r"
+        | SOME "plr" =>
+          let: "m" := !"plr" in
           let: "lrl" := Fst (Fst (Fst (Fst "m"))) in
           let: "lrk" := Snd (Fst (Fst (Fst "m"))) in
           let: "lrv" := Snd (Fst (Fst "m")) in
           let: "lrr" := Snd "m" in
-          avl_node (avl_node "ll" "lk" "lv" "lrl") "lrk" "lrv"
-                   (avl_node "lrr" "k" "v" "r")
+          avl_set_node "plr" (avl_set_node "pl" "ll" "lk" "lv" "lrl") "lrk" "lrv"
+                   (avl_set_node "p" "lrr" "k" "v" "r")
         end
     end
   else if: "hl" + #1 < "hr" then
     match: "r" with
-      NONE => avl_node "l" "k" "v" "r"
-    | SOME "n" =>
+      NONE => avl_set_node "p" "l" "k" "v" "r"
+    | SOME "pr" =>
+      let: "n" := !"pr" in
       let: "rl" := Fst (Fst (Fst (Fst "n"))) in
       let: "rk" := Snd (Fst (Fst (Fst "n"))) in
       let: "rv" := Snd (Fst (Fst "n")) in
       let: "rr" := Snd "n" in
       if: avl_height "rl" ≤ avl_height "rr" then
-        avl_node (avl_node "l" "k" "v" "rl") "rk" "rv" "rr"
+        avl_set_node "pr" (avl_set_node "p" "l" "k" "v" "rl") "rk" "rv" "rr"
       else
         match: "rl" with
-          NONE => avl_node "l" "k" "v" "r"
-        | SOME "m" =>
+          NONE => avl_set_node "p" "l" "k" "v" "r"
+        | SOME "prl" =>
+          let: "m" := !"prl" in
           let: "rll" := Fst (Fst (Fst (Fst "m"))) in
           let: "rlk" := Snd (Fst (Fst (Fst "m"))) in
           let: "rlv" := Snd (Fst (Fst "m")) in
           let: "rlr" := Snd "m" in
-          avl_node (avl_node "l" "k" "v" "rll") "rlk" "rlv"
-                   (avl_node "rlr" "rk" "rv" "rr")
+          avl_set_node "prl" (avl_set_node "p" "l" "k" "v" "rll") "rlk" "rlv"
+                   (avl_set_node "pr" "rlr" "rk" "rv" "rr")
         end
     end
-  else avl_node "l" "k" "v" "r".
+  else avl_set_node "p" "l" "k" "v" "r".
 
-Definition avl_insert : val := rec: "loop" "k" "v" "t" :=
+Definition avl_insert_node : val := rec: "loop" "k" "v" "t" :=
   match: "t" with
-    NONE => SOME (NONE, "k", "v", #1, NONE)
-  | SOME "n" =>
+    NONE => SOME (ref (NONE, "k", "v", #1, NONE))
+  | SOME "p" =>
+    let: "n" := !"p" in
     let: "l" := Fst (Fst (Fst (Fst "n"))) in
     let: "k'" := Snd (Fst (Fst (Fst "n"))) in
     let: "v'" := Snd (Fst (Fst "n")) in
     let: "h" := Snd (Fst "n") in
     let: "r" := Snd "n" in
-    if: "k" < "k'" then avl_bal ("loop" "k" "v" "l") "k'" "v'" "r"
-    else if: "k'" < "k" then avl_bal "l" "k'" "v'" ("loop" "k" "v" "r")
-    else SOME ("l", "k", "v", "h", "r")
+    if: "k" < "k'" then avl_bal "p" ("loop" "k" "v" "l") "k'" "v'" "r"
+    else if: "k'" < "k" then avl_bal "p" "l" "k'" "v'" ("loop" "k" "v" "r")
+    else "p" <- ("l", "k", "v", "h", "r");; "t"
   end.
 
-Definition avl_lookup : val := rec: "loop" "k" "t" :=
+Definition avl_insert : val := λ: "k" "v" "m",
+  "m" <- avl_insert_node "k" "v" !"m".
+
+Definition avl_lookup_node : val := rec: "loop" "k" "t" :=
   match: "t" with
     NONE => NONE
-  | SOME "n" =>
+  | SOME "p" =>
+    let: "n" := !"p" in
     let: "l" := Fst (Fst (Fst (Fst "n"))) in
     let: "k'" := Snd (Fst (Fst (Fst "n"))) in
     let: "v'" := Snd (Fst (Fst "n")) in
@@ -492,10 +510,13 @@ Definition avl_lookup : val := rec: "loop" "k" "t" :=
     else SOME "v'"
   end.
 
-#[local] Definition avl_to_list_acc : val := rec: "loop" "t" "acc" :=
+Definition avl_lookup : val := λ: "k" "m", avl_lookup_node "k" !"m".
+
+Definition avl_to_list_acc : val := rec: "loop" "t" "acc" :=
   match: "t" with
     NONE => "acc"
-  | SOME "n" =>
+  | SOME "p" =>
+    let: "n" := !"p" in
     let: "l" := Fst (Fst (Fst (Fst "n"))) in
     let: "k" := Snd (Fst (Fst (Fst "n"))) in
     let: "v" := Snd (Fst (Fst "n")) in
@@ -503,94 +524,182 @@ Definition avl_lookup : val := rec: "loop" "k" "t" :=
     "loop" "l" (SOME (("k", "v"), "loop" "r" "acc"))
   end.
 
-Definition avl_to_list : val := λ: "t", avl_to_list_acc "t" NONE.
+Definition avl_to_list : val := λ: "m", avl_to_list_acc !"m" NONE.
+
+End Impl.
 
 Section Specs.
 
 Context `{!heapGS Σ}.
 
-Implicit Types (t : AVL.tree) (Ψ : val → iProp Σ).
+Implicit Types (t : AVL.tree) (m w : val) (p : loc) (Ψ : val → iProp Σ).
 
-#[local] Lemma twp_avl_height E Ψ t :
-  Ψ #(AVL.height t) ⊢ WP avl_height (repr t) @ E [{ Ψ }].
-Proof. iIntros "post"; case: t => [|l k v h r] /=; by wp_rec; wp_pures. Qed.
+Definition is_avl : val → AVL.tree → iProp Σ := avl_at (λ p w, p ↦ w)%I.
 
-#[local] Lemma twp_avl_node E Ψ l k v r :
-  Ψ (repr (AVL.node l k v r)) ⊢ WP avl_node (repr l) #k #v (repr r) @ E [{ Ψ }].
+#[local] Abbreviation is_tree := (avl_tree_at (λ p w, p ↦ w)%I).
+
+#[local] Lemma twp_avl_height E Ψ t w :
+  is_tree t w -∗ (is_tree t w -∗ Ψ #(AVL.height t)) -∗
+  WP avl_height w @ E [{ Ψ }].
 Proof.
-iIntros "post". wp_rec. wp_pures.
-wp_apply twp_avl_height. wp_pures. wp_apply twp_avl_height. wp_pures.
-rewrite /AVL.node; case: bool_decide_reflect => ?; wp_pures.
-- by rewrite Z.max_r; last lia.
-- by rewrite Z.max_l; last lia.
+iIntros "Ht post". case: t => [|l k v h r] /=.
+- iDestruct "Ht" as %->. wp_rec. wp_pures. by iApply "post".
+- iDestruct "Ht" as (p wl wr ->) "(Hp & Hl & Hr)". wp_rec. wp_pures. wp_load.
+  wp_pures. iApply "post". iExists p, wl, wr. by iFrame.
 Qed.
 
-#[local] Lemma twp_avl_bal E Ψ l k v r :
-  Ψ (repr (AVL.bal l k v r)) ⊢ WP avl_bal (repr l) #k #v (repr r) @ E [{ Ψ }].
+#[local] Lemma twp_avl_node E Ψ p w0 l k v r wl wr :
+  p ↦ w0 -∗ is_tree l wl -∗ is_tree r wr -∗
+  (∀ w, is_tree (AVL.node l k v r) w -∗ Ψ w) -∗
+  WP avl_set_node #p wl #k #v wr @ E [{ Ψ }].
 Proof.
-iIntros "post". wp_rec. wp_pures.
-wp_apply twp_avl_height. wp_pures. wp_apply twp_avl_height. wp_pures.
+iIntros "Hp Hl Hr post". wp_rec. wp_pures.
+wp_apply (twp_avl_height with "Hl"). iIntros "Hl". wp_pures.
+wp_apply (twp_avl_height with "Hr"). iIntros "Hr". wp_pures.
+case: bool_decide_reflect => ?; wp_pures; wp_store; wp_pures;
+  iApply "post"; iExists p, wl, wr.
+- rewrite Z.max_r; last lia. by iFrame.
+- rewrite Z.max_l; last lia. by iFrame.
+Qed.
+
+#[local] Lemma twp_avl_bal E Ψ p w0 l k v r wl wr :
+  p ↦ w0 -∗ is_tree l wl -∗ is_tree r wr -∗
+  (∀ w, is_tree (AVL.bal l k v r) w -∗ Ψ w) -∗
+  WP avl_bal #p wl #k #v wr @ E [{ Ψ }].
+Proof.
+iIntros "Hp Hl Hr post". wp_rec. wp_pures.
+wp_apply (twp_avl_height with "Hl"). iIntros "Hl". wp_pures.
+wp_apply (twp_avl_height with "Hr"). iIntros "Hr". wp_pures.
 rewrite /AVL.bal. case: bool_decide_reflect => _; wp_pures.
-{ case: l => [|ll lk lv lh lr] /=; wp_pures;
-    first by iApply (twp_avl_node _ _ AVL.Leaf).
-  wp_apply twp_avl_height. wp_apply twp_avl_height. wp_pures.
+{ case: l => [|ll lk lv lh lr] /=.
+  { iDestruct "Hl" as %->. wp_pures.
+    by wp_apply (twp_avl_node _ _ _ _ AVL.Leaf with "Hp [//] Hr"). }
+  iDestruct "Hl" as (pl wll wlr ->) "(Hpl & Hll & Hlr)". wp_pures. wp_load.
+  wp_pures.
+  wp_apply (twp_avl_height with "Hll"). iIntros "Hll".
+  wp_apply (twp_avl_height with "Hlr"). iIntros "Hlr". wp_pures.
   case: bool_decide_reflect => _; wp_pures.
-  - wp_apply twp_avl_node.
-    by iApply (twp_avl_node _ _ ll lk lv (AVL.node lr k v r)).
-  - case: lr => [|lrl lrk lrv lrh lrr] /=; wp_pures;
-      first by iApply (twp_avl_node _ _ (AVL.Node ll lk lv lh AVL.Leaf)).
-    wp_apply twp_avl_node. wp_apply twp_avl_node.
-    by iApply (twp_avl_node _ _ (AVL.node ll lk lv lrl) lrk lrv (AVL.node lrr k v r)). }
-case: bool_decide_reflect => _; wp_pures; last by iApply twp_avl_node.
-case: r => [|rl rk rv rh rr] /=; wp_pures;
-  first by iApply (twp_avl_node _ _ _ _ _ AVL.Leaf).
-wp_apply twp_avl_height. wp_apply twp_avl_height. wp_pures.
+  { wp_apply (twp_avl_node with "Hp Hlr Hr"). iIntros (w) "Hw".
+    by wp_apply (twp_avl_node with "Hpl Hll Hw"). }
+  case: lr => [|lrl lrk lrv lrh lrr] /=.
+  { iDestruct "Hlr" as %->. wp_pures.
+    wp_apply (twp_avl_node _ _ _ _ (AVL.Node ll lk lv lh AVL.Leaf)
+                with "Hp [Hpl Hll] Hr"); last done.
+    iExists pl, wll, NONEV. by iFrame. }
+  iDestruct "Hlr" as (plr wlrl wlrr ->) "(Hplr & Hlrl & Hlrr)". wp_pures.
+  wp_load. wp_pures.
+  wp_apply (twp_avl_node with "Hp Hlrr Hr"). iIntros (w1) "H1".
+  wp_apply (twp_avl_node with "Hpl Hll Hlrl"). iIntros (w2) "H2".
+  by wp_apply (twp_avl_node with "Hplr H2 H1"). }
+case: bool_decide_reflect => _; wp_pures;
+  last by wp_apply (twp_avl_node with "Hp Hl Hr").
+case: r => [|rl rk rv rh rr] /=.
+{ iDestruct "Hr" as %->. wp_pures.
+  by wp_apply (twp_avl_node _ _ _ _ _ _ _ AVL.Leaf with "Hp Hl [//]"). }
+iDestruct "Hr" as (pr wrl wrr ->) "(Hpr & Hrl & Hrr)". wp_pures. wp_load.
+wp_pures.
+wp_apply (twp_avl_height with "Hrr"). iIntros "Hrr".
+wp_apply (twp_avl_height with "Hrl"). iIntros "Hrl". wp_pures.
 case: bool_decide_reflect => _; wp_pures.
-- wp_apply twp_avl_node. by iApply (twp_avl_node _ _ (AVL.node l k v rl) rk rv rr).
-- case: rl => [|rll rlk rlv rlh rlr] /=; wp_pures;
-    first by iApply (twp_avl_node _ _ _ _ _ (AVL.Node AVL.Leaf rk rv rh rr)).
-  wp_apply twp_avl_node. wp_apply twp_avl_node.
-  by iApply (twp_avl_node _ _ (AVL.node l k v rll) rlk rlv (AVL.node rlr rk rv rr)).
+{ wp_apply (twp_avl_node with "Hp Hl Hrl"). iIntros (w) "Hw".
+  by wp_apply (twp_avl_node with "Hpr Hw Hrr"). }
+case: rl => [|rll rlk rlv rlh rlr] /=.
+{ iDestruct "Hrl" as %->. wp_pures.
+  wp_apply (twp_avl_node _ _ _ _ _ _ _ (AVL.Node AVL.Leaf rk rv rh rr)
+              with "Hp Hl [Hpr Hrr]"); last done.
+  iExists pr, NONEV, wrr. by iFrame. }
+iDestruct "Hrl" as (prl wrll wrlr ->) "(Hprl & Hrll & Hrlr)". wp_pures.
+wp_load. wp_pures.
+wp_apply (twp_avl_node with "Hpr Hrlr Hrr"). iIntros (w1) "H1".
+wp_apply (twp_avl_node with "Hp Hl Hrll"). iIntros (w2) "H2".
+by wp_apply (twp_avl_node with "Hprl H2 H1").
 Qed.
 
-Lemma twp_avl_insert E Ψ k v t :
-  Ψ (repr (AVL.insert k v t)) ⊢ WP avl_insert #k #v (repr t) @ E [{ Ψ }].
+#[local] Lemma twp_avl_insert_node E Ψ k v t w :
+  is_tree t w -∗ (∀ w', is_tree (AVL.insert k v t) w' -∗ Ψ w') -∗
+  WP avl_insert_node #k #v w @ E [{ Ψ }].
 Proof.
-elim: t Ψ => [|l IHl k' v' h r IHr] Ψ /=; iIntros "post"; wp_rec; wp_pures;
-  first done.
+elim: t Ψ w => [|l IHl k' v' h r IHr] Ψ w /=; iIntros "Ht post".
+{ iDestruct "Ht" as %->. wp_rec. wp_pures. wp_alloc p as "Hp". wp_pures.
+  iApply "post". iExists p, NONEV, NONEV. by iFrame. }
+iDestruct "Ht" as (p wl wr ->) "(Hp & Hl & Hr)". wp_rec. wp_pures. wp_load.
+wp_pures.
 case: bool_decide_reflect => _; wp_pures.
-{ wp_apply IHl. by iApply twp_avl_bal. }
-case: bool_decide_reflect => _; wp_pures; last done.
-wp_apply IHr. by iApply twp_avl_bal.
+{ wp_apply (IHl with "Hl"). iIntros (wl') "Hl".
+  by wp_apply (twp_avl_bal with "Hp Hl Hr"). }
+case: bool_decide_reflect => _; wp_pures.
+{ wp_apply (IHr with "Hr"). iIntros (wr') "Hr".
+  by wp_apply (twp_avl_bal with "Hp Hl Hr"). }
+wp_store. iApply "post". iExists p, wl, wr. by iFrame.
 Qed.
 
-Lemma twp_avl_lookup E Ψ k t :
-  Ψ (repr (AVL.lookup k t)) ⊢ WP avl_lookup #k (repr t) @ E [{ Ψ }].
+#[local] Lemma twp_avl_lookup_node E Ψ k t w :
+  is_tree t w -∗ (is_tree t w -∗ Ψ (repr (AVL.lookup k t))) -∗
+  WP avl_lookup_node #k w @ E [{ Ψ }].
 Proof.
-elim: t Ψ => [|l IHl k' v' h r IHr] Ψ /=; iIntros "post"; wp_rec; wp_pures;
-  first done.
-case: bool_decide_reflect => _; wp_pures; first by iApply IHl.
-case: bool_decide_reflect => _; wp_pures; first by iApply IHr.
-done.
+elim: t Ψ w => [|l IHl k' v' h r IHr] Ψ w /=; iIntros "Ht post".
+{ iDestruct "Ht" as %->. wp_rec. wp_pures. by iApply "post". }
+iDestruct "Ht" as (p wl wr ->) "(Hp & Hl & Hr)". wp_rec. wp_pures. wp_load.
+wp_pures.
+case: bool_decide_reflect => _; wp_pures.
+{ wp_apply (IHl with "Hl"). iIntros "Hl".
+  iApply "post". iExists p, wl, wr. by iFrame. }
+case: bool_decide_reflect => _; wp_pures.
+{ wp_apply (IHr with "Hr"). iIntros "Hr".
+  iApply "post". iExists p, wl, wr. by iFrame. }
+iApply "post". iExists p, wl, wr. by iFrame.
 Qed.
 
-#[local] Lemma twp_avl_to_list_acc E Ψ t acc :
-  Ψ (repr (AVL.to_list_acc t acc)) ⊢
-  WP avl_to_list_acc (repr t) (repr acc) @ E [{ Ψ }].
+#[local] Lemma twp_avl_to_list_acc E Ψ t w acc :
+  is_tree t w -∗ (is_tree t w -∗ Ψ (repr (AVL.to_list_acc t acc))) -∗
+  WP avl_to_list_acc w (repr acc) @ E [{ Ψ }].
 Proof.
-elim: t Ψ acc => [|l IHl k v h r IHr] Ψ acc /=; iIntros "post"; wp_rec; wp_pures;
-  first done.
-wp_apply IHr. wp_pures.
-rewrite -[InjRV _](repr_listE ((k, v) :: AVL.to_list_acc r acc)).
-by iApply IHl.
+elim: t Ψ w acc => [|l IHl k v h r IHr] Ψ w acc /=; iIntros "Ht post".
+{ iDestruct "Ht" as %->. wp_rec. wp_pures. by iApply "post". }
+iDestruct "Ht" as (p wl wr ->) "(Hp & Hl & Hr)". wp_rec. wp_pures. wp_load.
+wp_pures.
+wp_apply (IHr with "Hr"). iIntros "Hr". wp_pures.
+rewrite -[InjRV (PairV _ _)](repr_listE ((k, v) :: AVL.to_list_acc r acc)).
+wp_apply (IHl with "Hl"). iIntros "Hl".
+iApply "post". iExists p, wl, wr. by iFrame.
 Qed.
 
-Lemma twp_avl_to_list E Ψ t :
-  Ψ (repr (AVL.to_list t)) ⊢ WP avl_to_list (repr t) @ E [{ Ψ }].
+Lemma twp_avl_new E Ψ :
+  (∀ m, is_avl m AVL.Leaf -∗ Ψ m) ⊢ WP avl_new #() @ E [{ Ψ }].
 Proof.
-iIntros "post". wp_rec. wp_pures.
+rewrite /is_avl /avl_at /=. iIntros "post". wp_rec. wp_alloc p as "Hp".
+iApply "post". iExists p, NONEV. by iFrame.
+Qed.
+
+Lemma twp_avl_insert E Ψ k v m t :
+  is_avl m t -∗ (is_avl m (AVL.insert k v t) -∗ Ψ #()) -∗
+  WP avl_insert #k #v m @ E [{ Ψ }].
+Proof.
+rewrite /is_avl /avl_at /=. iIntros "(%p & %w & -> & Hp & Ht) post".
+wp_rec. wp_pures. wp_load.
+wp_apply (twp_avl_insert_node with "Ht"). iIntros (w') "Ht". wp_store.
+iApply "post". iExists p, w'. by iFrame.
+Qed.
+
+Lemma twp_avl_lookup E Ψ k m t :
+  is_avl m t -∗ (is_avl m t -∗ Ψ (repr (AVL.lookup k t))) -∗
+  WP avl_lookup #k m @ E [{ Ψ }].
+Proof.
+rewrite /is_avl /avl_at /=. iIntros "(%p & %w & -> & Hp & Ht) post".
+wp_rec. wp_pures. wp_load.
+wp_apply (twp_avl_lookup_node with "Ht"). iIntros "Ht".
+iApply "post". iExists p, w. by iFrame.
+Qed.
+
+Lemma twp_avl_to_list E Ψ m t :
+  is_avl m t -∗ (is_avl m t -∗ Ψ (repr (AVL.to_list t))) -∗
+  WP avl_to_list m @ E [{ Ψ }].
+Proof.
+rewrite /is_avl /avl_at /=. iIntros "(%p & %w & -> & Hp & Ht) post".
+wp_rec. wp_load. wp_pures.
 rewrite -[InjLV _](repr_listE (@nil (Z * Z))).
-by iApply twp_avl_to_list_acc.
+wp_apply (twp_avl_to_list_acc with "Ht"). iIntros "Ht".
+iApply "post". iExists p, w. by iFrame.
 Qed.
 
 End Specs.

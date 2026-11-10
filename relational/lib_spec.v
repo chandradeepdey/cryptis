@@ -8,7 +8,6 @@ From cryptis Require Import lib.
 From cryptis.lib Require adequacy.
 From cryptis.core Require Import term.
 From cryptis.core.pre_term Require Import with_stdpp.
-From cryptis.lib Require Import avl.
 From cryptis.hyper.lib Require Export refines list_spec list_match_spec.
 
 Lemma pure_twp_rel_l Σ E K e t A (v: val) :
@@ -138,7 +137,7 @@ End NonDetProofs.
 (** Discharge the [pure_expr] side condition of [pure_twp_rel_{l,r}]. *)
 Ltac solve_pure_expr :=
   rewrite /= ?andb_True; repeat split;
-  first [apply: term_pure | apply: val_of_pre_term_pure | apply: tree_pure].
+  first [apply: term_pure | apply: val_of_pre_term_pure].
 
 (** Prove a one-sided [rel_*_{l,r}] spec of a pure primitive from its [twp_*]
     spec. *)

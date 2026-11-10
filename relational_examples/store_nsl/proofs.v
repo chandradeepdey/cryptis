@@ -17,6 +17,7 @@ From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.
 From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper.lib Require Import avl_spec.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
 From cryptis.hyper.primitives Require Import simple_spec with_cryptis_spec.
 From cryptis.hyper Require Import proofmode.
@@ -175,13 +176,15 @@ rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (session_keys with "Hctx Hnsl Hs") as "#Hk"; [solve_ndisj..|].
 rewrite /sess_key.
+rel_apply_l rel_avl_new_l. iIntros (db) "Hdb".
+rel_apply_r rel_avl_new_r. iIntros (db') "Hdb'". rel_pures.
 rel_apply (rel_conn_new γ (rl:=1) with "Hc Hk log"); first by right.
 iIntros (cs cs') "Hh". rel_pures.
 iApply (rel_rpc_server γ (key_sess_agree skI) (key_free_sess skI) (server_inv ops ops')
-          with "Hctx Hinv [] Hh []").
+          with "Hctx Hinv [] Hh [Hdb Hdb']").
 - iIntros "!>" (n r st st' p p') "HI HΦ".
   by iApply (rel_store_handle k ops_nodup ops_perm with "HI HΦ").
-- by iPureIntro.
+- by iFrame.
 Qed.
 
 Lemma rel_store_game c c' :

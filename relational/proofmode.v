@@ -5,7 +5,7 @@
   the spec files here puts the instances of every primitive in scope.
 
   [rel_prims_l] takes the left program as far as it can go on its own: pure
-  steps, the primitives on terms, the list and AVL operations, and list
+  steps, the primitives on terms, the list operations, and list
   literals.  It stops at the first step that needs the relation, such as a
   send or a receive.  [rel_prims_r] does the same on the right and
   [rel_prims] does both.  A new primitive needs only a [RelPrimL] and a
@@ -14,7 +14,6 @@
 From iris.proofmode Require Import environments.
 From reloc Require Import reloc.
 From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.lib Require Import avl_spec.
 From cryptis.hyper.primitives Require Import pre_term_spec simple_spec comp_spec with_cryptis_spec.
 From cryptis.hyper.proofmode Require Export classes updates tactics.
 
