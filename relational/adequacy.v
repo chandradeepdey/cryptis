@@ -32,11 +32,9 @@ apply: (refines_adequate Σ (λ _, LRel (λ v v', ⌜P v v'⌝)%I)).
 - by move=> ? v v'; iIntros "%".
 - move=> ?.
   iMod (public_relGS_alloc ⊤ _) as (Hpub) "#Hctx".
-  iApply (refines_run_network with "[] []").
-  + by iApply (Hadv with "Hctx").
-  + iIntros (c c') "#Hc".
-    iApply (refines_app with "[] []"); last by rel_values.
-    by iApply (Hf with "Hctx").
+  iApply (refines_app with "[] []"); last by iApply (Hf with "Hctx").
+  iApply (refines_app with "[] []"); last by iApply (Hadv with "Hctx").
+  iApply run_network_refinement.
 Qed.
 
 Lemma cryptis_ctx_refinement Σ `{!relocPreG Σ, !public_relGpreS Σ}
@@ -50,9 +48,7 @@ Proof.
 move=> Hadv Hf.
 apply: (refines_sound Σ) => Hreloc Δ.
 iMod (public_relGS_alloc ⊤ _) as (Hpub) "#Hctx".
-iApply (refines_run_network with "[] []").
-- by iApply (Hadv with "Hctx").
-- iIntros (c c') "#Hc".
-  iApply (refines_app with "[] []"); last by rel_values.
-  by iApply (Hf with "Hctx").
+iApply (refines_app with "[] []"); last by iApply (Hf with "Hctx").
+iApply (refines_app with "[] []"); last by iApply (Hadv with "Hctx").
+iApply run_network_refinement.
 Qed.

@@ -5,7 +5,7 @@ valid ([attacker_valid]) when it is related to itself, as a function from
 related channels to related computations.  The security theorems of
 [adequacy.v] hold for every valid attacker.
 
-- [Network] runs the attacker on a fresh channel ([refines_run_network]).
+- [Network] runs the attacker on a fresh channel ([run_network_refinement]).
   - [Contracts] gives each primitive a contract in the style of a type.  A
     proof that an attacker is valid uses them whenever the attacker calls a
     primitive.
@@ -179,7 +179,6 @@ rel_values. iModIntro. iApply lrel_term_intro.
 rewrite publicly_related_THash. by iLeft.
 Qed.
 
-(** Attacker nonces are fresh on both sides and publicly related. *)
 Lemma mk_nonce_refinement :
   cryptis_rel_ctx -∗ (() → lrel_term)%lrel mk_nonce mk_nonce.
 Proof.
@@ -199,8 +198,6 @@ iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] Htt Htts") as
 rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.
 
-(** Equality tests agree on both sides because [PUB] is a partial
-    bijection. *)
 Lemma eq_term_refinement :
   cryptis_rel_ctx -∗
   (lrel_term → lrel_term → lrel_bool)%lrel
@@ -235,15 +232,11 @@ Qed.
 
 End Contracts.
 
-Lemma refines_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
-  (REL adv << adv' : lrel_attacker) -∗
-  (∀ c c', lrel_channel c c' -∗ REL f c << f' c' : A) -∗
-  REL run_network adv f << run_network adv' f' : A.
+Lemma init_network_refinement :
+  ⊢ REL init_network << init_network : lrel_attacker → lrel_channel.
 Proof.
-iIntros "Hadv Hf". rewrite /run_network.
-rel_bind_l adv. rel_bind_r adv'.
-iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
-rel_pures_l. rel_pures_r. rewrite /init_network. rel_pures_l. rel_pures_r.
+rel_arrow_val. iIntros (a a') "#Ha".
+rewrite /init_network. rel_pures_l. rel_pures_r.
 rel_bind_l (mk_channel #()). rel_bind_r (mk_channel #()).
 iApply refines_bind; first iApply mk_channel_refinement.
 iIntros (c c') "#Hc /=". rel_pures_l. rel_pures_r.
@@ -252,7 +245,35 @@ iApply refines_bind.
 { iApply refines_fork.
   iApply (refines_app _ _ _ _ lrel_channel); by rel_values. }
 iIntros (? ?) "_ /=". rel_pures_l. rel_pures_r.
-by iApply "Hf".
+by rel_values.
+Qed.
+
+Lemma refines_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
+  (REL adv << adv' : lrel_attacker) -∗
+  (∀ c c', lrel_channel c c' -∗ REL f c << f' c' : A) -∗
+  REL run_network adv f << run_network adv' f' : A.
+Proof.
+iIntros "Hadv Hf". rewrite /run_network.
+rel_bind_l adv. rel_bind_r adv'.
+iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
+rel_pures_l. rel_pures_r.
+rel_bind_l (init_network _). rel_bind_r (init_network _).
+iApply refines_bind.
+{ iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
+  iApply init_network_refinement. }
+iIntros (c c') "#Hc /=". by iApply "Hf".
+Qed.
+
+Lemma run_network_refinement (A : lrel Σ) :
+  ⊢ REL run_network << run_network : lrel_attacker → (lrel_channel → A) → A.
+Proof.
+rel_arrow_val. iIntros (a a') "#Ha".
+rewrite /run_network. rel_pures_l. rel_pures_r.
+rel_arrow_val. iIntros (f f') "#Hf".
+rel_pures_l. rel_pures_r.
+iApply (refines_app _ _ _ _ lrel_channel); first by rel_values.
+iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
+iApply init_network_refinement.
 Qed.
 
 End Network.
