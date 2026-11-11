@@ -60,13 +60,13 @@ In the `relational` directory (Rocq namespace `cryptis.hyper`) you will find a
 relational version of Cryptis, built on [ReLoC](https://iris-project.org/reloc),
 for proving that two runs of a protocol are indistinguishable to the attacker:
 
-- `lib/*`, `lib_spec`: Relational specifications of the list-manipulation
+- `lib/*`, `lib`: Relational specifications of the list-manipulation
   programs and AVL maps.
 - `core/*`: The relation `PUB⟨t, t'⟩`, which says that the attacker cannot tell
   apart a term of one run from a term of the other, and its invariant.
-- `primitives/*`: Relational specifications of the primitives.  Definition of
-  a valid attacker.
-- `rel_adequacy`: Adequacy: a relational proof gives a contextual refinement
+- `primitives/*`, `primitives`: Relational specifications of the primitives.
+  Definition of a valid attacker.
+- `adequacy`: Adequacy: a relational proof gives a contextual refinement
   between games run against any valid attacker.
 - `proofmode/*`, `proofmode`: Ghost-state updates and tactics for relational
   proofs.

@@ -1,11 +1,12 @@
-(** Relational specs of the term primitives of [primitives/simple.v], and the
-    [RelPrimL] / [RelPrimR] instances through which [rel_prims] finds them. *)
+(** Relational specs of the term primitives of [cryptis/primitives/simple.v],
+    and the [RelPrimL] / [RelPrimR] instances through which [rel_prims] finds
+    them. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.core Require Import term.
 From cryptis.primitives Require Import simple.
-From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper Require Import lib.
 From cryptis.hyper.proofmode Require Import classes.
 
 Set Implicit Arguments.
@@ -527,7 +528,7 @@ Definition rel_prim_r_has_key_type (v1 v2 : val) : RelPrimR Σ (has_key_type v1 
   refines_has_key_type_r.
 
 (** Literal lists of terms in programs.  Their cells hold [val_of_term t]
-    rather than [repr t], so the list instances of [list_spec.v] do not match
+    rather than [repr t], so the list instances of [lib/list.v] do not match
     them. *)
 Definition rel_prim_l_cons_term (t : term) (ts : list term) :
   RelPrimL Σ (Val t :: Val (@repr_list term val_of_term ts)) _ := refines_cons_l (A:=term).

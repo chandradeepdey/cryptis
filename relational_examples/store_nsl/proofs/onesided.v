@@ -6,9 +6,9 @@
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.lib Require Import avl_spec list_match_spec.
-From cryptis.hyper.primitives Require Import simple_spec.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.lib Require Import avl list_match.
+From cryptis.hyper.primitives Require Import simple.
 From cryptis.hyper.examples.store_nsl Require Import impl.
 
 Set Implicit Arguments.

@@ -1,10 +1,10 @@
-(** Relational specs of the AVL map operations in [lib/avl.v].  Each side
-    owns its map and steps independently: nothing relates the two maps. *)
+(** Relational specs of the AVL map operations in [cryptis/lib/avl.v].  Each
+    side owns its map and steps independently: nothing relates the two maps. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import avl.
-From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper Require Import lib.
 
 Section Proofs.
 

@@ -1,4 +1,4 @@
-(** Relational specs of [list_match] from [lib/list_match.v]. *)
+(** Relational specs of [list_match] from [cryptis/lib/list_match.v]. *)
 
 From reloc Require Import reloc.
 From cryptis.lib Require Import repr list_match.

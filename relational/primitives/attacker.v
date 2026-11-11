@@ -3,7 +3,7 @@
 The attacker is a program [adv] that runs on a fresh network channel.  It is
 valid ([attacker_valid]) when it is related to itself, as a function from
 related channels to related computations.  The security theorems of
-[rel_adequacy.v] hold for every valid attacker.
+[adequacy.v] hold for every valid attacker.
 
 - [Network] runs the attacker on a fresh channel ([refines_run_network]).
   - [Contracts] gives each primitive a contract in the style of a type.  A
@@ -17,11 +17,11 @@ From reloc Require Import reloc.
 From reloc.typing Require Import types interp fundamental.
 From cryptis Require Import lib cryptis.
 From cryptis.core Require Import term.
-From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
 From cryptis.hyper.proofmode Require Import updates.
 From cryptis.primitives Require Import pre_term simple comp with_cryptis.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.primitives Require Import simple comp with_cryptis.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -268,8 +268,8 @@ Section Typed.
 
 Context `{!relocG Σ, !public_relGS Σ}.
 
-(** Binary primitives are eta-expanded so that the specs of [simple_spec.v]
-    and [comp_spec.v], which match saturated applications, apply. *)
+(** Binary primitives are eta-expanded so that the specs of [simple.v]
+    and [comp.v], which match saturated applications, apply. *)
 Definition attacker_prims : gmap string val :=
   <["tint" := tint]> $
   <["to_int" := to_int]> $

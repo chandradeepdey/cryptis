@@ -186,29 +186,31 @@ session/examples/store/game.v
 # Relational layer
 
 relational/lib/refines.v
-relational/lib/list_spec.v
-relational/lib/list_match_spec.v
-relational/lib/avl_spec.v
-relational/lib_spec.v
+relational/lib/list.v
+relational/lib/list_match.v
+relational/lib/avl.v
+relational/lib.v
 
 relational/core/minted_spec.v
 relational/core/term_meta_spec.v
-relational/core/rel_state.v
-relational/core/rel.v
-relational/core/rel_inv_updates.v
+relational/core/public/state.v
+relational/core/public/base.v
+relational/core/public/updates.v
+relational/core/public.v
 
 relational/proofmode/classes.v
 relational/proofmode/updates.v
 relational/proofmode/tactics.v
 
-relational/primitives/pre_term_spec.v
-relational/primitives/comp_spec.v
-relational/primitives/simple_spec.v
-relational/primitives/with_cryptis_spec.v
-relational/primitives/attacker_spec.v
+relational/primitives/pre_term.v
+relational/primitives/comp.v
+relational/primitives/simple.v
+relational/primitives/with_cryptis.v
+relational/primitives/attacker.v
+relational/primitives.v
 relational/proofmode.v
 
-relational/rel_adequacy.v
+relational/adequacy.v
 
 # Relational case studies
 

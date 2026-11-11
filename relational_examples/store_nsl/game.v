@@ -4,10 +4,10 @@
 
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.core Require Import rel.
-From cryptis.hyper.primitives Require Import with_cryptis_spec attacker_spec.
-From cryptis.hyper Require Import proofmode rel_adequacy.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.core Require Import public.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
+From cryptis.hyper Require Import proofmode adequacy.
 From cryptis.hyper.examples.nsl Require Import game.
 From cryptis.hyper.examples.store_nsl Require Import impl.
 From cryptis.hyper.examples.store_nsl.proofs Require Import conn.

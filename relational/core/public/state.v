@@ -1,4 +1,4 @@
-(** What the invariant of [rel.v] knows about a term.
+(** What the invariant of [base.v] knows about a term.
 
 - [Private t']: the runs treat the term as [t'] in the other run.
 - [Public t']: the same, and the attacker may see the term.

@@ -1,5 +1,5 @@
-(** Relational specs of the list functions of [lib/list.v] and of insertion
-    sort. *)
+(** Relational specs of the list functions of [cryptis/lib/list.v] and of
+    insertion sort. *)
 
 From reloc Require Import reloc.
 From stdpp Require Import sorting list lexico.

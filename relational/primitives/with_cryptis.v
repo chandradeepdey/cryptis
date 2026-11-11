@@ -1,13 +1,13 @@
-(** Relational specs of the primitives of [primitives/with_cryptis.v]: the
-    network channel, creating nonces and keys, checking the type of a key,
+(** Relational specs of the primitives of [cryptis/primitives/with_cryptis.v]:
+    the network channel, creating nonces and keys, checking the type of a key,
     randomized encryption, and deterministic symmetric encryption. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
 From cryptis.primitives Require Import simple with_cryptis.
-From cryptis.hyper.core Require Import minted_spec term_meta_spec rel.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.primitives Require Import simple_spec.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.primitives Require Import simple.
 From cryptis.hyper.proofmode Require Import classes updates tactics.
 
 Set Implicit Arguments.

@@ -1,4 +1,4 @@
-(** Shortcuts for the ghost state updates of [rel_inv_updates.v].  Each lemma
+(** Shortcuts for the ghost state updates of [core/public/updates.v].  Each lemma
   spends the relational token of a term, the part of the ghost state that
   decides how the two runs treat it.  A fresh term that is not a ciphertext
   takes it from its own token, through [term_token_rel_token_l]; a ciphertext
@@ -33,7 +33,7 @@
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
-From cryptis.hyper.core Require Import term_meta_spec rel rel_inv_updates.
+From cryptis.hyper.core Require Import term_meta_spec public.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

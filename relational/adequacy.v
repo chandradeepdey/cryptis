@@ -12,8 +12,8 @@ From reloc Require Import reloc.
 From reloc.typing Require Import types interp.
 From cryptis Require Import lib cryptis.
 From cryptis.core Require Import term.
-From cryptis.hyper.core Require Import rel.
-From cryptis.hyper.primitives Require Import with_cryptis_spec attacker_spec.
+From cryptis.hyper.core Require Import public.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

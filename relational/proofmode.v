@@ -13,8 +13,8 @@
 
 From iris.proofmode Require Import environments.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.primitives Require Import pre_term_spec simple_spec comp_spec with_cryptis_spec.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.primitives Require Import pre_term simple comp with_cryptis.
 From cryptis.hyper.proofmode Require Export classes updates tactics.
 
 Tactic Notation "rel_apply_at_l" constr(K) open_constr(lem) :=

@@ -53,7 +53,7 @@ From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec.
-From cryptis.hyper.core Require Import rel_state.
+From cryptis.hyper.core.public Require Import state.
 Import State.
 
 Set Implicit Arguments.

@@ -1,10 +1,10 @@
-(** Relational specs of the primitives of [primitives/comp.v]: term equality
-    and the operations on exponentials. *)
+(** Relational specs of the primitives of [cryptis/primitives/comp.v]: term
+    equality and the operations on exponentials. *)
 
 From reloc Require Import reloc.
 From cryptis.core Require Import term.
 From cryptis.primitives Require Import pre_term comp.
-From cryptis.hyper Require Import lib_spec.
+From cryptis.hyper Require Import lib.
 From cryptis.hyper.proofmode Require Import classes.
 
 Set Implicit Arguments.

@@ -14,9 +14,9 @@
 
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.core Require Import minted_spec term_meta_spec rel rel_inv_updates.
-From cryptis.hyper.primitives Require Import simple_spec comp_spec with_cryptis_spec attacker_spec.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
+From cryptis.hyper.primitives Require Import simple comp with_cryptis attacker.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.nsl Require Import impl.
 

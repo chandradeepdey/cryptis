@@ -8,7 +8,7 @@ From cryptis Require Import lib.
 From cryptis.lib Require adequacy.
 From cryptis.core Require Import term.
 From cryptis.core.pre_term Require Import with_stdpp.
-From cryptis.hyper.lib Require Export refines list_spec list_match_spec.
+From cryptis.hyper.lib Require Export refines list list_match.
 
 Lemma pure_twp_rel_l Σ E K e t A (v: val) :
   pure_expr e →

@@ -5,10 +5,10 @@
 From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.core Require Import rel.
-From cryptis.hyper.primitives Require Import comp_spec with_cryptis_spec attacker_spec.
-From cryptis.hyper Require Import proofmode rel_adequacy.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.core Require Import public.
+From cryptis.hyper.primitives Require Import comp with_cryptis attacker.
+From cryptis.hyper Require Import proofmode adequacy.
 From cryptis.hyper.examples.nsl Require Import impl proofs.
 
 Set Implicit Arguments.

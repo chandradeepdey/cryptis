@@ -3,9 +3,9 @@
 From cryptis.hyper.examples.vote.proofs Require Export base voter arbitrator.
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib_spec.
-From cryptis.hyper.core Require Import rel.
-From cryptis.hyper.primitives Require Import simple_spec with_cryptis_spec.
+From cryptis.hyper Require Import lib.
+From cryptis.hyper.core Require Import public.
+From cryptis.hyper.primitives Require Import simple with_cryptis.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl.
 
