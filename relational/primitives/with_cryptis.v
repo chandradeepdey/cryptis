@@ -643,11 +643,12 @@ Definition random_term_chain sk (N : namespace) n m : gset term :=
 
 Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
   cryptis_rel_ctx -∗
-  ⌜is_nonce (seed_of_aenc_key sk)⌝ -∗
   minted sk -∗
   minted_spec sk' -∗
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
-  secret_in_l (seed_of_aenc_key sk) -∗
+  □ (∀ n n', ⌜is_nonce n⌝ -∗ ⌜is_nonce n'⌝ -∗
+     PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ -∗
+     PUB⟨Spec.tag (Tag N) (TPair n m), Spec.tag (Tag N) (TPair n' m')⟩) -∗
   minted m -∗ minted_spec m' -∗
   ⌜∀ n, is_nonce n → random_term_chain sk N n m ## T n⌝ -∗
   ⌜∀ n', is_nonce n' → random_term_chain sk' N n' m' ## T' n'⌝ -∗
@@ -675,7 +676,7 @@ Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
   REL random_aenc (Spec.pkey sk) (Tag N) m
    << random_aenc (Spec.pkey sk') (Tag N) m' : Ψ.
 Proof.
-iIntros "#Hctx %Hnonce #mint_sk #mint_sk' #elem_pk #secret #mint_m #mint_m'".
+iIntros "#Hctx #mint_sk #mint_sk' #elem_pk #Hkey #mint_m #mint_m'".
 iIntros "%HT %HT' #mintT #mintT' post".
 iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
@@ -720,11 +721,8 @@ iMod (public_rel_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_sub
         ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
 iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
         with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#priv_tg".
-(* The secret seed can never become publicly related. *)
 iAssert (□ (PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ → PUB⟨tg, tg'⟩))%I as "#Hbox".
-{ iIntros "!> #Hs". iExFalso.
-  iDestruct (publicly_related_nonce_term _ Hnonce with "Hs") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "secret Hl") as "[]". }
+{ iIntros "!> #Hs". by iApply ("Hkey" $! n n' with "[//] [//] Hs"). }
 iAssert (minted tg) as "#mint_tg".
 { rewrite /tg minted_tag /pl minted_TPair. by iSplit. }
 iAssert (minted_spec tg') as "#mint_tg'".

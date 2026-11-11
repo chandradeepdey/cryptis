@@ -38,7 +38,10 @@ iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_spec_pkey.
 rewrite /ballot. rel_pures.
 rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
-  with "Hctx [//] mint_T mint_T' elem_pkT secret_T mint_v mint_v' [] [] [] []").
+  with "Hctx mint_T mint_T' elem_pkT [] mint_v mint_v' [] [] [] []").
+{ iIntros "!> %n %n' _ _ #Hs". iExFalso.
+  iDestruct (publicly_related_nonce_term _ HnonceT with "Hs") as "[Hl _]".
+  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_T Hl") as "[]". }
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
 { by iIntros (?); rewrite big_sepS_empty. }

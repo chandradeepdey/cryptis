@@ -349,7 +349,10 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
 rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
-  with "Hctx [//] mint_skA mint_spec_skA' elem_pkA secret_a mint_msg mint_spec_msg' [] [] [] []").
+  with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg' [] [] [] []").
+{ iIntros "!> %n %n' _ _ #Hs". iExFalso.
+  iDestruct (publicly_related_nonce_term _ Hnonce_a with "Hs") as "[Hl _]".
+  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_a Hl") as "[]". }
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
 { by iIntros (?); rewrite big_sepS_empty. }
