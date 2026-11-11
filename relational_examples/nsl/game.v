@@ -84,8 +84,9 @@ Theorem nsl_resp_ror_ctx_equiv adv :
   ∅ ⊨ ror_game resp_test true adv =ctx= ror_game resp_test false adv : TBool.
 Proof.
 move=> Hadv; split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iIntros "#Hctx #Hc"; iApply (guess_refinement with "Hctx Hc");
+  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
+  iApply (guess_refinement with "Hctx Hc");
   [iApply (resp_test_refinement true) | iApply (resp_test_refinement false)]; by iFrame "#".
 Qed.
 
@@ -95,8 +96,9 @@ Theorem nsl_init_ror_ctx_equiv adv :
   ∅ ⊨ ror_game init_test true adv =ctx= ror_game init_test false adv : TBool.
 Proof.
 move=> Hadv; split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iIntros "#Hctx #Hc"; iApply (guess_refinement with "Hctx Hc");
+  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
+  iApply (guess_refinement with "Hctx Hc");
   [iApply (init_test_refinement true) | iApply (init_test_refinement false)]; by iFrame "#".
 Qed.
 
@@ -109,8 +111,9 @@ Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iIntros "#Hctx #Hc". iApply (guess_wrapped_refinement with "Hctx Hc").
+move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
+iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
+iApply (guess_wrapped_refinement with "Hctx Hc").
 iIntros (b). by iApply resp_test_refinement.
 Qed.
 
@@ -123,7 +126,8 @@ Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iIntros "#Hctx #Hc". iApply (guess_wrapped_refinement with "Hctx Hc").
+move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
+iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
+iApply (guess_wrapped_refinement with "Hctx Hc").
 iIntros (b). by iApply init_test_refinement.
 Qed.

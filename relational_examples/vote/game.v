@@ -103,8 +103,9 @@ Theorem election_ctx_equiv cands votes votes' adv :
 Proof.
 move=> Hperm Hadv.
 by split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iApply election_of_refinement.
+  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
+  iApply (election_of_refinement with "Hctx Hc").
 Qed.
 
 Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 votes1
@@ -119,6 +120,7 @@ Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 vo
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hperm Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-by iApply election_guess_wrapped_refinement.
+move=> Hperm Hadv. apply: cryptis_rel_adequacy => // ? ?.
+iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
+by iApply (election_guess_wrapped_refinement with "Hctx Hc").
 Qed.

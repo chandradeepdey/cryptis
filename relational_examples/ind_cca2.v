@@ -424,8 +424,9 @@ Theorem ind_cca2_ctx_equiv N b b' adv :
   ∅ ⊨ ind_cca2_game N b adv =ctx= ind_cca2_game N b' adv : TBool.
 Proof.
 by move=> Hadv; split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ c c';
-  iApply alice_refinement.
+  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
+  iApply (alice_refinement with "Hctx Hc").
 Qed.
 
 Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
@@ -437,6 +438,7 @@ Theorem ind_cca2_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) 
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: cryptis_rel_adequacy => // ? ? c c'.
-iApply alice_guess_wrapped_refinement.
+move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
+iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
+iApply (alice_guess_wrapped_refinement with "Hctx Hc").
 Qed.
