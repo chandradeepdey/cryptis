@@ -26,9 +26,9 @@
 
 From iris.proofmode Require Import environments reduction spec_patterns.
 From reloc Require Import reloc.
-From cryptis Require Import lib cryptis.
+From cryptis Require Import cryptis.
 From cryptis.hyper.lib Require Import refines.
-From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
+From cryptis.hyper.core Require Import minted_spec public.
 
 Ltac minted_simpl :=
   rewrite /Spec.random_aenc /Spec.enc

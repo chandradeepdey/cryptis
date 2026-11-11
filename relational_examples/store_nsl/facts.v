@@ -5,7 +5,6 @@
 
 From mathcomp Require Import ssreflect.
 From stdpp Require Import gmap.
-From cryptis Require Import lib.
 From cryptis.lib Require Import avl.
 
 Set Implicit Arguments.

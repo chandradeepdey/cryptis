@@ -11,9 +11,8 @@
     key derived from a hash of the session key, or a fresh key; the hash lets
     the fresh key stand in for the derived one. *)
 
-From stdpp Require Import namespaces.
 From iris.heap_lang Require Import notation.
-From cryptis Require Import lib cryptis primitives.
+From cryptis Require Import primitives.
 From cryptis.examples.nsl Require Export impl.
 
 Definition reveal (b : bool) : val := λ: "c" "k",

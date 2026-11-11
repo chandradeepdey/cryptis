@@ -11,19 +11,15 @@ store of [store.v] over a connection under that key.
   the client: the stores, then the load, whose result goes to the
   attacker. *)
 
-From iris.base_logic.lib Require Import ghost_var.
 From reloc Require Import reloc.
-From cryptis Require Import lib cryptis primitives.
-From cryptis.lib Require Import avl.
-From cryptis.hyper Require Import lib.
+From cryptis Require Import cryptis primitives.
 From cryptis.hyper.lib Require Import avl.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
-From cryptis.hyper.primitives Require Import simple with_cryptis.
+From cryptis.hyper.primitives Require Import with_cryptis.
 From cryptis.hyper Require Import proofmode.
-From cryptis.hyper.examples.nsl Require Import impl.
 From cryptis.hyper.examples.nsl.proofs Require Import base init resp.
-From cryptis.hyper.examples.store_nsl Require Import impl facts.
-From cryptis.hyper.examples.store_nsl.proofs Require Import onesided conn rpc store.
+From cryptis.hyper.examples.store_nsl Require Import impl.
+From cryptis.hyper.examples.store_nsl.proofs Require Import conn rpc store.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

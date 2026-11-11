@@ -4,7 +4,6 @@
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import avl.
-From cryptis.hyper Require Import lib.
 
 Section Proofs.
 

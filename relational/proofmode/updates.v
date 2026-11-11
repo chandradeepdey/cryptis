@@ -32,7 +32,7 @@
     spending the never-sealed tokens of the seeds of their keys. *)
 
 From reloc Require Import reloc.
-From cryptis Require Import lib cryptis.
+From cryptis Require Import cryptis.
 From cryptis.hyper.core Require Import term_meta_spec public.
 
 Set Implicit Arguments.

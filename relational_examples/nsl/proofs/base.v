@@ -12,11 +12,10 @@
   honest reply also holds what the honest session gives both roles
   ([sess]), and what I needs to send the third message. *)
 
-From cryptis Require Import lib cryptis primitives.
+From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
-From cryptis.hyper.primitives Require Import simple comp with_cryptis attacker.
+From cryptis.hyper.primitives Require Import with_cryptis.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.nsl Require Import impl.
 

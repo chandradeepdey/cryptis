@@ -6,13 +6,10 @@
   arbitrator.
 - [KeyGeneration]: creating the arbitrator's and the voters' keys. *)
 
-From cryptis Require Import lib cryptis primitives.
-From cryptis.lib Require Import avl.
+From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
-From cryptis.hyper Require Import lib.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
-From cryptis.hyper.primitives Require Import simple comp with_cryptis attacker.
-From cryptis.hyper.lib Require Import avl.
+From cryptis.hyper.primitives Require Import with_cryptis.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl.
 

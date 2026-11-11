@@ -25,7 +25,6 @@ is known, it holds what recording the session takes ([free]).
 From iris.base_logic.lib Require Import ghost_var.
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
-From cryptis.hyper Require Import lib.
 From cryptis.hyper.lib Require Import list list_match.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
 From cryptis.hyper.primitives Require Import simple with_cryptis.

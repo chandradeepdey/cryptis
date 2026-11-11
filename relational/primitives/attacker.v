@@ -13,14 +13,11 @@ related channels to related computations.  The security theorems of
   types keep terms and the channel abstract, so the attacker cannot look
   inside them. *)
 
-From reloc Require Import reloc.
-From reloc.typing Require Import types interp fundamental.
-From cryptis Require Import lib cryptis.
+From reloc.typing Require Import fundamental.
 From cryptis.core Require Import term.
-From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
+From cryptis.hyper.core Require Import public.
 From cryptis.hyper.proofmode Require Import updates.
-From cryptis.primitives Require Import pre_term simple comp with_cryptis.
-From cryptis.hyper Require Import lib.
+From cryptis.primitives Require Import pre_term simple with_cryptis.
 From cryptis.hyper.primitives Require Import simple comp with_cryptis.
 
 Set Implicit Arguments.

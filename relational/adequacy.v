@@ -9,9 +9,6 @@
     against [adv]. *)
 
 From reloc Require Import reloc.
-From reloc.typing Require Import types interp.
-From cryptis Require Import lib cryptis.
-From cryptis.core Require Import term.
 From cryptis.hyper.core Require Import public.
 From cryptis.hyper.primitives Require Import with_cryptis attacker.
 

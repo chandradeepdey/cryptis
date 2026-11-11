@@ -2,7 +2,7 @@
     insertion sort. *)
 
 From reloc Require Import reloc.
-From stdpp Require Import sorting list lexico.
+From stdpp Require Import sorting.
 From cryptis.lib Require Import repr list list_sort.
 From cryptis.hyper.proofmode Require Import classes.
 

@@ -10,12 +10,10 @@ of each list.  At the load, each run holds the database of all its stores,
 and these give the same value for every key. *)
 
 From reloc Require Import reloc.
-From cryptis Require Import lib cryptis primitives.
+From cryptis Require Import lib cryptis.
 From cryptis.lib Require Import avl.
-From cryptis.hyper Require Import lib.
 From cryptis.hyper.lib Require Import avl.
 From cryptis.hyper.core Require Import minted_spec public.
-From cryptis.hyper.primitives Require Import simple with_cryptis.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.store_nsl Require Import impl facts.
 From cryptis.hyper.examples.store_nsl.proofs Require Import onesided conn rpc.

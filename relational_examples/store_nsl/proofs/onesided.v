@@ -4,9 +4,8 @@
     hold whatever the request is. *)
 
 From reloc Require Import reloc.
-From cryptis Require Import lib cryptis primitives.
+From cryptis Require Import lib cryptis.
 From cryptis.lib Require Import avl.
-From cryptis.hyper Require Import lib.
 From cryptis.hyper.lib Require Import avl list_match.
 From cryptis.hyper.primitives Require Import simple.
 From cryptis.hyper.examples.store_nsl Require Import impl.

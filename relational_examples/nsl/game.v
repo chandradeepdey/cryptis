@@ -3,11 +3,11 @@
     one. *)
 
 From iris.heap_lang.lib Require Import nondet_bool.
-From cryptis Require Import lib cryptis primitives.
+From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper Require Import lib.
 From cryptis.hyper.core Require Import public.
-From cryptis.hyper.primitives Require Import comp with_cryptis attacker.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import proofmode adequacy.
 From cryptis.hyper.examples.nsl Require Import impl proofs.
 
