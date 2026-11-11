@@ -30,7 +30,7 @@ Abbreviation sess2N := (storeN.@"sess2").
 
 Section Proofs.
 
-Context `{!relocG Σ, !public_relGS Σ, !connGS Σ}.
+Context `{!relocG Σ, !publicGS Σ, !connGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (s : term) (skI skR : aenc_key).
@@ -85,21 +85,21 @@ Definition store_ctx skI γ : iProp :=
   conn_ctx γ (key_sess skI) (key_free skI) Φs.
 
 Lemma store_alloc skI γ :
-  cryptis_rel_ctx -∗ store_ctx skI γ -∗ term_token (seed_of_aenc_key skI) (↑sessN) -∗
+  hypercryptis_ctx -∗ store_ctx skI γ -∗ term_token (seed_of_aenc_key skI) (↑sessN) -∗
   ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
     protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ store_sess skI s s'.
 Proof.
 iIntros "#Hctx #Hinv tok" (s s') "(ns & tt_k & tts_k & _) #sec #sec' prot prot'".
 iPoseProof (term_token_minted with "tt_k") as "#mk".
 iPoseProof (term_token_spec_minted_spec with "tts_k") as "#mk'".
-iDestruct (term_token_rel_token_l with "tt_k") as "(tt_k & _ & _)";
+iDestruct (term_token_public_token_l with "tt_k") as "(tt_k & _ & _)";
   first (rewrite /sess_key; solve_not_TSeal).
-iDestruct (term_token_rel_token_r with "tts_k") as "(tts_k & _ & _)";
+iDestruct (term_token_public_token_r with "tts_k") as "(tts_k & _ & _)";
   first (rewrite /sess_key; solve_not_TSeal).
-iMod (public_rel_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
+iMod (public_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
         with "Hctx sec prot tt_k") as "[#sec_k _]".
-iMod (public_rel_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
+iMod (public_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
         with "Hctx sec' prot' tts_k") as "[#sec_k' _]".
 iInv "Hinv" as "[>(free & log0 & log1)|(%k0 & %k0' & >(%s0 & %s0' & _ & #m0 & _) & _)]";
@@ -115,7 +115,7 @@ Qed.
 
 Lemma session_keys E skI skI' skR skR' s s' :
   ↑sealsIN ⊆ E → ↑cryptisN ⊆ E ∖ ↑sealsIN →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   session skI skI' skR skR' s s' ={E}=∗
   conn_keys (key_sess skI) (SEncKey s) (SEncKey s').
@@ -130,7 +130,7 @@ by iApply (seed_not_pub with "HnR").
 Qed.
 
 Lemma store_client_refinement skI skI' skR skR' γ c c' :
-  cryptis_rel_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
+  hypercryptis_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   conn_start γ 0 -∗
   REL client c skI (Spec.pkey skR) << client c' skI' (Spec.pkey skR') : λ v v',
     (⌜v = NONEV ∧ v' = NONEV⌝ ∨
@@ -149,7 +149,7 @@ iIntros (cs cs') "Hh". rel_pures. rel_values. iModIntro. iRight. iExists cs, cs'
 Qed.
 
 Lemma store_server_refinement skI skI' skR skR' γ c c' :
-  cryptis_rel_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
+  hypercryptis_ctx -∗ lrel_channel c c' -∗ nsl_ctx skI skI' skR skR' (store_sess skI) -∗
   store_ctx skI γ -∗ term_token (seed_of_aenc_key skI) (↑sessN) -∗
   conn_start γ 1 -∗
   REL server c skR (Spec.pkey skI) << server c' skR' (Spec.pkey skI') : ().
@@ -161,7 +161,7 @@ iIntros (? ?) "[[-> ->]|(%pkI & %pkI' & %kk & %kk' & [-> ->] & #HpkI & Hsess)]" 
 { rel_pures. by rel_values. }
 rel_prims.
 iPoseProof "Hnsl" as "((_ & _ & _ & _ & #pub_pkI & _) & _)".
-iMod (publicly_related_part_bij' (E:=⊤) with "Hctx HpkI pub_pkI") as %HX;
+iMod (public_part_bij' (E:=⊤) with "Hctx HpkI pub_pkI") as %HX;
   first solve_ndisj.
 case: (decide (pkI = Spec.pkey skI)) => [eX|neX]; last first.
 { rewrite bool_decide_eq_false_2 // bool_decide_eq_false_2; last by rewrite -HX.
@@ -183,7 +183,7 @@ iApply (rpc_server_refinement γ (key_sess_agree skI) (key_free_sess skI) (serve
 Qed.
 
 Lemma store_game_refinement c c' :
-  cryptis_rel_ctx -∗ lrel_channel c c' -∗
+  hypercryptis_ctx -∗ lrel_channel c c' -∗
   REL game ops k c << game ops' k c' : ().
 Proof.
 iIntros "#Hctx #Hc". rewrite /game. rel_pures.
@@ -242,7 +242,7 @@ rel_apply (rpc_call_refinement γ (key_sess_agree skI) (key_free_sess skI)
 { iPureIntro. rewrite /store_msg. case: decide => // _. by right. }
 iIntros (? ?) "(%p & %p' & [-> ->] & Hh & %Hp)" => /=.
 move: Hp. rewrite /store_msg. case: decide => // _ [z [-> ->]].
-iAssert (PUB⟨TInt z, TInt z⟩) as "#Hz"; first by rewrite publicly_related_TInt.
+iAssert (PUB⟨TInt z, TInt z⟩) as "#Hz"; first by rewrite public_TInt.
 by rel_apply (refines_send with "Hc Hz").
 Qed.
 

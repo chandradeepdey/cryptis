@@ -28,7 +28,7 @@ Abbreviation channelN := (hypercryptisN.@"channel").
 
 Section Proofs.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 
 Abbreviation nonce := loc.
 Implicit Types E : coPset.
@@ -60,7 +60,7 @@ iLöb as "IH".
 rel_rec_l. rel_rec_r.
 rel_pures_l. rel_pures_r.
 rel_store_l_atomic.
-iInv channelN as "(%t1 & %t1' & (Hl & Hl' & #Hrel))" "Hclose".
+iInv channelN as "(%t1 & %t1' & (Hl & Hl' & #Hpub))" "Hclose".
 iModIntro.
 iExists t1. iFrame.
 iIntros "!> Hl".
@@ -79,7 +79,7 @@ rel_pures_l. rel_pures_r.
 rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
 rel_pures_l. rel_pures_r.
 iMod (inv_alloc channelN _ (channel_inv l l') with "[Hl Hl']") as "#Hinv".
-iFrame. by rewrite publicly_related_TInt.
+iFrame. by rewrite public_TInt.
 rel_values.
 iModIntro.
 iExists _, _, _, _.
@@ -92,7 +92,7 @@ iSplit.
 - iIntros "!> %v %v' [-> ->]".
   rel_pures_l. rel_pures_r.
   rel_load_l_atomic.
-  iInv channelN as "(%t & %t' & Hl & Hl' & #Hrel)" "Hclose".
+  iInv channelN as "(%t & %t' & Hl & Hl' & #Hpub)" "Hclose".
   iModIntro.
   iExists t.
   iFrame.
@@ -126,7 +126,7 @@ iIntros "%v %v' (%t & %t' & -> & -> & #Ht) !>". by iApply "HΨ".
 Qed.
 
 Lemma refines_mk_nonce_l K e (T': term → gset term) Ψ :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ t, [∗ set] t' ∈ T' t, □ (minted t ↔ minted t')) -∗
   (∀ t, ⌜is_nonce t⌝ -∗
         minted t -∗
@@ -155,7 +155,7 @@ iApply ("mint" $! (TNonce (Nonce l)))=> //=.
 Qed.
 
 Lemma refines_mk_nonce_r K e (T': term → gset term) Ψ :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ t, [∗ set] t' ∈ T' t, □ (minted_spec t ↔ minted_spec t')) -∗
   (∀ t, ⌜is_nonce t⌝ -∗
         minted_spec t -∗
@@ -188,7 +188,7 @@ Lemma refines_mk_aenc_key_l K e (T_sk T_pk : term → gset term) Ψ :
      seed_of_aenc_key sk ∉ T_sk sk ∧
      seed_of_aenc_key sk ∉ T_pk (Spec.pkey sk) ∧
      T_sk sk ## T_pk (Spec.pkey sk)) →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ sk : aenc_key, [∗ set] t' ∈ T_sk sk, □ (minted sk ↔ minted t')) -∗
   (∀ sk : aenc_key, [∗ set] t' ∈ T_pk (Spec.pkey sk),
      □ (minted (Spec.pkey sk) ↔ minted t')) -∗
@@ -234,7 +234,7 @@ Lemma refines_mk_aenc_key_r K e (T_sk T_pk : term → gset term) Ψ :
      seed_of_aenc_key sk ∉ T_sk sk ∧
      seed_of_aenc_key sk ∉ T_pk (Spec.pkey sk) ∧
      T_sk sk ## T_pk (Spec.pkey sk)) →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ sk : aenc_key, [∗ set] t' ∈ T_sk sk, □ (minted_spec sk ↔ minted_spec t')) -∗
   (∀ sk : aenc_key, [∗ set] t' ∈ T_pk (Spec.pkey sk),
      □ (minted_spec (Spec.pkey sk) ↔ minted_spec t')) -∗
@@ -280,7 +280,7 @@ Lemma refines_mk_sign_key_l K e (T_sk T_pk : term → gset term) Ψ :
      seed_of_sign_key sk ∉ T_sk sk ∧
      seed_of_sign_key sk ∉ T_pk (Spec.pkey sk) ∧
      T_sk sk ## T_pk (Spec.pkey sk)) →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ sk : sign_key, [∗ set] t' ∈ T_sk sk, □ (minted sk ↔ minted t')) -∗
   (∀ sk : sign_key, [∗ set] t' ∈ T_pk (Spec.pkey sk),
      □ (minted (Spec.pkey sk) ↔ minted t')) -∗
@@ -326,7 +326,7 @@ Lemma refines_mk_sign_key_r K e (T_sk T_pk : term → gset term) Ψ :
      seed_of_sign_key sk ∉ T_sk sk ∧
      seed_of_sign_key sk ∉ T_pk (Spec.pkey sk) ∧
      T_sk sk ## T_pk (Spec.pkey sk)) →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ sk : sign_key, [∗ set] t' ∈ T_sk sk, □ (minted_spec sk ↔ minted_spec t')) -∗
   (∀ sk : sign_key, [∗ set] t' ∈ T_pk (Spec.pkey sk),
      □ (minted_spec (Spec.pkey sk) ↔ minted_spec t')) -∗
@@ -369,7 +369,7 @@ Qed.
 
 Lemma refines_mk_senc_key_l K e (T_k : term → gset term) Ψ :
   (∀ k : senc_key, seed_of_senc_key k ∉ T_k k) →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ k : senc_key, [∗ set] t' ∈ T_k k, □ (minted k ↔ minted t')) -∗
   (∀ k : senc_key, ⌜is_nonce (seed_of_senc_key k)⌝ -∗
     minted k -∗
@@ -404,7 +404,7 @@ Qed.
 
 Lemma refines_mk_senc_key_r K e (T_k : term → gset term) Ψ :
   (∀ k : senc_key, seed_of_senc_key k ∉ T_k k) →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (∀ k : senc_key, [∗ set] t' ∈ T_k k, □ (minted_spec k ↔ minted_spec t')) -∗
   (∀ k : senc_key, ⌜is_nonce (seed_of_senc_key k)⌝ -∗
     minted_spec k -∗
@@ -642,7 +642,7 @@ Definition random_term_chain sk (N : namespace) n m : gset term :=
     Spec.random_aenc (Spec.pkey sk) (Tag N) n m]}.
 
 Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   minted sk -∗
   minted_spec sk' -∗
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
@@ -661,12 +661,12 @@ Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
     term_token_spec (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m') ⊤ -∗
     (∀ E Ek Ek',
       ⌜↑cryptisN ⊆ E⌝ -∗
-      ⌜↑seal_ns (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)) ⊆ Ek⌝ -∗
-      ⌜↑seal_ns (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m')) ⊆ Ek'⌝ -∗
+      ⌜↑seal_namespace (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)) ⊆ Ek⌝ -∗
+      ⌜↑seal_namespace (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m')) ⊆ Ek'⌝ -∗
       never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk') Ek Ek' ={E}=∗
       never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
-        (Ek ∖ ↑seal_ns (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)))
-        (Ek' ∖ ↑seal_ns (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m'))) ∗
+        (Ek ∖ ↑seal_namespace (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)))
+        (Ek' ∖ ↑seal_namespace (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m'))) ∗
       publicly_linked (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
         (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m') ∗
       PUB⟨Spec.random_aenc (Spec.pkey sk) (Tag N) n m,
@@ -704,23 +704,23 @@ set pl := TPair n m.
 set tg := Spec.tag (Tag N) pl.
 set pl' := TPair n' m'.
 set tg' := Spec.tag (Tag N) pl'.
-iDestruct (term_token_rel_token_l with "tt_n") as "(tt_n & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_rel_token_l with "tt_pl") as "(tt_pl & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_rel_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_rel_token_r with "tts_n") as "(tts_n & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_rel_token_r with "tts_pl") as "(tts_pl & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_rel_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_l with "tt_n") as "(tt_n & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_l with "tt_pl") as "(tt_pl & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "tts_pl") as "(tts_pl & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
 (* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
-iMod (public_rel_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
+iMod (public_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
         ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
-iMod (public_rel_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
+iMod (public_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
         ltac:(solve_ndisj) with "Hctx protby_pl tt_pl") as "protby_tg".
-iMod (public_rel_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
+iMod (public_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
         ltac:(solve_ndisj) with "Hctx tts_n") as "protby_pl'".
-iMod (public_rel_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
+iMod (public_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
         ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
-iMod (public_rel_link (E:=⊤) ltac:(solve_ndisj)
-        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#priv_tg".
+iMod (public_link (E:=⊤) ltac:(solve_ndisj)
+        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#link_tg".
 iAssert (□ (PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ → PUB⟨tg, tg'⟩))%I as "#Hbox".
 { iIntros "!> #Hs". by iApply ("Hkey" $! n n' with "[//] [//] Hs"). }
 iAssert (minted tg) as "#mint_tg".
@@ -730,9 +730,9 @@ iAssert (minted_spec tg') as "#mint_tg'".
 iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") as "post".
 { iIntros (E Ek Ek' HE sub sub') "ns".
   rewrite /Spec.random_aenc /Spec.enc !Spec.aenc_key_pkey in sub sub' *.
-  iMod (public_rel_seal HE sub sub' with "Hctx [] ns") as "(#Hpl & #Hpub & $)";
+  iMod (public_seal HE sub sub' with "Hctx [] ns") as "(#Hpl & #Hpub & $)";
     last by iFrame "#".
-  iIntros "!> #Hpl". rewrite publicly_related_TSeal. iRight.
+  iIntros "!> #Hpl". rewrite public_TSeal. iRight.
   rewrite minted_TSeal minted_spec_TSeal.
   iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
   iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro.
@@ -743,9 +743,9 @@ Qed.
 
 Lemma refines_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
   ↑cryptisN ⊆ E →
-  ↑seal_ns k (Spec.tag (Tag N) t) ⊆ Ek →
-  ↑seal_ns k' (Spec.tag (Tag N) t') ⊆ Ek' →
-  cryptis_rel_ctx -∗
+  ↑seal_namespace k (Spec.tag (Tag N) t) ⊆ Ek →
+  ↑seal_namespace k' (Spec.tag (Tag N) t') ⊆ Ek' →
+  hypercryptis_ctx -∗
   minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
   linked (k : term) (k' : term) -∗
   □ (PUB⟨seed_of_senc_key k, seed_of_senc_key k'⟩ → PUB⟨t, t'⟩) -∗
@@ -753,17 +753,17 @@ Lemma refines_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
   PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
   publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗
   never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
-    (Ek ∖ ↑seal_ns k (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_ns k' (Spec.tag (Tag N) t')).
+    (Ek ∖ ↑seal_namespace k (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_namespace k' (Spec.tag (Tag N) t')).
 Proof.
 move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k') in sub sub' *.
 iIntros "#ctx #mk #mk' #mt #mt' #Hl #Himpl ns".
-iMod (public_rel_seal HE sub sub' with "ctx [] ns") as "(#Hpl & #Hpub & $)";
+iMod (public_seal HE sub sub' with "ctx [] ns") as "(#Hpl & #Hpub & $)";
   last by iFrame "#".
-iIntros "!> #Hpl". rewrite publicly_related_TSeal. iRight.
+iIntros "!> #Hpl". rewrite public_TSeal. iRight.
 rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
 iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
 iLeft. iSplit; first done. iModIntro.
-iIntros "#Hs". rewrite publicly_related_tag. iSplit; first done. by iApply "Himpl".
+iIntros "#Hs". rewrite public_tag. iSplit; first done. by iApply "Himpl".
 Qed.
 
 Definition rel_prim_l_random_adec (v1 v2 v3 : val) : RelPrimL Σ (random_adec v1 v2 v3) _ :=

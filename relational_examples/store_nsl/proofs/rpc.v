@@ -20,7 +20,7 @@ Unset Printing Implicit Defensive.
 
 Section RPC.
 
-Context `{!relocG Σ, !public_relGS Σ, !connGS Σ}.
+Context `{!relocG Σ, !publicGS Σ, !connGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Variable γ : conn_names.
@@ -37,7 +37,7 @@ Abbreviation handle := (conn_handle γ sess).
 Abbreviation ctx := (conn_ctx γ sess free Φ).
 
 Lemma rpc_call_refinement rl cs cs' n r (N : namespace) t t' :
-  cryptis_rel_ctx -∗ ctx -∗ handle rl cs cs' n r -∗
+  hypercryptis_ctx -∗ ctx -∗ handle rl cs cs' n r -∗
   conn_payload t t' -∗ Φ rl n (Spec.tag (Tag N) t) (Spec.tag (Tag N) t') -∗
   REL rpc_call cs (Tag N) t << rpc_call cs' (Tag N) t' :
     λ v v', (∃ p p' : term, ⌜v = p ∧ v' = p'⌝ ∗
@@ -51,7 +51,7 @@ by iApply (conn_recv_refinement γ sess_agree free_sess with "Hctx Hinv Hh").
 Qed.
 
 Lemma rpc_server_refinement (I : nat → nat → val → val → iProp) (f f' : val) cs cs' n r st st' :
-  cryptis_rel_ctx -∗ ctx -∗
+  hypercryptis_ctx -∗ ctx -∗
   □ (∀ n r st st' p p', I n r st st' -∗ Φ 0 r p p' -∗
       REL f st p << f' st' p' : λ v v',
         ((⌜v = NONEV ∧ v' = NONEV⌝ ∗ I n (S r) st st') ∨

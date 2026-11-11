@@ -26,10 +26,10 @@ Definition guess_wrapped (test : bool → val) : val := λ: "c",
 
 Section Game.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 
 Lemma guess_refinement (test test' : val) c c' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   (REL test c << test' c' : ()) -∗
   REL guess test c << guess test' c' : lrel_bool.
@@ -41,15 +41,15 @@ iIntros (? ?) "_" => /=. rel_pures.
 rel_apply (refines_recv with "Hc").
 iIntros (g g') "#Hg" => /=.
 rel_prims. rel_values.
-iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) g g'
+iMod (public_part_bij' (E:=⊤) (TInt 1) (TInt 1) g g'
         ltac:(solve_ndisj) with "Hctx [] Hg") as %H.
-{ by rewrite publicly_related_TInt. }
+{ by rewrite public_TInt. }
 iModIntro. iExists (bool_decide (TInt 1 = g)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
 Lemma guess_wrapped_refinement (test : bool → val) c c' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   (∀ b, REL test b c << test (negb b) c' : ()) -∗
   REL guess_wrapped test c << guess_wrapped test c' : λ p1 p2,
@@ -84,7 +84,7 @@ Theorem nsl_resp_ror_ctx_equiv adv :
   ∅ ⊨ ror_game resp_test true adv =ctx= ror_game resp_test false adv : TBool.
 Proof.
 move=> Hadv; split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc");
   [iApply (resp_test_refinement true) | iApply (resp_test_refinement false)]; by iFrame "#".
@@ -96,13 +96,13 @@ Theorem nsl_init_ror_ctx_equiv adv :
   ∅ ⊨ ror_game init_test true adv =ctx= ror_game init_test false adv : TBool.
 Proof.
 move=> Hadv; split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc");
   [iApply (init_test_refinement true) | iApply (init_test_refinement false)]; by iFrame "#".
 Qed.
 
-Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr) σ :
+Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv : expr) σ :
   attacker_valid adv →
   adequate NotStuck (run_network adv (guess_wrapped resp_test)) σ
     (λ v _, ∃ thp' h v',
@@ -111,13 +111,13 @@ Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
+move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
 iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
 iApply (guess_wrapped_refinement with "Hctx Hc").
 iIntros (b). by iApply resp_test_refinement.
 Qed.
 
-Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr) σ :
+Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv : expr) σ :
   attacker_valid adv →
   adequate NotStuck (run_network adv (guess_wrapped init_test)) σ
     (λ v _, ∃ thp' h v',
@@ -126,7 +126,7 @@ Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} (adv : expr
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
+move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
 iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
 iApply (guess_wrapped_refinement with "Hctx Hc").
 iIntros (b). by iApply init_test_refinement.

@@ -84,7 +84,7 @@ Arguments logged_snoc {L0 L1 rl t t' rl2 n2 p p'} Hrl.
 
 Section Conn.
 
-Context `{!relocG Σ, !public_relGS Σ, !connGS Σ}.
+Context `{!relocG Σ, !publicGS Σ, !connGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (k : senc_key) (t p u : term) (rl : Z) (n r : nat).
@@ -119,9 +119,9 @@ Definition conn_state k k' : iProp :=
   ∃ L0 L1 Ek Ek',
     ghost_var (conn_log0 γ) (1/2) L0 ∗ ghost_var (conn_log1 γ) (1/2) L1 ∗
     never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ∗
-    ⌜∀ u, ↑seal_ns k u ⊆ Ek ∨
+    ⌜∀ u, ↑seal_namespace k u ⊆ Ek ∨
           ∃ rl n t t', logged L0 L1 rl n t t' ∧ u = conn_body rl n t⌝ ∗
-    ⌜∀ u', ↑seal_ns k' u' ⊆ Ek' ∨
+    ⌜∀ u', ↑seal_namespace k' u' ⊆ Ek' ∨
            ∃ rl n t t', logged L0 L1 rl n t t' ∧ u' = conn_body rl n t'⌝ ∗
     □ (∀ rl n t t', ⌜logged L0 L1 rl n t t'⌝ → sent_pair k k' rl n t t').
 
@@ -220,7 +220,7 @@ Qed.
 Lemma conn_seal_send E rl L k k' t t' :
   ↑connIN ⊆ E → ↑cryptisN ⊆ E ∖ ↑connIN →
   (rl = 0 ∨ rl = 1)%Z →
-  cryptis_rel_ctx -∗ conn_ctx -∗ conn_keys k k' -∗
+  hypercryptis_ctx -∗ conn_ctx -∗ conn_keys k k' -∗
   ghost_var (log_name rl) (1/2) L -∗
   minted t -∗ minted_spec t' -∗ Φ rl (length L) t t' ={E}=∗
   ghost_var (log_name rl) (1/2) (L ++ [(t, t')]) ∗
@@ -234,10 +234,10 @@ iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
 iDestruct (log_acc L0 L1 Hrl with "log0 log1") as "[logi back]".
 iDestruct (ghost_var_agree with "logi log") as %HL. subst L.
 set n := length (log_of rl L0 L1).
-assert (Hsub : ↑seal_ns k (conn_body rl n t) ⊆ Ek).
+assert (Hsub : ↑seal_namespace k (conn_body rl n t) ⊆ Ek).
 { case: (Hcl (conn_body rl n t)) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
-assert (Hsub' : ↑seal_ns k' (conn_body rl n t') ⊆ Ek').
+assert (Hsub' : ↑seal_namespace k' (conn_body rl n t') ⊆ Ek').
 { case: (Hcl' (conn_body rl n t')) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
 iMod (refines_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
@@ -273,7 +273,7 @@ Qed.
 Arguments conn_seal_send {E rl L k k' t t'} _ _ _.
 
 Lemma conn_send_refinement rl cs cs' n r t t' :
-  cryptis_rel_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
+  hypercryptis_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
   conn_payload t t' -∗ Φ rl n t t' -∗
   REL conn_send cs t << conn_send cs' t' :
     λ v v', ⌜v = #() ∧ v' = #()⌝ ∗ conn_handle rl cs cs' (S n) r.
@@ -299,16 +299,16 @@ Section Receive.
 
 Lemma conn_sealed_l E k Ek u t' (P : Prop) :
   ↑cryptisN ⊆ E →
-  ↑seal_ns k u ⊆ Ek ∨ P →
-  cryptis_rel_ctx -∗
+  ↑seal_namespace k u ⊆ Ek ∨ P →
+  hypercryptis_ctx -∗
   term_token (seed_of_senc_key k) Ek -∗ publicly_linked (TSeal k u) t' ={E}=∗
   ⌜P⌝ ∗ term_token (seed_of_senc_key k) Ek.
 Proof.
 move=> HE [sub|?]; last by iIntros "_ $ _".
 rewrite (senc_key_TKey k) in sub *. iIntros "#ctx tok #[Hl _]".
-iMod (linked_in_l_map_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
+iMod (linked_in_l_states_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
 - by iApply publicly_linked_in_l_linked_in_l.
-- rewrite /map_token_l /=. iApply (term_token_drop with "tok").
+- rewrite /states_token_l /=. iApply (term_token_drop with "tok").
   etrans; last exact: sub. solve_ndisj.
 Qed.
 
@@ -316,16 +316,16 @@ Arguments conn_sealed_l {E k Ek u t' P} _ _.
 
 Lemma conn_sealed_r E k' Ek' u' t (P : Prop) :
   ↑cryptisN ⊆ E →
-  ↑seal_ns k' u' ⊆ Ek' ∨ P →
-  cryptis_rel_ctx -∗
+  ↑seal_namespace k' u' ⊆ Ek' ∨ P →
+  hypercryptis_ctx -∗
   term_token_spec (seed_of_senc_key k') Ek' -∗ publicly_linked t (TSeal k' u') ={E}=∗
   ⌜P⌝ ∗ term_token_spec (seed_of_senc_key k') Ek'.
 Proof.
 move=> HE [sub|?]; last by iIntros "_ $ _".
 rewrite (senc_key_TKey k') in sub *. iIntros "#ctx tok #[_ Hr]".
-iMod (linked_in_r_map_token_fupd _ _ HE with "ctx [Hr] [tok]") as "[]".
+iMod (linked_in_r_states_token_fupd _ _ HE with "ctx [Hr] [tok]") as "[]".
 - by iApply publicly_linked_in_r_linked_in_r.
-- rewrite /map_token_r /=. iApply (term_token_spec_drop with "tok").
+- rewrite /states_token_r /=. iApply (term_token_spec_drop with "tok").
   etrans; last exact: sub. solve_ndisj.
 Qed.
 
@@ -333,7 +333,7 @@ Arguments conn_sealed_r {E k' Ek' u' t P} _ _.
 
 Lemma conn_open E k k' t t' :
   ↑cryptisN ⊆ E ∖ ↑connIN → ↑connIN ⊆ E →
-  cryptis_rel_ctx -∗ conn_ctx -∗ conn_keys k k' -∗ PUB⟨t, t'⟩ ={E}=∗
+  hypercryptis_ctx -∗ conn_ctx -∗ conn_keys k k' -∗ PUB⟨t, t'⟩ ={E}=∗
   ⌜Spec.dec k (Tag connN) t = None ∧ Spec.dec k' (Tag connN) t' = None⌝ ∨
   ∃ rl n p p', ⌜(rl = 0 ∨ rl = 1)%Z⌝ ∗
     ⌜Spec.dec k (Tag connN) t = Some (Spec.of_list [TInt rl; TInt n; p])⌝ ∗
@@ -341,7 +341,7 @@ Lemma conn_open E k k' t t' :
     Φ rl n p p'.
 Proof.
 iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & ss & ss' & Hno) #Ht".
-iMod (publicly_related_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx ss ss' Ht")
+iMod (public_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx ss ss' Ht")
   as "#Hop".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & [tok tok'] & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
@@ -386,7 +386,7 @@ Qed.
 Arguments conn_open {E k k' t t'} _ _.
 
 Lemma conn_recv_refinement rl cs cs' n r :
-  cryptis_rel_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
+  hypercryptis_ctx -∗ conn_ctx -∗ conn_handle rl cs cs' n r -∗
   REL conn_recv cs << conn_recv cs' :
     λ v v', (∃ p p' : term, ⌜v = p ∧ v' = p'⌝ ∗
       conn_handle rl cs cs' n (S r) ∗ Φ (1 - rl) r p p')%I.
@@ -430,7 +430,7 @@ End Receive.
 
 End Conn.
 
-Lemma conn_names_alloc `{!relocG Σ, !public_relGS Σ, !connGS Σ} :
+Lemma conn_names_alloc `{!relocG Σ, !publicGS Σ, !connGS Σ} :
   ⊢ |==> ∃ γ, conn_fresh γ ∗ conn_start γ 0 ∗ conn_start γ 1.
 Proof.
 iMod (ghost_var_alloc ([] : list (term * term))) as (γ0) "[log0 log0']".

@@ -25,7 +25,7 @@ Proof.
 move=> Hadv Hnd Hp.
 have Hnd' : NoDup ops'.*1 by rewrite -Hp.
 split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ; connΣ])) => // ? ? Δ;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ; connΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc").
 - by iApply (store_game_refinement k Hnd Hp with "Hctx Hc").

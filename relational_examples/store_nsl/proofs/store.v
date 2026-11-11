@@ -55,7 +55,7 @@ Proof. move=> Hr. by rewrite (take_S_r _ _ _ Hr) /db_of foldl_app. Qed.
 
 Section Store.
 
-Context `{!relocG Σ, !public_relGS Σ, !connGS Σ}.
+Context `{!relocG Σ, !publicGS Σ, !connGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Variable γ : conn_names.
@@ -120,7 +120,7 @@ Qed.
 
 Lemma store_all_refinement cs cs' i :
   i ≤ length ops →
-  cryptis_rel_ctx -∗ ctx -∗ handle 0 cs cs' i i -∗
+  hypercryptis_ctx -∗ ctx -∗ handle 0 cs cs' i i -∗
   REL store_all cs (repr (map op_val (drop i ops))) <<
       store_all cs' (repr (map op_val (drop i ops'))) :
     λ v v', (⌜v = #() ∧ v' = #()⌝ ∗ handle 0 cs cs' (length ops) (length ops))%I.

@@ -14,7 +14,7 @@ Unset Printing Implicit Defensive.
 
 Section Proofs.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (skT : aenc_key) (skV : sign_key).
@@ -23,7 +23,7 @@ Implicit Types (st : list (option (term * term))).
 
 Lemma election_of_refinement c c' cands votes votes' :
   votes ≡ₚ votes' →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL election_of cands votes c << election_of cands votes' c' : ().
 Proof.
@@ -49,7 +49,7 @@ rel_apply_l refines_term_of_list_l. rel_apply_r refines_term_of_list_r.
 rel_bind_l (send _ _). rel_bind_r (send _ _).
 iApply refines_bind.
 { iApply (refines_send with "Hc"). iNext.
-  iApply publicly_related_of_list. by iApply pub_pkeys. }
+  iApply public_of_list. by iApply pub_pkeys. }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_bind_l (fork_voters _ _ _). rel_bind_r (fork_voters _ _ _).
 iApply (refines_bind with "[toks]").

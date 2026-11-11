@@ -18,7 +18,7 @@ Unset Printing Implicit Defensive.
 
 Section Init.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (t u m n : term).
@@ -48,7 +48,7 @@ Definition m2_comp x1 x1' x2 x2' x3 x3' : iProp :=
 
 Lemma m2_open E t t' :
   ↑cryptisN ⊆ E → ↑sealsIN ⊆ E →
-  cryptis_rel_ctx -∗ nsl_ctx -∗ PUB⟨t, t'⟩ ={E}=∗
+  hypercryptis_ctx -∗ nsl_ctx -∗ PUB⟨t, t'⟩ ={E}=∗
   ⌜Spec.dec skI (Tag m2N) t = None ∧ Spec.dec skI' (Tag m2N) t' = None⌝ ∨
   ∃ m m', ⌜Spec.dec skI (Tag m2N) t = Some m ∧ Spec.dec skI' (Tag m2N) t' = Some m'⌝ ∗
     (PUB⟨m, m'⟩ ∨
@@ -63,7 +63,7 @@ rewrite /Spec.dec.
 iMod (seals_inv_open with "Hctx HI HinvI Ht")
   as "[[-> ->]|(%u & %u' & [-> ->] & [#Hu|#Hl])]"; [done|solve_ndisj|..].
 - iModIntro. by iLeft.
-- iPoseProof (publicly_related_untag m2N with "Hu") as "Hp".
+- iPoseProof (public_untag m2N with "Hu") as "Hp".
   destruct (Spec.untag (Tag m2N) u) as [m|], (Spec.untag (Tag m2N) u') as [m'|];
     try done.
   + iModIntro. iRight. iExists m, m'. iSplit; first done. by iLeft.
@@ -91,7 +91,7 @@ Lemma m2_decode m m' :
        m2_comp x1 x1' x2 x2' x3 x3').
 Proof.
 iIntros "#HR [#Hm|(%x1 & %x1' & %x2 & %x2' & [-> ->] & #Hf & #Hl)]".
-- iDestruct (publicly_related_to_list_length 3 with "Hm") as "[%Hnone|(%ts & %ts' & %Hsome & [%Hlen|[%Hlen Hts]])]".
+- iDestruct (public_to_list_length 3 with "Hm") as "[%Hnone|(%ts & %ts' & %Hsome & [%Hlen|[%Hlen Hts]])]".
   + by iLeft.
   + iRight. iExists ts, ts'. iSplit; first done. by iLeft.
   + iRight. iExists ts, ts'. iSplit; first done. iRight.
@@ -115,7 +115,7 @@ Definition init_post pkX : val → val → iProp := λ v v',
       ∃ s s', ⌜k = sess_key s ∧ k' = sess_key s'⌝ ∗ session s s'))%I.
 
 Lemma init_refinement c c' pkX pkX' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   nsl_ctx -∗
   PUB⟨pkX, pkX'⟩ -∗
@@ -125,11 +125,11 @@ iIntros "#Hctx #Hc #Hnsl #HpkX".
 iPoseProof "Hnsl" as "(#HI & #HR & _ & #HinvR)".
 iPoseProof "HI" as "(_ & _ & #mint_skI & #mint_skI' & #pub_pkI & _)".
 iPoseProof "HR" as "(_ & _ & _ & _ & #pub_pkR & _)".
-iPoseProof (publicly_related_minted with "HpkX") as "#[mint_pkX mint_pkX']".
+iPoseProof (public_minted with "HpkX") as "#[mint_pkX mint_pkX']".
 iAssert (minted (Spec.pkey skI)) as "#mint_pkI"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skI')) as "#mint_pkI'";
   first by rewrite minted_spec_pkey.
-iMod (publicly_related_part_bij' (E:=⊤) with "Hctx HpkX pub_pkR") as %HX;
+iMod (public_part_bij' (E:=⊤) with "Hctx HpkX pub_pkR") as %HX;
   first solve_ndisj.
 rewrite /init /adec. rel_prims.
 rel_apply_l (refines_mk_nonce_l _ _ (λ nI,
@@ -156,32 +156,32 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
   with "[tt_n tt_pl tt_tg tt_c tts_n tts_pl tts_tg tts_c]" as ">(#HnI & claim3 & #Hc1)".
 { case: (decide (pkX = Spec.pkey skR)) => [eX|neX].
   - have eX' := proj1 HX eX. subst pkX pkX'.
-    iMod (public_rel_secret_seals_l (E:=⊤) HnI with "Hctx tt_n")
+    iMod (public_secret_seals_l (E:=⊤) HnI with "Hctx tt_n")
       as "(#sec & _ & prot & tok)"; first solve_ndisj.
-    iMod (public_rel_secret_seals_r (E:=⊤) HnI' with "Hctx tts_n")
+    iMod (public_secret_seals_r (E:=⊤) HnI' with "Hctx tts_n")
       as "(#sec' & _ & prot' & tok')"; first solve_ndisj.
     rewrite (term_token_difference nI (↑m3claimN) (⊤ ∖ ↑hypercryptisN));
       last solve_ndisj.
     iDestruct "tok" as "[claim3 tok]".
     iMod (term_meta_set initN nI' with "tok") as "#meta"; first solve_ndisj.
     iMod (term_meta_spec_set initN nI with "tok'") as "#meta'"; first solve_ndisj.
-    iMod (public_rel_flow_l_grow_2 (E:=⊤) (tsup:=Spec.of_list [nI; Spec.pkey skI])
+    iMod (public_prots_l_grow_2 (E:=⊤) (tsup:=Spec.of_list [nI; Spec.pkey skI])
             with "Hctx prot sec") as "[_ by_pl]";
       [solve_ndisj | apply not_elem_of_empty | solve_immediate_subterm |].
-    iMod (public_rel_flow_r_grow_2 (E:=⊤) (t'sup:=Spec.of_list [nI'; Spec.pkey skI'])
+    iMod (public_prots_r_grow_2 (E:=⊤) (t'sup:=Spec.of_list [nI'; Spec.pkey skI'])
             with "Hctx prot' sec'") as "[_ by_pl']";
       [solve_ndisj | apply not_elem_of_empty | solve_immediate_subterm |].
-    iDestruct (term_token_rel_token_l with "tt_pl") as "(tt_pl & _ & _)";
+    iDestruct (term_token_public_token_l with "tt_pl") as "(tt_pl & _ & _)";
       first solve_not_TSeal.
-    iDestruct (term_token_rel_token_r with "tts_pl") as "(tts_pl & _ & _)";
+    iDestruct (term_token_public_token_r with "tts_pl") as "(tts_pl & _ & _)";
       first solve_not_TSeal.
     have Htg : ∀ t, is_immediate_subterm t (Spec.tag (Tag m1N) t).
     { move=> t0. rewrite [Spec.tag]unlock. exact: SubtermPairR. }
-    iMod (public_rel_protect_step_l (E:=⊤) (t:=Spec.of_list [nI; Spec.pkey skI])
+    iMod (public_protect_step_l (E:=⊤) (t:=Spec.of_list [nI; Spec.pkey skI])
             (tsup:=Spec.tag (Tag m1N) (Spec.of_list [nI; Spec.pkey skI]))
             (Htg _) ltac:(solve_ndisj)
             with "Hctx by_pl tt_pl") as "by_tg".
-    iMod (public_rel_protect_step_r (E:=⊤) (t':=Spec.of_list [nI'; Spec.pkey skI'])
+    iMod (public_protect_step_r (E:=⊤) (t':=Spec.of_list [nI'; Spec.pkey skI'])
             (t'sup:=Spec.tag (Tag m1N) (Spec.of_list [nI'; Spec.pkey skI']))
             (Htg _) ltac:(solve_ndisj)
             with "Hctx by_pl' tts_pl") as "by_tg'".
@@ -195,19 +195,19 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
     { iLeft. iExists nI, nI'. iSplit; first done. by iFrame "#". }
     iModIntro. iFrame "Hc1". iSplitR; last by iIntros "_".
     iLeft. iSplit; first done. by iFrame "#".
-  - iDestruct (term_token_rel_token_l with "tt_n") as "(tt_n & _ & _)";
+  - iDestruct (term_token_public_token_l with "tt_n") as "(tt_n & _ & _)";
       first solve_not_TSeal.
-    iDestruct (term_token_rel_token_r with "tts_n") as "(tts_n & _ & _)";
+    iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)";
       first solve_not_TSeal.
-    iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+    iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
             with "Hctx [] tt_n tts_n")
       as "[_ #Hpub]".
-    { iIntros "!> #?". rewrite (publicly_related_nonce HnI HnI').
+    { iIntros "!> #?". rewrite (public_nonce HnI HnI').
       by do 2 (iSplit; first done). }
     iModIntro. iSplit; first by iRight; iSplit.
     iSplit; first by iIntros (?).
-    iApply (publicly_related_enc with "HpkX").
-    iApply publicly_related_of_list. by iFrame "#". }
+    iApply (public_enc with "HpkX").
+    iApply public_of_list. by iFrame "#". }
 iAssert (nonce_info initN nI nI') as "#Hinfo".
 { by iDestruct "HnI" as "[[_ ?]|[_ ?]]"; [iRight|iLeft]. }
 rel_apply (refines_send with "Hc Hc1").
@@ -235,7 +235,7 @@ rel_prims.
 iAssert (nonce_info initN x1 x1') as "#Hx1".
 { iDestruct "Hcomp" as "[[? _]|(_ & (? & _) & _)]"; by [iLeft|]. }
 iMod (nonce_info_eq (E:=⊤) with "Hctx Hx1 Hinfo") as %H1; first solve_ndisj.
-iMod (publicly_related_part_bij' (E:=⊤) with "Hctx Hx3 HpkX") as %H3;
+iMod (public_part_bij' (E:=⊤) with "Hctx Hx3 HpkX") as %H3;
   first solve_ndisj.
 case: (decide (x1 = nI)) => [e1|ne1]; last first.
 { rewrite bool_decide_eq_false_2 // bool_decide_eq_false_2; last by rewrite -H1.
@@ -256,7 +256,7 @@ iAssert ((⌜pkX = Spec.pkey skR⌝ ∗ resp_nonce x2 x2' ∗
          (⌜pkX ≠ Spec.pkey skR⌝ ∗ PUB⟨x2, x2'⟩))%I as "#Hcase".
 { iDestruct "HnI" as "[[%eX (_ & _ & _ & _ & #sec & _)]|[%neX _]]";
   iDestruct "Hcomp" as "[[#Hpub #Hx2]|([%eK %eK'] & (_ & #Hx2 & _) & #Hl)]".
-  - iDestruct (publicly_related_nonce_term _ HnI with "Hpub") as "[Hl _]".
+  - iDestruct (public_nonce_term _ HnI with "Hpub") as "[Hl _]".
     by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
   - iLeft. by iFrame "#".
   - iRight. by iSplit.
@@ -264,7 +264,7 @@ iAssert ((⌜pkX = Spec.pkey skR⌝ ∗ resp_nonce x2 x2' ∗
 iAssert (|={⊤}=> PUB⟨Spec.enc pkX (Tag m3N) x2, Spec.enc pkX' (Tag m3N) x2'⟩)%I
   with "[claim3]" as ">#Hc3".
 { iDestruct "Hcase" as "[(%eX & #Hx2 & #Hl)|[%neX #Hx2]]"; last first.
-  { by iApply (publicly_related_enc with "HpkX Hx2"). }
+  { by iApply (public_enc with "HpkX Hx2"). }
   iSpecialize ("claim3" with "[//]").
   have eX' := proj1 HX eX. subst pkX pkX'.
   iMod (claim_m3 with "Hctx Hnsl Hl claim3")

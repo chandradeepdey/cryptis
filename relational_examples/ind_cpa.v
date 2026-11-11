@@ -14,7 +14,7 @@ Unset Printing Implicit Defensive.
 
 Section CPA.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (t : term).
@@ -47,7 +47,7 @@ Definition alice_guess_wrapped : val := λ: "c",
   ("b", if: "b" then alice true "c" else alice false "c").
 
 Lemma alice_refinement c c' (b b' : bool) :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL alice b c << alice b' c' : lrel_bool.
 Proof.
@@ -68,17 +68,17 @@ rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[
   [solve_minted_iff.. |].
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
 split_term_tokens. rel_prims.
-iMod (public_rel_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
+iMod (public_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
         with "Hctx token_a") as "(#secret_a & seals_a & _ & _)".
-iMod (public_rel_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
+iMod (public_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
         with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
-iDestruct (term_token_rel_token_l with "token_pkA") as "(token_pkA & _ & _)";
+iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & _ & _)";
   first solve_not_TSeal.
-iDestruct (term_token_rel_token_r with "token_spec_pkA'") as "(token_spec_pkA' & _ & _)";
+iDestruct (term_token_public_token_r with "token_spec_pkA'") as "(token_spec_pkA' & _ & _)";
   first solve_not_TSeal.
-iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj)
+iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
-{ iIntros "!> #elem". rewrite publicly_related_aenc_key. iRight.
+{ iIntros "!> #elem". rewrite public_aenc_key. iRight.
   do 3 (iSplit; first done).
   iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
 rel_apply (refines_send with "Hc Hpub").
@@ -90,7 +90,7 @@ iIntros (msg_1 msg_1') "#Hmsg_1"=> /=. rel_pures.
 rel_bind_l (if: _ then _ else _)%E.
 rel_bind_r (if: _ then _ else _)%E.
 iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'⌝ ∧ minted m ∧ minted_spec m')%I).
-{ rewrite (publicly_related_minted msg_0) (publicly_related_minted msg_1).
+{ rewrite (public_minted msg_0) (public_minted msg_1).
   iDestruct "Hmsg_0" as "[? ?]".
   iDestruct "Hmsg_1" as "[? ?]".
   case: b; case: b'; rel_pures; rel_values.
@@ -103,7 +103,7 @@ rel_pures.
 rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
   with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg' [] [] [] []").
 { iIntros "!> %n %n' _ _ #Hs". iExFalso.
-  iDestruct (publicly_related_nonce_term _ Hnonce_a with "Hs") as "[Hl _]".
+  iDestruct (public_nonce_term _ Hnonce_a with "Hs") as "[Hl _]".
   by iDestruct (secret_in_l_publicly_linked_in_l with "secret_a Hl") as "[]". }
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
@@ -119,16 +119,16 @@ iIntros (? ?) "[-> ->]"=> /=. rel_pures.
 rel_apply (refines_recv with "Hc").
 iIntros (guess guess') "#Hguess"=> /=.
 rel_prims. rel_values.
-iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
+iMod (public_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
         ltac:(solve_ndisj)
         with "Hctx [] Hguess") as %H.
-{ by rewrite publicly_related_TInt. }
+{ by rewrite public_TInt. }
 iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
 Lemma alice_guess_wrapped_refinement c c' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
@@ -162,12 +162,12 @@ Theorem ind_cpa_ctx_equiv N b b' adv :
   ∅ ⊨ ind_cpa_game N b adv =ctx= ind_cpa_game N b' adv : TBool.
 Proof.
 by move=> Hadv; split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (alice_refinement with "Hctx Hc").
 Qed.
 
-Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) σ :
+Theorem ind_cpa_secure Σ `{!relocPreG Σ, !publicGpreS Σ} N (adv : expr) σ :
   attacker_valid adv →
   adequate NotStuck (run_network adv (alice_guess_wrapped N)) σ
     (λ v _, ∃ thp' h v',
@@ -176,7 +176,7 @@ Theorem ind_cpa_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} N (adv : expr) �
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: cryptis_rel_adequacy => // ? ?.
+move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
 iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
 iApply (alice_guess_wrapped_refinement with "Hctx Hc").
 Qed.

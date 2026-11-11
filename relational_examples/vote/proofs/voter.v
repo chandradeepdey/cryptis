@@ -15,7 +15,7 @@ Unset Printing Implicit Defensive.
 
 Section Voter.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (skT : aenc_key) (skV : sign_key).
@@ -23,7 +23,7 @@ Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
 Lemma ballot_refinement skT skT' skV skV' v v' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   arb_key skT skT' -∗
   voter_key skV skV' skT skT' v v' -∗
   minted v -∗ minted_spec v' -∗
@@ -40,7 +40,7 @@ rewrite /ballot. rel_pures.
 rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
   with "Hctx mint_T mint_T' elem_pkT [] mint_v mint_v' [] [] [] []").
 { iIntros "!> %n %n' _ _ #Hs". iExFalso.
-  iDestruct (publicly_related_nonce_term _ HnonceT with "Hs") as "[Hl _]".
+  iDestruct (public_nonce_term _ HnonceT with "Hs") as "[Hl _]".
   by iDestruct (secret_in_l_publicly_linked_in_l with "secret_T Hl") as "[]". }
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
@@ -56,7 +56,7 @@ iMod (urn_inv_seal (E:=⊤) skT skT' _ _ (PUB⟨ballot_ct skT n v, ballot_ct skT
   by iMod ("upd" $! (⊤ ∖ ↑urnN) Ek Ek' with "[] [//] [//] ns") as "($ & _ & $)";
     first (iPureIntro; solve_ndisj). }
 iAssert (PUB⟨ballot_body skT n v, ballot_body skT' n' v'⟩) as "#pub_tgc".
-{ rewrite /ballot_body publicly_related_tag. by iSplit. }
+{ rewrite /ballot_body public_tag. by iSplit. }
 iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hctx Hballot token []") as "#pub_sig";
   [solve_ndisj..| |].
 { iIntros "!> #Hsu".
@@ -65,7 +65,7 @@ iModIntro. rel_prims. rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.
 
 Lemma voter_refinement c c' skT skT' skV skV' (v v' : Z) :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   arb_key skT skT' -∗
   voter_key skV skV' skT skT' (TInt v) (TInt v') -∗
@@ -84,7 +84,7 @@ Qed.
 
 Lemma mk_voters_refinement skT skT' votes votes' :
   length votes = length votes' →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   REL mk_voters (repr votes) << mk_voters (repr votes') : λ v v',
     (∃ ks ks', ⌜v = repr (zip ks votes)⌝ ∗ ⌜v' = repr (zip ks' votes')⌝ ∗
       ⌜length ks = length votes⌝ ∗ ⌜length ks' = length votes'⌝ ∗
@@ -109,7 +109,7 @@ Qed.
 
 Lemma fork_voters_refinement c c' skT skT' ks ks' votes votes' :
   length votes = length ks → length votes' = length ks' →
-  cryptis_rel_ctx -∗ lrel_channel c c' -∗ arb_key skT skT' -∗
+  hypercryptis_ctx -∗ lrel_channel c c' -∗ arb_key skT skT' -∗
   voter_keys skT skT' ks ks' votes votes' -∗ voter_tokens ks -∗
   REL fork_voters c (Spec.pkey skT) (repr (zip ks votes))
    << fork_voters c' (Spec.pkey skT') (repr (zip ks' votes')) : ().

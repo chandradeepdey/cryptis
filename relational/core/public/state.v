@@ -1,10 +1,10 @@
 (** What the invariant of [base.v] knows about a term.
 
-- [Private t']: the runs treat the term as [t'] in the other run.
-- [Public t']: the same, and the attacker may see the term.
+- [Pending t']: the runs treat the term as [t'] in the other run.
+- [PublicLink t']: the same, and the attacker may see the term.
 - [Secret]: the attacker never sees the term.
 
-A [Private t'] term can later become [Public t'] or [Secret].  After that it
+A [Pending t'] term can later become [PublicLink t'] or [Secret].  After that it
 never changes. *)
 
 From iris.algebra Require Import auth.
@@ -17,14 +17,14 @@ Unset Printing Implicit Defensive.
 Module State.
 
 Inductive state :=
-  | Private (t : term)
-  | Public (t : term)
+  | Pending (t : term)
+  | PublicLink (t : term)
   | Secret
   | Invalid.
 
-Definition not_Public st : Prop :=
+Definition not_PublicLink st : Prop :=
   match st with
-  | Public _ => False
+  | PublicLink _ => False
   | _ => True
   end.
 
@@ -39,13 +39,13 @@ Proof. apply _. Qed.
 
 #[local] Instance state_op_instance : Op state := λ s1 s2,
   match s1, s2 with
-  | Private t1, Private t2 =>
-    if bool_decide (t1 = t2) then Private t1 else Secret
-  | Private t1, Public t2 | Public t2, Private t1 =>
-    if bool_decide (t1 = t2) then Public t2 else Invalid
-  | Public t1, Public t2 =>
-    if bool_decide (t1 = t2) then Public t1 else Invalid
-  | Private _, Secret | Secret, Private _ | Secret, Secret => Secret
+  | Pending t1, Pending t2 =>
+    if bool_decide (t1 = t2) then Pending t1 else Secret
+  | Pending t1, PublicLink t2 | PublicLink t2, Pending t1 =>
+    if bool_decide (t1 = t2) then PublicLink t2 else Invalid
+  | PublicLink t1, PublicLink t2 =>
+    if bool_decide (t1 = t2) then PublicLink t1 else Invalid
+  | Pending _, Secret | Secret, Pending _ | Secret, Secret => Secret
   | _, _ => Invalid
   end.
 
@@ -92,20 +92,20 @@ Proof. by constructor. Qed.
 #[global] Instance stateR_total : CmraTotal stateR.
 Proof. by move=> st; exists st. Qed.
 
-Lemma Private_included_Public t : Private t ≼ Public t.
-Proof. exists (Public t). rewrite state_op /=. by case_bool_decide. Qed.
+Lemma Pending_included_PublicLink t : Pending t ≼ PublicLink t.
+Proof. exists (PublicLink t). rewrite state_op /=. by case_bool_decide. Qed.
 
-Lemma Private_included_Secret t : Private t ≼ Secret.
+Lemma Pending_included_Secret t : Pending t ≼ Secret.
 Proof. by exists Secret. Qed.
 
-Lemma Private_included t st :
-  ✓ st → Private t ≼ st → st = Private t ∨ st = Secret ∨ st = Public t.
+Lemma Pending_included t st :
+  ✓ st → Pending t ≼ st → st = Pending t ∨ st = Secret ∨ st = PublicLink t.
 Proof.
 move=> Hval [z Heq]. fold_leibniz. subst st. move: Hval. rewrite state_op.
 case: z => [t1|t1||] //=; repeat (case_bool_decide; simplify_eq/=); try done; eauto.
 Qed.
 
-Lemma Public_included t st : ✓ st → Public t ≼ st → st = Public t.
+Lemma PublicLink_included t st : ✓ st → PublicLink t ≼ st → st = PublicLink t.
 Proof.
 move=> Hval [z Heq]. fold_leibniz. subst st. move: Hval. rewrite state_op.
 case: z => [t1|t1||] //=; repeat (case_bool_decide; simplify_eq/=); try done; eauto.
@@ -116,13 +116,13 @@ Proof.
 move=> Hval [z Heq]. fold_leibniz. subst st. move: Hval. rewrite state_op. by case: z.
 Qed.
 
-Lemma Public_Public_valid t1 t2 : ✓ (Public t1 ⋅ Public t2) → t1 = t2.
+Lemma PublicLink_PublicLink_valid t1 t2 : ✓ (PublicLink t1 ⋅ PublicLink t2) → t1 = t2.
 Proof. rewrite state_op /=. by case_bool_decide. Qed.
 
-Lemma Private_Public_valid t1 t2 : ✓ (Private t1 ⋅ Public t2) → t1 = t2.
+Lemma Pending_PublicLink_valid t1 t2 : ✓ (Pending t1 ⋅ PublicLink t2) → t1 = t2.
 Proof. rewrite state_op /=. by case_bool_decide. Qed.
 
-Lemma Secret_Public_valid t : ✓ (Secret ⋅ Public t) → False.
+Lemma Secret_PublicLink_valid t : ✓ (Secret ⋅ PublicLink t) → False.
 Proof. by rewrite state_op. Qed.
 
 End StateCmra.
@@ -131,11 +131,11 @@ Section StateUpdates.
 
 Context {SI : sidx}.
 
-Lemma state_local_update_lock_Public t :
-  (● Some (Private t) ⋅ ◯ Some (Private t),
-   ● Some (Private t) ⋅ ◯ Some (Private t)) ~l~>
-  (● Some (Public t) ⋅ ◯ Some (Public t),
-   ● Some (Public t) ⋅ ◯ Some (Public t)).
+Lemma state_local_update_lock_PublicLink t :
+  (● Some (Pending t) ⋅ ◯ Some (Pending t),
+   ● Some (Pending t) ⋅ ◯ Some (Pending t)) ~l~>
+  (● Some (PublicLink t) ⋅ ◯ Some (PublicLink t),
+   ● Some (PublicLink t) ⋅ ◯ Some (PublicLink t)).
 Proof.
 apply auth_local_update=> //. apply local_update_discrete.
 move=> mz Hval Heq; split; first done.
@@ -145,8 +145,8 @@ case: mz Hval Heq => [[[t1|t1||]|]|] //= Hval Heq;
 Qed.
 
 Lemma state_local_update_lock_Secret t :
-  (● Some (Private t) ⋅ ◯ Some (Private t),
-   ● Some (Private t) ⋅ ◯ Some (Private t)) ~l~>
+  (● Some (Pending t) ⋅ ◯ Some (Pending t),
+   ● Some (Pending t) ⋅ ◯ Some (Pending t)) ~l~>
   (● Some Secret ⋅ ◯ Some Secret,
    ● Some Secret ⋅ ◯ Some Secret).
 Proof.

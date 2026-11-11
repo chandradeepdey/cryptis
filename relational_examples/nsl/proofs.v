@@ -22,7 +22,7 @@ Unset Printing Implicit Defensive.
 
 Section Proofs.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (t s : term).
@@ -61,21 +61,21 @@ Definition ror_inv skI : iProp :=
     (hash_tokens s s' ∨ claim skI).
 
 Lemma ror_alloc skI :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   inv rorN (ror_inv skI) -∗
   term_token (seed_of_aenc_key skI) (↑sess2N) -∗
   ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
     protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ ror_sess skI s s'.
 Proof.
 iIntros "#Hctx #Hinv tok2" (s s') "(_ & tt_k & tts_k & toks) #sec #sec' prot prot'".
-iDestruct (term_token_rel_token_l with "tt_k") as "(tt_k & _ & _)";
+iDestruct (term_token_public_token_l with "tt_k") as "(tt_k & _ & _)";
   first (rewrite /sess_key; solve_not_TSeal).
-iDestruct (term_token_rel_token_r with "tts_k") as "(tts_k & _ & _)";
+iDestruct (term_token_public_token_r with "tts_k") as "(tts_k & _ & _)";
   first (rewrite /sess_key; solve_not_TSeal).
-iMod (public_rel_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
+iMod (public_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
         with "Hctx sec prot tt_k") as "[#sec_k _]".
-iMod (public_rel_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
+iMod (public_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
         with "Hctx sec' prot' tts_k") as "[#sec_k' _]".
 iInv "Hinv" as "[>tok|(%s0 & %s0' & _ & >tok2' & _)]"; last first.
@@ -89,7 +89,7 @@ Qed.
 
 Lemma claim_hash E skI skI' skR skR' s s' :
   ↑sealsIN ⊆ E → ↑cryptisN ⊆ E ∖ ↑sealsIN → ↑rorN ⊆ E →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   nsl_ctx skI skI' skR skR' (ror_sess skI) -∗
   inv rorN (ror_inv skI) -∗
   session skI skI' skR skR' s s' -∗ claim skI ={E}=∗
@@ -114,7 +114,7 @@ End Claim.
 Section Tests.
 
 Lemma setup_refinement c c' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL setup c << setup c' : λ v v',
     (∃ (skI skI' skR skR' : aenc_key) (pkX pkX' : term),
@@ -167,7 +167,7 @@ iFrame "claim tok_sess2 HpkX". by iFrame "#".
 Qed.
 
 Lemma reveal_refinement b c c' s s' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   hash_tokens s s' -∗ secret_in_l (sess_key s) -∗ secret_in_r (sess_key s') -∗
   REL reveal b c (sess_key s) << reveal (negb b) c' (sess_key s') : ().
@@ -181,15 +181,15 @@ case: b; rel_pures.
   iIntros (k') "%Hk' #mint_k' tok_k' _".
   destruct k' as [n']. simpl in Hk'. case/is_nonceP: Hk' => a' e. subst n'.
   iEval (rewrite minted_spec_senc) in "mint_k'".
-  iDestruct (term_token_rel_token_l with "tok") as "(tok & _ & _)"; first solve_not_TSeal.
-  iDestruct (term_token_rel_token_r with "tok_k'") as "(tok_k' & _ & _)";
+  iDestruct (term_token_public_token_l with "tok") as "(tok & _ & _)"; first solve_not_TSeal.
+  iDestruct (term_token_public_token_r with "tok_k'") as "(tok_k' & _ & _)";
     first solve_not_TSeal.
-  iMod (public_rel_publish (E:=⊤) (t:=THash (sess_key s)) (t':=TNonce a') ltac:(solve_ndisj)
+  iMod (public_publish (E:=⊤) (t:=THash (sess_key s)) (t':=TNonce a') ltac:(solve_ndisj)
           with "Hctx [] tok tok_k'")
     as "[_ #Hpub]".
-  { iIntros "!> #link". by iApply (publicly_related_opaque with "mint mint_k' link sec"). }
+  { iIntros "!> #link". by iApply (public_opaque with "mint mint_k' link sec"). }
   iAssert (PUB⟨SEncKey (THash (sess_key s)), SEncKey (TNonce a')⟩) as "#Hk".
-  { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
+  { rewrite [term_of_senc_key]unlock public_TKey. by iSplit. }
   rel_prims.
   by rel_apply (refines_send with "Hc Hk").
 - rel_apply_l (refines_mk_senc_key_l _ _ (λ _, ∅) _ (λ _, not_elem_of_empty _) with "Hctx []").
@@ -197,20 +197,20 @@ case: b; rel_pures.
   iIntros (k) "%Hk #mint_k tok_k _".
   destruct k as [n]. simpl in Hk. case/is_nonceP: Hk => a e. subst n.
   iEval (rewrite minted_senc) in "mint_k".
-  iDestruct (term_token_rel_token_l with "tok_k") as "(tok_k & _ & _)"; first solve_not_TSeal.
-  iDestruct (term_token_rel_token_r with "tok'") as "(tok' & _ & _)"; first solve_not_TSeal.
-  iMod (public_rel_publish (E:=⊤) (t:=TNonce a) (t':=THash (sess_key s')) ltac:(solve_ndisj)
+  iDestruct (term_token_public_token_l with "tok_k") as "(tok_k & _ & _)"; first solve_not_TSeal.
+  iDestruct (term_token_public_token_r with "tok'") as "(tok' & _ & _)"; first solve_not_TSeal.
+  iMod (public_publish (E:=⊤) (t:=TNonce a) (t':=THash (sess_key s')) ltac:(solve_ndisj)
           with "Hctx [] tok_k tok'")
     as "[_ #Hpub]".
-  { iIntros "!> #link". by iApply (publicly_related_opaque with "mint_k mint' link"). }
+  { iIntros "!> #link". by iApply (public_opaque with "mint_k mint' link"). }
   iAssert (PUB⟨SEncKey (TNonce a), SEncKey (THash (sess_key s'))⟩) as "#Hk".
-  { rewrite [term_of_senc_key]unlock publicly_related_TKey. by iSplit. }
+  { rewrite [term_of_senc_key]unlock public_TKey. by iSplit. }
   rel_prims.
   by rel_apply (refines_send with "Hc Hk").
 Qed.
 
 Lemma resp_test_refinement b c c' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL resp_test b c << resp_test (negb b) c' : ().
 Proof.
@@ -231,7 +231,7 @@ iIntros (? ?) "[[-> ->]|(%pkI & %pkI' & %k & %k' & [-> ->] & #HpkI & Hsess)]" =>
 { rel_pures. by rel_values. }
 rel_prims.
 iPoseProof "Hnsl" as "((_ & _ & _ & _ & #pub_pkI & _) & _)".
-iMod (publicly_related_part_bij' (E:=⊤) with "Hctx HpkI pub_pkI") as %HX;
+iMod (public_part_bij' (E:=⊤) with "Hctx HpkI pub_pkI") as %HX;
   first solve_ndisj.
 case: (decide (pkI = Spec.pkey skI)) => [eX|neX]; last first.
 { rewrite bool_decide_eq_false_2 // bool_decide_eq_false_2; last by rewrite -HX.
@@ -244,7 +244,7 @@ by iApply (reveal_refinement with "Hctx Hc toks sec sec'").
 Qed.
 
 Lemma init_test_refinement b c c' :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL init_test b c << init_test (negb b) c' : ().
 Proof.
@@ -265,7 +265,7 @@ iIntros (? ?) "[[-> ->]|(%k & %k' & [-> ->] & Hsess)]" => /=.
 { rel_pures. by rel_values. }
 rel_prims.
 iPoseProof "Hnsl" as "(_ & (_ & _ & _ & _ & #pub_pkR & _) & _)".
-iMod (publicly_related_part_bij' (E:=⊤) with "Hctx HpkX pub_pkR") as %HX;
+iMod (public_part_bij' (E:=⊤) with "Hctx HpkX pub_pkR") as %HX;
   first solve_ndisj.
 case: (decide (pkX = Spec.pkey skR)) => [eX|neX]; last first.
 { rewrite bool_decide_eq_false_2 // bool_decide_eq_false_2; last by rewrite -HX.

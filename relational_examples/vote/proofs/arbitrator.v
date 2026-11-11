@@ -26,7 +26,7 @@ Unset Printing Implicit Defensive.
 
 Section Arbitrator.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (skT : aenc_key) (skV : sign_key).
@@ -179,11 +179,11 @@ Lemma pub_pair_terms (l : list (Z * Z)) :
   ⊢ PUB⟨Spec.of_list (map pair_of l), Spec.of_list (map pair_of l)⟩.
 Proof.
 rewrite [Spec.of_list]unlock. elim: l => [|[k v] l IH].
-- rewrite -[foldr _ _ _]/(TInt 0) publicly_related_TInt. by iPureIntro.
+- rewrite -[foldr _ _ _]/(TInt 0) public_TInt. by iPureIntro.
 - rewrite -[foldr TPair (TInt 0) (map pair_of ((k, v) :: l))]
           /(TPair (pair_of (k, v)) (foldr TPair (TInt 0) (map pair_of l))).
-  rewrite publicly_related_TPair. iSplit; last by iApply IH.
-  rewrite /pair_of publicly_related_TPair !publicly_related_TInt. by iSplit; iPureIntro.
+  rewrite public_TPair. iSplit; last by iApply IH.
+  rewrite /pair_of public_TPair !public_TInt. by iSplit; iPureIntro.
 Qed.
 
 End PublicTerms.
@@ -373,7 +373,7 @@ Section TwoSided.
 Lemma record_ballot_refinement skT skT' ks ks' votes votes' st m m' :
   length st = length ks → length votes = length ks → length votes' = length ks' →
   slots_ok skT skT' votes votes' st →
-  cryptis_rel_ctx -∗ voter_keys skT skT' ks ks' votes votes' -∗ PUB⟨m, m'⟩ -∗
+  hypercryptis_ctx -∗ voter_keys skT skT' ks ks' votes votes' -∗ PUB⟨m, m'⟩ -∗
   REL record_ballot m (repr (slots_l (pkeys ks) st))
    << record_ballot m' (repr (slots_r (pkeys ks') st)) : λ v v',
     (∃ st', ⌜v = repr (slots_l (pkeys ks) st')⌝ ∗ ⌜v' = repr (slots_r (pkeys ks') st')⌝ ∗
@@ -420,7 +420,7 @@ Lemma collect_refinement c c' skT skT' ks ks' votes votes' st :
   length st = length ks → length votes = length ks → length votes' = length ks' →
   length ks = length ks' →
   slots_ok skT skT' votes votes' st →
-  cryptis_rel_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
+  hypercryptis_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
   REL collect c (repr (slots_l (pkeys ks) st))
    << collect c' (repr (slots_r (pkeys ks') st)) : λ v v',
     (∃ st', ⌜v = repr (slots_l (pkeys ks) st')⌝ ∗ ⌜v' = repr (slots_r (pkeys ks') st')⌝ ∗
@@ -456,7 +456,7 @@ Qed.
 Lemma arbitrator_refinement c c' skT skT' ks ks' cands votes votes' :
   votes ≡ₚ votes' →
   length votes = length ks → length votes' = length ks' → length ks = length ks' →
-  cryptis_rel_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
+  hypercryptis_ctx -∗ lrel_channel c c' -∗ voter_keys skT skT' ks ks' votes votes' -∗
   REL arbitrator c skT (repr cands) (repr (pkeys ks))
    << arbitrator c' skT' (repr cands) (repr (pkeys ks')) : ().
 Proof.

@@ -17,7 +17,7 @@ Unset Printing Implicit Defensive.
 
 Section Game.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 
 Implicit Types (skT : aenc_key) (skV : sign_key).
@@ -36,7 +36,7 @@ Definition election_guess_wrapped cands votes0 votes1 : val := λ: "c",
 
 Lemma election_guess_refinement c c' cands votes votes' :
   votes ≡ₚ votes' →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL election_guess cands votes c << election_guess cands votes' c' : lrel_bool.
 Proof.
@@ -52,17 +52,17 @@ iIntros (guess guess') "#Hguess"=> /=.
 rel_pures.
 rel_apply_l refines_eq_term_l. rel_apply_r refines_eq_term_r.
 rel_values.
-iMod (publicly_related_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
+iMod (public_part_bij' (E:=⊤) (TInt 1) (TInt 1) guess guess'
         ltac:(solve_ndisj)
         with "Hctx [] Hguess") as %H.
-{ by rewrite publicly_related_TInt. }
+{ by rewrite public_TInt. }
 iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
 Lemma election_guess_wrapped_refinement c c' cands votes0 votes1 :
   votes0 ≡ₚ votes1 →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   lrel_channel c c' -∗
   REL election_guess_wrapped cands votes0 votes1 c
    << election_guess_wrapped cands votes0 votes1 c' : λ p1 p2,
@@ -103,12 +103,12 @@ Theorem election_ctx_equiv cands votes votes' adv :
 Proof.
 move=> Hperm Hadv.
 by split;
-  apply: (cryptis_ctx_refinement (Σ:=#[relocΣ; public_relΣ])) => // ? ? Δ;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (election_of_refinement with "Hctx Hc").
 Qed.
 
-Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 votes1
+Theorem election_secure Σ `{!relocPreG Σ, !publicGpreS Σ} cands votes0 votes1
     (adv : expr) σ :
   votes0 ≡ₚ votes1 →
   attacker_valid adv →
@@ -120,7 +120,7 @@ Theorem election_secure Σ `{!relocPreG Σ, !public_relGpreS Σ} cands votes0 vo
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hperm Hadv. apply: cryptis_rel_adequacy => // ? ?.
+move=> Hperm Hadv. apply: hypercryptis_adequacy => // ? ?.
 iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
 by iApply (election_guess_wrapped_refinement with "Hctx Hc").
 Qed.

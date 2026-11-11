@@ -14,7 +14,7 @@
   - [solve_immediate_subterm] and [solve_subterm], which show that one term
     occurs in another, looking through tags, encryptions and lists.
   - [solve_not_TSeal], which shows that a term is not a ciphertext, so that
-    its own token holds its relational token.
+    its own token holds its public token.
 
   Running the programs:
   - [rel_later] strips a later, which the one-sided steps of the primitives

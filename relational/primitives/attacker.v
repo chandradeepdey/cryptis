@@ -34,7 +34,7 @@ Definition run_network : val := λ: "adv" "f",
 
 Section Network.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 
 Implicit Types t : term.
 Implicit Types v : val.
@@ -48,7 +48,7 @@ Proof.
 iIntros "!> %v %v' (%n & %e & %e')". subst v v'.
 rel_apply_l refines_tint_l. rel_apply_r refines_tint_r.
 rel_values. iModIntro. iApply lrel_term_intro.
-by rewrite publicly_related_TInt.
+by rewrite public_TInt.
 Qed.
 
 Lemma to_int_refinement : ⊢ (lrel_term → () + lrel_int)%lrel to_int to_int.
@@ -57,10 +57,10 @@ iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
 rel_apply_l refines_to_int_l. rel_apply_r refines_to_int_r.
 rel_values. iModIntro.
 case: (Spec.to_intP t) => [n ->|Hne].
-- iDestruct (publicly_related_TInt_term with "Ht") as %->.
+- iDestruct (public_TInt_term with "Ht") as %->.
   iExists #n, #n. iRight. do 2 (iSplit; first done). by iExists n.
 - case: (Spec.to_intP t') => [n' ->|_].
-  { iDestruct (publicly_related_term_TInt with "Ht") as %e.
+  { iDestruct (public_term_TInt with "Ht") as %e.
     by case: (Hne _ e). }
   iExists #(), #(). iLeft. by do 2 (iSplit; first done).
 Qed.
@@ -75,7 +75,7 @@ iIntros "%v2 %v2' (%t2 & %t2' & -> & -> & #H2)".
 rel_pures_l. rel_pures_r.
 rel_apply_l refines_tuple_l. rel_apply_r refines_tuple_r.
 rel_values. iModIntro. iApply lrel_term_intro.
-rewrite publicly_related_TPair. by iSplit.
+rewrite public_TPair. by iSplit.
 Qed.
 
 Lemma untuple_refinement :
@@ -90,8 +90,8 @@ all: try (
   [ case: t' => //= t1' t2';
     by iDestruct "Ht" as "(_ & _ & [[]|(_ & [[]|[_ []]])])"
   | iExists #(), #(); iLeft; by do 2 (iSplit; first done) ]).
-iDestruct (publicly_related_TPair_term with "Ht") as %(t1' & t2' & ->).
-rewrite publicly_related_TPair. iDestruct "Ht" as "[H1 H2]".
+iDestruct (public_TPair_term with "Ht") as %(t1' & t2' & ->).
+rewrite public_TPair. iDestruct "Ht" as "[H1 H2]".
 iExists (t1, t2)%V, (t1', t2')%V. iRight. do 2 (iSplit; first done).
 iExists t1, t1', t2, t2'. do 2 (iSplit; first done).
 iSplit; by iApply lrel_term_intro.
@@ -102,7 +102,7 @@ Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
 rel_apply_l refines_key_l. rel_apply_r refines_key_r.
 rel_values. iModIntro. iApply lrel_term_intro.
-rewrite publicly_related_TKey. iSplit; first done.
+rewrite public_TKey. iSplit; first done.
 case: kt; try (by iLeft); done.
 Qed.
 
@@ -132,7 +132,7 @@ Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
 rel_apply_l refines_pkey_l. rel_apply_r refines_pkey_r.
 rel_values. iModIntro. iApply lrel_term_intro.
-by iApply publicly_related_pkey.
+by iApply public_pkey.
 Qed.
 
 Lemma seal_refinement :
@@ -145,11 +145,11 @@ iIntros "%v2 %v2' (%t & %t' & -> & -> & #Ht)".
 rel_pures_l. rel_pures_r.
 rel_apply_l refines_seal_l. rel_apply_r refines_seal_r.
 rel_values. iModIntro. iApply lrel_term_intro.
-rewrite publicly_related_TSeal. iLeft. by iSplit.
+rewrite public_TSeal. iLeft. by iSplit.
 Qed.
 
 Lemma open_refinement :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (lrel_term → lrel_term → () + lrel_term)%lrel
     (λ: "k" "t", open "k" "t")%V (λ: "k" "t", open "k" "t")%V.
 Proof.
@@ -159,11 +159,11 @@ iIntros "%v2 %v2' (%t & %t' & -> & -> & #Ht)".
 rel_pures_l. rel_pures_r.
 rel_apply_l refines_open_l. rel_apply_r refines_open_r.
 rel_values.
-iMod (publicly_related_open_fupd (E:=⊤) k k' t t' ltac:(solve_ndisj)
+iMod (public_open_fupd (E:=⊤) k k' t t' ltac:(solve_ndisj)
         with "Hctx Hk Ht") as %Hiff.
 case e: (Spec.open k t) Hiff => [t1|] Hiff;
 case e': (Spec.open k' t') Hiff => [t1'|] Hiff; last iModIntro.
-- iMod (publicly_related_open (E:=⊤) ltac:(solve_ndisj) e e' with "Hctx Hk Ht") as "#Ht1".
+- iMod (public_open (E:=⊤) ltac:(solve_ndisj) e e' with "Hctx Hk Ht") as "#Ht1".
   iModIntro. iExists t1, t1'. iRight. do 2 (iSplit; first done).
   by iApply lrel_term_intro.
 - exfalso. apply: is_Some_None. apply Hiff. by eapply mk_is_Some.
@@ -176,11 +176,11 @@ Proof.
 iIntros "!> %v %v' (%t & %t' & -> & -> & #Ht)".
 rel_apply_l refines_hash_l. rel_apply_r refines_hash_r.
 rel_values. iModIntro. iApply lrel_term_intro.
-rewrite publicly_related_THash. by iLeft.
+rewrite public_THash. by iLeft.
 Qed.
 
 Lemma mk_nonce_refinement :
-  cryptis_rel_ctx -∗ (() → lrel_term)%lrel mk_nonce mk_nonce.
+  hypercryptis_ctx -∗ (() → lrel_term)%lrel mk_nonce mk_nonce.
 Proof.
 iIntros "#Hctx !> %v %v' [-> ->]".
 rel_apply_l (refines_mk_nonce_l _ _ (λ n, {[n]}) with "[//]").
@@ -189,17 +189,17 @@ iIntros (n) "%Hn #mint_n Htt". rewrite big_sepS_singleton.
 rel_apply_r (refines_mk_nonce_r _ _ (λ n, {[n]}) with "[//]").
 { iIntros "%t". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
 iIntros (n') "%Hn' #mint_spec_n' Htts". rewrite big_sepS_singleton.
-iDestruct (term_token_rel_token_l with "Htt") as "(Htt & _ & _)";
+iDestruct (term_token_public_token_l with "Htt") as "(Htt & _ & _)";
   first exact: is_nonce_not_TSeal.
-iDestruct (term_token_rel_token_r with "Htts") as "(Htts & _ & _)";
+iDestruct (term_token_public_token_r with "Htts") as "(Htts & _ & _)";
   first exact: is_nonce_not_TSeal.
-iMod (public_rel_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] Htt Htts") as "[_ #Hpub]".
-{ iIntros "!> #Hel". rewrite (publicly_related_nonce Hn Hn'). by iSplit; last iSplit. }
+iMod (public_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] Htt Htts") as "[_ #Hpub]".
+{ iIntros "!> #Hel". rewrite (public_nonce Hn Hn'). by iSplit; last iSplit. }
 rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.
 
 Lemma eq_term_refinement :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   (lrel_term → lrel_term → lrel_bool)%lrel
     (λ: "t1" "t2", eq_term "t1" "t2")%V (λ: "t1" "t2", eq_term "t1" "t2")%V.
 Proof.
@@ -209,7 +209,7 @@ iIntros "%v2 %v2' (%t2 & %t2' & -> & -> & #H2)".
 rel_pures_l. rel_pures_r.
 rel_apply_l refines_eq_term_l. rel_apply_r refines_eq_term_r.
 rel_values.
-iMod (publicly_related_part_bij' (E:=⊤) t1 t1' t2 t2' ltac:(solve_ndisj)
+iMod (public_part_bij' (E:=⊤) t1 t1' t2 t2' ltac:(solve_ndisj)
         with "Hctx H1 H2") as %Hiff.
 iModIntro. iExists (bool_decide (t1 = t2)). iPureIntro. split; first done.
 do 2 f_equal. apply bool_decide_ext. by rewrite Hiff.
@@ -279,12 +279,12 @@ Qed.
 End Network.
 
 Definition attacker_valid (adv : expr) : Prop :=
-  ∀ Σ (Hreloc : relocG Σ) (Hpub : public_relGS Σ),
-    ⊢ cryptis_rel_ctx -∗ REL adv << adv : lrel_attacker.
+  ∀ Σ (Hreloc : relocG Σ) (Hpub : publicGS Σ),
+    ⊢ hypercryptis_ctx -∗ REL adv << adv : lrel_attacker.
 
 Section Typed.
 
-Context `{!relocG Σ, !public_relGS Σ}.
+Context `{!relocG Σ, !publicGS Σ}.
 
 (** Binary primitives are eta-expanded so that the specs of [simple.v]
     and [comp.v], which match saturated applications, apply. *)
@@ -325,7 +325,7 @@ Definition attacker_prims_ty : gmap string type :=
 Definition attacker_ty : type := (#1 → ())%ty.
 
 Lemma attacker_prims_env :
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   ⟦ (λ τ, interp τ [lrel_term; lrel_channel]) <$> attacker_prims_ty ⟧*
     ((λ v, (v, v)) <$> attacker_prims).
 Proof.
@@ -351,7 +351,7 @@ Qed.
 
 Lemma refines_attacker_typed e :
   attacker_prims_ty ⊢ₜ e : attacker_ty →
-  cryptis_rel_ctx -∗
+  hypercryptis_ctx -∗
   REL subst_map attacker_prims e << subst_map attacker_prims e : lrel_attacker.
 Proof.
 move=> /(fundamental [lrel_term; lrel_channel]) He. iIntros "#Hctx".
