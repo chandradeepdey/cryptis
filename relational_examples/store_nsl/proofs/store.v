@@ -9,7 +9,6 @@ After [r] requests, the server holds the database of the first [r] stores
 of each list.  At the load, each run holds the database of all its stores,
 and these give the same value for every key. *)
 
-From mathcomp Require Import ssreflect.
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.

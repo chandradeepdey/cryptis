@@ -160,7 +160,7 @@ Definition rel_prim_r_tgone (v1 : val) : RelPrimR Σ (tgone v1) _ :=
 
 End Proofs.
 
-Global Hint Resolve
+#[global] Hint Resolve
   rel_prim_l_eq_term rel_prim_r_eq_term
   rel_prim_l_texp rel_prim_r_texp
   rel_prim_l_tmul rel_prim_r_tmul

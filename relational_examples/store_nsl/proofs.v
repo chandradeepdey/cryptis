@@ -11,7 +11,6 @@ store of [store.v] over a connection under that key.
   the client: the stores, then the load, whose result goes to the
   attacker. *)
 
-From mathcomp Require Import ssreflect.
 From iris.base_logic.lib Require Import ghost_var.
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
@@ -211,10 +210,10 @@ iMod (inv_alloc sealsRN _ (seals_inv skR skR' (seals_R_info skI skI'))
   iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
   by rewrite !big_sepS_empty. }
 rewrite (term_token_difference (seed_of_aenc_key skI) (↑sessN)
-           (⊤ ∖ ↑cryptisN.@"public_rel")); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN)); last solve_ndisj.
 iDestruct "tokI" as "[tok_sess tokI]".
 rewrite (term_token_difference (seed_of_aenc_key skI) (↑sess2N)
-           (⊤ ∖ ↑cryptisN.@"public_rel" ∖ ↑sessN)); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN ∖ ↑sessN)); last solve_ndisj.
 iDestruct "tokI" as "[tok_sess2 _]".
 iMod conn_names_alloc as (γ) "(fresh & log0 & log1)".
 iMod (inv_alloc connIN _ (conn_inv γ (key_sess skI) (key_free skI) Φs)

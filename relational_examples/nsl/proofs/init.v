@@ -29,13 +29,13 @@ Variable sess : term → term → iProp.
 Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
 Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
-Local Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR' sess).
-Local Abbreviation session := (session skI skI' skR skR').
-Local Abbreviation m2_facts := (m2_facts skI skI' skR skR' sess).
-Local Abbreviation m2_seal := (m2_seal skR skR').
-Local Abbreviation m1_seal := (m1_seal skI skI').
-Local Abbreviation seed_l := (seed_l skI skR).
-Local Abbreviation seed_r := (seed_r skI' skR').
+#[local] Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR' sess).
+#[local] Abbreviation session := (session skI skI' skR skR').
+#[local] Abbreviation m2_facts := (m2_facts skI skI' skR skR' sess).
+#[local] Abbreviation m2_seal := (m2_seal skR skR').
+#[local] Abbreviation m1_seal := (m1_seal skI skI').
+#[local] Abbreviation seed_l := (seed_l skI skR).
+#[local] Abbreviation seed_r := (seed_r skI' skR').
 
 (** The components of a reply, as the initiator decodes them: related, or
     those of R's honest reply. *)
@@ -161,7 +161,7 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
       as "(#sec & _ & prot & tok)"; first solve_ndisj.
     iMod (public_rel_secret_seals_r (E:=⊤) HnI' with "Hctx tts_n")
       as "(#sec' & _ & prot' & tok')"; first solve_ndisj.
-    rewrite (term_token_difference nI (↑m3claimN) (⊤ ∖ ↑cryptisN.@"public_rel"));
+    rewrite (term_token_difference nI (↑m3claimN) (⊤ ∖ ↑hypercryptisN));
       last solve_ndisj.
     iDestruct "tok" as "[claim3 tok]".
     iMod (term_meta_set initN nI' with "tok") as "#meta"; first solve_ndisj.

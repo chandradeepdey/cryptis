@@ -10,8 +10,8 @@ From reloc Require Import reloc.
 
 Class RelPrimL Σ `{!relocG Σ} (e : expr) (A : Type) := rel_prim_l_spec : A.
 Class RelPrimR Σ `{!relocG Σ} (e : expr) (A : Type) := rel_prim_r_spec : A.
-Global Arguments rel_prim_l_spec {_ _ _ _} _.
-Global Arguments rel_prim_r_spec {_ _ _ _} _.
+#[global] Arguments rel_prim_l_spec {_ _ _ _} _.
+#[global] Arguments rel_prim_r_spec {_ _ _ _} _.
 
 Create HintDb rel_prims discriminated.
-Global Hint Constants Opaque : rel_prims.
+#[global] Hint Constants Opaque : rel_prims.

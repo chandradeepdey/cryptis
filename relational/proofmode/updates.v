@@ -124,8 +124,8 @@ Lemma public_rel_secret_seals_l E t :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   term_token t ⊤ ={E}=∗
-  secret_in_l t ∗ term_token t (↑cryptisN.@"public_rel".@"seal") ∗ protects_superterms_l t ∅ ∗
-  term_token t (⊤ ∖ ↑cryptisN.@"public_rel").
+  secret_in_l t ∗ term_token t (↑sealN) ∗ protects_superterms_l t ∅ ∗
+  term_token t (⊤ ∖ ↑hypercryptisN).
 Proof.
 iIntros (Ht HE) "#ctx tok".
 iDestruct (term_token_rel_token_l with "tok") as "(tok & $ & $)";
@@ -140,8 +140,8 @@ Lemma public_rel_secret_seals_r E t' :
   ↑cryptisN ⊆ E →
   cryptis_rel_ctx -∗
   term_token_spec t' ⊤ ={E}=∗
-  secret_in_r t' ∗ term_token_spec t' (↑cryptisN.@"public_rel".@"seal") ∗
-  protects_superterms_r t' ∅ ∗ term_token_spec t' (⊤ ∖ ↑cryptisN.@"public_rel").
+  secret_in_r t' ∗ term_token_spec t' (↑sealN) ∗
+  protects_superterms_r t' ∅ ∗ term_token_spec t' (⊤ ∖ ↑hypercryptisN).
 Proof.
 iIntros (Ht HE) "#ctx tok".
 iDestruct (term_token_rel_token_r with "tok") as "(tok & $ & $)";

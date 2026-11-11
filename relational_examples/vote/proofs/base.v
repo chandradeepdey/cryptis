@@ -42,13 +42,13 @@ Definition ballot_sig skV skT n v : term :=
   Spec.enc skV (Tag (voteN.@"ballot")) (ballot_ct skT n v).
 
 Definition ballot_inv skV skV' skT skT' v v' : iProp :=
-  (term_token (seed_of_sign_key skV) (↑cryptisN.@"public_rel".@"seal") ∗
-   term_token_spec (seed_of_sign_key skV') (↑cryptisN.@"public_rel".@"seal")) ∨
+  (term_token (seed_of_sign_key skV) (↑sealN) ∗
+   term_token_spec (seed_of_sign_key skV') (↑sealN)) ∨
   (∃ n n',
     term_token (seed_of_sign_key skV)
-      (↑cryptisN.@"public_rel".@"seal" ∖ ↑seal_ns skV (ballot_body skT n v)) ∗
+      (↑sealN ∖ ↑seal_ns skV (ballot_body skT n v)) ∗
     term_token_spec (seed_of_sign_key skV')
-      (↑cryptisN.@"public_rel".@"seal" ∖ ↑seal_ns skV' (ballot_body skT' n' v')) ∗
+      (↑sealN ∖ ↑seal_ns skV' (ballot_body skT' n' v')) ∗
     publicly_linked (ballot_sig skV skT n v) (ballot_sig skV' skT' n' v') ∗
     term_meta (seed_of_sign_key skV) signedN ()).
 
@@ -159,7 +159,7 @@ iInv "Hinv" as "[(>tok & >tok')|(%n & %n' & >tok & >tok' & >#Hsu & >#Hsigned)]".
   { have Hd : (↑seal_ns skV w : coPset) ## ↑seal_ns skV (ballot_body skT n v).
     { rewrite /seal_ns. apply ndot_ne_disjoint. by case. }
     have Hsub : (↑seal_ns skV w.@"map" : coPset) ⊆
-                ↑cryptisN.@"public_rel".@"seal" ∖ ↑seal_ns skV (ballot_body skT n v).
+                ↑sealN ∖ ↑seal_ns skV (ballot_body skT n v).
     { apply subseteq_difference_r; last by rewrite /seal_ns; solve_ndisj.
       have : (↑seal_ns skV w.@"map" : coPset) ⊆ ↑seal_ns skV w by solve_ndisj.
       set_solver. }
@@ -337,7 +337,7 @@ iMod (public_rel_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx to
 iMod (public_rel_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
   as "(#secret_s' & seals' & prot_s' & _)".
 rewrite (term_token_difference (seed_of_sign_key skV) (↑signedN)
-           (⊤ ∖ ↑cryptisN.@"public_rel")); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN)); last solve_ndisj.
 iDestruct "token_s" as "[token_signed _]".
 iDestruct (term_token_rel_token_l with "token_sk") as "(token_sk & _ & _)";
   first solve_not_TSeal.

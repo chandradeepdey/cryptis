@@ -339,8 +339,8 @@ Lemma mk_honest_key_refinement K K' Ψ :
   cryptis_rel_ctx -∗
   (∀ sk sk', honest_key sk sk' -∗
      never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
-       (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal") -∗
-     term_token (seed_of_aenc_key sk) (⊤ ∖ ↑cryptisN.@"public_rel") -∗
+       (↑sealN) (↑sealN) -∗
+     term_token (seed_of_aenc_key sk) (⊤ ∖ ↑hypercryptisN) -∗
      REL fill K (sk : expr) << fill K' (sk' : expr) : Ψ) -∗
   REL fill K (mk_aenc_key #()) << fill K' (mk_aenc_key #()) : Ψ.
 Proof.
@@ -392,7 +392,7 @@ Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
 (** The tests derive their key from the hash of the session key. *)
 Definition key_tokens s s' : iProp :=
-  never_sealed_under s s' (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal") ∗
+  never_sealed_under s s' (↑sealN) (↑sealN) ∗
   term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤ ∗
   term_token (THash (sess_key s)) ⊤ ∗ term_token_spec (THash (sess_key s')) ⊤.
 

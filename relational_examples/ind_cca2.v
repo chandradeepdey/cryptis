@@ -67,20 +67,20 @@ Definition alice_guess_wrapped : val := λ: "c",
   let: "b" := nondet_bool #() in
   ("b", if: "b" then alice true "c" else alice false "c").
 
-Local Abbreviation challenge_ns skA pl :=
+#[local] Abbreviation challenge_ns skA pl :=
   (seal_ns (Spec.pkey skA) (Spec.tag (Tag (N.@"m")) pl)).
 
 Definition cell_inv skA skA' (l l' : loc) : iProp :=
   (l ↦ NONEV ∗ l' ↦ₛ NONEV ∗
-   term_token (seed_of_aenc_key skA) (↑cryptisN.@"public_rel".@"seal") ∗
-   term_token_spec (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"seal")) ∨
+   term_token (seed_of_aenc_key skA) (↑sealN) ∗
+   term_token_spec (seed_of_aenc_key skA') (↑sealN)) ∨
   (∃ pl pl',
     l ↦ SOMEV (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl) ∗
     l' ↦ₛ SOMEV (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl') ∗
     term_token (seed_of_aenc_key skA)
-      (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA pl) ∗
+      (↑sealN ∖ ↑challenge_ns skA pl) ∗
     term_token_spec (seed_of_aenc_key skA')
-      (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA' pl') ∗
+      (↑sealN ∖ ↑challenge_ns skA' pl') ∗
     publicly_linked (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl)
       (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl') ∗
     term_meta (seed_of_aenc_key skA) storeN () ∗
@@ -91,7 +91,7 @@ Lemma cell_unsealed_l E skA t t' u :
   ↑cryptisN ⊆ E →
   Spec.open skA t = Some u →
   cryptis_rel_ctx -∗
-  term_token (seed_of_aenc_key skA) (↑cryptisN.@"public_rel".@"seal") -∗
+  term_token (seed_of_aenc_key skA) (↑sealN) -∗
   publicly_linked t t' ={E}=∗ False.
 Proof.
 move=> HE /Spec.open_aenc_key_Some ->. rewrite Spec.aenc_key_pkey.
@@ -105,7 +105,7 @@ Lemma cell_unsealed_r E skA' t t' u' :
   ↑cryptisN ⊆ E →
   Spec.open skA' t' = Some u' →
   cryptis_rel_ctx -∗
-  term_token_spec (seed_of_aenc_key skA') (↑cryptisN.@"public_rel".@"seal") -∗
+  term_token_spec (seed_of_aenc_key skA') (↑sealN) -∗
   publicly_linked t t' ={E}=∗ False.
 Proof.
 move=> HE /Spec.open_aenc_key_Some ->. rewrite Spec.aenc_key_pkey.
@@ -118,7 +118,7 @@ Qed.
 Lemma challenge_ns_disj skA pl u :
   u ≠ Spec.tag (Tag (N.@"m")) pl →
   (↑seal_ns (Spec.pkey skA) u.@"map" : coPset) ⊆
-  ↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA pl.
+  ↑sealN ∖ ↑challenge_ns skA pl.
 Proof.
 move=> ne. apply subseteq_difference_r; last by rewrite /seal_ns; solve_ndisj.
 have Hd : (↑seal_ns (Spec.pkey skA) u : coPset) ## ↑challenge_ns skA pl.
@@ -133,11 +133,11 @@ Lemma cell_challenge_l E skA pl t t' u :
   Spec.open skA t = Some u →
   cryptis_rel_ctx -∗
   term_token (seed_of_aenc_key skA)
-    (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA pl) -∗
+    (↑sealN ∖ ↑challenge_ns skA pl) -∗
   publicly_linked t t' ={E}=∗
   ⌜u = Spec.tag (Tag (N.@"m")) pl⌝ ∗
   term_token (seed_of_aenc_key skA)
-    (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA pl).
+    (↑sealN ∖ ↑challenge_ns skA pl).
 Proof.
 move=> HE Ho. case: (decide (u = Spec.tag (Tag (N.@"m")) pl)) => [-> | ne].
 { by iIntros "_ $ _". }
@@ -154,11 +154,11 @@ Lemma cell_challenge_r E skA' pl' t t' u' :
   Spec.open skA' t' = Some u' →
   cryptis_rel_ctx -∗
   term_token_spec (seed_of_aenc_key skA')
-    (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA' pl') -∗
+    (↑sealN ∖ ↑challenge_ns skA' pl') -∗
   publicly_linked t t' ={E}=∗
   ⌜u' = Spec.tag (Tag (N.@"m")) pl'⌝ ∗
   term_token_spec (seed_of_aenc_key skA')
-    (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA' pl').
+    (↑sealN ∖ ↑challenge_ns skA' pl').
 Proof.
 move=> HE Ho. case: (decide (u' = Spec.tag (Tag (N.@"m")) pl')) => [-> | ne].
 { by iIntros "_ $ _". }
@@ -249,7 +249,7 @@ iMod (oracle_open_refinement with "Hctx Hcell Hpk Hlink Ht")
     set ct' := Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'.
     iAssert (|={⊤ ∖ ↑cellN}=> (⌜ct = t⌝ ∨ (⌜ct ≠ t⌝ ∗ PUB⟨u, u'⟩)) ∗
       term_token (seed_of_aenc_key skA)
-        (↑cryptisN.@"public_rel".@"seal" ∖ ↑challenge_ns skA pl))%I
+        (↑sealN ∖ ↑challenge_ns skA pl))%I
       with "[seals]" as ">[#Hcase seals]".
     { iDestruct "Hu" as "[#Hu|#Hin]".
       - iFrame. iModIntro. case: (decide (ct = t)) => [e|ne]; first by iLeft.
@@ -305,7 +305,7 @@ split_term_tokens. rel_prims.
 iMod (public_rel_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
         with "Hctx token_a") as "(#secret_a & seals_a & _ & token_a)".
 rewrite (term_token_difference (seed_of_aenc_key skA) (↑storeN)
-           (⊤ ∖ ↑cryptisN.@"public_rel")); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN)); last solve_ndisj.
 iDestruct "token_a" as "[token_store _]".
 iMod (public_rel_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
         with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
@@ -362,8 +362,8 @@ iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl0 & %pl0' & Hl & Hl' & _ & _ &
 { by iDestruct (term_meta_token with "token_store Hstore0") as "[]". }
 iMod (term_meta_set storeN () (↑storeN) (seed_of_aenc_key skA) ltac:(done)
         with "token_store") as "#Hstore".
-iMod ("link" $! (⊤ ∖ ↑cellN) (↑cryptisN.@"public_rel".@"seal")
-        (↑cryptisN.@"public_rel".@"seal")
+iMod ("link" $! (⊤ ∖ ↑cellN) (↑sealN)
+        (↑sealN)
         with "[] [] [] [$seals $seals']") as "([seals seals'] & #Hsu & #Hct)";
   [iPureIntro; solve_ndisj | iPureIntro; apply nclose_subseteq..|].
 iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".

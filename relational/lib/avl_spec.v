@@ -1,7 +1,6 @@
 (** Relational specs of the AVL map operations in [lib/avl.v].  Each side
     owns its map and steps independently: nothing relates the two maps. *)
 
-From mathcomp Require Import ssreflect.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import avl.

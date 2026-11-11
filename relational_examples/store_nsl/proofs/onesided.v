@@ -3,7 +3,6 @@
     database after it.  The specs run [store_handle] on one side only, so they
     hold whatever the request is. *)
 
-From mathcomp Require Import ssreflect.
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.lib Require Import avl.

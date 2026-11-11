@@ -52,7 +52,8 @@ The right hand side lemmas are identical, but use primed names and refer to
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
-From cryptis.hyper.core Require Import term_meta_spec rel.
+From cryptis.hyper.core Require Import term_meta_spec rel_state rel.
+Import State.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

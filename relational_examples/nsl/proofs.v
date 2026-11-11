@@ -144,13 +144,13 @@ iMod (inv_alloc sealsRN _ (seals_inv skR skR' (seals_R_info skI skI'))
   iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
   by rewrite !big_sepS_empty. }
 rewrite (term_token_difference (seed_of_aenc_key skI) (↑claimN)
-           (⊤ ∖ ↑cryptisN.@"public_rel")); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN)); last solve_ndisj.
 iDestruct "tokI" as "[claim tokI]".
 rewrite (term_token_difference (seed_of_aenc_key skI) (↑sessN)
-           (⊤ ∖ ↑cryptisN.@"public_rel" ∖ ↑claimN)); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN ∖ ↑claimN)); last solve_ndisj.
 iDestruct "tokI" as "[tok_sess tokI]".
 rewrite (term_token_difference (seed_of_aenc_key skI) (↑sess2N)
-           (⊤ ∖ ↑cryptisN.@"public_rel" ∖ ↑claimN ∖ ↑sessN)); last solve_ndisj.
+           (⊤ ∖ ↑hypercryptisN ∖ ↑claimN ∖ ↑sessN)); last solve_ndisj.
 iDestruct "tokI" as "[tok_sess2 _]".
 iMod (inv_alloc rorN _ (ror_inv skI) with "[tok_sess]") as "#Hror".
 { iNext. by iLeft. }

@@ -7,7 +7,6 @@ reply the [n]-th pair that role 1 sends.  The server keeps a relation [I]
 between the states of the two runs, indexed by the number of replies sent
 and of requests received. *)
 
-From mathcomp Require Import ssreflect.
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.hyper Require Import lib_spec.

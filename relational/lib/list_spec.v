@@ -326,7 +326,7 @@ Qed.
 
 End ListLemmas.
 
-Global Hint Resolve
+#[global] Hint Resolve
   rel_prim_l_cons rel_prim_r_cons rel_prim_l_cons_nil rel_prim_r_cons_nil
   : rel_prims.
 

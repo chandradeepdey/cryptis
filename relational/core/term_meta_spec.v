@@ -15,6 +15,8 @@ Unset Printing Implicit Defensive.
 #[local] Existing Instance term_meta_meta.
 #[local] Existing Instance term_meta_names.
 
+Abbreviation meta_specN := (nroot.@"cryptis".@"meta_spec").
+
 Class term_meta_specGS Σ : Type := TermMetaSpecGS {
   #[global] term_meta_spec_inG  :: term_metaGpreS Σ;
   term_meta_spec_name : gname;
@@ -33,7 +35,7 @@ Definition term_meta_spec_inv `{!term_meta_specGS Σ} : iProp :=
     [∗ set] t ∈ dom names, minted_spec t.
 
 Definition term_meta_spec_ctx `{!term_meta_specGS Σ} : iProp :=
-  inv (nroot.@"cryptis".@"meta_spec") term_meta_spec_inv.
+  inv meta_specN term_meta_spec_inv.
 
 Lemma term_meta_specGS_alloc E :
   term_metaGpreS Σ →
@@ -49,7 +51,7 @@ Qed.
 
 Context `{!term_meta_specGS Σ}.
 
-Global Instance term_meta_spec_inv_timeless : Timeless term_meta_spec_inv.
+#[global] Instance term_meta_spec_inv_timeless : Timeless term_meta_spec_inv.
 Proof. rewrite /term_meta_spec_inv. apply _. Qed.
 
 #[global]
@@ -61,15 +63,15 @@ Class HasTermMetaSpecCtx (ctx : iProp) := {
   has_term_meta_spec_ctx_persistent : Persistent ctx;
 }.
 
-Local Existing Instance has_term_meta_spec_ctx_persistent.
+#[local] Existing Instance has_term_meta_spec_ctx_persistent.
 
 Definition term_spec_name t γ : iProp :=
   minted_spec t ∗ t ↪[term_meta_spec_name]□ γ.
 
-Global Instance term_spec_name_persistent t γ : Persistent (term_spec_name t γ).
+#[global] Instance term_spec_name_persistent t γ : Persistent (term_spec_name t γ).
 Proof. apply _. Qed.
 
-Global Instance term_spec_name_timeless t γ : Timeless (term_spec_name t γ).
+#[global] Instance term_spec_name_timeless t γ : Timeless (term_spec_name t γ).
 Proof. apply _. Qed.
 
 Lemma term_spec_name_agree t γ1 γ2 :
@@ -112,14 +114,14 @@ rewrite term_meta_spec_unseal. iIntros "(%γ & #name & _)".
 by iApply term_spec_name_minted_spec.
 Qed.
 
-Global Instance term_token_spec_timeless t E : Timeless (term_token_spec t E).
+#[global] Instance term_token_spec_timeless t E : Timeless (term_token_spec t E).
 Proof. rewrite term_token_spec_unseal. apply _. Qed.
 
-Global Instance term_meta_spec_timeless `{Countable L} t N (x : L) :
+#[global] Instance term_meta_spec_timeless `{Countable L} t N (x : L) :
   Timeless (term_meta_spec t N x).
 Proof. rewrite term_meta_spec_unseal. apply _. Qed.
 
-Global Instance term_meta_spec_persistent `{Countable L} t N (x : L) :
+#[global] Instance term_meta_spec_persistent `{Countable L} t N (x : L) :
   Persistent (term_meta_spec t N x).
 Proof. rewrite term_meta_spec_unseal. apply _. Qed.
 
@@ -388,11 +390,11 @@ Variable ctx: iProp.
 Context `{!HasTermMetaSpecCtx ctx}.
 
 Lemma term_token_spec_alloc (T : gset term) (P Q : iProp) E :
-  ↑nroot.@"cryptis".@"meta_spec" ⊆ E →
+  ↑meta_specN ⊆ E →
   ctx -∗
   (∀ t, ⌜t ∈ T⌝ -∗ P -∗ minted_spec t -∗ False) -∗
   (∀ t, ⌜t ∈ T⌝ -∗ Q -∗ minted_spec t) -∗
-  (P ∧ |={E ∖ ↑nroot.@"cryptis".@"meta_spec"}=> Q) ={E}=∗
+  (P ∧ |={E ∖ ↑meta_specN}=> Q) ={E}=∗
   Q ∗ [∗ set] t ∈ T, term_token_spec t ⊤.
 Proof.
 iIntros "%sub ctx H1 H2 H3".

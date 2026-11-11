@@ -540,7 +540,7 @@ Definition rel_prim_r_cons_term_nil (t : term) :
 
 End Proofs.
 
-Global Hint Resolve
+#[global] Hint Resolve
   rel_prim_l_tint rel_prim_r_tint
   rel_prim_l_to_int rel_prim_r_to_int
   rel_prim_l_tuple rel_prim_r_tuple

@@ -22,7 +22,6 @@ is known, it holds what recording the session takes ([free]).
   one end of a connection.
 - [Send] and [Receive]: the specs of [conn_send] and [conn_recv]. *)
 
-From mathcomp Require Import ssreflect.
 From iris.base_logic.lib Require Import ghost_var.
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis primitives.
@@ -178,7 +177,7 @@ Definition conn_handle rl (cs cs' : val) n r : iProp :=
 
 Lemma conn_state_init k k' :
   never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
-    (↑cryptisN.@"public_rel".@"seal") (↑cryptisN.@"public_rel".@"seal") -∗
+    (↑sealN) (↑sealN) -∗
   conn_fresh -∗ conn_state k k'.
 Proof.
 iIntros "ns [log0 log1]". iExists [], [], _, _. iFrame.

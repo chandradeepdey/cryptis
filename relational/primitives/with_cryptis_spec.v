@@ -24,6 +24,8 @@ Definition mk_channel : val :=
   let: "l" := ref (TInt 0) in
   (λ: "t", Fork (sender "l" "t"), λ: <>, !"l").
 
+Abbreviation channelN := (hypercryptisN.@"channel").
+
 Section Proofs.
 
 Context `{!relocG Σ, !public_relGS Σ}.
@@ -44,8 +46,6 @@ Lemma lrel_term_intro t t' : PUB⟨t, t'⟩ -∗ lrel_term t t'.
 Proof. iIntros "#H". iExists t, t'. by eauto. Qed.
 
 Definition lrel_channel : lrel Σ := ((lrel_term → ()) * (() → lrel_term))%lrel.
-
-Definition channelN : namespace := cryptisN.@"channel".
 
 Definition channel_inv l l' : iProp Σ :=
   ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ PUB⟨t, t'⟩.
@@ -775,7 +775,7 @@ Definition rel_prim_r_random_adec (v1 v2 v3 : val) : RelPrimR Σ (random_adec v1
 
 End Proofs.
 
-Global Hint Resolve
+#[global] Hint Resolve
   rel_prim_l_random_adec rel_prim_r_random_adec
   : rel_prims.
 

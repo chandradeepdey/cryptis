@@ -30,13 +30,13 @@ Variable sess : term → term → iProp.
 Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
 Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
-Local Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR' sess).
-Local Abbreviation session := (session skI skI' skR skR').
-Local Abbreviation m2_facts := (m2_facts skI skI' skR skR' sess).
-Local Abbreviation m2_seal := (m2_seal skI skI' skR skR').
-Local Abbreviation seals_I_info := (seals_I_info skI skI' skR skR' sess).
-Local Abbreviation seed_l := (seed_l skI skR).
-Local Abbreviation seed_r := (seed_r skI' skR').
+#[local] Abbreviation nsl_ctx := (nsl_ctx skI skI' skR skR' sess).
+#[local] Abbreviation session := (session skI skI' skR skR').
+#[local] Abbreviation m2_facts := (m2_facts skI skI' skR skR' sess).
+#[local] Abbreviation m2_seal := (m2_seal skI skI' skR skR').
+#[local] Abbreviation seals_I_info := (seals_I_info skI skI' skR skR' sess).
+#[local] Abbreviation seed_l := (seed_l skI skR).
+#[local] Abbreviation seed_r := (seed_r skI' skR').
 
 (** The terms that contain the responder's nonce. *)
 Definition resp_terms pkI pkR nI nR : gset term :=

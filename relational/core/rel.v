@@ -53,11 +53,16 @@ From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec.
-From cryptis.hyper.core Require Export rel_state.
+From cryptis.hyper.core Require Import rel_state.
+Import State.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
+Abbreviation hypercryptisN := (cryptisN.@"hyper").
+Abbreviation sealN := (hypercryptisN.@"seal").
+Abbreviation termN := (hypercryptisN.@"term").
 
 Class public_relGpreS Σ := Public_relGpreS {
   #[local] public_relGpreS_maps :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
@@ -99,7 +104,7 @@ Implicit Types P : term -> term -> iProp.
 
 Section Owners.
 
-Definition seal_ns (k t : term) : namespace := cryptisN.@"public_rel".@"seal".@(k, t).
+Definition seal_ns (k t : term) : namespace := sealN.@(k, t).
 
 Definition rel_owner t : term :=
   match t with
@@ -110,7 +115,7 @@ Definition rel_owner t : term :=
 Definition rel_ns t : namespace :=
   match t with
   | TSeal k t1 => seal_ns k t1
-  | _ => cryptisN.@"public_rel".@"term"
+  | _ => termN
   end.
 
 Definition rel_token_l t : iProp := term_token (rel_owner t) (↑rel_ns t).
@@ -183,32 +188,32 @@ Proof. by move=> /is_nonceP [a ->]. Qed.
 Lemma term_token_rel_token_l t :
   (∀ k t1, t ≠ TSeal k t1) →
   term_token t ⊤ ⊢
-  rel_token_l t ∗ term_token t (↑cryptisN.@"public_rel".@"seal") ∗
-  term_token t (⊤ ∖ ↑cryptisN.@"public_rel").
+  rel_token_l t ∗ term_token t (↑sealN) ∗
+  term_token t (⊤ ∖ ↑hypercryptisN).
 Proof.
-move=> H. have -> : rel_token_l t = term_token t (↑cryptisN.@"public_rel".@"term").
+move=> H. have -> : rel_token_l t = term_token t (↑termN).
 { by case: t H => // k t1 /(_ k t1). }
-rewrite (term_token_difference t (↑cryptisN.@"public_rel") ⊤) //.
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"term") (↑cryptisN.@"public_rel"));
+rewrite (term_token_difference t (↑hypercryptisN) ⊤) //.
+rewrite (term_token_difference t (↑termN) (↑hypercryptisN));
   last solve_ndisj.
-rewrite (term_token_difference t (↑cryptisN.@"public_rel".@"seal")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"term")); last solve_ndisj.
+rewrite (term_token_difference t (↑sealN)
+           (↑hypercryptisN ∖ ↑termN)); last solve_ndisj.
 iIntros "[(term & seal & _) rest]". iFrame.
 Qed.
 
 Lemma term_token_rel_token_r t' :
   (∀ k t1, t' ≠ TSeal k t1) →
   term_token_spec t' ⊤ ⊢
-  rel_token_r t' ∗ term_token_spec t' (↑cryptisN.@"public_rel".@"seal") ∗
-  term_token_spec t' (⊤ ∖ ↑cryptisN.@"public_rel").
+  rel_token_r t' ∗ term_token_spec t' (↑sealN) ∗
+  term_token_spec t' (⊤ ∖ ↑hypercryptisN).
 Proof.
-move=> H. have -> : rel_token_r t' = term_token_spec t' (↑cryptisN.@"public_rel".@"term").
+move=> H. have -> : rel_token_r t' = term_token_spec t' (↑termN).
 { by case: t' H => // k t1 /(_ k t1). }
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel") ⊤) //.
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"term")
-           (↑cryptisN.@"public_rel")); last solve_ndisj.
-rewrite (term_token_spec_difference t' (↑cryptisN.@"public_rel".@"seal")
-           (↑cryptisN.@"public_rel" ∖ ↑cryptisN.@"public_rel".@"term")); last solve_ndisj.
+rewrite (term_token_spec_difference t' (↑hypercryptisN) ⊤) //.
+rewrite (term_token_spec_difference t' (↑termN)
+           (↑hypercryptisN)); last solve_ndisj.
+rewrite (term_token_spec_difference t' (↑sealN)
+           (↑hypercryptisN ∖ ↑termN)); last solve_ndisj.
 iIntros "[(term & seal & _) rest]". iFrame.
 Qed.
 
