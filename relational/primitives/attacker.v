@@ -87,7 +87,7 @@ Qed.
 End Network.
 
 Definition attacker_valid (adv adv' : expr) : Prop :=
-  ∀ Σ (Hreloc : relocG Σ) (Hpub : publicGS Σ),
+  ∀ Σ `(!relocG Σ, !publicGS Σ),
     ⊢ hypercryptis_ctx -∗ REL adv << adv' : lrel_attacker.
 
 Section Typed.
