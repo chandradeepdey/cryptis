@@ -7,13 +7,13 @@ theorems of [adequacy.v] hold for every pair of valid attackers, and in
 particular for every attacker that is related to itself.
 
 - [Network] runs the attacker on a fresh channel ([run_network_refinement]).
-  - [Contracts] gives each primitive a contract in the style of a type.  A
-    proof that an attacker is valid uses them whenever the attacker calls a
-    primitive.
 - [Typed]: every well-typed attacker is related to itself
   ([attacker_valid_typed]).  Its
   types keep terms and the channel abstract, so the attacker cannot look
-  inside them. *)
+  inside them.
+  - [Contracts] gives each primitive a contract in the style of a type.  A
+    proof that an attacker is valid uses them whenever the attacker calls a
+    primitive. *)
 
 From reloc.typing Require Import fundamental.
 From cryptis.core Require Import term.
@@ -38,10 +38,99 @@ Section Network.
 
 Context `{!relocG Σ, !publicGS Σ}.
 
-Implicit Types t : term.
-Implicit Types v : val.
-
 Definition lrel_attacker : lrel Σ := (lrel_channel → ())%lrel.
+
+Lemma init_network_refinement :
+  ⊢ REL init_network << init_network : lrel_attacker → lrel_channel.
+Proof.
+rel_arrow_val. iIntros (a a') "#Ha".
+rewrite /init_network. rel_pures_l. rel_pures_r.
+rel_bind_l (mk_channel #()). rel_bind_r (mk_channel #()).
+iApply refines_bind; first iApply mk_channel_refinement.
+iIntros (c c') "#Hc /=". rel_pures_l. rel_pures_r.
+rel_bind_l (Fork _). rel_bind_r (Fork _).
+iApply refines_bind.
+{ iApply refines_fork.
+  iApply (refines_app _ _ _ _ lrel_channel); by rel_values. }
+iIntros (? ?) "_ /=". rel_pures_l. rel_pures_r.
+by rel_values.
+Qed.
+
+Lemma refines_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
+  (REL adv << adv' : lrel_attacker) -∗
+  (∀ c c', lrel_channel c c' -∗ REL f c << f' c' : A) -∗
+  REL run_network adv f << run_network adv' f' : A.
+Proof.
+iIntros "Hadv Hf". rewrite /run_network.
+rel_bind_l adv. rel_bind_r adv'.
+iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
+rel_pures_l. rel_pures_r.
+rel_bind_l (init_network _). rel_bind_r (init_network _).
+iApply refines_bind.
+{ iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
+  iApply init_network_refinement. }
+iIntros (c c') "#Hc /=". by iApply "Hf".
+Qed.
+
+Lemma run_network_refinement (A : lrel Σ) :
+  ⊢ REL run_network << run_network : lrel_attacker → (lrel_channel → A) → A.
+Proof.
+rel_arrow_val. iIntros (a a') "#Ha".
+rewrite /run_network. rel_pures_l. rel_pures_r.
+rel_arrow_val. iIntros (f f') "#Hf".
+rel_pures_l. rel_pures_r.
+iApply (refines_app _ _ _ _ lrel_channel); first by rel_values.
+iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
+iApply init_network_refinement.
+Qed.
+
+End Network.
+
+Definition attacker_valid (adv adv' : expr) : Prop :=
+  ∀ Σ (Hreloc : relocG Σ) (Hpub : publicGS Σ),
+    ⊢ hypercryptis_ctx -∗ REL adv << adv' : lrel_attacker.
+
+Section Typed.
+
+Context `{!relocG Σ, !publicGS Σ}.
+
+(** Binary primitives are eta-expanded so that the specs of [simple.v]
+    and [comp.v], which match saturated applications, apply. *)
+Definition attacker_prims : gmap string val :=
+  <["tint" := tint]> $
+  <["to_int" := to_int]> $
+  <["tuple" := (λ: "t1" "t2", tuple "t1" "t2")%V]> $
+  <["untuple" := untuple]> $
+  <["derive_aenc_key" := derive_aenc_key]> $
+  <["derive_sign_key" := derive_sign_key]> $
+  <["derive_senc_key" := derive_senc_key]> $
+  <["pkey" := pkey]> $
+  <["seal" := (λ: "k" "t", seal "k" "t")%V]> $
+  <["open" := (λ: "k" "t", open "k" "t")%V]> $
+  <["hash" := hash]> $
+  <["mk_nonce" := mk_nonce]> $
+  <["eq_term" := (λ: "t1" "t2", eq_term "t1" "t2")%V]> $
+  <["send" := send]> $
+  <["recv" := recv]> ∅.
+
+Definition attacker_prims_ty : gmap string type :=
+  <["tint" := (TNat → #0)%ty]> $
+  <["to_int" := (#0 → () + TNat)%ty]> $
+  <["tuple" := (#0 → #0 → #0)%ty]> $
+  <["untuple" := (#0 → () + #0 * #0)%ty]> $
+  <["derive_aenc_key" := (#0 → #0)%ty]> $
+  <["derive_sign_key" := (#0 → #0)%ty]> $
+  <["derive_senc_key" := (#0 → #0)%ty]> $
+  <["pkey" := (#0 → #0)%ty]> $
+  <["seal" := (#0 → #0 → #0)%ty]> $
+  <["open" := (#0 → #0 → () + #0)%ty]> $
+  <["hash" := (#0 → #0)%ty]> $
+  <["mk_nonce" := (() → #0)%ty]> $
+  <["eq_term" := (#0 → #0 → TBool)%ty]> $
+  <["send" := (#1 → #0 → ())%ty]> $
+  <["recv" := (#1 → #0)%ty]> ∅.
+
+Definition attacker_ty : type := (#1 → ())%ty.
 
 Section Contracts.
 
@@ -233,98 +322,6 @@ iApply (refines_recv with "Hc"). iIntros "%t %t' #Ht". by iApply lrel_term_intro
 Qed.
 
 End Contracts.
-
-Lemma init_network_refinement :
-  ⊢ REL init_network << init_network : lrel_attacker → lrel_channel.
-Proof.
-rel_arrow_val. iIntros (a a') "#Ha".
-rewrite /init_network. rel_pures_l. rel_pures_r.
-rel_bind_l (mk_channel #()). rel_bind_r (mk_channel #()).
-iApply refines_bind; first iApply mk_channel_refinement.
-iIntros (c c') "#Hc /=". rel_pures_l. rel_pures_r.
-rel_bind_l (Fork _). rel_bind_r (Fork _).
-iApply refines_bind.
-{ iApply refines_fork.
-  iApply (refines_app _ _ _ _ lrel_channel); by rel_values. }
-iIntros (? ?) "_ /=". rel_pures_l. rel_pures_r.
-by rel_values.
-Qed.
-
-Lemma refines_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
-  (REL adv << adv' : lrel_attacker) -∗
-  (∀ c c', lrel_channel c c' -∗ REL f c << f' c' : A) -∗
-  REL run_network adv f << run_network adv' f' : A.
-Proof.
-iIntros "Hadv Hf". rewrite /run_network.
-rel_bind_l adv. rel_bind_r adv'.
-iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
-rel_pures_l. rel_pures_r.
-rel_bind_l (init_network _). rel_bind_r (init_network _).
-iApply refines_bind.
-{ iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-  iApply init_network_refinement. }
-iIntros (c c') "#Hc /=". by iApply "Hf".
-Qed.
-
-Lemma run_network_refinement (A : lrel Σ) :
-  ⊢ REL run_network << run_network : lrel_attacker → (lrel_channel → A) → A.
-Proof.
-rel_arrow_val. iIntros (a a') "#Ha".
-rewrite /run_network. rel_pures_l. rel_pures_r.
-rel_arrow_val. iIntros (f f') "#Hf".
-rel_pures_l. rel_pures_r.
-iApply (refines_app _ _ _ _ lrel_channel); first by rel_values.
-iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-iApply init_network_refinement.
-Qed.
-
-End Network.
-
-Definition attacker_valid (adv adv' : expr) : Prop :=
-  ∀ Σ (Hreloc : relocG Σ) (Hpub : publicGS Σ),
-    ⊢ hypercryptis_ctx -∗ REL adv << adv' : lrel_attacker.
-
-Section Typed.
-
-Context `{!relocG Σ, !publicGS Σ}.
-
-(** Binary primitives are eta-expanded so that the specs of [simple.v]
-    and [comp.v], which match saturated applications, apply. *)
-Definition attacker_prims : gmap string val :=
-  <["tint" := tint]> $
-  <["to_int" := to_int]> $
-  <["tuple" := (λ: "t1" "t2", tuple "t1" "t2")%V]> $
-  <["untuple" := untuple]> $
-  <["derive_aenc_key" := derive_aenc_key]> $
-  <["derive_sign_key" := derive_sign_key]> $
-  <["derive_senc_key" := derive_senc_key]> $
-  <["pkey" := pkey]> $
-  <["seal" := (λ: "k" "t", seal "k" "t")%V]> $
-  <["open" := (λ: "k" "t", open "k" "t")%V]> $
-  <["hash" := hash]> $
-  <["mk_nonce" := mk_nonce]> $
-  <["eq_term" := (λ: "t1" "t2", eq_term "t1" "t2")%V]> $
-  <["send" := send]> $
-  <["recv" := recv]> ∅.
-
-Definition attacker_prims_ty : gmap string type :=
-  <["tint" := (TNat → #0)%ty]> $
-  <["to_int" := (#0 → () + TNat)%ty]> $
-  <["tuple" := (#0 → #0 → #0)%ty]> $
-  <["untuple" := (#0 → () + #0 * #0)%ty]> $
-  <["derive_aenc_key" := (#0 → #0)%ty]> $
-  <["derive_sign_key" := (#0 → #0)%ty]> $
-  <["derive_senc_key" := (#0 → #0)%ty]> $
-  <["pkey" := (#0 → #0)%ty]> $
-  <["seal" := (#0 → #0 → #0)%ty]> $
-  <["open" := (#0 → #0 → () + #0)%ty]> $
-  <["hash" := (#0 → #0)%ty]> $
-  <["mk_nonce" := (() → #0)%ty]> $
-  <["eq_term" := (#0 → #0 → TBool)%ty]> $
-  <["send" := (#1 → #0 → ())%ty]> $
-  <["recv" := (#1 → #0)%ty]> ∅.
-
-Definition attacker_ty : type := (#1 → ())%ty.
 
 Lemma attacker_prims_env :
   hypercryptis_ctx -∗
