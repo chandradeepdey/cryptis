@@ -18,11 +18,12 @@ Unset Printing Implicit Defensive.
 Definition store_game (ops : list (Z * Z)) (k : Z) (adv : expr) : expr :=
   (run_network adv (guess (game ops k)))%E.
 
-Theorem store_nsl_ctx_equiv ops ops' k adv :
-  attacker_valid adv → NoDup ops.*1 → ops ≡ₚ ops' →
-  ∅ ⊨ store_game ops k adv =ctx= store_game ops' k adv : TBool.
+Theorem store_nsl_ctx_equiv ops ops' k adv adv' :
+  attacker_valid adv adv' → attacker_valid adv' adv →
+  NoDup ops.*1 → ops ≡ₚ ops' →
+  ∅ ⊨ store_game ops k adv =ctx= store_game ops' k adv' : TBool.
 Proof.
-move=> Hadv Hnd Hp.
+move=> Hadv Hadv' Hnd Hp.
 have Hnd' : NoDup ops'.*1 by rewrite -Hp.
 split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ; connΣ])) => // ? ? Δ;

@@ -65,9 +65,9 @@ for proving that two runs of a protocol are indistinguishable to the attacker:
 - `core/*`: The relation `PUB⟨t, t'⟩`, which says that the attacker cannot tell
   apart a term of one run from a term of the other, and its invariant.
 - `primitives/*`, `primitives`: Relational specifications of the primitives.
-  Definition of a valid attacker.
+  Definition of valid attackers.
 - `adequacy`: Adequacy: a relational proof gives a contextual refinement
-  between games run against any valid attacker.
+  between games run against any two related attackers.
 - `proofmode/*`, `proofmode`: Ghost-state updates and tactics for relational
   proofs.
 

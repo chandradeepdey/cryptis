@@ -92,16 +92,16 @@ End Game.
 Definition election_game (cands votes : list Z) (adv : expr) : expr :=
   (run_network adv (election_of cands votes))%E.
 
-(** Vote privacy as a contextual equivalence: against any valid attacker,
-    two assignments of votes to voters with the same number of votes for
-    every candidate yield contextually equivalent elections. *)
-Theorem election_ctx_equiv cands votes votes' adv :
+(** Vote privacy as a contextual equivalence: against any pair of valid
+    attackers, two assignments of votes to voters with the same number of
+    votes for every candidate yield contextually equivalent elections. *)
+Theorem election_ctx_equiv cands votes votes' adv adv' :
   votes ≡ₚ votes' →
-  attacker_valid adv →
-  ∅ ⊨ election_game cands votes adv =ctx= election_game cands votes' adv :
+  attacker_valid adv adv' → attacker_valid adv' adv →
+  ∅ ⊨ election_game cands votes adv =ctx= election_game cands votes' adv' :
       TUnit.
 Proof.
-move=> Hperm Hadv.
+move=> Hperm Hadv Hadv'.
 by split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
@@ -109,13 +109,13 @@ by split;
 Qed.
 
 Theorem election_secure Σ `{!relocPreG Σ, !publicGpreS Σ} cands votes0 votes1
-    (adv : expr) σ :
+    (adv adv' : expr) σ :
   votes0 ≡ₚ votes1 →
-  attacker_valid adv →
+  attacker_valid adv adv' →
   adequate NotStuck (run_network adv (election_guess_wrapped cands votes0 votes1)) σ
     (λ v _, ∃ thp' h v',
        rtc erased_step
-         ([run_network adv (election_guess_wrapped cands votes0 votes1)], σ)
+         ([run_network adv' (election_guess_wrapped cands votes0 votes1)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').

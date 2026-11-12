@@ -416,24 +416,25 @@ End CCA2.
 Definition ind_cca2_game N (b : bool) (adv : expr) : expr :=
   (run_network adv (alice N b))%E.
 
-(** IND-CCA2 as a contextual equivalence: against any valid attacker with a
-    decryption oracle for every ciphertext but the challenge, no well-typed
-    context can tell which of the attacker's two messages Alice encrypts. *)
-Theorem ind_cca2_ctx_equiv N b b' adv :
-  attacker_valid adv →
-  ∅ ⊨ ind_cca2_game N b adv =ctx= ind_cca2_game N b' adv : TBool.
+(** IND-CCA2 as a contextual equivalence: against any pair of valid
+    attackers with a decryption oracle for every ciphertext but the
+    challenge, no well-typed context can tell which of the attacker's two
+    messages Alice encrypts. *)
+Theorem ind_cca2_ctx_equiv N b b' adv adv' :
+  attacker_valid adv adv' → attacker_valid adv' adv →
+  ∅ ⊨ ind_cca2_game N b adv =ctx= ind_cca2_game N b' adv' : TBool.
 Proof.
-by move=> Hadv; split;
+by move=> Hadv Hadv'; split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (alice_refinement with "Hctx Hc").
 Qed.
 
-Theorem ind_cca2_secure Σ `{!relocPreG Σ, !publicGpreS Σ} N (adv : expr) σ :
-  attacker_valid adv →
+Theorem ind_cca2_secure Σ `{!relocPreG Σ, !publicGpreS Σ} N (adv adv' : expr) σ :
+  attacker_valid adv adv' →
   adequate NotStuck (run_network adv (alice_guess_wrapped N)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network adv (alice_guess_wrapped N)], σ)
+       rtc erased_step ([run_network adv' (alice_guess_wrapped N)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').

@@ -1,15 +1,17 @@
 (** * The attacker
 
-The attacker is a program [adv] that runs on a fresh network channel.  It is
-valid ([attacker_valid]) when it is related to itself, as a function from
-related channels to related computations.  The security theorems of
-[adequacy.v] hold for every valid attacker.
+The attacker is a program that runs on a fresh network channel.  Two
+attackers [adv] and [adv'] are valid ([attacker_valid]) when they are related,
+as functions from related channels to related computations.  The security
+theorems of [adequacy.v] hold for every pair of valid attackers, and in
+particular for every attacker that is related to itself.
 
 - [Network] runs the attacker on a fresh channel ([run_network_refinement]).
   - [Contracts] gives each primitive a contract in the style of a type.  A
     proof that an attacker is valid uses them whenever the attacker calls a
     primitive.
-- [Typed]: every well-typed attacker is valid ([attacker_valid_typed]).  Its
+- [Typed]: every well-typed attacker is related to itself
+  ([attacker_valid_typed]).  Its
   types keep terms and the channel abstract, so the attacker cannot look
   inside them. *)
 
@@ -278,9 +280,9 @@ Qed.
 
 End Network.
 
-Definition attacker_valid (adv : expr) : Prop :=
+Definition attacker_valid (adv adv' : expr) : Prop :=
   ∀ Σ (Hreloc : relocG Σ) (Hpub : publicGS Σ),
-    ⊢ hypercryptis_ctx -∗ REL adv << adv : lrel_attacker.
+    ⊢ hypercryptis_ctx -∗ REL adv << adv' : lrel_attacker.
 
 Section Typed.
 
@@ -363,5 +365,5 @@ End Typed.
 
 Lemma attacker_valid_typed e :
   attacker_prims_ty ⊢ₜ e : attacker_ty →
-  attacker_valid (subst_map attacker_prims e).
+  attacker_valid (subst_map attacker_prims e) (subst_map attacker_prims e).
 Proof. move=> He Σ ? ?. by iApply refines_attacker_typed. Qed.

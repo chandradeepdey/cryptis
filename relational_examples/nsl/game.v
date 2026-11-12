@@ -77,13 +77,13 @@ Definition ror_game (test : bool → val) (b : bool) (adv : expr) : expr :=
   (run_network adv (guess (test b)))%E.
 
 (** Real-or-random secrecy of the responder's session key as a contextual
-    equivalence: against any valid attacker, when R's peer is I, no
-    well-typed context can tell the session key from a fresh key. *)
-Theorem nsl_resp_ror_ctx_equiv adv :
-  attacker_valid adv →
-  ∅ ⊨ ror_game resp_test true adv =ctx= ror_game resp_test false adv : TBool.
+    equivalence: against any pair of valid attackers, when R's peer is I,
+    no well-typed context can tell the session key from a fresh key. *)
+Theorem nsl_resp_ror_ctx_equiv adv adv' :
+  attacker_valid adv adv' → attacker_valid adv' adv →
+  ∅ ⊨ ror_game resp_test true adv =ctx= ror_game resp_test false adv' : TBool.
 Proof.
-move=> Hadv; split;
+move=> Hadv Hadv'; split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc");
@@ -91,22 +91,22 @@ move=> Hadv; split;
 Qed.
 
 (** The same fact for the initiator's session key, when I's peer is R. *)
-Theorem nsl_init_ror_ctx_equiv adv :
-  attacker_valid adv →
-  ∅ ⊨ ror_game init_test true adv =ctx= ror_game init_test false adv : TBool.
+Theorem nsl_init_ror_ctx_equiv adv adv' :
+  attacker_valid adv adv' → attacker_valid adv' adv →
+  ∅ ⊨ ror_game init_test true adv =ctx= ror_game init_test false adv' : TBool.
 Proof.
-move=> Hadv; split;
+move=> Hadv Hadv'; split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc");
   [iApply (init_test_refinement true) | iApply (init_test_refinement false)]; by iFrame "#".
 Qed.
 
-Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv : expr) σ :
-  attacker_valid adv →
+Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : expr) σ :
+  attacker_valid adv adv' →
   adequate NotStuck (run_network adv (guess_wrapped resp_test)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network adv (guess_wrapped resp_test)], σ)
+       rtc erased_step ([run_network adv' (guess_wrapped resp_test)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
@@ -117,11 +117,11 @@ iApply (guess_wrapped_refinement with "Hctx Hc").
 iIntros (b). by iApply resp_test_refinement.
 Qed.
 
-Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv : expr) σ :
-  attacker_valid adv →
+Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : expr) σ :
+  attacker_valid adv adv' →
   adequate NotStuck (run_network adv (guess_wrapped init_test)) σ
     (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network adv (guess_wrapped init_test)], σ)
+       rtc erased_step ([run_network adv' (guess_wrapped init_test)], σ)
          (of_val v' :: thp', h) ∧
        ∃ b g b' g' : bool,
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
