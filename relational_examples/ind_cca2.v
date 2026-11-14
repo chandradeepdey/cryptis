@@ -279,12 +279,11 @@ iMod (oracle_open_refinement with "Hctx Hcell Hpk Hlink Ht")
       rel_pures. by iApply "IH".
 Qed.
 
-Lemma alice_refinement c c' (b b' : bool) :
+Lemma alice_refinement (b b' : bool) :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL alice b c << alice b' c' : lrel_bool.
+  REL alice b << alice b' : lrel_channel → lrel_bool.
 Proof.
-iIntros "#Hctx #Hc". rewrite /alice.
+iIntros "#Hctx". rewrite /alice. rel_arrow_val. iIntros (c c') "#Hc".
 rel_pures.
 have Hdisj : ∀ sk : aenc_key,
     seed_of_aenc_key sk ∉ (∅ : gset term) ∧
@@ -389,23 +388,28 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma alice_guess_wrapped_refinement c c' :
+Lemma alice_guess_wrapped_refinement :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL alice_guess_wrapped c << alice_guess_wrapped c' : λ p1 p2,
+  REL alice_guess_wrapped << alice_guess_wrapped : lrel_channel → LRel (λ p1 p2,
     ⌜∃ b g b' g' : bool,
-    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
+    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝).
 Proof.
-iIntros "#Hctx #Hc". rewrite /alice_guess_wrapped.
-rel_pures.
+iIntros "#Hctx". rewrite /alice_guess_wrapped.
+rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_apply_l refines_nondet_bool_l. iIntros (choice).
 rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
-- rel_apply (alice_refinement with "Hctx Hc").
+- rel_bind_l (alice _ _). rel_bind_r (alice _ _).
+  iApply refines_bind.
+  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+    by iApply alice_refinement. }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
-- rel_apply (alice_refinement with "Hctx Hc").
+- rel_bind_l (alice _ _). rel_bind_r (alice _ _).
+  iApply refines_bind.
+  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+    by iApply alice_refinement. }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -426,8 +430,7 @@ Theorem ind_cca2_ctx_equiv N b b' adv adv' :
 Proof.
 by move=> Hadv Hadv'; split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
-  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
-  iApply (alice_refinement with "Hctx Hc").
+  iIntros "#Hctx"; iApply (alice_refinement with "Hctx").
 Qed.
 
 Theorem ind_cca2_secure Σ `{!relocPreG Σ, !publicGpreS Σ} N (adv adv' : expr) σ :
@@ -440,6 +443,5 @@ Theorem ind_cca2_secure Σ `{!relocPreG Σ, !publicGpreS Σ} N (adv adv' : expr)
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
-iApply (alice_guess_wrapped_refinement with "Hctx Hc").
+iIntros "#Hctx". by iApply alice_guess_wrapped_refinement.
 Qed.

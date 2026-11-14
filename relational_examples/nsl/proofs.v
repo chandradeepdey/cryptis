@@ -209,12 +209,11 @@ case: b; rel_pures.
   by rel_apply (refines_send with "Hc Hk").
 Qed.
 
-Lemma resp_test_refinement b c c' :
+Lemma resp_test_refinement b :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL resp_test b c << resp_test (negb b) c' : ().
+  REL resp_test b << resp_test (negb b) : lrel_channel → ().
 Proof.
-iIntros "#Hctx #Hc". rewrite /resp_test. rel_pures.
+iIntros "#Hctx". rewrite /resp_test. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_apply (setup_refinement with "Hctx Hc").
 iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
@@ -243,12 +242,11 @@ iMod (claim_hash with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [so
 by iApply (reveal_refinement with "Hctx Hc toks sec sec'").
 Qed.
 
-Lemma init_test_refinement b c c' :
+Lemma init_test_refinement b :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL init_test b c << init_test (negb b) c' : ().
+  REL init_test b << init_test (negb b) : lrel_channel → ().
 Proof.
-iIntros "#Hctx #Hc". rewrite /init_test. rel_pures.
+iIntros "#Hctx". rewrite /init_test. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_apply (setup_refinement with "Hctx Hc").
 iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.

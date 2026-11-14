@@ -182,11 +182,11 @@ iApply (rpc_server_refinement γ (key_sess_agree skI) (key_free_sess skI) (serve
 - by iFrame.
 Qed.
 
-Lemma store_game_refinement c c' :
-  hypercryptis_ctx -∗ lrel_channel c c' -∗
-  REL game ops k c << game ops' k c' : ().
+Lemma store_game_refinement :
+  hypercryptis_ctx -∗
+  REL game ops k << game ops' k : lrel_channel → ().
 Proof.
-iIntros "#Hctx #Hc". rewrite /game. rel_pures.
+iIntros "#Hctx". rewrite /game. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.

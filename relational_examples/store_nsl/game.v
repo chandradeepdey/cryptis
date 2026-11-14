@@ -4,7 +4,7 @@
 
 From reloc Require Import reloc.
 From cryptis.hyper.core Require Import public.
-From cryptis.hyper.primitives Require Import attacker.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import adequacy.
 From cryptis.hyper.examples.nsl Require Import game.
 From cryptis.hyper.examples.store_nsl Require Import impl.
@@ -28,7 +28,8 @@ have Hnd' : NoDup ops'.*1 by rewrite -Hp.
 split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ; connΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
-  iApply (guess_refinement with "Hctx Hc").
-- by iApply (store_game_refinement k Hnd Hp with "Hctx Hc").
-- by iApply (store_game_refinement k Hnd' (symmetry Hp) with "Hctx Hc").
+  iApply (guess_refinement with "Hctx Hc");
+  (iApply (refines_app _ _ _ _ lrel_channel); last by rel_values).
+- by iApply (store_game_refinement k Hnd Hp with "Hctx").
+- by iApply (store_game_refinement k Hnd' (symmetry Hp) with "Hctx").
 Qed.

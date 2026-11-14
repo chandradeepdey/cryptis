@@ -34,16 +34,17 @@ Definition election_guess_wrapped cands votes0 votes1 : val := λ: "c",
   ("b", if: "b" then election_guess cands votes1 "c"
         else election_guess cands votes0 "c").
 
-Lemma election_guess_refinement c c' cands votes votes' :
+Lemma election_guess_refinement cands votes votes' :
   votes ≡ₚ votes' →
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL election_guess cands votes c << election_guess cands votes' c' : lrel_bool.
+  REL election_guess cands votes << election_guess cands votes' : lrel_channel → lrel_bool.
 Proof.
-iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess.
-rel_pures.
+iIntros (Hperm) "#Hctx". rewrite /election_guess.
+rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_bind_l (election_of _ _ _). rel_bind_r (election_of _ _ _).
-iApply refines_bind; first by iApply election_of_refinement.
+iApply refines_bind.
+{ iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+  by iApply election_of_refinement. }
 iIntros (? ?) "[-> ->]"=> /=.
 rel_pures.
 rel_bind_l (recv _). rel_bind_r (recv _).
@@ -60,28 +61,30 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma election_guess_wrapped_refinement c c' cands votes0 votes1 :
+Lemma election_guess_wrapped_refinement cands votes0 votes1 :
   votes0 ≡ₚ votes1 →
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL election_guess_wrapped cands votes0 votes1 c
-   << election_guess_wrapped cands votes0 votes1 c' : λ p1 p2,
+  REL election_guess_wrapped cands votes0 votes1
+   << election_guess_wrapped cands votes0 votes1 : lrel_channel → LRel (λ p1 p2,
     ⌜∃ b g b' g' : bool,
-    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
+    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝).
 Proof.
-iIntros (Hperm) "#Hctx #Hc". rewrite /election_guess_wrapped.
-rel_pures.
+iIntros (Hperm) "#Hctx". rewrite /election_guess_wrapped.
+rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_apply_l refines_nondet_bool_l. iIntros (choice).
 rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
 - rel_bind_l (election_guess _ votes1 _). rel_bind_r (election_guess _ votes0 _).
-  iApply refines_bind;
-    first by iApply (election_guess_refinement _ _ _ (Permutation_sym Hperm) with "Hctx Hc").
+  iApply refines_bind.
+  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+    by iApply (election_guess_refinement _ (Permutation_sym Hperm) with "Hctx"). }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
 - rel_bind_l (election_guess _ votes0 _). rel_bind_r (election_guess _ votes1 _).
-  iApply refines_bind; first by iApply (election_guess_refinement _ _ _ Hperm with "Hctx Hc").
+  iApply refines_bind.
+  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+    by iApply (election_guess_refinement _ Hperm with "Hctx"). }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -104,8 +107,7 @@ Proof.
 move=> Hperm Hadv Hadv'.
 by split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
-  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
-  iApply (election_of_refinement with "Hctx Hc").
+  iIntros "#Hctx"; iApply (election_of_refinement with "Hctx").
 Qed.
 
 Theorem election_secure Σ `{!relocPreG Σ, !publicGpreS Σ} cands votes0 votes1
@@ -121,6 +123,5 @@ Theorem election_secure Σ `{!relocPreG Σ, !publicGpreS Σ} cands votes0 votes1
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hperm Hadv. apply: hypercryptis_adequacy => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
-by iApply (election_guess_wrapped_refinement with "Hctx Hc").
+iIntros "#Hctx". by iApply election_guess_wrapped_refinement.
 Qed.

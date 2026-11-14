@@ -21,15 +21,14 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-Lemma election_of_refinement c c' cands votes votes' :
+Lemma election_of_refinement cands votes votes' :
   votes ≡ₚ votes' →
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL election_of cands votes c << election_of cands votes' c' : ().
+  REL election_of cands votes << election_of cands votes' : lrel_channel → ().
 Proof.
-iIntros (Hperm) "#Hctx #Hc".
+iIntros (Hperm) "#Hctx".
 have Hlen := Permutation_length Hperm.
-rewrite /election_of. rel_pures.
+rewrite /election_of. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_arb_key_refinement with "Hctx"). iIntros (skT skT') "#HT" => /=.
 rel_pures.

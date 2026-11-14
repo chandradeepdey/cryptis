@@ -87,6 +87,7 @@ move=> Hadv Hadv'; split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc");
+  (iApply (refines_app _ _ _ _ lrel_channel); last by rel_values);
   [iApply (resp_test_refinement true) | iApply (resp_test_refinement false)]; by iFrame "#".
 Qed.
 
@@ -99,6 +100,7 @@ move=> Hadv Hadv'; split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
   iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
   iApply (guess_refinement with "Hctx Hc");
+  (iApply (refines_app _ _ _ _ lrel_channel); last by rel_values);
   [iApply (init_test_refinement true) | iApply (init_test_refinement false)]; by iFrame "#".
 Qed.
 
@@ -114,7 +116,8 @@ Proof.
 move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
 iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
 iApply (guess_wrapped_refinement with "Hctx Hc").
-iIntros (b). by iApply resp_test_refinement.
+iIntros (b). iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+by iApply resp_test_refinement.
 Qed.
 
 Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : expr) σ :
@@ -129,5 +132,6 @@ Proof.
 move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
 iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
 iApply (guess_wrapped_refinement with "Hctx Hc").
-iIntros (b). by iApply init_test_refinement.
+iIntros (b). iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+by iApply init_test_refinement.
 Qed.
