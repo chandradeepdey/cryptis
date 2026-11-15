@@ -250,7 +250,7 @@ iIntros "#Hctx". rewrite /init_test. rel_arrow_val. iIntros (c c') "#Hc". rel_pu
 rel_apply (setup_refinement with "Hctx Hc").
 iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
-rel_pures.
+rel_pures. rel_prims.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[tok2]").
 { iApply refines_fork. rel_pures.

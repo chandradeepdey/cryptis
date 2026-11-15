@@ -29,10 +29,12 @@ Definition resp_test (b : bool) : val := λ: "c",
   let: "keys" := setup "c" in
   let: "skI" := Fst (Fst "keys") in
   let: "skR" := Snd (Fst "keys") in
-  Fork (init "c" "skI" (Snd "keys");; #());;
+  let: "pkX" := Snd "keys" in
+  Fork (init "c" "skI" "pkX";; #());;
   match: resp "c" "skR" with
     SOME "res" =>
-    if: eq_term (Fst "res") (pkey "skI") then reveal b "c" (Snd "res") else #()
+    let: "k" := Snd "res" in
+    if: eq_term (Fst "res") (pkey "skI") then reveal b "c" "k" else #()
   | NONE => #()
   end.
 
@@ -40,10 +42,11 @@ Definition init_test (b : bool) : val := λ: "c",
   let: "keys" := setup "c" in
   let: "skI" := Fst (Fst "keys") in
   let: "skR" := Snd (Fst "keys") in
+  let: "pkR" := pkey "skR" in
   let: "pkX" := Snd "keys" in
   Fork (resp "c" "skR";; #());;
   match: init "c" "skI" "pkX" with
     SOME "k" =>
-    if: eq_term "pkX" (pkey "skR") then reveal b "c" "k" else #()
+    if: eq_term "pkX" "pkR" then reveal b "c" "k" else #()
   | NONE => #()
   end.
