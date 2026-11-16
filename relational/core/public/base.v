@@ -1287,15 +1287,18 @@ Lemma public_THash t t' :
   PUB⟨THash t, THash t'⟩ ⊣⊢
   PUB⟨t, t'⟩ ∨
   (minted t ∧ minted_spec t' ∧
-   publicly_linked (THash t) (THash t') ∧
-   (linked t t' ∨ (secret_in_l t ∧ secret_in_r t'))).
+   publicly_linked (THash t) (THash t') ∧ linked t t').
 Proof.
 rewrite /= minted_THash minted_spec_THash. iSplit.
-- iIntros "#(? & ? & [?|(? & ?)])"; [by iLeft | iRight; by do 3 (iSplit; first done)].
-- iIntros "#[H|(? & ? & ? & ?)]";
-    last by (do 2 (iSplit; first done); iRight; iSplit).
-  iPoseProof (public_minted with "H") as "[? ?]".
-  do 2 (iSplit; first done). by iLeft.
+- iIntros "#(? & ? & [?|(? & [?|[? ?]])])".
+  + by iLeft.
+  + iRight. by iFrame "#".
+  + iRight. do 3 (iSplit; first done).
+    iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r].
+- iIntros "#[H|(? & ? & ? & ?)]".
+  + iPoseProof (public_minted with "H") as "[? ?]".
+    do 2 (iSplit; first done). by iLeft.
+  + do 2 (iSplit; first done). iRight. iSplit; first done. by iLeft.
 Qed.
 
 Lemma public_THash_term t (t' : term) :
