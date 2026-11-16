@@ -182,7 +182,7 @@ case: b; rel_pures.
   iMod (public_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tok tok_k'") as "[_ #Hk]".
   { iIntros "!> #link". rewrite /sess_key [term_of_senc_key]unlock public_TKey.
     iSplit; first done. iRight. do 3 (iSplit; first done). iSplit; last done.
-    iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
+    by iApply secret_in_linked. }
   by rel_apply (refines_send with "Hc Hk").
 - rel_apply_l (refines_mk_senc_key_l _ _ (λ k, {[k]}) _ Hdisj with "Hctx []").
   { iIntros (?). rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
@@ -197,7 +197,7 @@ case: b; rel_pures.
   iMod (public_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] tok_k tok'") as "[_ #Hk]".
   { iIntros "!> #link". rewrite /sess_key [term_of_senc_key]unlock public_TKey.
     iSplit; first done. iRight. do 3 (iSplit; first done). iSplit; last done.
-    iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
+    by iApply secret_in_linked. }
   by rel_apply (refines_send with "Hc Hk").
 Qed.
 

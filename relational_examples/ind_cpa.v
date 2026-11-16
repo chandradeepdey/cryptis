@@ -88,7 +88,7 @@ iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
 { iIntros "!> #elem". rewrite public_aenc_key. iRight.
   do 3 (iSplit; first done).
-  iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
+  by iApply secret_in_linked. }
 rel_apply (refines_send with "Hc Hpub").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.
 rel_apply (refines_recv with "Hc").

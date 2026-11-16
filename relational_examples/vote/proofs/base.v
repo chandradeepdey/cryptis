@@ -186,7 +186,7 @@ rewrite -[Spec.pkey (TKey Sign s)]/(TKey Verify s) -[Spec.pkey (TKey Sign s')]/(
 rewrite minted_TKey minted_spec_TKey public_TKey.
 iIntros "#? #? #? #? #?". iSplit; first done. iRight.
 do 3 (iSplit; first done). iSplit; last done.
-iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r].
+by iApply secret_in_linked.
 Qed.
 
 Lemma pub_sign skV skV' t t' :
@@ -205,7 +205,7 @@ rewrite public_TSeal. iRight.
 rewrite minted_TSeal minted_spec_TSeal.
 iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
 iLeft. iSplit.
-- by iSplit; [iApply secret_in_l_linked_in_l | iApply secret_in_r_linked_in_r].
+- by iApply secret_in_linked.
 - iModIntro. by iSplit.
 Qed.
 
@@ -304,7 +304,7 @@ iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pk token_pk'") as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". rewrite public_aenc_key. iRight.
   do 3 (iSplit; first done).
-  iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
+  by iApply secret_in_linked. }
 iMod (inv_alloc urnN _ (urn_inv skT skT') with "[seals seals']") as "#Hurn".
 { iNext. iExists _, _. iFrame "seals seals'".
   iSplit; iIntros "!>" (?); iLeft; iPureIntro; apply nclose_subseteq. }

@@ -384,7 +384,7 @@ iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] token_pk token_pk'") as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". rewrite public_aenc_key. iRight.
   do 3 (iSplit; first done).
-  iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
+  by iApply secret_in_linked. }
 iApply ("post" with "[] [$seals $seals'] token_s").
 do 2 (iSplit; first done). by iFrame "#".
 Qed.

@@ -239,12 +239,12 @@ assert (Hsub : ↑seal_namespace k (conn_body rl n t) ⊆ Ek).
 assert (Hsub' : ↑seal_namespace k' (conn_body rl n t') ⊆ Ek').
 { case: (Hcl' (conn_body rl n t')) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
-iMod (refines_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
+iMod (public_seal_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
         (t':=Spec.of_list [TInt rl; TInt n; t']) HE Hsub Hsub'
         with "Hctx mk mk' [] [] [] [] ns") as "(#Hpub & #Hsu & ns)".
 { minted_simpl. rewrite !minted_TInt. by iFrame "#". }
 { minted_simpl. rewrite !minted_spec_TInt. by iFrame "#". }
-{ iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
+{ by iApply secret_in_linked. }
 { iIntros "!> #Hk". by iDestruct ("Hno" with "Hk") as "[]". }
 iMod (ghost_var_update_halves (log_of rl L0 L1 ++ [(t, t')]) with "logi log") as "[logi log]".
 iDestruct ("back" with "logi") as "[log0 log1]".

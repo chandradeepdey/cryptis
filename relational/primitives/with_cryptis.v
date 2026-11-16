@@ -1,6 +1,6 @@
 (** Relational specs of the primitives of [cryptis/primitives/with_cryptis.v]:
     the network channel, creating nonces and keys, checking the type of a key,
-    randomized encryption, and deterministic symmetric encryption. *)
+    and randomized encryption. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
@@ -646,8 +646,8 @@ Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
   minted sk -∗
   minted_spec sk' -∗
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
-  □ (∀ n n', ⌜is_nonce n⌝ -∗ ⌜is_nonce n'⌝ -∗
-     PUB⟨sk, sk'⟩ -∗
+  □ (∀ n n', ⌜is_nonce n⌝ → ⌜is_nonce n'⌝ →
+     PUB⟨sk, sk'⟩ →
      PUB⟨Spec.tag (Tag N) (TPair n m), Spec.tag (Tag N) (TPair n' m')⟩) -∗
   minted m -∗ minted_spec m' -∗
   ⌜∀ n, is_nonce n → random_term_chain sk N n m ## T n⌝ -∗
@@ -741,31 +741,6 @@ iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") 
   iSplit; first done. by iRight. }
 rel_apply_l refines_tuple_l. rel_apply_l refines_aenc'_l. rel_later.
 rel_apply_r refines_tuple_r. rel_apply_r refines_aenc'_r. by rel_values.
-Qed.
-
-Lemma refines_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
-  ↑cryptisN ⊆ E →
-  ↑seal_namespace k (Spec.tag (Tag N) t) ⊆ Ek →
-  ↑seal_namespace k' (Spec.tag (Tag N) t') ⊆ Ek' →
-  hypercryptis_ctx -∗
-  minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
-  linked (k : term) (k' : term) -∗
-  □ (PUB⟨k, k'⟩ → PUB⟨t, t'⟩) -∗
-  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ={E}=∗
-  PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
-  publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗
-  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
-    (Ek ∖ ↑seal_namespace k (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_namespace k' (Spec.tag (Tag N) t')).
-Proof.
-move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k') in sub sub' *.
-iIntros "#ctx #mk #mk' #mt #mt' #Hl #Himpl ns".
-iMod (public_seal HE sub sub' with "ctx [] ns") as "(#Hpl & #Hpub & $)";
-  last by iFrame "#".
-iIntros "!> #Hpl". rewrite public_TSeal. iRight.
-rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
-iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-iLeft. iSplit; first done. iModIntro.
-iIntros "#Hs". rewrite public_tag. iSplit; first done. by iApply "Himpl".
 Qed.
 
 Definition rel_prim_l_random_adec (v1 v2 v3 : val) : RelPrimL Σ (random_adec v1 v2 v3) _ :=

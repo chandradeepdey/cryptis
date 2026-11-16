@@ -30,11 +30,13 @@
   - [public_publish] makes two fresh terms publicly linked and related by
     [PUB], given a proof that linking them is enough for [PUB].
     [public_seal] does the same for two ciphertexts,
-    spending the never-sealed tokens of the seeds of their keys. *)
+    spending the never-sealed tokens of the seeds of their keys.
+    [public_seal_senc] is [public_seal] for tagged payloads under symmetric
+    keys whose leak would make the payloads public. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
-From cryptis.hyper.core Require Import term_meta_spec public.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -232,6 +234,31 @@ iIntros (HE sub sub') "#ctx #wand ns".
 rewrite (never_sealed_under_public_token sub sub').
 iDestruct "ns" as "(tok & tok' & $)".
 by iApply (public_publish HE with "ctx wand tok tok'").
+Qed.
+
+Lemma public_seal_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
+  ↑cryptisN ⊆ E →
+  ↑seal_namespace k (Spec.tag (Tag N) t) ⊆ Ek →
+  ↑seal_namespace k' (Spec.tag (Tag N) t') ⊆ Ek' →
+  hypercryptis_ctx -∗
+  minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
+  linked (k : term) (k' : term) -∗
+  □ (PUB⟨k, k'⟩ → PUB⟨t, t'⟩) -∗
+  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ={E}=∗
+  PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
+  publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗
+  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
+    (Ek ∖ ↑seal_namespace k (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_namespace k' (Spec.tag (Tag N) t')).
+Proof.
+move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k') in sub sub' *.
+iIntros "#ctx #mk #mk' #mt #mt' #Hl #Himpl ns".
+iMod (public_seal HE sub sub' with "ctx [] ns") as "(#Hpl & #Hpub & $)";
+  last by iFrame "#".
+iIntros "!> #Hpl". rewrite public_TSeal. iRight.
+rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
+iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
+iLeft. iSplit; first done. iModIntro.
+iIntros "#Hs". rewrite public_tag. iSplit; first done. by iApply "Himpl".
 Qed.
 
 End Updates.
