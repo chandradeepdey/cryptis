@@ -7,16 +7,15 @@
 
     Each test runs one initiator, whose peer the attacker picks, and one
     responder.  [resp_test] tests R's session key when R's peer is I, and
-    [init_test] tests I's session key when I's peer is R.  A test reveals a
-    key derived from a hash of the session key, or a fresh key; the hash lets
-    the fresh key stand in for the derived one. *)
+    [init_test] tests I's session key when I's peer is R.  A test reveals the
+    session key or a fresh key. *)
 
 From iris.heap_lang Require Import notation.
 From cryptis Require Import primitives.
 From cryptis.examples.nsl Require Export impl.
 
 Definition reveal (b : bool) : val := λ: "c" "k",
-  send "c" (if: #b then derive_senc_key (hash "k") else mk_senc_key #()).
+  send "c" (if: #b then "k" else mk_senc_key #()).
 
 Definition setup : val := λ: "c",
   let: "skI" := mk_aenc_key #() in

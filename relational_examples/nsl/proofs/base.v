@@ -70,7 +70,8 @@ Definition honest_key sk sk' : iProp :=
   minted sk ∗ minted_spec sk' ∗
   PUB⟨Spec.pkey sk, Spec.pkey sk'⟩ ∗
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') ∗
-  secret_in_l (seed_of_aenc_key sk) ∗ secret_in_r (seed_of_aenc_key sk').
+  secret_in_l (seed_of_aenc_key sk) ∗ secret_in_r (seed_of_aenc_key sk') ∗
+  secret_in_l sk ∗ secret_in_r sk'.
 
 #[global] Instance honest_key_persistent sk sk' : Persistent (honest_key sk sk').
 Proof. apply _. Qed.
@@ -254,7 +255,8 @@ Lemma aenc_link E sk sk' (N : namespace) m m' {tsub tsub'} :
   term_token (Spec.enc (Spec.pkey sk) (Tag N) m) (↑markN) ∗
   term_token_spec (Spec.enc (Spec.pkey sk') (Tag N) m') (↑markN).
 Proof.
-iIntros (HE) "#Hctx (%Hnonce & _ & #mint_sk & #mint_sk' & _ & #elem_pk & #secret & _)".
+iIntros (HE) "#Hctx (%Hnonce & _ & #mint_sk & #mint_sk' & _ & #elem_pk & #secret & _ &
+                      #secret_sk & _)".
 iIntros "#mint_m #mint_m' protby protby' tt_tg tts_tg tt_c tts_c".
 iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
@@ -262,11 +264,12 @@ iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
 iDestruct (term_token_public_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
 iMod (public_link HE with "Hctx protby protby' tt_tg tts_tg") as "#link_tg".
-iAssert (□ (PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ →
+iAssert (secret_in_l (TKey ADec (seed_of_aenc_key sk))) as "#secret_k".
+{ by rewrite [term_of_aenc_key]unlock. }
+iAssert (□ (PUB⟨TKey ADec (seed_of_aenc_key sk), TKey ADec (seed_of_aenc_key sk')⟩ →
             PUB⟨Spec.tag (Tag N) m, Spec.tag (Tag N) m'⟩))%I as "#Hbox".
 { iIntros "!> #Hs". iExFalso.
-  iDestruct (public_nonce_term _ Hnonce with "Hs") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "secret Hl") as "[]". }
+  by iApply (secret_in_l_TKey_public _ _ Hnonce with "secret secret_k Hs"). }
 iAssert (minted (Spec.tag (Tag N) m)) as "#mint_tg"; first by rewrite minted_tag.
 iAssert (minted_spec (Spec.tag (Tag N) m')) as "#mint_tg'"; first by rewrite minted_spec_tag.
 iModIntro. iSplitR "tt_c tts_c"; last first.
@@ -345,25 +348,34 @@ Lemma mk_honest_key_refinement K K' Ψ :
 Proof.
 iIntros "#Hctx post".
 have Hdisj : ∀ sk : aenc_key,
-    seed_of_aenc_key sk ∉ (∅ : gset term) ∧
+    seed_of_aenc_key sk ∉ ({[sk : term]} : gset term) ∧
     seed_of_aenc_key sk ∉ ({[Spec.pkey sk]} : gset term) ∧
-    (∅ : gset term) ## ({[Spec.pkey sk]} : gset term).
+    ({[sk : term]} : gset term) ## ({[Spec.pkey sk]} : gset term).
 { move=> sk. rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
   have Hne : ∀ kt (t : term), t ≠ TKey kt t.
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
+  have Hkt : ∀ t, TKey ADec t ≠ TKey AEnc t by congruence.
   set_solver. }
-rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
-iIntros (sk) "%Hnonce #mint_sk token_s _ token_pk".
-rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+iIntros (sk) "%Hnonce #mint_sk token_s token_sk token_pk".
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
-iIntros (sk') "%Hnonce' #mint_sk' token_s' _ token_pk'".
+iIntros (sk') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.
 iMod (public_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
-  as "(#secret_s & seals & _ & token_s)".
+  as "(#secret_s & seals & prot_s & token_s)".
 iMod (public_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
-  as "(#secret_s' & seals' & _ & _)".
+  as "(#secret_s' & seals' & prot_s' & _)".
+iDestruct (term_token_public_token_l with "token_sk") as "(token_sk & _ & _)";
+  first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "token_sk'") as "(token_sk' & _ & _)";
+  first solve_not_TSeal.
+iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key sk) ltac:(solve_ndisj)
+        with "Hctx secret_s prot_s token_sk") as "[#secret_sk _]".
+iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key sk') ltac:(solve_ndisj)
+        with "Hctx secret_s' prot_s' token_sk'") as "[#secret_sk' _]".
 iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & _ & _)";
@@ -389,11 +401,9 @@ Variable sess : term → term → iProp.
 Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
 Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
-(** The tests derive their key from the hash of the session key. *)
 Definition key_tokens s s' : iProp :=
   never_sealed_under s s' (↑sealN) (↑sealN) ∗
-  term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤ ∗
-  term_token (THash (sess_key s)) ⊤ ∗ term_token_spec (THash (sess_key s')) ⊤.
+  term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤.
 
 Definition seed_l nI nR := sess_seed (Spec.pkey skI) (Spec.pkey skR) nI nR.
 Definition seed_r nI' nR' := sess_seed (Spec.pkey skI') (Spec.pkey skR') nI' nR'.

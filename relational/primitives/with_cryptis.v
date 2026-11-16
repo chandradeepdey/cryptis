@@ -647,7 +647,7 @@ Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
   minted_spec sk' -∗
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
   □ (∀ n n', ⌜is_nonce n⌝ -∗ ⌜is_nonce n'⌝ -∗
-     PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ -∗
+     PUB⟨sk, sk'⟩ -∗
      PUB⟨Spec.tag (Tag N) (TPair n m), Spec.tag (Tag N) (TPair n' m')⟩) -∗
   minted m -∗ minted_spec m' -∗
   ⌜∀ n, is_nonce n → random_term_chain sk N n m ## T n⌝ -∗
@@ -721,8 +721,10 @@ iMod (public_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm
         ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
 iMod (public_link (E:=⊤) ltac:(solve_ndisj)
         with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#link_tg".
-iAssert (□ (PUB⟨seed_of_aenc_key sk, seed_of_aenc_key sk'⟩ → PUB⟨tg, tg'⟩))%I as "#Hbox".
-{ iIntros "!> #Hs". by iApply ("Hkey" $! n n' with "[//] [//] Hs"). }
+iAssert (□ (PUB⟨TKey ADec (seed_of_aenc_key sk), TKey ADec (seed_of_aenc_key sk')⟩ →
+             PUB⟨tg, tg'⟩))%I as "#Hbox".
+{ iIntros "!> #Hs". iApply ("Hkey" $! n n' with "[//] [//]").
+  by rewrite [term_of_aenc_key]unlock. }
 iAssert (minted tg) as "#mint_tg".
 { rewrite /tg minted_tag /pl minted_TPair. by iSplit. }
 iAssert (minted_spec tg') as "#mint_tg'".
@@ -748,7 +750,7 @@ Lemma refines_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
   hypercryptis_ctx -∗
   minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
   linked (k : term) (k' : term) -∗
-  □ (PUB⟨seed_of_senc_key k, seed_of_senc_key k'⟩ → PUB⟨t, t'⟩) -∗
+  □ (PUB⟨k, k'⟩ → PUB⟨t, t'⟩) -∗
   never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ={E}=∗
   PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
   publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗

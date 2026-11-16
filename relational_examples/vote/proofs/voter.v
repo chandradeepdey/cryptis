@@ -31,7 +31,7 @@ Lemma ballot_refinement skT skT' skV skV' v v' :
   REL ballot skV (Spec.pkey skT) v << ballot skV' (Spec.pkey skT') v' : lrel_term.
 Proof.
 iIntros "#Hctx (%HnonceT & %HnonceT' & #mint_T & #mint_T' & #pub_pkT & #elem_pkT &
-               #secret_T & #secret_T' & #Hurn)".
+               #secret_T & #secret_T' & #secret_kT & #secret_kT' & #Hurn)".
 iIntros "(%HnonceV & %HnonceV' & #mint_V & #mint_V' & #pub_pkV & _ & _ &
           #secret_V & #secret_V' & #Hballot) #mint_v #mint_v' token".
 iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
@@ -39,9 +39,9 @@ iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_
 rewrite /ballot. rel_pures.
 rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
   with "Hctx mint_T mint_T' elem_pkT [] mint_v mint_v' [] [] [] []").
-{ iIntros "!> %n %n' _ _ #Hs". iExFalso.
-  iDestruct (public_nonce_term _ HnonceT with "Hs") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_T Hl") as "[]". }
+{ iIntros "!> %n %n' _ _ #Hs". iExFalso. iRevert "Hs".
+  rewrite [term_of_aenc_key]unlock. iIntros "#Hs".
+  by iApply (secret_in_l_TKey_public _ _ HnonceT with "secret_T secret_kT Hs"). }
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
 { by iIntros (?); rewrite big_sepS_empty. }

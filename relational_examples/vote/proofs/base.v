@@ -62,6 +62,7 @@ Definition arb_key skT skT' : iProp :=
   PUB⟨Spec.pkey skT, Spec.pkey skT'⟩ ∗
   publicly_linked (Spec.pkey skT) (Spec.pkey skT') ∗
   secret_in_l (seed_of_aenc_key skT) ∗ secret_in_r (seed_of_aenc_key skT') ∗
+  secret_in_l skT ∗ secret_in_r skT' ∗
   inv urnN (urn_inv skT skT').
 
 #[global] Instance arb_key_persistent skT skT' : Persistent (arb_key skT skT').
@@ -184,7 +185,7 @@ case: skV skV' => [s] [s']. rewrite [term_of_sign_key]unlock.
 rewrite -[Spec.pkey (TKey Sign s)]/(TKey Verify s) -[Spec.pkey (TKey Sign s')]/(TKey Verify s').
 rewrite minted_TKey minted_spec_TKey public_TKey.
 iIntros "#? #? #? #? #?". iSplit; first done. iRight.
-do 3 (iSplit; first done).
+do 3 (iSplit; first done). iSplit; last done.
 iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r].
 Qed.
 
@@ -210,20 +211,17 @@ Qed.
 
 Lemma pub_sign_inv skV w t' :
   is_nonce (seed_of_sign_key skV) →
-  secret_in_l (seed_of_sign_key skV) -∗
+  secret_in_l (seed_of_sign_key skV) -∗ secret_in_l skV -∗
   PUB⟨TSeal skV w, t'⟩ -∗
   ∃ s' w', ⌜t' = TSeal (TKey Sign s') w'⌝ ∧ PUB⟨w, w'⟩ ∧
     publicly_linked (TSeal skV w) t'.
 Proof.
 case: skV => [s] Hnonce. rewrite [term_of_sign_key]unlock.
-iIntros "#sec #Ht".
+iIntros "#sec #sec_k #Ht".
 iDestruct (public_TSeal_term with "Ht") as "[(%k' & %w' & ->)|(_ & Ho & _)]";
   last by iSimpl in "Ho"; iDestruct "Ho" as "[]".
 iDestruct (public_TSeal with "Ht") as "[[Hk _]|(_ & _ & Hl & [[_ #Hbox]|[Ho _]])]".
-- iDestruct (public_TKey_term with "Hk") as %[s' ->].
-  rewrite public_TKey. iDestruct "Hk" as "[_ Hk]".
-  iDestruct (public_nonce_term _ Hnonce with "Hk") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "sec Hl") as "[]".
+- iExFalso. by iApply (secret_in_l_TKey_public _ _ Hnonce with "sec sec_k Hk").
 - case: k' => [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf']; try by iDestruct "Hbox" as "[]".
   case: kt'; try by iDestruct "Hbox" as "[]".
   iDestruct "Hbox" as "[_ Hw]".
@@ -243,13 +241,13 @@ Lemma pub_verify_cases skV skV' skT skT' v v' t t' :
     ⌜t = TSeal skV (Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT n v))⌝ ∧
     ⌜t' = TSeal skV' (Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT' n' v'))⌝.
 Proof.
-iIntros "#Hctx (%Hnonce & %Hnonce' & _ & _ & #Hpk & #sec & _ & _ & _ & #Hinv) #Ht".
+iIntros "#Hctx (%Hnonce & %Hnonce' & _ & _ & #Hpk & #sec & _ & #sec_k & _ & #Hinv) #Ht".
 iMod (public_open_fupd (E:=⊤) _ _ t t' ltac:(solve_ndisj)
         with "Hctx Hpk Ht") as %Hiff.
 rewrite /Spec.dec.
 case: (Spec.openP (Spec.pkey skV) t) Hiff => [k w Hk -> Hiff|Hiff].
 - move/Spec.open_key_signK: Hk => ->.
-  iDestruct (pub_sign_inv _ _ Hnonce with "sec Ht") as "(%s' & %w' & _ & _ & #Hl)".
+  iDestruct (pub_sign_inv _ _ Hnonce with "sec sec_k Ht") as "(%s' & %w' & _ & _ & #Hl)".
   iMod (ballot_inv_lookup with "Hctx Hinv Hl") as %(n & n' & -> & ->); [solve_ndisj..|].
   iModIntro. iRight. iExists n, n'. by iSplit.
 - have Hnone : Spec.open (Spec.pkey skV') t' = None.
@@ -270,25 +268,34 @@ Lemma mk_arb_key_refinement K K' Ψ :
 Proof.
 iIntros "#Hctx post".
 have Hdisj : ∀ sk : aenc_key,
-    seed_of_aenc_key sk ∉ (∅ : gset term) ∧
+    seed_of_aenc_key sk ∉ ({[sk : term]} : gset term) ∧
     seed_of_aenc_key sk ∉ ({[Spec.pkey sk]} : gset term) ∧
-    (∅ : gset term) ## ({[Spec.pkey sk]} : gset term).
+    ({[sk : term]} : gset term) ## ({[Spec.pkey sk]} : gset term).
 { move=> sk. rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
   have Hne : ∀ kt (t : term), t ≠ TKey kt t.
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
+  have Hkt : ∀ t, TKey ADec t ≠ TKey AEnc t by congruence.
   set_solver. }
-rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
-iIntros (skT) "%Hnonce #mint_sk token_s _ token_pk".
-rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+iIntros (skT) "%Hnonce #mint_sk token_s token_sk token_pk".
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
-iIntros (skT') "%Hnonce' #mint_sk' token_s' _ token_pk'".
+iIntros (skT') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.
 iMod (public_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
-  as "(#secret_s & seals & _ & _)".
+  as "(#secret_s & seals & prot_s & _)".
 iMod (public_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
-  as "(#secret_s' & seals' & _ & _)".
+  as "(#secret_s' & seals' & prot_s' & _)".
+iDestruct (term_token_public_token_l with "token_sk") as "(token_sk & _ & _)";
+  first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "token_sk'") as "(token_sk' & _ & _)";
+  first solve_not_TSeal.
+iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key skT) ltac:(solve_ndisj)
+        with "Hctx secret_s prot_s token_sk") as "[#secret_sk _]".
+iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key skT') ltac:(solve_ndisj)
+        with "Hctx secret_s' prot_s' token_sk'") as "[#secret_sk' _]".
 iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & _ & _)";

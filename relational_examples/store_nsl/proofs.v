@@ -89,7 +89,7 @@ Lemma store_alloc skI γ :
   ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
     protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ store_sess skI s s'.
 Proof.
-iIntros "#Hctx #Hinv tok" (s s') "(ns & tt_k & tts_k & _) #sec #sec' prot prot'".
+iIntros "#Hctx #Hinv tok" (s s') "(ns & tt_k & tts_k) #sec #sec' prot prot'".
 iPoseProof (term_token_minted with "tt_k") as "#mk".
 iPoseProof (term_token_spec_minted_spec with "tts_k") as "#mk'".
 iDestruct (term_token_public_token_l with "tt_k") as "(tt_k & _ & _)";
@@ -121,12 +121,15 @@ Lemma session_keys E skI skI' skR skR' s s' :
   conn_keys (key_sess skI) (SEncKey s) (SEncKey s').
 Proof.
 iIntros (HN HE) "#Hctx #Hnsl #Hs".
-iMod (session_sess with "Hctx Hnsl Hs") as (nI nI' nR nR' [-> ->]) "(_ & #HnR & #ss & #ss' & #Hss)";
+iMod (session_sess with "Hctx Hnsl Hs") as (nI nI' nR nR' [-> ->]) "(_ & #HnR & _ & _ & #Hss)";
   [done..|].
 iModIntro. iPoseProof "Hss" as "(_ & _ & mk & mk' & sk & sk')".
 iSplit; first by iExists _, _; iSplit; last iFrame "Hss".
-iFrame "mk mk' sk sk' ss ss'".
-by iApply (seed_not_pub with "HnR").
+iFrame "mk mk' sk sk'". rewrite /sess_key [term_of_senc_key]unlock.
+iIntros "!> #H".
+iDestruct (public_TKey with "H") as "[_ [Hseed|(_ & _ & [Hl _] & _)]]".
+- by iApply (seed_not_pub with "HnR Hseed").
+- by iApply (secret_in_l_publicly_linked_in_l with "sk Hl").
 Qed.
 
 Lemma store_client_refinement skI skI' skR skR' γ c c' :

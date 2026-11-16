@@ -135,8 +135,7 @@ Definition conn_ctx : iProp := inv connIN conn_inv.
 Definition conn_keys k k' : iProp :=
   sess k k' ∗ minted k ∗ minted_spec k' ∗
   secret_in_l (k : term) ∗ secret_in_r (k' : term) ∗
-  secret_in_l (seed_of_senc_key k) ∗ secret_in_r (seed_of_senc_key k') ∗
-  □ (PUB⟨seed_of_senc_key k, seed_of_senc_key k'⟩ → False).
+  □ (PUB⟨k, k'⟩ → False).
 
 #[global] Instance conn_keys_persistent k k' : Persistent (conn_keys k k').
 Proof. apply _. Qed.
@@ -227,7 +226,7 @@ Lemma conn_seal_send E rl L k k' t t' :
   PUB⟨Spec.enc k (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t]),
       Spec.enc k' (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t'])⟩.
 Proof.
-iIntros (HN HE Hrl) "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & _ & _ & Hno) log #mt #mt' #HΦ".
+iIntros (HN HE Hrl) "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & Hno) log #mt #mt' #HΦ".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & ns & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
 iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
@@ -246,7 +245,7 @@ iMod (refines_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
 { minted_simpl. rewrite !minted_TInt. by iFrame "#". }
 { minted_simpl. rewrite !minted_spec_TInt. by iFrame "#". }
 { iSplit; [by iApply secret_in_l_linked_in_l | by iApply secret_in_r_linked_in_r]. }
-{ iIntros "!> #Hseed". by iDestruct ("Hno" with "Hseed") as "[]". }
+{ iIntros "!> #Hk". by iDestruct ("Hno" with "Hk") as "[]". }
 iMod (ghost_var_update_halves (log_of rl L0 L1 ++ [(t, t')]) with "logi log") as "[logi log]".
 iDestruct ("back" with "logi") as "[log0 log1]".
 iModIntro. iSplitR "log"; last by iFrame "log Hpub".
@@ -340,8 +339,8 @@ Lemma conn_open E k k' t t' :
     ⌜Spec.dec k' (Tag connN) t' = Some (Spec.of_list [TInt rl; TInt n; p'])⌝ ∗
     Φ rl n p p'.
 Proof.
-iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & ss & ss' & Hno) #Ht".
-iMod (public_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx ss ss' Ht")
+iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & Hno) #Ht".
+iMod (public_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx sk sk' Ht")
   as "#Hop".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & [tok tok'] & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }

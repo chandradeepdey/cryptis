@@ -52,25 +52,34 @@ Lemma alice_refinement (b b' : bool) :
 Proof.
 iIntros "#Hctx". rewrite /alice. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
 have Hdisj : ∀ sk : aenc_key,
-    seed_of_aenc_key sk ∉ (∅ : gset term) ∧
+    seed_of_aenc_key sk ∉ ({[sk : term]} : gset term) ∧
     seed_of_aenc_key sk ∉ ({[Spec.pkey sk]} : gset term) ∧
-    (∅ : gset term) ## ({[Spec.pkey sk]} : gset term).
+    ({[sk : term]} : gset term) ## ({[Spec.pkey sk]} : gset term).
 { move=> sk. rewrite /Spec.pkey [term_of_aenc_key]unlock /=.
   have Hne : ∀ kt (t : term), t ≠ TKey kt t.
   { move=> kt t H. have := f_equal tsize H.
     rewrite (tsize_eq (TKey kt t)). lia. }
+  have Hkt : ∀ t, TKey ADec t ≠ TKey AEnc t by congruence.
   set_solver. }
-rel_apply_l (refines_mk_aenc_key_l _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+rel_apply_l (refines_mk_aenc_key_l _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
-iIntros (skA) "%Hnonce_a #mint_skA token_a _ token_pkA".
-rel_apply_r (refines_mk_aenc_key_r _ _ (λ _, ∅) (λ t, {[t]}) _ Hdisj with "[//]");
+iIntros (skA) "%Hnonce_a #mint_skA token_a token_skA token_pkA".
+rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with "[//]");
   [solve_minted_iff.. |].
-iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a _ token_spec_pkA'".
+iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a token_spec_skA' token_spec_pkA'".
 split_term_tokens. rel_prims.
 iMod (public_secret_seals_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
-        with "Hctx token_a") as "(#secret_a & seals_a & _ & _)".
+        with "Hctx token_a") as "(#secret_a & seals_a & prot_a & _)".
 iMod (public_secret_seals_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
-        with "Hctx token_spec_a") as "(#secret_a' & seals_a' & _ & _)".
+        with "Hctx token_spec_a") as "(#secret_a' & seals_a' & prot_a' & _)".
+iDestruct (term_token_public_token_l with "token_skA") as "(token_skA & _ & _)";
+  first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "token_spec_skA'") as "(token_spec_skA' & _ & _)";
+  first solve_not_TSeal.
+iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key skA) ltac:(solve_ndisj)
+        with "Hctx secret_a prot_a token_skA") as "[#secret_skA _]".
+iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key skA') ltac:(solve_ndisj)
+        with "Hctx secret_a' prot_a' token_spec_skA'") as "[#secret_skA' _]".
 iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_spec_pkA'") as "(token_spec_pkA' & _ & _)";
@@ -101,9 +110,9 @@ iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
 rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
   with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg' [] [] [] []").
-{ iIntros "!> %n %n' _ _ #Hs". iExFalso.
-  iDestruct (public_nonce_term _ Hnonce_a with "Hs") as "[Hl _]".
-  by iDestruct (secret_in_l_publicly_linked_in_l with "secret_a Hl") as "[]". }
+{ iIntros "!> %n %n' _ _ #Hs". iExFalso. iRevert "Hs".
+  rewrite [term_of_aenc_key]unlock. iIntros "#Hs".
+  by iApply (secret_in_l_TKey_public _ _ Hnonce_a with "secret_a secret_skA Hs"). }
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
 { by iIntros (?); rewrite big_sepS_empty. }

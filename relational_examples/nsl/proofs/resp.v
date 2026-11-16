@@ -43,7 +43,6 @@ Definition resp_terms pkI pkR nI nR : gset term :=
     TPair pkR (TPair nI (TPair nR (TInt 0)));
     Spec.of_list [pkI; pkR; nI; nR];
     (SEncKey (Spec.of_list [pkI; pkR; nI; nR]) : term);
-    THash (SEncKey (Spec.of_list [pkI; pkR; nI; nR]));
     TPair nR (TPair pkR (TInt 0));
     Spec.of_list [nI; nR; pkR];
     Spec.tag (Tag m2N) (Spec.of_list [nI; nR; pkR]);
@@ -210,9 +209,9 @@ rel_apply_r (refines_mk_nonce_r _ _ (λ nR, resp_terms x2' (Spec.pkey skR') x1' 
 iIntros (nR') "%HnR' #mint_nR' tok'".
 rewrite /resp_terms. split_term_tokens.
 all: try by rewrite /Spec.pkey [term_of_aenc_key]unlock /=; solve_term_disj.
-iDestruct "tok" as "((((((((((((tt_n & tt_p1) & tt_p2) & tt_p3) & tt_s) & tt_k) & tt_h) &
+iDestruct "tok" as "(((((((((((tt_n & tt_p1) & tt_p2) & tt_p3) & tt_s) & tt_k) &
                     tt_q1) & tt_pl) & tt_tg) & tt_c) & tt_tg3) & tt_c3)".
-iDestruct "tok'" as "((((((((((((tts_n & tts_p1) & tts_p2) & tts_p3) & tts_s) & tts_k) & tts_h) &
+iDestruct "tok'" as "(((((((((((tts_n & tts_p1) & tts_p2) & tts_p3) & tts_s) & tts_k) &
                      tts_q1) & tts_pl) & tts_tg) & tts_c) & tts_tg3) & tts_c3)".
 rel_prims.
 have Htag : ∀ N t, is_immediate_subterm t (Spec.tag (Tag N) t).
@@ -345,7 +344,7 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
   { rewrite minted_of_list /=. by iFrame "#". }
   { rewrite minted_spec_of_list /=. by iFrame "#". }
   iMod ("Halloc" $! (seed_l x1 nR) (seed_r x1' nR')
-          with "[tt_s_seal tts_s_seal tt_k tts_k tt_h tts_h] sec_s sec_s' fl_s fl_s'")
+          with "[tt_s_seal tts_s_seal tt_k tts_k] sec_s sec_s' fl_s fl_s'")
     as "#Hss".
   { rewrite /key_tokens /never_sealed_under. iFrame. }
   iMod (seals_inv_link (E:=⊤) (N:=sealsIN) ltac:(solve_ndisj) ltac:(solve_ndisj)
