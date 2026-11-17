@@ -30,7 +30,7 @@ Implicit Types (st : list (option (term * term))).
 Section GhostState.
 
 Definition ballot_ct skT n v : term :=
-  Spec.random_aenc (Spec.pkey skT) (Tag (voteN.@"vote")) n v.
+  Spec.nondet_aenc (Spec.pkey skT) (Tag (voteN.@"vote")) n v.
 
 Definition ballot_body skT n v : term :=
   Spec.tag (Tag (voteN.@"ballot")) (ballot_ct skT n v).

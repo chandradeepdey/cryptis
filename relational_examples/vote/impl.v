@@ -21,7 +21,7 @@ Abbreviation urnN := (voteN.@"urn").
 
 
 Definition ballot : val := λ: "sk" "pkT" "v",
-  sign "sk" (Tag $ voteN.@"ballot") (random_aenc "pkT" (Tag $ voteN.@"vote") "v").
+  sign "sk" (Tag $ voteN.@"ballot") (nondet_aenc "pkT" (Tag $ voteN.@"vote") "v").
 
 Definition voter : val := λ: "c" "sk" "pkT" "v",
   send "c" (ballot "sk" "pkT" (tint "v")).
@@ -52,7 +52,7 @@ Definition tally_vote : val := λ: "skT" "p" "t",
   match: Snd "p" with
     NONE => #()
   | SOME "ct" =>
-    match: random_adec "skT" (Tag $ voteN.@"vote") "ct" with
+    match: nondet_adec "skT" (Tag $ voteN.@"vote") "ct" with
       NONE => #()
     | SOME "v" =>
       match: to_int "v" with

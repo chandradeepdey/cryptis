@@ -1,6 +1,6 @@
 (** Relational specs of the primitives of [cryptis/primitives/with_cryptis.v]:
     the network channel, creating nonces and keys, checking the type of a key,
-    and randomized encryption. *)
+    and nondeterministic encryption. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
@@ -626,22 +626,22 @@ iApply (pure_twp_rel_r _ _ _ _ _ _ #(Spec.has_key_type Sign sk)
   rewrite [term_of_sign_key]unlock.
 Qed.
 
-Lemma refines_random_adec_l E K e k N c Ψ :
-  (REL fill K (repr (Spec.random_adec k N c) : expr) << e @ E : Ψ) -∗
-  REL fill K (random_adec k N c) << e @ E : Ψ.
-Proof. pure_twp_rel twp_random_adec'. Qed.
+Lemma refines_nondet_adec_l E K e k N c Ψ :
+  (REL fill K (repr (Spec.nondet_adec k N c) : expr) << e @ E : Ψ) -∗
+  REL fill K (nondet_adec k N c) << e @ E : Ψ.
+Proof. pure_twp_rel twp_nondet_adec'. Qed.
 
-Lemma refines_random_adec_r E K e k N c Ψ :
+Lemma refines_nondet_adec_r E K e k N c Ψ :
   ↑specN ⊆ E →
-  (REL e << fill K (repr (Spec.random_adec k N c) : expr) @ E : Ψ) -∗
-  REL e << fill K (random_adec k N c) @ E : Ψ.
-Proof. pure_twp_rel twp_random_adec'. Qed.
+  (REL e << fill K (repr (Spec.nondet_adec k N c) : expr) @ E : Ψ) -∗
+  REL e << fill K (nondet_adec k N c) @ E : Ψ.
+Proof. pure_twp_rel twp_nondet_adec'. Qed.
 
-Definition random_term_chain sk (N : namespace) n m : gset term :=
+Definition nondet_term_chain sk (N : namespace) n m : gset term :=
   {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
-    Spec.random_aenc (Spec.pkey sk) (Tag N) n m]}.
+    Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m]}.
 
-Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
+Lemma refines_nondet_aenc (T T' : term → gset term) sk sk' (N : namespace) m m' Ψ :
   hypercryptis_ctx -∗
   minted sk -∗
   minted_spec sk' -∗
@@ -650,15 +650,15 @@ Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
      PUB⟨sk, sk'⟩ →
      PUB⟨Spec.tag (Tag N) (TPair n m), Spec.tag (Tag N) (TPair n' m')⟩) -∗
   minted m -∗ minted_spec m' -∗
-  ⌜∀ n, is_nonce n → random_term_chain sk N n m ## T n⌝ -∗
-  ⌜∀ n', is_nonce n' → random_term_chain sk' N n' m' ## T' n'⌝ -∗
+  ⌜∀ n, is_nonce n → nondet_term_chain sk N n m ## T n⌝ -∗
+  ⌜∀ n', is_nonce n' → nondet_term_chain sk' N n' m' ## T' n'⌝ -∗
   (∀ n, [∗ set] t ∈ T n, □ (minted n ↔ minted t)) -∗
   (∀ n', [∗ set] t ∈ T' n', □ (minted_spec n' ↔ minted_spec t)) -∗
   (∀ n n', ⌜is_nonce n⌝ -∗ ⌜is_nonce n'⌝ -∗ minted n -∗ minted_spec n' -∗
     ([∗ set] t ∈ T n, term_token t ⊤) -∗
     ([∗ set] t ∈ T' n', term_token_spec t ⊤) -∗
-    term_token (Spec.random_aenc (Spec.pkey sk) (Tag N) n m) ⊤ -∗
-    term_token_spec (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m') ⊤ -∗
+    term_token (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m) ⊤ -∗
+    term_token_spec (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m') ⊤ -∗
     (∀ E Ek Ek',
       ⌜↑cryptisN ⊆ E⌝ -∗
       ⌜↑seal_namespace (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)) ⊆ Ek⌝ -∗
@@ -667,37 +667,37 @@ Lemma refines_random_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
       never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
         (Ek ∖ ↑seal_namespace (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)))
         (Ek' ∖ ↑seal_namespace (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m'))) ∗
-      publicly_linked (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
-        (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m') ∗
-      PUB⟨Spec.random_aenc (Spec.pkey sk) (Tag N) n m,
-          Spec.random_aenc (Spec.pkey sk') (Tag N) n' m'⟩) ={⊤}=∗
-    Ψ (Spec.random_aenc (Spec.pkey sk) (Tag N) n m)
-      (Spec.random_aenc (Spec.pkey sk') (Tag N) n' m')) -∗
-  REL random_aenc (Spec.pkey sk) (Tag N) m
-   << random_aenc (Spec.pkey sk') (Tag N) m' : Ψ.
+      publicly_linked (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m)
+        (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m') ∗
+      PUB⟨Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m,
+          Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m'⟩) ={⊤}=∗
+    Ψ (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m)
+      (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m')) -∗
+  REL nondet_aenc (Spec.pkey sk) (Tag N) m
+   << nondet_aenc (Spec.pkey sk') (Tag N) m' : Ψ.
 Proof.
 iIntros "#Hctx #mint_sk #mint_sk' #elem_pk #Hkey #mint_m #mint_m'".
 iIntros "%HT %HT' #mintT #mintT' post".
 iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
   first by rewrite minted_spec_pkey.
-rewrite /random_aenc. rel_pures.
-rel_apply_l (refines_mk_nonce_l _ _ (λ n, random_term_chain sk N n m ∪ T n) with "[//]").
+rewrite /nondet_aenc. rel_pures.
+rel_apply_l (refines_mk_nonce_l _ _ (λ n, nondet_term_chain sk N n m ∪ T n) with "[//]").
 { iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
-  - rewrite /random_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
+  - rewrite /nondet_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
       solve_minted_iff_elem.
   - iSpecialize ("mintT" $! t). rewrite big_sepS_forall. by iApply "mintT". }
 iIntros (n) "%Hn #mint_n Htt".
-rel_apply_r (refines_mk_nonce_r _ _ (λ n', random_term_chain sk' N n' m' ∪ T' n') with "[//]").
+rel_apply_r (refines_mk_nonce_r _ _ (λ n', nondet_term_chain sk' N n' m' ∪ T' n') with "[//]").
 { iIntros (t). rewrite big_sepS_forall. iIntros (t' [Ht'|Ht']%elem_of_union).
-  - rewrite /random_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
+  - rewrite /nondet_term_chain in Ht'. set_unfold in Ht'. destruct_or? Ht'; subst t';
       solve_minted_iff_elem.
   - iSpecialize ("mintT'" $! t). rewrite big_sepS_forall. by iApply "mintT'". }
 iIntros (n') "%Hn' #mint_n' Htts".
-rewrite (big_sepS_union _ (random_term_chain sk N n m)); last exact: HT.
-rewrite (big_sepS_union _ (random_term_chain sk' N n' m')); last exact: HT'.
+rewrite (big_sepS_union _ (nondet_term_chain sk N n m)); last exact: HT.
+rewrite (big_sepS_union _ (nondet_term_chain sk' N n' m')); last exact: HT'.
 iDestruct "Htt" as "[Htt tokT]". iDestruct "Htts" as "[Htts tokT']".
-rewrite /random_term_chain. split_term_tokens.
+rewrite /nondet_term_chain. split_term_tokens.
 iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
 iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
 set pl := TPair n m.
@@ -731,7 +731,7 @@ iAssert (minted_spec tg') as "#mint_tg'".
 { rewrite /tg' minted_spec_tag /pl' minted_spec_TPair. by iSplit. }
 iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") as "post".
 { iIntros (E Ek Ek' HE sub sub') "ns".
-  rewrite /Spec.random_aenc /Spec.enc !Spec.aenc_key_pkey in sub sub' *.
+  rewrite /Spec.nondet_aenc /Spec.enc !Spec.aenc_key_pkey in sub sub' *.
   iMod (public_seal HE sub sub' with "Hctx [] ns") as "(#Hpl & #Hpub & $)";
     last by iFrame "#".
   iIntros "!> #Hpl". rewrite public_TSeal. iRight.
@@ -743,15 +743,15 @@ rel_apply_l refines_tuple_l. rel_apply_l refines_aenc'_l. rel_later.
 rel_apply_r refines_tuple_r. rel_apply_r refines_aenc'_r. by rel_values.
 Qed.
 
-Definition rel_prim_l_random_adec (v1 v2 v3 : val) : RelPrimL Σ (random_adec v1 v2 v3) _ :=
-  refines_random_adec_l.
-Definition rel_prim_r_random_adec (v1 v2 v3 : val) : RelPrimR Σ (random_adec v1 v2 v3) _ :=
-  refines_random_adec_r.
+Definition rel_prim_l_nondet_adec (v1 v2 v3 : val) : RelPrimL Σ (nondet_adec v1 v2 v3) _ :=
+  refines_nondet_adec_l.
+Definition rel_prim_r_nondet_adec (v1 v2 v3 : val) : RelPrimR Σ (nondet_adec v1 v2 v3) _ :=
+  refines_nondet_adec_r.
 
 End Proofs.
 
 #[global] Hint Resolve
-  rel_prim_l_random_adec rel_prim_r_random_adec
+  rel_prim_l_nondet_adec rel_prim_r_nondet_adec
   : rel_prims.
 
 Arguments lrel_channel {Σ _ _}.

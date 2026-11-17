@@ -1,4 +1,4 @@
-(** IND-CPA for randomized asymmetric encryption. *)
+(** IND-CPA for nondeterministic asymmetric encryption. *)
 
 From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import cryptis primitives.
@@ -38,7 +38,7 @@ Definition alice (b : bool) : val := λ: "c",
   let: "msg_0" := recv "c" in
   let: "msg_1" := recv "c" in
   let: "msg" := if: #b then "msg_0" else "msg_1" in
-  send "c" (random_aenc "pkA" (Tag $ N.@"m") "msg");;
+  send "c" (nondet_aenc "pkA" (Tag $ N.@"m") "msg");;
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
 
@@ -108,7 +108,7 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skA skA'
+rel_apply (refines_nondet_aenc (λ _, ∅) (λ _, ∅) skA skA'
   with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg' [] [] [] []").
 { iIntros "!> %n %n' _ _ #Hs". iExFalso. iRevert "Hs".
   rewrite [term_of_aenc_key]unlock. iIntros "#Hs".

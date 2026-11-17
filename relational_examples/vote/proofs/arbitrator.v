@@ -39,7 +39,7 @@ Definition slot_empty (p : term * option term) : bool :=
   match p.2 with None => true | Some _ => false end.
 
 Definition vote_of skT (t : term) : option Z :=
-  match Spec.random_adec skT (Tag (voteN.@"vote")) t with
+  match Spec.nondet_adec skT (Tag (voteN.@"vote")) t with
   | Some v => Spec.to_int v
   | None => None
   end.
@@ -103,7 +103,7 @@ rewrite IH // Forall_cons. split; [by split; eauto | by case].
 Qed.
 
 Lemma vote_of_ballot skT n (v : Z) : vote_of skT (ballot_ct skT n (TInt v)) = Some v.
-Proof. by rewrite /vote_of /ballot_ct Spec.random_adec_aenc. Qed.
+Proof. by rewrite /vote_of /ballot_ct Spec.nondet_adec_aenc. Qed.
 
 Lemma tally_slots_l_eq skT skT' ks votes votes' st acc :
   length st = length ks → length votes = length ks →
@@ -197,8 +197,8 @@ Lemma refines_tally_vote_l K e skT p m t Ψ :
 Proof.
 iIntros "Hm post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_l; last by iApply ("post" with "Hm").
-rel_apply_l refines_random_adec_l. rewrite /vote_of.
-case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_l;
+rel_apply_l refines_nondet_adec_l. rewrite /vote_of.
+case: (Spec.nondet_adec _ _ _) => [v|] /=; rel_pures_l;
   last by iApply ("post" with "Hm").
 rel_apply_l refines_to_int_l.
 case: (Spec.to_int v) => [k|] /=; rel_pures_l; last by iApply ("post" with "Hm").
@@ -214,8 +214,8 @@ Lemma refines_tally_vote_r K e skT p m t Ψ :
 Proof.
 iIntros "Hm post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_r; last by iApply ("post" with "Hm").
-rel_apply_r refines_random_adec_r. rewrite /vote_of.
-case: (Spec.random_adec _ _ _) => [v|] /=; rel_pures_r;
+rel_apply_r refines_nondet_adec_r. rewrite /vote_of.
+case: (Spec.nondet_adec _ _ _) => [v|] /=; rel_pures_r;
   last by iApply ("post" with "Hm").
 rel_apply_r refines_to_int_r.
 case: (Spec.to_int v) => [k|] /=; rel_pures_r; last by iApply ("post" with "Hm").

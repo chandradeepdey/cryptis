@@ -37,7 +37,7 @@ iIntros "(%HnonceV & %HnonceV' & #mint_V & #mint_V' & #pub_pkV & _ & _ &
 iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_spec_pkey.
 rewrite /ballot. rel_pures.
-rel_apply (refines_random_aenc (λ _, ∅) (λ _, ∅) skT skT'
+rel_apply (refines_nondet_aenc (λ _, ∅) (λ _, ∅) skT skT'
   with "Hctx mint_T mint_T' elem_pkT [] mint_v mint_v' [] [] [] []").
 { iIntros "!> %n %n' _ _ #Hs". iExFalso. iRevert "Hs".
   rewrite [term_of_aenc_key]unlock. iIntros "#Hs".
