@@ -1,4 +1,14 @@
-(** IND-CCA2 for nondeterministic asymmetric encryption. *)
+(** * IND-CCA2 for nondeterministic asymmetric encryption
+
+The attacker has a decryption oracle for every ciphertext but the
+challenge.  Alice keeps the challenge in a cell that is written once, and
+the oracle reads it.
+
+- [Cell]: the invariant of the cell.  Before the challenge it holds the
+  never-sealed tokens of Alice's key, so no ciphertext under the key is
+  honest.  Afterwards it holds the tokens of every other payload, so the
+  challenge is the only honest one.
+- [Game]: the oracle, Alice, and the game. *)
 
 From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import cryptis primitives.
@@ -69,6 +79,8 @@ Definition alice_guess_wrapped : val := λ: "c",
 
 #[local] Abbreviation challenge_ns pl :=
   (seal_namespace (Spec.tag (Tag (N.@"m")) pl)).
+
+Section Cell.
 
 Definition cell_inv skA skA' (l l' : loc) : iProp :=
   (l ↦ NONEV ∗ l' ↦ₛ NONEV ∗
@@ -169,6 +181,10 @@ iMod (linked_in_r_states_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
 - by iApply publicly_linked_in_r_linked_in_r.
 - rewrite /states_token_r /=. by iApply (term_token_spec_drop with "tok").
 Qed.
+
+End Cell.
+
+Section Game.
 
 Lemma oracle_open_refinement skA skA' (l l' : loc) t t' :
   hypercryptis_ctx -∗
@@ -424,6 +440,8 @@ case: choice; rel_pures.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
 Qed.
+
+End Game.
 
 End CCA2.
 

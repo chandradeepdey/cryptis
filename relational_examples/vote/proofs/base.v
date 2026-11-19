@@ -4,7 +4,8 @@
   that record each voter's one ballot.
 - [Signatures]: what a signature under a voter's secret key tells the
   arbitrator.
-- [KeyGeneration]: creating the arbitrator's and the voters' keys. *)
+- [KeyGeneration]: creating the arbitrator's and the voters' keys.
+- [Voters]: the keys of all the voters together. *)
 
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
@@ -371,6 +372,10 @@ iApply ("post" with "[] token_signed").
 do 4 (iSplit; first done). by iFrame "#".
 Qed.
 
+End KeyGeneration.
+
+Section Voters.
+
 Definition pkeys ks : list term := map (λ sk : sign_key, Spec.pkey sk) ks.
 
 Definition voter_keys skT skT' ks ks' votes votes' : iProp :=
@@ -398,6 +403,6 @@ iInduction ks as [|sk ks] "IH" forall (ks' votes votes'); iIntros "H".
   by case: votes; case: votes' => /=.
 Qed.
 
-End KeyGeneration.
+End Voters.
 
 End Base.

@@ -5,7 +5,7 @@ From reloc Require Import reloc.
 From cryptis Require Import lib.
 From cryptis.lib Require Import avl.
 
-Section Proofs.
+Section Specs.
 
 Context `{!relocG Σ}.
 
@@ -246,4 +246,4 @@ rel_apply_r (refines_avl_to_list_acc_r with "Ht"). iIntros "Ht".
 iApply "post". iExists p, w. by iFrame.
 Qed.
 
-End Proofs.
+End Specs.
