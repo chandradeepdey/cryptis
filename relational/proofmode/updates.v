@@ -33,6 +33,9 @@
     - [public_seal] does the same for two ciphertexts, spending the
       never-sealed tokens of their keys.  It hands the seals' releases to
       the caller, who decides what the invariant keeps.
+    - [public_seal_held] is [public_seal] for ciphertexts that hold their
+      keys back.  It takes what the invariant keeps directly, and gives
+      the seals' releases back, to be traded for the holds later.
     - [public_seal_senc] is [public_seal] for tagged payloads under linked
       symmetric keys, when the payloads are related or the keys are
       secret. *)
@@ -243,6 +246,31 @@ iDestruct "ns" as "(tok & tok' & $)".
 iDestruct (public_token_l_split with "tok") as "(states & prots & rel)".
 iDestruct (public_token_r_split with "tok'") as "(states' & prots' & rel')".
 iDestruct ("prot" with "rel rel'") as "[pl pr]".
+iMod (public_prots_l_extend with "ctx prots") as "prots"; first done.
+iMod (public_prots_r_extend with "ctx prots'") as "prots'"; first done.
+iMod (public_extend _ _ HE with "ctx wand pl pr prots prots' states states'") as "#link".
+iModIntro. iSplit => //. by iApply "wand".
+Qed.
+
+Lemma public_seal_held E k k' t t' Ek Ek' :
+  ↑cryptisN ⊆ E →
+  ↑seal_namespace t ⊆ Ek →
+  ↑seal_namespace t' ⊆ Ek' →
+  hypercryptis_ctx -∗
+  □ (publicly_linked (TSeal k t) (TSeal k' t') -∗ PUB⟨TSeal k t, TSeal k' t'⟩) -∗
+  public_deposit_l (TSeal k t) (TSeal k' t') -∗
+  public_deposit_r (TSeal k t) (TSeal k' t') -∗
+  never_sealed_under k k' Ek Ek' ={E}=∗
+  publicly_linked (TSeal k t) (TSeal k' t') ∗
+  PUB⟨TSeal k t, TSeal k' t'⟩ ∗
+  never_sealed_under k k' (Ek ∖ ↑seal_namespace t) (Ek' ∖ ↑seal_namespace t') ∗
+  seal_release_l (TSeal k t) ∗ seal_release_r (TSeal k' t').
+Proof.
+iIntros (HE sub sub') "#ctx #wand pl pr ns".
+rewrite (never_sealed_under_public_token k k' sub sub').
+iDestruct "ns" as "(tok & tok' & $)".
+iDestruct (public_token_l_split with "tok") as "(states & prots & $)".
+iDestruct (public_token_r_split with "tok'") as "(states' & prots' & $)".
 iMod (public_prots_l_extend with "ctx prots") as "prots"; first done.
 iMod (public_prots_r_extend with "ctx prots'") as "prots'"; first done.
 iMod (public_extend _ _ HE with "ctx wand pl pr prots prots' states states'") as "#link".

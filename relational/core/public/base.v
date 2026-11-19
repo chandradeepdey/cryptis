@@ -11,11 +11,12 @@ terms the two runs treat as the same, and which terms stay secret.
   tokens of the key decides how the runs treat the ciphertexts made with it,
   even the ones that anyone can compute.  Any other term lives on itself.
   The part of these tokens that decides how the runs treat a term is its
-  public token; the never-sealed tokens of a key hold the public tokens of
-  all the ciphertexts under it.
+  public token.  The never-sealed tokens of a key hold the public tokens of
+  all the ciphertexts under it, so each of them can be made public once.
   - [seal_release_l c] is a part of the public token of a ciphertext [c].
+    In the invariant, it says that [c] does not hold its key back.
   - [holds_key_l t k] is a token that the key [k] has for each payload [t].
-    In the invariant it means that the ciphertext of [t] under [k] holds
+    In the invariant, it says that the ciphertext of [t] under [k] holds
     the key back.
 - [States] records what is known about each term.
   - [linked t t'] means that the runs treat [t] and [t'] as the same term.
@@ -31,12 +32,15 @@ terms the two runs treat as the same, and which terms stay secret.
   same way in both runs, or are both opaque: a nonce, the hash of a secret, or
   a ciphertext that the attacker can neither make nor open.
 - [Invariant] puts these together.  A ciphertext may be public while its
-  payload is hidden, as long as its key is.  So for each public ciphertext
-  the invariant has one of two tokens: the seal's release if the payloads
-  are related or the key is secret, the payload's hold on the key
-  otherwise.  A key becomes public by handing in every hold on it.  By then
-  the invariant has none of them, so the ciphertexts under the key have
-  related payloads.  [public_deposit_l] is what is handed over when a term
+  payload is hidden, as long as its key stays hidden too.  So when a
+  ciphertext becomes public, the invariant takes one of two tokens for it:
+  the seal's release if the payloads are related or the decryption key is
+  secret, and the payload's hold on the key otherwise.  Once the payloads
+  are related, the seal's release can be traded for the hold.  A key
+  becomes public by handing in every hold on it, which is possible only
+  when the invariant keeps none of the holds.  Every ciphertext under a
+  public key therefore has its seal's release in the invariant, and
+  related payloads.  [public_deposit_l] is what a term hands over when it
   becomes public.
 
 ** Section [PublicProperties]
