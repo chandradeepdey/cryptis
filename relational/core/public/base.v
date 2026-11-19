@@ -6,7 +6,7 @@ terms the two runs treat as the same, and which terms stay secret.
 
 ** Section [Public]
 
-- [Owners] says where the ghost state of a term lives.  A ciphertext lives on
+- [Tokens] says where the ghost state of a term lives.  A ciphertext lives on
   its key, under a namespace for its payload, so that whoever holds the
   tokens of the key decides how the runs treat the ciphertexts made with it,
   even the ones that anyone can compute.  Any other term lives on itself.
@@ -102,7 +102,7 @@ Implicit Types states_l states_r : gmap term state.
 Implicit Types prots_l prots_r : gmap term (gset term).
 Implicit Types P : term -> term -> iProp.
 
-Section Owners.
+Section Tokens.
 
 Definition seal_namespace (t : term) : namespace := sealN.@t.
 
@@ -221,7 +221,7 @@ rewrite (term_token_difference k _ E) // (term_token_spec_difference k' _ E') //
 iSplit; [iIntros "[[$ ?] [$ ?]]" | iIntros "(? & ? & ? & ?)"]; iFrame.
 Qed.
 
-End Owners.
+End Tokens.
 
 Section States.
 
