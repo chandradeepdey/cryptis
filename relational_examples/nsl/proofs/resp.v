@@ -227,10 +227,12 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
     iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)";
       first solve_not_TSeal.
     iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
-            with "Hctx [] tt_n tts_n")
+            with "Hctx [] [] [] tt_n tts_n")
       as "[_ #Hpub]".
     { iIntros "!> #?". rewrite (public_nonce HnR HnR').
       by do 2 (iSplit; first done). }
+    { by case/is_nonceP: HnR => ? ->. }
+    { by case/is_nonceP: HnR' => ? ->. }
     iModIntro. iSplit; first by iLeft. iSplit; last by iIntros (?).
     iApply (public_enc with "Hx2"). iApply public_of_list.
     iDestruct "Hx1" as "[#H1|[%eX _]]"; last by case: neX; case: eX.
@@ -260,10 +262,10 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
     first solve_not_TSeal.
   iDestruct (term_token_public_token_r with "tts_s") as "(tts_s & tts_s_seal & _)";
     first solve_not_TSeal.
-  iMod (public_secret_seals_l (E:=⊤) HnR with "Hctx tt_n")
-    as "(#sec & _ & prot & tok)"; first solve_ndisj.
-  iMod (public_secret_seals_r (E:=⊤) HnR' with "Hctx tts_n")
-    as "(#sec' & _ & prot' & tok')"; first solve_ndisj.
+  iMod (public_secret_nonce_l (E:=⊤) HnR with "Hctx tt_n")
+    as "(#sec & prot & tok)"; first solve_ndisj.
+  iMod (public_secret_nonce_r (E:=⊤) HnR' with "Hctx tts_n")
+    as "(#sec' & prot' & tok')"; first solve_ndisj.
   iMod (term_meta_set respN nR' with "tok") as "#meta"; first solve_ndisj.
   iMod (term_meta_spec_set respN nR with "tok'") as "#meta'"; first solve_ndisj.
   iAssert (resp_nonce nR nR') as "#HnR"; first by iFrame "#".
@@ -300,7 +302,7 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
           (tsup:=Spec.of_list [Spec.pkey skI; Spec.pkey skR; x1; nR])
           ltac:(solve_immediate_subterm) ltac:(solve_ndisj)
           with "Hctx by_p3 tt_p3") as "by_s".
-  iDestruct (public_token_l_split with "tt_s") as "[tt_s tt_s_flow]".
+  iDestruct (public_token_l_split with "tt_s") as "(tt_s & tt_s_flow & _)".
   iMod (public_prots_l_extend (E:=⊤) _ ltac:(solve_ndisj) with "Hctx tt_s_flow") as "fl_s".
   iMod (public_secret_l (E:=⊤) _ _ ltac:(solve_ndisj) with "Hctx by_s tt_s")
     as "[_ #sec_s]".
@@ -317,7 +319,7 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
           (t'sup:=Spec.of_list [Spec.pkey skI'; Spec.pkey skR'; x1'; nR'])
           ltac:(solve_immediate_subterm) ltac:(solve_ndisj)
           with "Hctx by_p3' tts_p3") as "by_s'".
-  iDestruct (public_token_r_split with "tts_s") as "[tts_s tts_s_flow]".
+  iDestruct (public_token_r_split with "tts_s") as "(tts_s & tts_s_flow & _)".
   iMod (public_prots_r_extend (E:=⊤) _ ltac:(solve_ndisj) with "Hctx tts_s_flow") as "fl_s'".
   iMod (public_secret_r (E:=⊤) _ _ ltac:(solve_ndisj) with "Hctx by_s' tts_s")
     as "[_ #sec_s']".
@@ -344,9 +346,9 @@ iAssert (|={⊤}=> nonce_info respN nR nR' ∗
   { rewrite minted_of_list /=. by iFrame "#". }
   { rewrite minted_spec_of_list /=. by iFrame "#". }
   iMod ("Halloc" $! (seed_l x1 nR) (seed_r x1' nR')
-          with "[tt_s_seal tts_s_seal tt_k tts_k] sec_s sec_s' fl_s fl_s'")
+          with "[tt_k tts_k] sec_s sec_s' fl_s fl_s'")
     as "#Hss".
-  { rewrite /key_tokens /never_sealed_under. iFrame. }
+  { rewrite /key_tokens. iFrame. }
   iMod (seals_inv_link (E:=⊤) (N:=sealsIN) ltac:(solve_ndisj) ltac:(solve_ndisj)
     with "HinvI [by_tg3 by_tg3' tt_tg3 tts_tg3 tt_c3 tts_c3] link mk mk'")
     as "[#Hc2 #Hl]".

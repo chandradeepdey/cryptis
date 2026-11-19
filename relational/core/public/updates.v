@@ -47,7 +47,8 @@ The right hand side lemmas are identical, but use primed names and refer to
 - The [public_lock_PublicLink] family and [public_extend] produce
   [publicly_linked]. They accept various combinations of not being in
   [states_l] already and being marked [Pending] in it. See the comment on
-  [public_lock_PublicLink] for more details. *)
+  [public_lock_PublicLink] for more details.  They take
+  [public_deposit_l] and [public_deposit_r]. *)
 
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
@@ -84,7 +85,7 @@ iIntros (HE) "#(_ & _ & Hinv) Httf".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates_inv &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_l_fresh prots_l t with "Hmeta_prots_l Httf") as "%Hfresh".
 iMod (own_update with "Hprots_l") as "[Hprots_l Hprots_frag_t]".
@@ -130,7 +131,7 @@ iIntros (HE) "#(_ & _ & Hinv) Httf".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates_inv &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_r_fresh prots_r t' with "Hmeta_prots_r Httf") as "%Hfresh".
 iMod (own_update with "Hprots_r") as "[Hprots_r Hprots_frag_t']".
@@ -180,7 +181,7 @@ iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
 iDestruct (big_sepM_delete _ _ t _ Hfltts with "Hprots_l_frag") as "[Hl_frac2 Hprots_l_frag]".
@@ -243,7 +244,7 @@ iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t' _ Hfrt'ts with "Hprots_r_frag") as "[Hr_frac2 Hprots_r_frag]".
@@ -306,7 +307,7 @@ iIntros (HE Hni Hsub) "#(_ & _ & Hinv) Hl_frac #Hsec".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (secret_in_l_lookup with "Hstates_l Hsec") as "%Hstates_t".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
@@ -375,7 +376,7 @@ iIntros (HE Hni Hsub) "#(_ & _ & Hinv) Hr_frac #Hsec".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (secret_in_r_lookup with "Hstates_r Hsec") as "%Hstates_t".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
@@ -446,7 +447,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -512,7 +513,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -578,7 +579,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hfrag") as "%Hpltts".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -646,7 +647,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_lookup with "Hstates_r Hfrag") as "%Hprtst'".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -714,7 +715,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l (TNonce a) with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -776,7 +777,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r (TNonce a') with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -838,7 +839,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hfrag") as "%Hpltts".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -902,7 +903,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_lookup with "Hstates_r Hfrag") as "%Hprtst'".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -965,7 +966,7 @@ iPoseProof (public_prots_l_ne with "Hprot Hprot1") as "%Hne".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
 iPoseProof (public_prots_l_lookup with "Hprots_l Hprot1") as "(%ts1 & % & %)".
@@ -1038,7 +1039,7 @@ iPoseProof (public_prots_r_ne with "Hprot Hprot1") as "%Hne".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_prots_r_lookup with "Hprots_r Hprot1") as "(%ts1 & % & %)".
@@ -1112,7 +1113,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hl_frac_sup Htt_sup".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l tsup with "Hmeta_states_l Htt_sup") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
@@ -1184,7 +1185,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hr_frac_sup Htts_sup".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r t'sup with "Hmeta_states_r Htts_sup") as "%Hfresh".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
@@ -1253,7 +1254,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot #Hpub".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (publicly_linked_lookup_l with "Hstates_l Hpub") as "%Hpltsupt'".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
@@ -1325,7 +1326,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot #Hpub".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_deposits & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (publicly_linked_lookup_r with "Hstates_r Hpub") as "%Hprtt'sup".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
@@ -1401,7 +1402,9 @@ iIntros (HE) "#(_ & _ & Hinv) Hprot Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_prots_l_lookup with "Hprots_l Hprot") as "%Hprot".
@@ -1413,6 +1416,9 @@ iMod (own_update with "Hstates_l") as "[Hstates_l Hstates_frag_t]".
 iDestruct "Hstates_frag_t" as "[[Hstates_t_frag Hstates_t_frag'] Hstates_frag_t]".
 iMod (states_meta_l_set with "Htt") as "#Hmeta_states_t".
 iModIntro. iSplitR "Hprot Hstates_frag_t Hstates_t_frag'"; last by iFrame.
+iAssert (public_PublicLink_l_deposits (<[t := Pending t']> states_l))
+  with "[Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[] Hpublic_deposit_l"). }
 iModIntro. iExists (<[t := Pending t']> states_l), states_r.
 iFrame. iFrame "#".
 iSplitL "Hstates_l Hstates_l_frag Hstates_t_frag".
@@ -1449,7 +1455,9 @@ iIntros (HE) "#(_ & _ & Hinv) Hprot Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_r_lookup with "Hprots_r Hprot") as "%Hprot".
@@ -1461,6 +1469,9 @@ iMod (own_update with "Hstates_r") as "[Hstates_r Hstates_frag_t']".
 iDestruct "Hstates_frag_t'" as "[[Hstates_t'_frag Hstates_t'_frag'] Hstates_frag_t']".
 iMod (states_meta_r_set with "Htts") as "#Hmeta_states_t'".
 iModIntro. iSplitR "Hprot Hstates_frag_t' Hstates_t'_frag'"; last by iFrame.
+iAssert (public_PublicLink_r_deposits (<[t' := Pending t]> states_r))
+  with "[Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[] Hpublic_deposit_r"). }
 iModIntro. iExists states_l, (<[t' := Pending t]> states_r).
 iFrame. iFrame "#".
 iSplitL "Hstates_r Hstates_r_frag Hstates_t'_frag".
@@ -1497,7 +1508,9 @@ iIntros (HE) "#(_ & _ & Hinv) Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l (TNonce a) with "Hmeta_states_l Htt") as "%Hfresh".
 iMod (own_update with "Hstates_l") as "[Hstates_l Hstates_frag_t]".
@@ -1508,6 +1521,9 @@ iMod (own_update with "Hstates_l") as "[Hstates_l Hstates_frag_t]".
 iDestruct "Hstates_frag_t" as "[[Hstates_t_frag Hstates_t_frag'] Hstates_frag_t]".
 iMod (states_meta_l_set with "Htt") as "#Hmeta_states_t".
 iModIntro. iSplitR "Hstates_frag_t Hstates_t_frag'"; last by iFrame.
+iAssert (public_PublicLink_l_deposits (<[(TNonce a) := Pending t']> states_l))
+  with "[Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[] Hpublic_deposit_l"). }
 iModIntro. iExists (<[TNonce a := Pending t']> states_l), states_r, prots_l, prots_r.
 iFrame. iFrame "#".
 iSplitL "Hstates_l Hstates_l_frag Hstates_t_frag".
@@ -1544,7 +1560,9 @@ iIntros (HE) "#(_ & _ & Hinv) Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r (TNonce a') with "Hmeta_states_r Htts") as "%Hfresh".
 iMod (own_update with "Hstates_r") as "[Hstates_r Hstates_frag_t']".
@@ -1555,6 +1573,9 @@ iMod (own_update with "Hstates_r") as "[Hstates_r Hstates_frag_t']".
 iDestruct "Hstates_frag_t'" as "[[Hstates_t'_frag Hstates_t'_frag'] Hstates_frag_t']".
 iMod (states_meta_r_set with "Htts") as "#Hmeta_states_t'".
 iModIntro. iSplitR "Hstates_frag_t' Hstates_t'_frag'"; last by iFrame.
+iAssert (public_PublicLink_r_deposits (<[(TNonce a') := Pending t]> states_r))
+  with "[Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[] Hpublic_deposit_r"). }
 iModIntro. iExists states_l, (<[TNonce a' := Pending t]> states_r), prots_l, prots_r.
 iFrame. iFrame "#".
 iSplitL "Hstates_r Hstates_r_frag Hstates_t'_frag".
@@ -1663,7 +1684,9 @@ iIntros (HE) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   Hprots &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hl_frac") as "%Hpltt'".
 iDestruct (big_sepM_delete _ _ t _ Hpltt' with "Hstates_l_frag") as "[Hl_frac2 Hstates_l_frag]".
@@ -1677,6 +1700,9 @@ iMod (own_update_2 with "Hstates_l Hl") as "[Hstates_l Hl]".
   apply state_local_update_lock_Secret. }
 iDestruct "Hl" as "[_ #Hl]".
 iModIntro. iSplitL; last by iFrame "#".
+iAssert (public_PublicLink_l_deposits (<[t := Secret]> states_l))
+  with "[Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[] Hpublic_deposit_l"). }
 iModIntro. iExists (<[t := Secret]> states_l), states_r, prots_l, prots_r.
 rewrite /public_inv.
 iFrame. iFrame "#".
@@ -1707,7 +1733,9 @@ iIntros (HE) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   Hprots &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_lookup with "Hstates_r Hr_frac") as "%Hprtt'".
 iDestruct (big_sepM_delete _ _ t' _ Hprtt' with "Hstates_r_frag") as "[Hr_frac2 Hstates_r_frag]".
@@ -1721,6 +1749,9 @@ iMod (own_update_2 with "Hstates_r Hr") as "[Hstates_r Hr]".
   apply state_local_update_lock_Secret. }
 iDestruct "Hr" as "[_ #Hr]".
 iModIntro. iSplitL; last by iFrame "#".
+iAssert (public_PublicLink_r_deposits (<[t' := Secret]> states_r))
+  with "[Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[] Hpublic_deposit_r"). }
 iModIntro. iExists states_l, (<[t' := Secret]> states_r), prots_l, prots_r.
 rewrite /public_inv.
 iFrame. iFrame "#".
@@ -1825,18 +1856,28 @@ Lemma public_lock_PublicLink E t t' :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
+  public_deposit_l t t' -∗
+  public_deposit_r t t' -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
   pending_in_l t t' -∗
   pending_in_r t t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Hl_frac Hr_frac".
+iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hsl Hsr Hprot Hprot1 Hl_frac Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
+iAssert (public_PublicLink_l_deposits (<[t := PublicLink t']> states_l))
+  with "[Hsl Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[Hsl] Hpublic_deposit_l"). }
+iAssert (public_PublicLink_r_deposits (<[t' := PublicLink t]> states_r))
+  with "[Hsr Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[Hsr] Hpublic_deposit_r"). }
 iPoseProof (public_states_l_lookup with "Hstates_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_states_r_lookup with "Hstates_r Hr_frac") as "%Hprtt'".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hprot") as "%Hfltts".
@@ -1901,18 +1942,28 @@ Lemma public_lock_PublicLink_l E t t' :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
+  public_deposit_l t t' -∗
+  public_deposit_r t t' -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
   pending_in_l t t' -∗
   states_token_r t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Hl_frac Htts".
+iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hsl Hsr Hprot Hprot1 Hl_frac Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
+iAssert (public_PublicLink_l_deposits (<[t := PublicLink t']> states_l))
+  with "[Hsl Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[Hsl] Hpublic_deposit_l"). }
+iAssert (public_PublicLink_r_deposits (<[t' := PublicLink t]> states_r))
+  with "[Hsr Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[Hsr] Hpublic_deposit_r"). }
 iPoseProof (public_states_l_lookup with "Hstates_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hprot") as "%Hfltts".
@@ -1977,18 +2028,28 @@ Lemma public_lock_PublicLink_r E t t' :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
+  public_deposit_l t t' -∗
+  public_deposit_r t t' -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
   states_token_l t -∗
   pending_in_r t t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Htt Hr_frac".
+iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hsl Hsr Hprot Hprot1 Htt Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
+iAssert (public_PublicLink_l_deposits (<[t := PublicLink t']> states_l))
+  with "[Hsl Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[Hsl] Hpublic_deposit_l"). }
+iAssert (public_PublicLink_r_deposits (<[t' := PublicLink t]> states_r))
+  with "[Hsr Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[Hsr] Hpublic_deposit_r"). }
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_states_r_lookup with "Hstates_r Hr_frac") as "%Hprtt'".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hprot") as "%Hfltts".
@@ -2053,18 +2114,28 @@ Lemma public_extend E t t' :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
+  public_deposit_l t t' -∗
+  public_deposit_r t t' -∗
   protects_superterms_l t ∅ -∗
   protects_superterms_r t' ∅ -∗
   states_token_l t -∗
   states_token_r t' -∗
   |={E}=> publicly_linked t t'.
 Proof.
-iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Htt Htts".
+iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hsl Hsr Hprot Hprot1 Htt Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
+                  [Hpublic_deposit_l Hpublic_deposit_r] &
+                  [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
+iAssert (public_PublicLink_l_deposits (<[t := PublicLink t']> states_l))
+  with "[Hsl Hpublic_deposit_l]" as "Hpublic_deposit_l".
+{ by iApply (big_sepM_insert_2 with "[Hsl] Hpublic_deposit_l"). }
+iAssert (public_PublicLink_r_deposits (<[t' := PublicLink t]> states_r))
+  with "[Hsr Hpublic_deposit_r]" as "Hpublic_deposit_r".
+{ by iApply (big_sepM_insert_2 with "[Hsr] Hpublic_deposit_r"). }
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh_l".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh_r".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hprot") as "%Hfltts".

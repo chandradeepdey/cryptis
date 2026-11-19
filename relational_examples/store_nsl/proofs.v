@@ -6,7 +6,7 @@ store of [store.v] over a connection under that key.
 - R records the session of its run on I's seed, when NSL hands it the
   session.  Recording it makes the session key secret, and starts the
   connection invariant of [conn.v] with the never-sealed tokens of the
-  session secret, which is the key's seed.
+  session key.
 - The game creates the keys, starts the server in a new thread, and runs
   the client: the stores, then the load, whose result goes to the
   attacker. *)
@@ -89,12 +89,12 @@ Lemma store_alloc skI γ :
   ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
     protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ store_sess skI s s'.
 Proof.
-iIntros "#Hctx #Hinv tok" (s s') "(ns & tt_k & tts_k) #sec #sec' prot prot'".
+iIntros "#Hctx #Hinv tok" (s s') "(tt_k & tts_k) #sec #sec' prot prot'".
 iPoseProof (term_token_minted with "tt_k") as "#mk".
 iPoseProof (term_token_spec_minted_spec with "tts_k") as "#mk'".
-iDestruct (term_token_public_token_l with "tt_k") as "(tt_k & _ & _)";
+iDestruct (term_token_public_token_l with "tt_k") as "(tt_k & ns & _)";
   first (rewrite /sess_key; solve_not_TSeal).
-iDestruct (term_token_public_token_r with "tts_k") as "(tts_k & _ & _)";
+iDestruct (term_token_public_token_r with "tts_k") as "(tts_k & ns' & _)";
   first (rewrite /sess_key; solve_not_TSeal).
 iMod (public_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
@@ -110,7 +110,7 @@ iAssert (store_sess skI s s') as "#Hs"; first by iFrame "#".
 iModIntro. iSplitL; last done.
 iNext. iRight. iExists (SEncKey s), (SEncKey s').
 iSplitR; first by iExists s, s'; iFrame "Hs".
-by iApply (conn_state_init γ Φs (SEncKey s) (SEncKey s') with "ns [$log0 $log1]").
+by iApply (conn_state_init γ Φs (SEncKey s) (SEncKey s') with "[$ns $ns'] [$log0 $log1]").
 Qed.
 
 Lemma session_keys E skI skI' skR skR' s s' :
@@ -125,11 +125,7 @@ iMod (session_sess with "Hctx Hnsl Hs") as (nI nI' nR nR' [-> ->]) "(_ & #HnR & 
   [done..|].
 iModIntro. iPoseProof "Hss" as "(_ & _ & mk & mk' & sk & sk')".
 iSplit; first by iExists _, _; iSplit; last iFrame "Hss".
-iFrame "mk mk' sk sk'". rewrite /sess_key [term_of_senc_key]unlock.
-iIntros "!> #H".
-iDestruct (public_TKey with "H") as "[_ [Hseed|(_ & _ & [Hl _] & _)]]".
-- by iApply (seed_not_pub with "HnR Hseed").
-- by iApply (secret_in_l_publicly_linked_in_l with "sk Hl").
+by iFrame "mk mk' sk sk'".
 Qed.
 
 Lemma store_client_refinement skI skI' skR skR' γ c c' :

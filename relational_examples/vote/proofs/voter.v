@@ -38,10 +38,7 @@ iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_spec_pkey.
 rewrite /ballot. rel_pures.
 rel_apply (refines_nondet_aenc (λ _, ∅) (λ _, ∅) skT skT'
-  with "Hctx mint_T mint_T' elem_pkT [] mint_v mint_v' [] [] [] []").
-{ iIntros "!> %n %n' _ _ #Hs". iExFalso. iRevert "Hs".
-  rewrite [term_of_aenc_key]unlock. iIntros "#Hs".
-  by iApply (secret_in_l_TKey_public _ _ HnonceT with "secret_T secret_kT Hs"). }
+  with "Hctx mint_T mint_T' elem_pkT mint_v mint_v' [] [] [] []").
 { iPureIntro. set_solver. }
 { iPureIntro. set_solver. }
 { by iIntros (?); rewrite big_sepS_empty. }
@@ -53,11 +50,13 @@ iMod (urn_inv_seal (E:=⊤) skT skT' _ _ (PUB⟨ballot_ct skT n v, ballot_ct skT
 { iApply (term_token_drop with "tc"). solve_ndisj. }
 { iApply (term_token_spec_drop with "tc'"). solve_ndisj. }
 { iIntros (Ek Ek') "%sub %sub' ns".
-  by iMod ("upd" $! (⊤ ∖ ↑urnN) Ek Ek' with "[] [//] [//] ns") as "($ & _ & $)";
-    first (iPureIntro; solve_ndisj). }
+  iMod ("upd" $! (⊤ ∖ ↑urnN) Ek Ek' with "[] [//] [//] [] ns") as "($ & _ & $)";
+    [iPureIntro; solve_ndisj | | done].
+  iIntros "rel rel'". rewrite /Spec.nondet_aenc /Spec.enc [term_of_aenc_key]unlock /=.
+  iSplitL "rel"; iLeft; iFrame; by iRight. }
 iAssert (PUB⟨ballot_body skT n v, ballot_body skT' n' v'⟩) as "#pub_tgc".
 { rewrite /ballot_body public_tag. by iSplit. }
-iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hctx Hballot token []") as "#pub_sig";
+iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hctx Hballot token pub_tgc []") as "#pub_sig";
   [solve_ndisj..| |].
 { iIntros "!> #Hsu".
   by iApply (pub_sign with "mint_V mint_V' secret_V secret_V' pub_pkV pub_tgc Hsu"). }

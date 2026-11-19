@@ -140,23 +140,23 @@ Proof. apply _. Qed.
     [P] holding for each.  The plaintexts not in [S] are still unsealed. *)
 Definition seals_inv sk sk' (P : term * term → iProp) : iProp :=
   ∃ S E E',
-    never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk') E E' ∗
-    ⌜∀ u, ↑seal_namespace (Spec.pkey sk) u ⊆ E ∨ ∃ e, e ∈ S ∧ e.1 = u⌝ ∗
-    ⌜∀ u', ↑seal_namespace (Spec.pkey sk') u' ⊆ E' ∨ ∃ e, e ∈ S ∧ e.2 = u'⌝ ∗
+    never_sealed_under (Spec.pkey sk) (Spec.pkey sk') E E' ∗
+    ⌜∀ u, ↑seal_namespace u ⊆ E ∨ ∃ e, e ∈ S ∧ e.1 = u⌝ ∗
+    ⌜∀ u', ↑seal_namespace u' ⊆ E' ∨ ∃ e, e ∈ S ∧ e.2 = u'⌝ ∗
     □ ([∗ set] e ∈ S, publicly_linked (TSeal (Spec.pkey sk) e.1) (TSeal (Spec.pkey sk') e.2) ∗
                       seal_mark sk sk' e) ∗
     [∗ set] e ∈ S, P e.
 
 Lemma seals_elem_of_l E sk sk' S E0 u x :
   ↑cryptisN ⊆ E →
-  (∀ u0, ↑seal_namespace (Spec.pkey sk) u0 ⊆ E0 ∨ ∃ e, e ∈ S ∧ e.1 = u0) →
+  (∀ u0, ↑seal_namespace u0 ⊆ E0 ∨ ∃ e, e ∈ S ∧ e.1 = u0) →
   hypercryptis_ctx -∗
-  term_token (seed_of_aenc_key sk) E0 -∗
+  term_token (Spec.pkey sk) E0 -∗
   ([∗ set] e ∈ S, publicly_linked (TSeal (Spec.pkey sk) e.1) (TSeal (Spec.pkey sk') e.2) ∗
                   seal_mark sk sk' e) -∗
   publicly_linked (TSeal (Spec.pkey sk) u) x ={E}=∗
   ⌜∃ u', (u, u') ∈ S ∧ x = TSeal (Spec.pkey sk') u'⌝ ∗
-  term_token (seed_of_aenc_key sk) E0.
+  term_token (Spec.pkey sk) E0.
 Proof.
 move=> HE HS. iIntros "#Hctx tok #Hrec #[Hl _]".
 case: (HS u) => [sub|[[e1 e2] [He Heq]]]; last (simpl in Heq; subst e1).
@@ -172,14 +172,14 @@ Qed.
 
 Lemma seals_elem_of_r E sk sk' S E0' u' x :
   ↑cryptisN ⊆ E →
-  (∀ u0', ↑seal_namespace (Spec.pkey sk') u0' ⊆ E0' ∨ ∃ e, e ∈ S ∧ e.2 = u0') →
+  (∀ u0', ↑seal_namespace u0' ⊆ E0' ∨ ∃ e, e ∈ S ∧ e.2 = u0') →
   hypercryptis_ctx -∗
-  term_token_spec (seed_of_aenc_key sk') E0' -∗
+  term_token_spec (Spec.pkey sk') E0' -∗
   ([∗ set] e ∈ S, publicly_linked (TSeal (Spec.pkey sk) e.1) (TSeal (Spec.pkey sk') e.2) ∗
                   seal_mark sk sk' e) -∗
   publicly_linked x (TSeal (Spec.pkey sk') u') ={E}=∗
   ⌜∃ u, (u, u') ∈ S ∧ x = TSeal (Spec.pkey sk) u⌝ ∗
-  term_token_spec (seed_of_aenc_key sk') E0'.
+  term_token_spec (Spec.pkey sk') E0'.
 Proof.
 move=> HE HS. iIntros "#Hctx tok #Hrec #[_ Hr]".
 case: (HS u') => [sub|[[e1 e2] [He Heq]]]; last (simpl in Heq; subst e2).
@@ -214,13 +214,13 @@ case eL: (Spec.open sk t) => [u|]; case eR: (Spec.open sk' t') => [u'|]; iSimpl 
 - move/Spec.open_aenc_key_Some: (eL) => ?; subst t.
   iDestruct "Ho" as "[Hl _]".
   iInv "Hinv" as "(%S & %E1 & %E1' & >[tok _] & >%HS & _ & >#Hrec & _)".
-  iMod (seals_elem_of_l _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu _]".
+  iMod (seals_elem_of_l _ _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu _]".
   case: Hu => u'' [_ ?]; subst t'.
   by rewrite (proj2 (Spec.open_aenc_key_Some _ _ _) eq_refl) in eR.
 - move/Spec.open_aenc_key_Some: (eR) => ?; subst t'.
   iDestruct "Ho" as "[Hr _]".
   iInv "Hinv" as "(%S & %E1 & %E1' & >[_ tok'] & _ & >%HS' & >#Hrec & _)".
-  iMod (seals_elem_of_r _ _ _ HE HS' with "Hctx tok' Hrec Hr") as "[%Hu _]".
+  iMod (seals_elem_of_r _ _ _ _ HE HS' with "Hctx tok' Hrec Hr") as "[%Hu _]".
   case: Hu => u'' [_ ?]; subst t.
   by rewrite (proj2 (Spec.open_aenc_key_Some _ _ _) eq_refl) in eL.
 - iModIntro. by iLeft.
@@ -229,10 +229,10 @@ Qed.
 Definition seal_step sk sk' e (Q : iProp) : iProp :=
   ∀ E Ek Ek',
     ⌜↑cryptisN ⊆ E⌝ -∗
-    ⌜↑seal_namespace (Spec.pkey sk) e.1 ⊆ Ek⌝ -∗ ⌜↑seal_namespace (Spec.pkey sk') e.2 ⊆ Ek'⌝ -∗
-    never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk') Ek Ek' ={E}=∗
-    never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
-      (Ek ∖ ↑seal_namespace (Spec.pkey sk) e.1) (Ek' ∖ ↑seal_namespace (Spec.pkey sk') e.2) ∗
+    ⌜↑seal_namespace e.1 ⊆ Ek⌝ -∗ ⌜↑seal_namespace e.2 ⊆ Ek'⌝ -∗
+    never_sealed_under (Spec.pkey sk) (Spec.pkey sk') Ek Ek' ={E}=∗
+    never_sealed_under (Spec.pkey sk) (Spec.pkey sk')
+      (Ek ∖ ↑seal_namespace e.1) (Ek' ∖ ↑seal_namespace e.2) ∗
     publicly_linked (TSeal (Spec.pkey sk) e.1) (TSeal (Spec.pkey sk') e.2) ∗ Q.
 
 (** Encrypting under an honest key a plaintext that one of its subterms
@@ -255,8 +255,8 @@ Lemma aenc_link E sk sk' (N : namespace) m m' {tsub tsub'} :
   term_token (Spec.enc (Spec.pkey sk) (Tag N) m) (↑markN) ∗
   term_token_spec (Spec.enc (Spec.pkey sk') (Tag N) m') (↑markN).
 Proof.
-iIntros (HE) "#Hctx (%Hnonce & _ & #mint_sk & #mint_sk' & _ & #elem_pk & #secret & _ &
-                      #secret_sk & _)".
+iIntros (HE) "#Hctx (_ & _ & #mint_sk & #mint_sk' & _ & #elem_pk & _ & _ &
+                      #secret_sk & #secret_sk')".
 iIntros "#mint_m #mint_m' protby protby' tt_tg tts_tg tt_c tts_c".
 iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
@@ -264,26 +264,20 @@ iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
 iDestruct (term_token_public_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
 iMod (public_link HE with "Hctx protby protby' tt_tg tts_tg") as "#link_tg".
-iAssert (secret_in_l (TKey ADec (seed_of_aenc_key sk))) as "#secret_k".
-{ by rewrite [term_of_aenc_key]unlock. }
-iAssert (□ (PUB⟨TKey ADec (seed_of_aenc_key sk), TKey ADec (seed_of_aenc_key sk')⟩ →
-            PUB⟨Spec.tag (Tag N) m, Spec.tag (Tag N) m'⟩))%I as "#Hbox".
-{ iIntros "!> #Hs". iExFalso.
-  by iApply (secret_in_l_TKey_public _ _ Hnonce with "secret secret_k Hs"). }
 iAssert (minted (Spec.tag (Tag N) m)) as "#mint_tg"; first by rewrite minted_tag.
 iAssert (minted_spec (Spec.tag (Tag N) m')) as "#mint_tg'"; first by rewrite minted_spec_tag.
 iModIntro. iSplitR "tt_c tts_c"; last first.
 { iSplitL "tt_c"; [iApply (term_token_drop with "tt_c") |
                    iApply (term_token_spec_drop with "tts_c")]; solve_ndisj. }
 iIntros (E0 Ek Ek' HE0 sub sub') "ns".
-rewrite /Spec.enc !Spec.aenc_key_pkey in sub sub' *.
-iMod (public_seal HE0 sub sub' with "Hctx [] ns") as "(#Hpl & #Hpub & $)";
+rewrite /Spec.enc [term_of_aenc_key]unlock /=.
+iMod (public_seal _ _ HE0 sub sub' with "Hctx [] [] ns") as "(#Hpl & #Hpub & $)";
   last by iFrame "#".
-iIntros "!> #Hpl". rewrite public_TSeal. iRight.
-rewrite minted_TSeal minted_spec_TSeal.
-iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro.
-iSplit; first done. by iRight.
+- iIntros "!> #Hpl". rewrite public_TSeal. iRight.
+  rewrite minted_TSeal minted_spec_TSeal.
+  iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
+  iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro. by iRight.
+- iIntros "rel rel'". iSplitL "rel"; iLeft; iFrame; by iRight.
 Qed.
 
 (** Runs the step of [aenc_link], given [P] for the new seal. *)
@@ -300,11 +294,11 @@ Proof.
 iIntros (HN HE) "#Hinv HP link mk mk'".
 set e := aenc_seal Nm m m'.
 iInv "Hinv" as "(%S & %E0 & %E0' & >ns & >%HS & >%HS' & >#Hrec & HPs)".
-iAssert ⌜↑seal_namespace (Spec.pkey sk) e.1 ⊆ E0⌝%I as %sub.
+iAssert ⌜↑seal_namespace e.1 ⊆ E0⌝%I as %sub.
 { case: (HS e.1) => [|[e0 [He0 He01]]]; first done.
   iDestruct (big_sepS_elem_of _ _ _ He0 with "Hrec") as "[_ [Hm _]]".
   rewrite He01. by iDestruct (term_meta_token with "mk Hm") as "[]". }
-iAssert ⌜↑seal_namespace (Spec.pkey sk') e.2 ⊆ E0'⌝%I as %sub'.
+iAssert ⌜↑seal_namespace e.2 ⊆ E0'⌝%I as %sub'.
 { case: (HS' e.2) => [|[e0 [He0 He02]]]; first done.
   iDestruct (big_sepS_elem_of _ _ _ He0 with "Hrec") as "[_ [_ Hm']]".
   rewrite He02. by iDestruct (term_meta_spec_token with "mk' Hm'") as "[]". }
@@ -318,7 +312,7 @@ iExists (S ∪ {[e]}), _, _. iFrame "ns". iSplit.
     apply elem_of_union_r. exact: elem_of_singleton_2.
   - case: (HS u) => [sub0|[e0 [? ?]]].
     + left. apply subseteq_difference_r; last done.
-      apply ndot_ne_disjoint. by case.
+      by apply ndot_ne_disjoint.
     + right. exists e0. split; last done. exact: elem_of_union_l. }
 iSplit.
 { iPureIntro. move=> u'. case: (decide (u' = e.2)) => [He|ne].
@@ -326,7 +320,7 @@ iSplit.
     apply elem_of_union_r. exact: elem_of_singleton_2.
   - case: (HS' u') => [sub0|[e0 [? ?]]].
     + left. apply subseteq_difference_r; last done.
-      apply ndot_ne_disjoint. by case.
+      by apply ndot_ne_disjoint.
     + right. exists e0. split; last done. exact: elem_of_union_l. }
 iSplit; last by iApply (big_sepS_insert_2' with "HP HPs").
 iModIntro. iApply (big_sepS_insert_2' with "[] Hrec").
@@ -340,7 +334,7 @@ Section KeyGeneration.
 Lemma mk_honest_key_refinement K K' Ψ :
   hypercryptis_ctx -∗
   (∀ sk sk', honest_key sk sk' -∗
-     never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
+     never_sealed_under (Spec.pkey sk) (Spec.pkey sk')
        (↑sealN) (↑sealN) -∗
      term_token (seed_of_aenc_key sk) (⊤ ∖ ↑hypercryptisN) -∗
      REL fill K (sk : expr) << fill K' (sk' : expr) : Ψ) -∗
@@ -364,10 +358,10 @@ rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with 
   [solve_minted_iff.. |].
 iIntros (sk') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.
-iMod (public_secret_seals_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
-  as "(#secret_s & seals & prot_s & token_s)".
-iMod (public_secret_seals_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
-  as "(#secret_s' & seals' & prot_s' & _)".
+iMod (public_secret_nonce_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
+  as "(#secret_s & prot_s & token_s)".
+iMod (public_secret_nonce_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
+  as "(#secret_s' & prot_s' & _)".
 iDestruct (term_token_public_token_l with "token_sk") as "(token_sk & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_sk'") as "(token_sk' & _ & _)";
@@ -376,15 +370,17 @@ iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key sk) ltac:(sol
         with "Hctx secret_s prot_s token_sk") as "[#secret_sk _]".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key sk') ltac:(solve_ndisj)
         with "Hctx secret_s' prot_s' token_sk'") as "[#secret_sk' _]".
-iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & _ & _)";
+iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & seals & _)";
   first solve_not_TSeal.
-iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & _ & _)";
+iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & seals' & _)";
   first solve_not_TSeal.
 iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
-        with "Hctx [] token_pk token_pk'") as "[#elem_pk #pub_pk]".
+        with "Hctx [] [] [] token_pk token_pk'") as "[#elem_pk #pub_pk]".
 { iIntros "!> #elem". rewrite public_aenc_key. iRight.
   do 3 (iSplit; first done).
   by iApply secret_in_linked. }
+{ by rewrite [term_of_aenc_key]unlock. }
+{ by rewrite [term_of_aenc_key]unlock. }
 iApply ("post" with "[] [$seals $seals'] token_s").
 do 2 (iSplit; first done). by iFrame "#".
 Qed.
@@ -402,7 +398,6 @@ Context {sess_persistent : ∀ s s', Persistent (sess s s')}.
 Context {sess_timeless : ∀ s s', Timeless (sess s s')}.
 
 Definition key_tokens s s' : iProp :=
-  never_sealed_under s s' (↑sealN) (↑sealN) ∗
   term_token (sess_key s) ⊤ ∗ term_token_spec (sess_key s') ⊤.
 
 Definition seed_l nI nR := sess_seed (Spec.pkey skI) (Spec.pkey skR) nI nR.
@@ -491,7 +486,7 @@ Lemma seals_R_lookup E u u' :
 Proof.
 iIntros (HN HE) "#Hctx (_ & _ & _ & #Hinv) #Hl".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >#HP)".
-iMod (seals_elem_of_l _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
+iMod (seals_elem_of_l _ _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
 case: Hu => u0' [Hin [= Hu0]]; subst u0'.
 iDestruct (big_sepS_elem_of with "HP") as "#He"; first exact: Hin.
 iModIntro. iSplitL "tok tok'"; last by iModIntro.
@@ -507,7 +502,7 @@ Lemma seals_I_lookup E u u' :
 Proof.
 iIntros (HN HE) "#Hctx (_ & _ & #Hinv & _) #Hl".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >HP)".
-iMod (seals_elem_of_l _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
+iMod (seals_elem_of_l _ _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
 case: Hu => u0' [Hin [= Hu0]]; subst u0'.
 iDestruct (big_sepS_elem_of_acc with "HP") as "[He HP]"; first exact: Hin.
 iDestruct "He" as (nI nI' nR nR' e) "(#Hf & slot3)".
@@ -525,7 +520,7 @@ Lemma session_sess E s s' :
 Proof.
 iIntros (HN HE) "#Hctx (_ & _ & #Hinv & _) (%nI & %nI' & %nR & %nR' & -> & -> & #Hl)".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >HP)".
-iMod (seals_elem_of_l _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
+iMod (seals_elem_of_l _ _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
 case: Hu => u0' [Hin [= Hu0]]; subst u0'.
 iDestruct (big_sepS_elem_of_acc with "HP") as "[He HP]"; first exact: Hin.
 iDestruct "He" as (nI0 nI0' nR0 nR0' e) "(#Hf & slot3)".
@@ -546,7 +541,7 @@ Lemma claim_m3 E nI nI' nR nR' :
 Proof.
 iIntros (HN HE) "#Hctx (_ & _ & #Hinv & _) #Hl claim".
 iInv "Hinv" as "(%S & %E0 & %E0' & >[tok tok'] & >%HS & >%HS' & >#Hrec & >HP)".
-iMod (seals_elem_of_l _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
+iMod (seals_elem_of_l _ _ _ _ HE HS with "Hctx tok Hrec Hl") as "[%Hu tok]".
 case: Hu => u0' [Hin [= Hu0]]; subst u0'.
 iDestruct (big_sepS_elem_of_acc with "HP") as "[He HP]"; first exact: Hin.
 iDestruct "He" as (nI0 nI0' nR0 nR0' e) "(#Hf & slot3)".

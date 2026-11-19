@@ -284,7 +284,8 @@ iDestruct (term_token_public_token_l with "Htt") as "(Htt & _ & _)";
   first by move: Hn => /is_nonceP [? ->].
 iDestruct (term_token_public_token_r with "Htts") as "(Htts & _ & _)";
   first by move: Hn' => /is_nonceP [? ->].
-iMod (public_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] Htt Htts") as "[_ #Hpub]".
+iMod (public_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] [] [] Htt Htts") as "[_ #Hpub]";
+  [|by move: Hn {Hn'} => /is_nonceP [? ->]|by move: Hn' {Hn} => /is_nonceP [? ->]|].
 { iIntros "!> #Hel". rewrite (public_nonce Hn Hn'). by iSplit; last iSplit. }
 rel_values. iModIntro. by iApply lrel_term_intro.
 Qed.

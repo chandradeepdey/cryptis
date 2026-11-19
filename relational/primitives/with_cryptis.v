@@ -646,9 +646,6 @@ Lemma refines_nondet_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
   minted sk -∗
   minted_spec sk' -∗
   publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
-  □ (∀ n n', ⌜is_nonce n⌝ → ⌜is_nonce n'⌝ →
-     PUB⟨sk, sk'⟩ →
-     PUB⟨Spec.tag (Tag N) (TPair n m), Spec.tag (Tag N) (TPair n' m')⟩) -∗
   minted m -∗ minted_spec m' -∗
   ⌜∀ n, is_nonce n → nondet_term_chain sk N n m ## T n⌝ -∗
   ⌜∀ n', is_nonce n' → nondet_term_chain sk' N n' m' ## T' n'⌝ -∗
@@ -661,12 +658,18 @@ Lemma refines_nondet_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
     term_token_spec (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m') ⊤ -∗
     (∀ E Ek Ek',
       ⌜↑cryptisN ⊆ E⌝ -∗
-      ⌜↑seal_namespace (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)) ⊆ Ek⌝ -∗
-      ⌜↑seal_namespace (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m')) ⊆ Ek'⌝ -∗
-      never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk') Ek Ek' ={E}=∗
-      never_sealed_under (seed_of_aenc_key sk) (seed_of_aenc_key sk')
-        (Ek ∖ ↑seal_namespace (Spec.pkey sk) (Spec.tag (Tag N) (TPair n m)))
-        (Ek' ∖ ↑seal_namespace (Spec.pkey sk') (Spec.tag (Tag N) (TPair n' m'))) ∗
+      ⌜↑seal_namespace (Spec.tag (Tag N) (TPair n m)) ⊆ Ek⌝ -∗
+      ⌜↑seal_namespace (Spec.tag (Tag N) (TPair n' m')) ⊆ Ek'⌝ -∗
+      (seal_release_l (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m) -∗
+       seal_release_r (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m') -∗
+       public_deposit_l (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m)
+         (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m') ∗
+       public_deposit_r (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m)
+         (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m')) -∗
+      never_sealed_under (Spec.pkey sk) (Spec.pkey sk') Ek Ek' ={E}=∗
+      never_sealed_under (Spec.pkey sk) (Spec.pkey sk')
+        (Ek ∖ ↑seal_namespace (Spec.tag (Tag N) (TPair n m)))
+        (Ek' ∖ ↑seal_namespace (Spec.tag (Tag N) (TPair n' m'))) ∗
       publicly_linked (Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m)
         (Spec.nondet_aenc (Spec.pkey sk') (Tag N) n' m') ∗
       PUB⟨Spec.nondet_aenc (Spec.pkey sk) (Tag N) n m,
@@ -676,7 +679,7 @@ Lemma refines_nondet_aenc (T T' : term → gset term) sk sk' (N : namespace) m m
   REL nondet_aenc (Spec.pkey sk) (Tag N) m
    << nondet_aenc (Spec.pkey sk') (Tag N) m' : Ψ.
 Proof.
-iIntros "#Hctx #mint_sk #mint_sk' #elem_pk #Hkey #mint_m #mint_m'".
+iIntros "#Hctx #mint_sk #mint_sk' #elem_pk #mint_m #mint_m'".
 iIntros "%HT %HT' #mintT #mintT' post".
 iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'";
@@ -721,24 +724,19 @@ iMod (public_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm
         ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
 iMod (public_link (E:=⊤) ltac:(solve_ndisj)
         with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#link_tg".
-iAssert (□ (PUB⟨TKey ADec (seed_of_aenc_key sk), TKey ADec (seed_of_aenc_key sk')⟩ →
-             PUB⟨tg, tg'⟩))%I as "#Hbox".
-{ iIntros "!> #Hs". iApply ("Hkey" $! n n' with "[//] [//]").
-  by rewrite [term_of_aenc_key]unlock. }
 iAssert (minted tg) as "#mint_tg".
 { rewrite /tg minted_tag /pl minted_TPair. by iSplit. }
 iAssert (minted_spec tg') as "#mint_tg'".
 { rewrite /tg' minted_spec_tag /pl' minted_spec_TPair. by iSplit. }
 iMod ("post" $! n n' with "[//] [//] mint_n mint_n' tokT tokT' tt_c tts_c [] ") as "post".
-{ iIntros (E Ek Ek' HE sub sub') "ns".
-  rewrite /Spec.nondet_aenc /Spec.enc !Spec.aenc_key_pkey in sub sub' *.
-  iMod (public_seal HE sub sub' with "Hctx [] ns") as "(#Hpl & #Hpub & $)";
+{ iIntros (E Ek Ek' HE sub sub') "dep ns".
+  rewrite /Spec.nondet_aenc /Spec.enc !Spec.aenc_key_pkey.
+  iMod (public_seal _ _ HE sub sub' with "Hctx [] dep ns") as "(#Hpl & #Hpub & $)";
     last by iFrame "#".
   iIntros "!> #Hpl". rewrite public_TSeal. iRight.
   rewrite minted_TSeal minted_spec_TSeal.
   iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-  iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro.
-  iSplit; first done. by iRight. }
+  iLeft. iSplit; first by iApply publicly_linked_linked. iModIntro. by iRight. }
 rel_apply_l refines_tuple_l. rel_apply_l refines_aenc'_l. rel_later.
 rel_apply_r refines_tuple_r. rel_apply_r refines_aenc'_r. by rel_values.
 Qed.

@@ -156,10 +156,10 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
   with "[tt_n tt_pl tt_tg tt_c tts_n tts_pl tts_tg tts_c]" as ">(#HnI & claim3 & #Hc1)".
 { case: (decide (pkX = Spec.pkey skR)) => [eX|neX].
   - have eX' := proj1 HX eX. subst pkX pkX'.
-    iMod (public_secret_seals_l (E:=⊤) HnI with "Hctx tt_n")
-      as "(#sec & _ & prot & tok)"; first solve_ndisj.
-    iMod (public_secret_seals_r (E:=⊤) HnI' with "Hctx tts_n")
-      as "(#sec' & _ & prot' & tok')"; first solve_ndisj.
+    iMod (public_secret_nonce_l (E:=⊤) HnI with "Hctx tt_n")
+      as "(#sec & prot & tok)"; first solve_ndisj.
+    iMod (public_secret_nonce_r (E:=⊤) HnI' with "Hctx tts_n")
+      as "(#sec' & prot' & tok')"; first solve_ndisj.
     rewrite (term_token_difference nI (↑m3claimN) (⊤ ∖ ↑hypercryptisN));
       last solve_ndisj.
     iDestruct "tok" as "[claim3 tok]".
@@ -200,10 +200,12 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
     iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)";
       first solve_not_TSeal.
     iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
-            with "Hctx [] tt_n tts_n")
+            with "Hctx [] [] [] tt_n tts_n")
       as "[_ #Hpub]".
     { iIntros "!> #?". rewrite (public_nonce HnI HnI').
       by do 2 (iSplit; first done). }
+    { by case/is_nonceP: HnI => ? ->. }
+    { by case/is_nonceP: HnI' => ? ->. }
     iModIntro. iSplit; first by iRight; iSplit.
     iSplit; first by iIntros (?).
     iApply (public_enc with "HpkX").

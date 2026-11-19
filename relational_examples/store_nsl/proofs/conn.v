@@ -10,8 +10,8 @@ what each pair means ([Φ rl n]: the [n]-th pair that role [rl] sends), and
 the receiver of a message learns it.
 
 Encrypting a message links its ciphertext to the one of the other run,
-spending a token on the seed of the session key.  The invariant keeps the
-seed's tokens for every message that is not sent yet, so a message that
+spending a token of the session key.  The invariant keeps the key's tokens
+for every message that is not sent yet, so a message that
 decrypts under the key was sent by an honest party: both runs decrypt it to a
 pair of the lists, or both fail to.
 
@@ -118,10 +118,10 @@ Definition sent_pair k k' rl n t t' : iProp :=
 Definition conn_state k k' : iProp :=
   ∃ L0 L1 Ek Ek',
     ghost_var (conn_log0 γ) (1/2) L0 ∗ ghost_var (conn_log1 γ) (1/2) L1 ∗
-    never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ∗
-    ⌜∀ u, ↑seal_namespace k u ⊆ Ek ∨
+    never_sealed_under k k' Ek Ek' ∗
+    ⌜∀ u, ↑seal_namespace u ⊆ Ek ∨
           ∃ rl n t t', logged L0 L1 rl n t t' ∧ u = conn_body rl n t⌝ ∗
-    ⌜∀ u', ↑seal_namespace k' u' ⊆ Ek' ∨
+    ⌜∀ u', ↑seal_namespace u' ⊆ Ek' ∨
            ∃ rl n t t', logged L0 L1 rl n t t' ∧ u' = conn_body rl n t'⌝ ∗
     □ (∀ rl n t t', ⌜logged L0 L1 rl n t t'⌝ → sent_pair k k' rl n t t').
 
@@ -134,8 +134,7 @@ Definition conn_ctx : iProp := inv connIN conn_inv.
 (** What the parties of the session know about its key. *)
 Definition conn_keys k k' : iProp :=
   sess k k' ∗ minted k ∗ minted_spec k' ∗
-  secret_in_l (k : term) ∗ secret_in_r (k' : term) ∗
-  □ (PUB⟨k, k'⟩ → False).
+  secret_in_l (k : term) ∗ secret_in_r (k' : term).
 
 #[global] Instance conn_keys_persistent k k' : Persistent (conn_keys k k').
 Proof. apply _. Qed.
@@ -174,7 +173,7 @@ Definition conn_handle rl (cs cs' : val) n r : iProp :=
     ghost_var (log_name rl) (1/2) L.
 
 Lemma conn_state_init k k' :
-  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
+  never_sealed_under k k'
     (↑sealN) (↑sealN) -∗
   conn_fresh -∗ conn_state k k'.
 Proof.
@@ -226,26 +225,26 @@ Lemma conn_seal_send E rl L k k' t t' :
   PUB⟨Spec.enc k (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t]),
       Spec.enc k' (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t'])⟩.
 Proof.
-iIntros (HN HE Hrl) "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & Hno) log #mt #mt' #HΦ".
+iIntros (HN HE Hrl) "#Hctx #Hinv #(Hs & mk & mk' & sk & sk') log #mt #mt' #HΦ".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & ns & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
 iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
 iDestruct (log_acc L0 L1 Hrl with "log0 log1") as "[logi back]".
 iDestruct (ghost_var_agree with "logi log") as %HL. subst L.
 set n := length (log_of rl L0 L1).
-assert (Hsub : ↑seal_namespace k (conn_body rl n t) ⊆ Ek).
+assert (Hsub : ↑seal_namespace (conn_body rl n t) ⊆ Ek).
 { case: (Hcl (conn_body rl n t)) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
-assert (Hsub' : ↑seal_namespace k' (conn_body rl n t') ⊆ Ek').
+assert (Hsub' : ↑seal_namespace (conn_body rl n t') ⊆ Ek').
 { case: (Hcl' (conn_body rl n t')) => [//|[rl2 [n2 [p [p' [[_ Hl] /conn_body_inj [? [? ?]]]]]]]].
   subst. by rewrite lookup_ge_None_2 in Hl. }
-iMod (public_seal_senc (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
+iMod (public_seal_senc k k' (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
         (t':=Spec.of_list [TInt rl; TInt n; t']) HE Hsub Hsub'
         with "Hctx mk mk' [] [] [] [] ns") as "(#Hpub & #Hsu & ns)".
 { minted_simpl. rewrite !minted_TInt. by iFrame "#". }
 { minted_simpl. rewrite !minted_spec_TInt. by iFrame "#". }
 { by iApply secret_in_linked. }
-{ iIntros "!> #Hk". by iDestruct ("Hno" with "Hk") as "[]". }
+{ iRight. by iSplit. }
 iMod (ghost_var_update_halves (log_of rl L0 L1 ++ [(t, t')]) with "logi log") as "[logi log]".
 iDestruct ("back" with "logi") as "[log0 log1]".
 iModIntro. iSplitR "log"; last by iFrame "log Hpub".
@@ -255,14 +254,14 @@ iSplit.
   { right. exists rl, n, t, t'. split; last done. apply (logged_snoc Hrl). by right. }
   case: (Hcl u) => [sub|[rl2 [n2 [p [p' [Hl ->]]]]]].
   - left. apply subseteq_difference_r; last done.
-    apply ndot_ne_disjoint. by move=> [= ?].
+    by apply ndot_ne_disjoint.
   - right. exists rl2, n2, p, p'. split; last done. apply (logged_snoc Hrl). by left. }
 iSplit.
 { iPureIntro => u. case: (decide (u = conn_body rl n t')) => [->|ne].
   { right. exists rl, n, t, t'. split; last done. apply (logged_snoc Hrl). by right. }
   case: (Hcl' u) => [sub|[rl2 [n2 [p [p' [Hl ->]]]]]].
   - left. apply subseteq_difference_r; last done.
-    apply ndot_ne_disjoint. by move=> [= ?].
+    by apply ndot_ne_disjoint.
   - right. exists rl2, n2, p, p'. split; last done. apply (logged_snoc Hrl). by left. }
 iIntros "!>" (rl2 n2 p p' Hl).
 case: (proj1 (logged_snoc Hrl) Hl) => [Hl'|[-> [-> [-> ->]]]]; first by iApply "Hsent".
@@ -298,10 +297,10 @@ Section Receive.
 
 Lemma conn_sealed_l E k Ek u t' (P : Prop) :
   ↑cryptisN ⊆ E →
-  ↑seal_namespace k u ⊆ Ek ∨ P →
+  ↑seal_namespace u ⊆ Ek ∨ P →
   hypercryptis_ctx -∗
-  term_token (seed_of_senc_key k) Ek -∗ publicly_linked (TSeal k u) t' ={E}=∗
-  ⌜P⌝ ∗ term_token (seed_of_senc_key k) Ek.
+  term_token k Ek -∗ publicly_linked (TSeal k u) t' ={E}=∗
+  ⌜P⌝ ∗ term_token k Ek.
 Proof.
 move=> HE [sub|?]; last by iIntros "_ $ _".
 rewrite (senc_key_TKey k) in sub *. iIntros "#ctx tok #[Hl _]".
@@ -315,10 +314,10 @@ Arguments conn_sealed_l {E k Ek u t' P} _ _.
 
 Lemma conn_sealed_r E k' Ek' u' t (P : Prop) :
   ↑cryptisN ⊆ E →
-  ↑seal_namespace k' u' ⊆ Ek' ∨ P →
+  ↑seal_namespace u' ⊆ Ek' ∨ P →
   hypercryptis_ctx -∗
-  term_token_spec (seed_of_senc_key k') Ek' -∗ publicly_linked t (TSeal k' u') ={E}=∗
-  ⌜P⌝ ∗ term_token_spec (seed_of_senc_key k') Ek'.
+  term_token_spec k' Ek' -∗ publicly_linked t (TSeal k' u') ={E}=∗
+  ⌜P⌝ ∗ term_token_spec k' Ek'.
 Proof.
 move=> HE [sub|?]; last by iIntros "_ $ _".
 rewrite (senc_key_TKey k') in sub *. iIntros "#ctx tok #[_ Hr]".
@@ -339,7 +338,7 @@ Lemma conn_open E k k' t t' :
     ⌜Spec.dec k' (Tag connN) t' = Some (Spec.of_list [TInt rl; TInt n; p'])⌝ ∗
     Φ rl n p p'.
 Proof.
-iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk' & Hno) #Ht".
+iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk') #Ht".
 iMod (public_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx sk sk' Ht")
   as "#Hop".
 iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & [tok tok'] & %Hcl & %Hcl' & #Hsent))]".

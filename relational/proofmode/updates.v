@@ -2,7 +2,7 @@
   spends the public token of a term, the part of the ghost state that
   decides how the two runs treat it.  A fresh term that is not a ciphertext
   takes it from its own token, through [term_token_public_token_l]; a ciphertext
-  takes it from the never-sealed tokens of the seed of its key, through
+  takes it from the never-sealed tokens of its key, through
   [never_sealed_under_public_token].  The right hand side lemmas are identical,
   but use primed names and tokens of the specification side.
 
@@ -16,23 +16,26 @@
     - [public_protect_step_l] is for a protecting term that is itself
       protected, typically the next link of such a chain.
   - Making a term secret.
-    - [public_secret_seals_l] is for a nonce, typically the seed of a key.
-      It spends the whole token of the nonce, and besides marking it secret it
-      gives back its never-sealed tokens, registers it in the prots map so that
-      it can protect the key built from it, and gives back the part of the
-      token outside the namespaces of its public token for other uses such as
-      per-protocol metadata.
+    - [public_secret_nonce_l] is for a nonce, typically the seed of a key.
+      It spends the whole token of the nonce.  Besides marking it secret, it
+      registers it in the prots map so that it can protect the key built
+      from it, and gives back the part of the token outside the namespaces
+      of HyperCryptis for other uses such as per-protocol metadata.
     - [public_secret_step_l] is for a term built on top of a secret one,
       typically the signing key built from its seed.  The secret subterm
       protects it, so nothing else is needed.
   - [public_link] links two terms protected on their respective sides,
     which is what the payload of an honest encryption needs.
-  - [public_publish] makes two fresh terms publicly linked and related by
-    [PUB], given a proof that linking them is enough for [PUB].
-    [public_seal] does the same for two ciphertexts,
-    spending the never-sealed tokens of the seeds of their keys.
-    [public_seal_senc] is [public_seal] for tagged payloads under symmetric
-    keys whose leak would make the payloads public. *)
+  - Making a term public.
+    - [public_publish] makes two fresh terms publicly linked and related by
+      [PUB], given a proof that linking them is enough for [PUB], and what
+      the invariant keeps for them ([public_deposit_l]).
+    - [public_seal] does the same for two ciphertexts, spending the
+      never-sealed tokens of their keys.  It hands the seals' releases to
+      the caller, who decides what the invariant keeps.
+    - [public_seal_senc] is [public_seal] for tagged payloads under linked
+      symmetric keys, when the payloads are related or the keys are
+      secret. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import cryptis.
@@ -54,7 +57,7 @@ Lemma public_fresh_l E t :
   public_token_l t ={E}=∗
   protects_superterms_l t ∅ ∗ states_token_l t.
 Proof.
-iIntros (?) "#ctx tok". iDestruct (public_token_l_split with "tok") as "[$ prots]".
+iIntros (?) "#ctx tok". iDestruct (public_token_l_split with "tok") as "($ & prots & _)".
 by iApply (public_prots_l_extend with "ctx prots").
 Qed.
 
@@ -64,7 +67,7 @@ Lemma public_fresh_r E t' :
   public_token_r t' ={E}=∗
   protects_superterms_r t' ∅ ∗ states_token_r t'.
 Proof.
-iIntros (?) "#ctx tok". iDestruct (public_token_r_split with "tok") as "[$ prots]".
+iIntros (?) "#ctx tok". iDestruct (public_token_r_split with "tok") as "($ & prots & _)".
 by iApply (public_prots_r_extend with "ctx prots").
 Qed.
 
@@ -122,34 +125,34 @@ by iMod (public_prots_r_grow_3 t'sub HE Hsup with "ctx by prot states")
   as "(_ & $ & _)".
 Qed.
 
-Lemma public_secret_seals_l E t :
+Lemma public_secret_nonce_l E t :
   is_nonce t →
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   term_token t ⊤ ={E}=∗
-  secret_in_l t ∗ term_token t (↑sealN) ∗ protects_superterms_l t ∅ ∗
+  secret_in_l t ∗ protects_superterms_l t ∅ ∗
   term_token t (⊤ ∖ ↑hypercryptisN).
 Proof.
 iIntros (Ht HE) "#ctx tok".
-iDestruct (term_token_public_token_l with "tok") as "(tok & $ & $)";
+iDestruct (term_token_public_token_l with "tok") as "(tok & _ & _ & $)";
   first by move: Ht => /is_nonceP [? ->].
-iDestruct (public_token_l_split with "tok") as "[states prots]".
+iDestruct (public_token_l_split with "tok") as "(states & prots & _)".
 iMod (public_prots_l_extend with "ctx prots") as "$"; first done.
 by iApply (public_secret_l_2 Ht HE with "ctx states").
 Qed.
 
-Lemma public_secret_seals_r E t' :
+Lemma public_secret_nonce_r E t' :
   is_nonce t' →
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   term_token_spec t' ⊤ ={E}=∗
-  secret_in_r t' ∗ term_token_spec t' (↑sealN) ∗
-  protects_superterms_r t' ∅ ∗ term_token_spec t' (⊤ ∖ ↑hypercryptisN).
+  secret_in_r t' ∗ protects_superterms_r t' ∅ ∗
+  term_token_spec t' (⊤ ∖ ↑hypercryptisN).
 Proof.
 iIntros (Ht HE) "#ctx tok".
-iDestruct (term_token_public_token_r with "tok") as "(tok & $ & $)";
+iDestruct (term_token_public_token_r with "tok") as "(tok & _ & _ & $)";
   first by move: Ht => /is_nonceP [? ->].
-iDestruct (public_token_r_split with "tok") as "[states prots]".
+iDestruct (public_token_r_split with "tok") as "(states & prots & _)".
 iMod (public_prots_r_extend with "ctx prots") as "$"; first done.
 by iApply (public_secret_r_2 Ht HE with "ctx states").
 Qed.
@@ -166,7 +169,7 @@ Proof.
 iIntros (Hsup HE) "#ctx #sec prot tok".
 iMod (public_prots_l_grow_2 (tsup:=tsup) with "ctx prot sec") as "[_ by]";
   [done | apply not_elem_of_empty | done |].
-iDestruct (public_token_l_split with "tok") as "[states prots]".
+iDestruct (public_token_l_split with "tok") as "(states & prots & _)".
 iMod (public_prots_l_extend with "ctx prots") as "$"; first done.
 by iMod (public_secret_l with "ctx by states") as "[_ $]".
 Qed.
@@ -183,7 +186,7 @@ Proof.
 iIntros (Hsup HE) "#ctx #sec prot tok".
 iMod (public_prots_r_grow_2 (t'sup:=t'sup) with "ctx prot sec") as "[_ by]";
   [done | apply not_elem_of_empty | done |].
-iDestruct (public_token_r_split with "tok") as "[states prots]".
+iDestruct (public_token_r_split with "tok") as "(states & prots & _)".
 iMod (public_prots_r_extend with "ctx prots") as "$"; first done.
 by iMod (public_secret_r with "ctx by states") as "[_ $]".
 Qed.
@@ -207,58 +210,70 @@ Lemma public_publish E {t t'} :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   □ (publicly_linked t t' -∗ PUB⟨t, t'⟩) -∗
+  public_deposit_l t t' -∗
+  public_deposit_r t t' -∗
   public_token_l t -∗
   public_token_r t' ={E}=∗
   publicly_linked t t' ∗ PUB⟨t, t'⟩.
 Proof.
-iIntros (HE) "#ctx #wand tok tok'".
+iIntros (HE) "#ctx #wand pl pr tok tok'".
 iMod (public_fresh_l t HE with "ctx tok") as "[prot states]".
 iMod (public_fresh_r t' HE with "ctx tok'") as "[prot' states']".
-iMod (public_extend t t' HE with "ctx wand prot prot' states states'") as "#link".
+iMod (public_extend t t' HE with "ctx wand pl pr prot prot' states states'") as "#link".
 iModIntro. iSplit => //. by iApply "wand".
 Qed.
 
-Lemma public_seal E kt s kt' s' t t' Ek Ek' :
+Lemma public_seal E k k' t t' Ek Ek' :
   ↑cryptisN ⊆ E →
-  ↑seal_namespace (TKey kt s) t ⊆ Ek →
-  ↑seal_namespace (TKey kt' s') t' ⊆ Ek' →
+  ↑seal_namespace t ⊆ Ek →
+  ↑seal_namespace t' ⊆ Ek' →
   hypercryptis_ctx -∗
-  □ (publicly_linked (TSeal (TKey kt s) t) (TSeal (TKey kt' s') t') -∗
-     PUB⟨TSeal (TKey kt s) t, TSeal (TKey kt' s') t'⟩) -∗
-  never_sealed_under s s' Ek Ek' ={E}=∗
-  publicly_linked (TSeal (TKey kt s) t) (TSeal (TKey kt' s') t') ∗
-  PUB⟨TSeal (TKey kt s) t, TSeal (TKey kt' s') t'⟩ ∗
-  never_sealed_under s s' (Ek ∖ ↑seal_namespace (TKey kt s) t) (Ek' ∖ ↑seal_namespace (TKey kt' s') t').
+  □ (publicly_linked (TSeal k t) (TSeal k' t') -∗ PUB⟨TSeal k t, TSeal k' t'⟩) -∗
+  (seal_release_l (TSeal k t) -∗ seal_release_r (TSeal k' t') -∗
+   public_deposit_l (TSeal k t) (TSeal k' t') ∗
+   public_deposit_r (TSeal k t) (TSeal k' t')) -∗
+  never_sealed_under k k' Ek Ek' ={E}=∗
+  publicly_linked (TSeal k t) (TSeal k' t') ∗
+  PUB⟨TSeal k t, TSeal k' t'⟩ ∗
+  never_sealed_under k k' (Ek ∖ ↑seal_namespace t) (Ek' ∖ ↑seal_namespace t').
 Proof.
-iIntros (HE sub sub') "#ctx #wand ns".
-rewrite (never_sealed_under_public_token sub sub').
+iIntros (HE sub sub') "#ctx #wand prot ns".
+rewrite (never_sealed_under_public_token k k' sub sub').
 iDestruct "ns" as "(tok & tok' & $)".
-by iApply (public_publish HE with "ctx wand tok tok'").
+iDestruct (public_token_l_split with "tok") as "(states & prots & rel)".
+iDestruct (public_token_r_split with "tok'") as "(states' & prots' & rel')".
+iDestruct ("prot" with "rel rel'") as "[pl pr]".
+iMod (public_prots_l_extend with "ctx prots") as "prots"; first done.
+iMod (public_prots_r_extend with "ctx prots'") as "prots'"; first done.
+iMod (public_extend _ _ HE with "ctx wand pl pr prots prots' states states'") as "#link".
+iModIntro. iSplit => //. by iApply "wand".
 Qed.
 
 Lemma public_seal_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
   ↑cryptisN ⊆ E →
-  ↑seal_namespace k (Spec.tag (Tag N) t) ⊆ Ek →
-  ↑seal_namespace k' (Spec.tag (Tag N) t') ⊆ Ek' →
+  ↑seal_namespace (Spec.tag (Tag N) t) ⊆ Ek →
+  ↑seal_namespace (Spec.tag (Tag N) t') ⊆ Ek' →
   hypercryptis_ctx -∗
   minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
   linked (k : term) (k' : term) -∗
-  □ (PUB⟨k, k'⟩ → PUB⟨t, t'⟩) -∗
-  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k') Ek Ek' ={E}=∗
+  PUB⟨t, t'⟩ ∨ secret_in_l k ∧ secret_in_r k' -∗
+  never_sealed_under k k' Ek Ek' ={E}=∗
   PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
   publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗
-  never_sealed_under (seed_of_senc_key k) (seed_of_senc_key k')
-    (Ek ∖ ↑seal_namespace k (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_namespace k' (Spec.tag (Tag N) t')).
+  never_sealed_under k k'
+    (Ek ∖ ↑seal_namespace (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_namespace (Spec.tag (Tag N) t')).
 Proof.
-move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k') in sub sub' *.
-iIntros "#ctx #mk #mk' #mt #mt' #Hl #Himpl ns".
-iMod (public_seal HE sub sub' with "ctx [] ns") as "(#Hpl & #Hpub & $)";
+move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k').
+iIntros "#ctx #mk #mk' #mt #mt' #Hl #Hcase ns".
+iMod (public_seal _ _ HE sub sub' with "ctx [] [] ns") as "(#Hpl & #Hpub & $)";
   last by iFrame "#".
-iIntros "!> #Hpl". rewrite public_TSeal. iRight.
-rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
-iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-iLeft. iSplit; first done. iModIntro.
-iIntros "#Hs". rewrite public_tag. iSplit; first done. by iApply "Himpl".
+- iIntros "!> #Hpl". rewrite public_TSeal. iRight.
+  rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.
+  iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
+  iLeft. by iSplit.
+- iIntros "rel rel'". iSplitL "rel"; iLeft; iFrame.
+  all: iDestruct "Hcase" as "[Ht|[Hs Hs']]"; [|by iRight].
+  all: iLeft; rewrite public_tag; by iSplit.
 Qed.
 
 End Updates.
