@@ -1916,56 +1916,106 @@ all: exfalso; have Hsub : ↑holdN.@t' ⊆ (↑holdN : coPset) by solve_ndisj.
 all: pose proof (nclose_non_empty (holdN.@t')); set_solver.
 Qed.
 
-Lemma public_TSeal_release_l_fupd E kt s t k' t' :
+Lemma public_TSeal_release_AEnc_hold_l_fupd E s t k' t' :
   ↑cryptisN ⊆ E →
-  kt = AEnc ∨ kt = SEnc →
   hypercryptis_ctx -∗
   PUB⟨t, t'⟩ -∗
-  seal_release_l (TSeal (TKey kt s) t) -∗
-  publicly_linked_in_l (TSeal (TKey kt s) t) (TSeal k' t') ={E}=∗
-  holds_key_l t (TKey kt s).
+  seal_release_l (TSeal (TKey AEnc s) t) -∗
+  publicly_linked_in_l (TSeal (TKey AEnc s) t) (TSeal k' t') ={E}=∗
+  holds_key_l t (TKey AEnc s).
 Proof.
-iIntros (HE Hkt) "#(_ & _ & Hinv) #Ht Hseal #Hl".
+iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
                   [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
 iDestruct (publicly_linked_in_l_lookup with "Hstates_l Hl") as %Hc.
 iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_l") as "[He Hothers]".
-iAssert (holds_key_l t (TKey kt s) ∗ public_PublicLink_l_deposits states_l)%I
+iAssert (holds_key_l t (TKey AEnc s) ∗ public_PublicLink_l_deposits states_l)%I
   with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_l]".
 { rewrite /public_PublicLink_l_deposits (big_sepM_delete _ states_l _ _ Hc).
   iFrame "Hothers".
-  case: Hkt => ->; iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
-  1,3: iDestruct (term_token_disj with "Hseal Hseal'") as %Hdisj; exfalso;
-    pose proof (nclose_non_empty (seal_namespace t.@"release")); set_solver.
-  all: iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
+  iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
+  - iDestruct (term_token_disj with "Hseal Hseal'") as %Hdisj; exfalso;
+      pose proof (nclose_non_empty (seal_namespace t.@"release")); set_solver.
+  - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
 iModIntro. iSplitR "Hkey"; last done.
 iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
 Qed.
 
-Lemma public_TSeal_release_r_fupd E kt s' t' k t :
+Lemma public_TSeal_release_AEnc_hold_r_fupd E s' t' k t :
   ↑cryptisN ⊆ E →
-  kt = AEnc ∨ kt = SEnc →
   hypercryptis_ctx -∗
   PUB⟨t, t'⟩ -∗
-  seal_release_r (TSeal (TKey kt s') t') -∗
-  publicly_linked_in_r (TSeal k t) (TSeal (TKey kt s') t') ={E}=∗
-  holds_key_r t' (TKey kt s').
+  seal_release_r (TSeal (TKey AEnc s') t') -∗
+  publicly_linked_in_r (TSeal k t) (TSeal (TKey AEnc s') t') ={E}=∗
+  holds_key_r t' (TKey AEnc s').
 Proof.
-iIntros (HE Hkt) "#(_ & _ & Hinv) #Ht Hseal #Hl".
+iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
                   [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
 iDestruct (publicly_linked_in_r_lookup with "Hstates_r Hl") as %Hc.
 iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_r") as "[He Hothers]".
-iAssert (holds_key_r t' (TKey kt s') ∗ public_PublicLink_r_deposits states_r)%I
+iAssert (holds_key_r t' (TKey AEnc s') ∗ public_PublicLink_r_deposits states_r)%I
   with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_r]".
 { rewrite /public_PublicLink_r_deposits (big_sepM_delete _ states_r _ _ Hc).
   iFrame "Hothers".
-  case: Hkt => ->; iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
-  1,3: iDestruct (term_token_spec_disj with "Hseal Hseal'") as %Hdisj; exfalso;
-    pose proof (nclose_non_empty (seal_namespace t'.@"release")); set_solver.
-  all: iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
+  iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
+  - iDestruct (term_token_spec_disj with "Hseal Hseal'") as %Hdisj; exfalso;
+      pose proof (nclose_non_empty (seal_namespace t'.@"release")); set_solver.
+  - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
+iModIntro. iSplitR "Hkey"; last done.
+iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+Qed.
+
+Lemma public_TSeal_release_SEnc_hold_l_fupd E s t k' t' :
+  ↑cryptisN ⊆ E →
+  hypercryptis_ctx -∗
+  PUB⟨t, t'⟩ -∗
+  seal_release_l (TSeal (TKey SEnc s) t) -∗
+  publicly_linked_in_l (TSeal (TKey SEnc s) t) (TSeal k' t') ={E}=∗
+  holds_key_l t (TKey SEnc s).
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
+iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
+                  ([Hstates_l Hstates_l_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
+                  [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
+iDestruct (publicly_linked_in_l_lookup with "Hstates_l Hl") as %Hc.
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_l") as "[He Hothers]".
+iAssert (holds_key_l t (TKey SEnc s) ∗ public_PublicLink_l_deposits states_l)%I
+  with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_l]".
+{ rewrite /public_PublicLink_l_deposits (big_sepM_delete _ states_l _ _ Hc).
+  iFrame "Hothers".
+  iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
+  - iDestruct (term_token_disj with "Hseal Hseal'") as %Hdisj; exfalso;
+      pose proof (nclose_non_empty (seal_namespace t.@"release")); set_solver.
+  - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
+iModIntro. iSplitR "Hkey"; last done.
+iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+Qed.
+
+Lemma public_TSeal_release_SEnc_hold_r_fupd E s' t' k t :
+  ↑cryptisN ⊆ E →
+  hypercryptis_ctx -∗
+  PUB⟨t, t'⟩ -∗
+  seal_release_r (TSeal (TKey SEnc s') t') -∗
+  publicly_linked_in_r (TSeal k t) (TSeal (TKey SEnc s') t') ={E}=∗
+  holds_key_r t' (TKey SEnc s').
+Proof.
+iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
+iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
+                  (Hstates_l & [Hstates_r Hstates_r_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
+                  [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
+iDestruct (publicly_linked_in_r_lookup with "Hstates_r Hl") as %Hc.
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_r") as "[He Hothers]".
+iAssert (holds_key_r t' (TKey SEnc s') ∗ public_PublicLink_r_deposits states_r)%I
+  with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_r]".
+{ rewrite /public_PublicLink_r_deposits (big_sepM_delete _ states_r _ _ Hc).
+  iFrame "Hothers".
+  iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
+  - iDestruct (term_token_spec_disj with "Hseal Hseal'") as %Hdisj; exfalso;
+      pose proof (nclose_non_empty (seal_namespace t'.@"release")); set_solver.
+  - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
 iModIntro. iSplitR "Hkey"; last done.
 iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
 Qed.
