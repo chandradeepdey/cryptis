@@ -281,9 +281,9 @@ rel_apply_r (refines_mk_nonce_r _ _ (λ n, {[n]}) with "[//]").
 { iIntros "%t". rewrite big_sepS_singleton. iModIntro. by iSplit; iIntros "?". }
 iIntros (n') "%Hn' #mint_spec_n' Htts". rewrite big_sepS_singleton.
 iDestruct (term_token_public_token_l with "Htt") as "(Htt & _ & _)";
-  first exact: is_nonce_not_TSeal.
+  first by move: Hn => /is_nonceP [? ->].
 iDestruct (term_token_public_token_r with "Htts") as "(Htts & _ & _)";
-  first exact: is_nonce_not_TSeal.
+  first by move: Hn' => /is_nonceP [? ->].
 iMod (public_publish (E:=⊤) ltac:(solve_ndisj) with "Hctx [] Htt Htts") as "[_ #Hpub]".
 { iIntros "!> #Hel". rewrite (public_nonce Hn Hn'). by iSplit; last iSplit. }
 rel_values. iModIntro. by iApply lrel_term_intro.

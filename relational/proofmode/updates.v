@@ -132,7 +132,7 @@ Lemma public_secret_seals_l E t :
 Proof.
 iIntros (Ht HE) "#ctx tok".
 iDestruct (term_token_public_token_l with "tok") as "(tok & $ & $)";
-  first exact: is_nonce_not_TSeal.
+  first by move: Ht => /is_nonceP [? ->].
 iDestruct (public_token_l_split with "tok") as "[states prots]".
 iMod (public_prots_l_extend with "ctx prots") as "$"; first done.
 by iApply (public_secret_l_2 Ht HE with "ctx states").
@@ -148,7 +148,7 @@ Lemma public_secret_seals_r E t' :
 Proof.
 iIntros (Ht HE) "#ctx tok".
 iDestruct (term_token_public_token_r with "tok") as "(tok & $ & $)";
-  first exact: is_nonce_not_TSeal.
+  first by move: Ht => /is_nonceP [? ->].
 iDestruct (public_token_r_split with "tok") as "[states prots]".
 iMod (public_prots_r_extend with "ctx prots") as "$"; first done.
 by iApply (public_secret_r_2 Ht HE with "ctx states").

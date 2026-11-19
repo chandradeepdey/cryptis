@@ -84,7 +84,7 @@ iIntros (HE) "#(_ & _ & Hinv) Httf".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates_inv &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_l_fresh prots_l t with "Hmeta_prots_l Httf") as "%Hfresh".
 iMod (own_update with "Hprots_l") as "[Hprots_l Hprots_frag_t]".
@@ -108,7 +108,7 @@ iSplitL "Hprots_l Hprots_l_frag Hprots_t_frag".
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates Hst.
-  destruct (HPending_l _ _ Hstates Hst) as [? | (t1sub & ts1 & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates Hst) as [? | (t1sub & ts1 & ?)]; first eauto.
   right. exists t1sub, ts1.
   rewrite lookup_insert_ne; naive_solver.
 - split; last done.
@@ -130,7 +130,7 @@ iIntros (HE) "#(_ & _ & Hinv) Httf".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates_inv &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_r_fresh prots_r t' with "Hmeta_prots_r Httf") as "%Hfresh".
 iMod (own_update with "Hprots_r") as "[Hprots_r Hprots_frag_t']".
@@ -154,7 +154,7 @@ iSplitL "Hprots_r Hprots_r_frag Hprots_t'_frag".
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates Hst.
-  destruct (HPending_r _ _ Hstates Hst) as [? | (t1'sub & ts1 & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates Hst) as [? | (t1'sub & ts1 & ?)]; first eauto.
   right. exists t1'sub, ts1.
   rewrite lookup_insert_ne; naive_solver.
 - split; first done.
@@ -180,7 +180,7 @@ iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
 iDestruct (big_sepM_delete _ _ t _ Hfltts with "Hprots_l_frag") as "[Hl_frac2 Hprots_l_frag]".
@@ -208,7 +208,7 @@ destruct (Hprots_l_cons _ _ Hfltts Hts) as (Hsubs & Hchain & Hstates).
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1sub = t)) as [->|?].
   + exists t, (ts ∪ {[ tsup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1sub, ts1. by rewrite lookup_insert_ne.
@@ -243,7 +243,7 @@ iIntros (HE Hts Hni Hsub) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
 iDestruct (big_sepM_delete _ _ t' _ Hfrt'ts with "Hprots_r_frag") as "[Hr_frac2 Hprots_r_frag]".
@@ -271,7 +271,7 @@ destruct (Hprots_r_cons _ _ Hfrt'ts Hts) as (Hsubs & Hchain & Hstates).
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1'sub, ts1. by rewrite lookup_insert_ne.
@@ -306,7 +306,7 @@ iIntros (HE Hni Hsub) "#(_ & _ & Hinv) Hl_frac #Hsec".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (secret_in_l_lookup with "Hstates_l Hsec") as "%Hstates_t".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
@@ -333,11 +333,11 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
   rewrite /public_prots_l_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-have Hchain := HPending_l _ _ Hstates_t I.
+have Hchain := Hnot_PublicLink_l _ _ Hstates_t I.
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t1sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t1sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t1sub = t)) as [->|?].
   + exists t, (ts ∪ {[ tsup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1sub, ts2. by rewrite lookup_insert_ne.
@@ -375,7 +375,7 @@ iIntros (HE Hni Hsub) "#(_ & _ & Hinv) Hr_frac #Hsec".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (secret_in_r_lookup with "Hstates_r Hsec") as "%Hstates_t".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
@@ -402,11 +402,11 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
   rewrite /public_prots_r_auth fmap_insert.
   rewrite big_sepM_insert_delete.
   iFrame. }
-have Hchain := HPending_r _ _ Hstates_t I.
+have Hchain := Hnot_PublicLink_r _ _ Hstates_t I.
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', (ts ∪ {[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1'sub, ts2. by rewrite lookup_insert_ne.
@@ -446,7 +446,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -475,7 +475,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1sub = t)) as [->|?].
   + exists t, ({[ tsup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1sub, ts1. by rewrite lookup_insert_ne.
@@ -512,7 +512,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -541,7 +541,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1'sub, ts1. by rewrite lookup_insert_ne.
@@ -578,7 +578,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hl_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hfrag") as "%Hpltts".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -609,7 +609,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1sub = t)) as [->|?].
   + exists t, ({[ tsup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1sub, ts1. by rewrite lookup_insert_ne.
@@ -646,7 +646,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hprot Hr_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_lookup with "Hstates_r Hfrag") as "%Hprtst'".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -677,7 +677,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1'sub = t')) as [->|?].
   + exists t', ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1'sub, ts1. by rewrite lookup_insert_ne.
@@ -714,7 +714,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l (TNonce a) with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -742,7 +742,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1sub = TNonce a)) as [->|?].
   + exists (TNonce a), ({[ tsup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1sub, ts1. by rewrite lookup_insert_ne.
@@ -776,7 +776,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r (TNonce a') with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -804,7 +804,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1'sub = TNonce a')) as [->|?].
   + exists (TNonce a'), ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1'sub, ts1. by rewrite lookup_insert_ne.
@@ -838,7 +838,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hl_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hfrag") as "%Hpltts".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hflt".
@@ -868,7 +868,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t1 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t1sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1sub = TNonce a)) as [->|?].
   + exists (TNonce a), ({[ tsup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1sub, ts1. by rewrite lookup_insert_ne.
@@ -902,7 +902,7 @@ iIntros (HE Hsub) "#(_ & _ & Hinv) Hr_frac Hfrag".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_lookup with "Hstates_r Hfrag") as "%Hprtst'".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'".
@@ -932,7 +932,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t1' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t1'sub & ts1 & ? & ?)]; first eauto.
   right. destruct (decide (t1'sub = TNonce a')) as [->|?].
   + exists (TNonce a'), ({[ t'sup ]}). rewrite lookup_insert_eq. set_solver.
   + exists t1'sub, ts1. by rewrite lookup_insert_ne.
@@ -965,7 +965,7 @@ iPoseProof (public_prots_l_ne with "Hprot Hprot1") as "%Hne".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
 iPoseProof (public_prots_l_lookup with "Hprots_l Hprot1") as "(%ts1 & % & %)".
@@ -993,7 +993,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t2 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t2sub = t)) as [->|?].
   + assert (ts2 = ts) as -> by congruence.
     destruct (decide (tsup = t2)) as [->|?].
@@ -1038,7 +1038,7 @@ iPoseProof (public_prots_r_ne with "Hprot Hprot1") as "%Hne".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   Hstates &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
 iPoseProof (public_prots_r_lookup with "Hprots_r Hprot1") as "(%ts1 & % & %)".
@@ -1066,7 +1066,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t2' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t2'sub = t')) as [->|?].
   + assert (ts2 = ts) as -> by congruence.
     destruct (decide (t'sup = t2')) as [->|?].
@@ -1112,7 +1112,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot Hl_frac_sup Htt_sup".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l tsup with "Hmeta_states_l Htt_sup") as "%Hfresh".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
@@ -1141,7 +1141,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t2 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t2sub = t)) as [->|?].
   + assert (ts2 = ts) as -> by congruence.
     destruct (decide (tsup = t2)) as [->|?]; first by set_solver.
@@ -1184,7 +1184,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot Hr_frac_sup Htts_sup".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r t'sup with "Hmeta_states_r Htts_sup") as "%Hfresh".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
@@ -1213,7 +1213,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t2' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t2'sub = t')) as [->|?].
   + assert (ts2 = ts) as -> by congruence.
     destruct (decide (t'sup = t2')) as [->|?]; first by set_solver.
@@ -1253,7 +1253,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hl_frac Hprot #Hpub".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (publicly_linked_lookup_l with "Hstates_l Hpub") as "%Hpltsupt'".
 iPoseProof (public_prots_l_lookup_2 with "Hprots_l Hl_frac") as "%Hfltts".
@@ -1285,7 +1285,7 @@ iSplitL "Hprots_l Hprots_l_frag Hl_frac2".
 iPureIntro. split.
 - split; last done.
   move=> t2 ? Hstates1 Hst1.
-  destruct (HPending_l _ _ Hstates1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_l _ _ Hstates1 Hst1) as [? | (t2sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t2sub = t)) as [->|?].
   + assert (ts2 = ts) as -> by congruence.
     destruct (decide (tsup = t2)) as [->|?]; first by set_solver.
@@ -1325,7 +1325,7 @@ iIntros (HE Hin) "#(_ & _ & Hinv) Hr_frac Hprot #Hpub".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & HPublicLink_consistent &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & HPublicLink_consistent &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (publicly_linked_lookup_r with "Hstates_r Hpub") as "%Hprtt'sup".
 iPoseProof (public_prots_r_lookup_2 with "Hprots_r Hr_frac") as "%Hfrt'ts".
@@ -1357,7 +1357,7 @@ iSplitL "Hprots_r Hprots_r_frag Hr_frac2".
 iPureIntro. split.
 - split; first done.
   move=> t2' ? Hstates1 Hst1.
-  destruct (HPending_r _ _ Hstates1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
+  destruct (Hnot_PublicLink_r _ _ Hstates1 Hst1) as [? | (t2'sub & ts2 & ? & ?)]; first eauto.
   right. destruct (decide (t2'sub = t')) as [->|?].
   + assert (ts2 = ts) as -> by congruence.
     destruct (decide (t'sup = t2')) as [->|?]; first by set_solver.
@@ -1401,7 +1401,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hprot Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_prots_l_lookup with "Hprots_l Hprot") as "%Hprot".
@@ -1449,7 +1449,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hprot Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh".
 iPoseProof (public_prots_r_lookup with "Hprots_r Hprot") as "%Hprot".
@@ -1497,7 +1497,7 @@ iIntros (HE) "#(_ & _ & Hinv) Htt".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & Hprots_r & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l (TNonce a) with "Hmeta_states_l Htt") as "%Hfresh".
 iMod (own_update with "Hstates_l") as "[Hstates_l Hstates_frag_t]".
@@ -1544,7 +1544,7 @@ iIntros (HE) "#(_ & _ & Hinv) Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   (Hprots_l & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_fresh states_r (TNonce a') with "Hmeta_states_r Htts") as "%Hfresh".
 iMod (own_update with "Hstates_r") as "[Hstates_r Hstates_frag_t']".
@@ -1663,7 +1663,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hl_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & Hstates_r & #Hmeta_states_l & #Hmeta_states_r) &
                   Hprots &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hl_frac") as "%Hpltt'".
 iDestruct (big_sepM_delete _ _ t _ Hpltt' with "Hstates_l_frag") as "[Hl_frac2 Hstates_l_frag]".
@@ -1685,8 +1685,8 @@ iSplitL "Hstates_l Hstates_l_frag".
   iFrame. iFrame "#". }
 iSplit.
 { iPureIntro. split; last done. move=> t1 st Hstates Hst.
-  rewrite lookup_insert in Hstates; case_decide; last by eapply HPending_l.
-  simplify_eq. exact: (HPending_l _ _ Hpltt' I). }
+  rewrite lookup_insert in Hstates; case_decide; last by eapply Hnot_PublicLink_l.
+  simplify_eq. exact: (Hnot_PublicLink_l _ _ Hpltt' I). }
 iSplitL "HPublicLink_consistent".
 { iIntros (??) "%Hstates".
   rewrite lookup_insert in Hstates; case_decide; first naive_solver.
@@ -1707,7 +1707,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   (Hstates_l & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   Hprots &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_r_lookup with "Hstates_r Hr_frac") as "%Hprtt'".
 iDestruct (big_sepM_delete _ _ t' _ Hprtt' with "Hstates_r_frag") as "[Hr_frac2 Hstates_r_frag]".
@@ -1729,8 +1729,8 @@ iSplitL "Hstates_r Hstates_r_frag".
   iFrame. iFrame "#". }
 iSplit.
 { iPureIntro. split; first done. move=> t1' st Hstates Hst.
-  rewrite lookup_insert in Hstates; case_decide; last by eapply HPending_r.
-  simplify_eq. exact: (HPending_r _ _ Hprtt' I). }
+  rewrite lookup_insert in Hstates; case_decide; last by eapply Hnot_PublicLink_r.
+  simplify_eq. exact: (Hnot_PublicLink_r _ _ Hprtt' I). }
 iSplitL "HPublicLink_consistent_r".
 { iIntros (??) "%Hstates".
   rewrite lookup_insert in Hstates; case_decide; first naive_solver.
@@ -1835,7 +1835,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Hl_frac Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_states_r_lookup with "Hstates_r Hr_frac") as "%Hprtt'".
@@ -1911,7 +1911,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Hl_frac Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_lookup with "Hstates_l Hl_frac") as "%Hpltt'".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh".
@@ -1987,7 +1987,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Htt Hr_frac".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh".
 iPoseProof (public_states_r_lookup with "Hstates_r Hr_frac") as "%Hprtt'".
@@ -2063,7 +2063,7 @@ iIntros (HE) "#(_ & _ & Hinv) Hlink_pub Hprot Hprot1 Htt Htts".
 iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
                   ([Hstates_l Hstates_l_frag] & [Hstates_r Hstates_r_frag] & #Hmeta_states_l & #Hmeta_states_r) &
                   ([Hprots_l Hprots_l_frag] & [Hprots_r Hprots_r_frag] & #Hmeta_prots_l & #Hmeta_prots_r) &
-                  [%HPending_l %HPending_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
+                  [%Hnot_PublicLink_l %Hnot_PublicLink_r] & [HPublicLink_consistent HPublicLink_consistent_r] &
                   [%Hprots_l_cons %Hprots_r_cons])".
 iPoseProof (public_states_l_fresh states_l t with "Hmeta_states_l Htt") as "%Hfresh_l".
 iPoseProof (public_states_r_fresh states_r t' with "Hmeta_states_r Htts") as "%Hfresh_r".
