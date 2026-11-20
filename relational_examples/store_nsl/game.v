@@ -6,7 +6,6 @@ From reloc Require Import reloc.
 From cryptis.hyper.core Require Import public.
 From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import adequacy.
-From cryptis.hyper.examples.nsl Require Import game.
 From cryptis.hyper.examples.store_nsl Require Import impl.
 From cryptis.hyper.examples.store_nsl.proofs Require Import conn.
 From cryptis.hyper.examples.store_nsl Require Import proofs.
@@ -15,21 +14,16 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Definition store_game (ops : list (Z * Z)) (k : Z) (adv : expr) : expr :=
-  (run_network adv (guess (game ops k)))%E.
-
-Theorem store_nsl_ctx_equiv ops ops' k adv adv' :
-  attacker_valid adv adv' → attacker_valid adv' adv →
+Theorem store_nsl_game_ctx_equiv ops ops' k :
   NoDup ops.*1 → ops ≡ₚ ops' →
-  ∅ ⊨ store_game ops k adv =ctx= store_game ops' k adv' : TBool.
+  ∅ ⊨ network_game (game ops k) =ctx= network_game (game ops' k) :
+      network_game_ty TUnit.
 Proof.
-move=> Hadv Hadv' Hnd Hp.
+move=> Hnd Hp.
 have Hnd' : NoDup ops'.*1 by rewrite -Hp.
 split;
-  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ; connΣ])) => // ? ? Δ;
-  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
-  iApply (guess_refinement with "Hctx Hc");
-  (iApply (refines_app _ _ _ _ lrel_channel); last by rel_values).
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ; connΣ])) => ? ? Δ;
+  iIntros "#Hctx".
 - by iApply (store_game_refinement k Hnd Hp with "Hctx").
 - by iApply (store_game_refinement k Hnd' (symmetry Hp) with "Hctx").
 Qed.

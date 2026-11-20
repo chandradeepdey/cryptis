@@ -92,21 +92,18 @@ Qed.
 
 End Game.
 
-Definition election_game (cands votes : list Z) (adv : expr) : expr :=
-  (run_network adv (election_of cands votes))%E.
-
-(** Vote privacy as a contextual equivalence: against any pair of valid
-    attackers, two assignments of votes to voters with the same number of
-    votes for every candidate yield contextually equivalent elections. *)
-Theorem election_ctx_equiv cands votes votes' adv adv' :
+(** Vote privacy as a contextual equivalence: two assignments of votes to
+    voters with the same number of votes for every candidate yield
+    contextually equivalent elections. *)
+Theorem election_game_ctx_equiv cands votes votes' :
   votes ≡ₚ votes' →
-  attacker_valid adv adv' → attacker_valid adv' adv →
-  ∅ ⊨ election_game cands votes adv =ctx= election_game cands votes' adv' :
-      TUnit.
+  ∅ ⊨ network_game (election_of cands votes)
+      =ctx= network_game (election_of cands votes') :
+      network_game_ty TUnit.
 Proof.
-move=> Hperm Hadv Hadv'.
+move=> Hperm.
 by split;
-  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;
   iIntros "#Hctx"; iApply (election_of_refinement with "Hctx").
 Qed.
 

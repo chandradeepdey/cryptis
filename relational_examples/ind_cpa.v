@@ -165,18 +165,14 @@ Qed.
 
 End CPA.
 
-Definition ind_cpa_game N (b : bool) (adv : expr) : expr :=
-  (run_network adv (alice N b))%E.
-
-(** IND-CPA as a contextual equivalence: against any pair of valid
-    attackers, no well-typed context can tell which of the attacker's two
-    messages Alice encrypts. *)
-Theorem ind_cpa_ctx_equiv N b b' adv adv' :
-  attacker_valid adv adv' → attacker_valid adv' adv →
-  ∅ ⊨ ind_cpa_game N b adv =ctx= ind_cpa_game N b' adv' : TBool.
+(** IND-CPA as a contextual equivalence: no well-typed context can tell
+    which of the attacker's two messages Alice encrypts. *)
+Theorem ind_cpa_game_ctx_equiv N b b' :
+  ∅ ⊨ network_game (alice N b) =ctx= network_game (alice N b') :
+      network_game_ty TBool.
 Proof.
-by move=> Hadv Hadv'; split;
-  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
+by split;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;
   iIntros "#Hctx"; iApply (alice_refinement with "Hctx").
 Qed.
 

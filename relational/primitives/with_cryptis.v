@@ -14,18 +14,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-#[local] Definition sender : val :=
-  rec: "loop" "l" "t" :=
-  "l" <- "t";;
-  "loop" "l" "t".
-
-Definition mk_channel : val :=
-  λ: <>,
-  let: "l" := ref (TInt 0) in
-  (λ: "t", Fork (sender "l" "t"), λ: <>, !"l").
-
-Abbreviation channelN := (hypercryptisN.@"channel").
-
 Section Proofs.
 
 Context `{!relocG Σ, !publicGS Σ}.
@@ -46,63 +34,6 @@ Lemma lrel_term_intro t t' : PUB⟨t, t'⟩ -∗ lrel_term t t'.
 Proof. iIntros "#H". iExists t, t'. by eauto. Qed.
 
 Definition lrel_channel : lrel Σ := ((lrel_term → ()) * (() → lrel_term))%lrel.
-
-Definition channel_inv l l' : iProp Σ :=
-  ∃ t t', l ↦ t ∗ l' ↦ₛ t' ∗ PUB⟨t, t'⟩.
-
-#[local] Lemma sender_refinement (l l': loc) t t' :
-  inv channelN (channel_inv l l') -∗
-  PUB⟨t, t'⟩ -∗
-  REL (sender #l t) << (sender #l' t') : ().
-Proof.
-iIntros "#Hinv #Ht".
-iLöb as "IH".
-rel_rec_l. rel_rec_r.
-rel_pures_l. rel_pures_r.
-rel_store_l_atomic.
-iInv channelN as "(%t1 & %t1' & (Hl & Hl' & #Hpub))" "Hclose".
-iModIntro.
-iExists t1. iFrame.
-iIntros "!> Hl".
-rel_pures_l.
-rel_store_r. rel_pures_r.
-iMod ("Hclose" with "[Hl Hl']").
-by iFrame.
-done.
-Qed.
-
-Lemma mk_channel_refinement :
-  ⊢ REL mk_channel #() << mk_channel #() : lrel_channel.
-Proof.
-rewrite /mk_channel.
-rel_pures_l. rel_pures_r.
-rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
-rel_pures_l. rel_pures_r.
-iMod (inv_alloc channelN _ (channel_inv l l') with "[Hl Hl']") as "#Hinv".
-iFrame. by rewrite public_TInt.
-rel_values.
-iModIntro.
-iExists _, _, _, _.
-do 2 (iSplit; eauto).
-iSplit.
-- iIntros "!> %v %v' (%t & %t' & -> & -> & #H)".
-  rel_pures_l. rel_pures_r.
-  iApply refines_fork.
-  by iApply sender_refinement.
-- iIntros "!> %v %v' [-> ->]".
-  rel_pures_l. rel_pures_r.
-  rel_load_l_atomic.
-  iInv channelN as "(%t & %t' & Hl & Hl' & #Hpub)" "Hclose".
-  iModIntro.
-  iExists t.
-  iFrame.
-  iIntros "!> Hl".
-  rel_load_r.
-  iMod ("Hclose" with "[Hl Hl']").
-  by iFrame.
-  rel_values.
-  by iApply lrel_term_intro.
-Qed.
 
 Lemma refines_send c c' t t' :
   lrel_channel c c' -∗

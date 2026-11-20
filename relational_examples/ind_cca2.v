@@ -445,19 +445,15 @@ End Game.
 
 End CCA2.
 
-Definition ind_cca2_game N (b : bool) (adv : expr) : expr :=
-  (run_network adv (alice N b))%E.
-
-(** IND-CCA2 as a contextual equivalence: against any pair of valid
-    attackers with a decryption oracle for every ciphertext but the
-    challenge, no well-typed context can tell which of the attacker's two
-    messages Alice encrypts. *)
-Theorem ind_cca2_ctx_equiv N b b' adv adv' :
-  attacker_valid adv adv' → attacker_valid adv' adv →
-  ∅ ⊨ ind_cca2_game N b adv =ctx= ind_cca2_game N b' adv' : TBool.
+(** IND-CCA2 as a contextual equivalence: with a decryption oracle for
+    every ciphertext but the challenge, no well-typed context can tell which
+    of the attacker's two messages Alice encrypts. *)
+Theorem ind_cca2_game_ctx_equiv N b b' :
+  ∅ ⊨ network_game (alice N b) =ctx= network_game (alice N b') :
+      network_game_ty TBool.
 Proof.
-by move=> Hadv Hadv'; split;
-  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
+by split;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;
   iIntros "#Hctx"; iApply (alice_refinement with "Hctx").
 Qed.
 

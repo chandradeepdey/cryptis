@@ -73,35 +73,28 @@ Qed.
 
 End Game.
 
-Definition ror_game (test : bool → val) (b : bool) (adv : expr) : expr :=
-  (run_network adv (guess (test b)))%E.
-
 (** Real-or-random secrecy of the responder's session key as a contextual
-    equivalence: against any pair of valid attackers, when R's peer is I,
-    no well-typed context can tell the session key from a fresh key. *)
-Theorem nsl_resp_ror_ctx_equiv adv adv' :
-  attacker_valid adv adv' → attacker_valid adv' adv →
-  ∅ ⊨ ror_game resp_test true adv =ctx= ror_game resp_test false adv' : TBool.
+    equivalence: when R's peer is I, no well-typed context can tell the
+    session key from a fresh key. *)
+Theorem nsl_resp_ror_game_ctx_equiv :
+  ∅ ⊨ network_game (resp_test true) =ctx= network_game (resp_test false) :
+      network_game_ty TUnit.
 Proof.
-move=> Hadv Hadv'; split;
-  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
-  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
-  iApply (guess_refinement with "Hctx Hc");
-  (iApply (refines_app _ _ _ _ lrel_channel); last by rel_values);
-  [iApply (resp_test_refinement true) | iApply (resp_test_refinement false)]; by iFrame "#".
+by split;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;
+  iIntros "#Hctx";
+  [iApply (resp_test_refinement true) | iApply (resp_test_refinement false)].
 Qed.
 
 (** The same fact for the initiator's session key, when I's peer is R. *)
-Theorem nsl_init_ror_ctx_equiv adv adv' :
-  attacker_valid adv adv' → attacker_valid adv' adv →
-  ∅ ⊨ ror_game init_test true adv =ctx= ror_game init_test false adv' : TBool.
+Theorem nsl_init_ror_game_ctx_equiv :
+  ∅ ⊨ network_game (init_test true) =ctx= network_game (init_test false) :
+      network_game_ty TUnit.
 Proof.
-move=> Hadv Hadv'; split;
-  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => // ? ? Δ;
-  iIntros "#Hctx"; rel_arrow_val; iIntros (c c') "#Hc";
-  iApply (guess_refinement with "Hctx Hc");
-  (iApply (refines_app _ _ _ _ lrel_channel); last by rel_values);
-  [iApply (init_test_refinement true) | iApply (init_test_refinement false)]; by iFrame "#".
+by split;
+  apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;
+  iIntros "#Hctx";
+  [iApply (init_test_refinement true) | iApply (init_test_refinement false)].
 Qed.
 
 Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : expr) σ :

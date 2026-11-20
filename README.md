@@ -67,7 +67,7 @@ for proving that two runs of a protocol are indistinguishable to the attacker:
 - `primitives/*`, `primitives`: Relational specifications of the primitives.
   Definition of valid attackers.
 - `adequacy`: Adequacy: a relational proof gives a contextual refinement
-  between games run against any two related attackers.
+  between games.
 - `proofmode/*`, `proofmode`: Ghost-state updates and tactics for relational
   proofs.
 
