@@ -31,10 +31,17 @@ A --> *: if b then {nonce, msg_0}@pkA else {nonce, msg_1}@pkA
 ]]
 *)
 
-Definition alice (b : bool) : val := λ: "c",
+Definition setup : val := λ: "network",
+  let: "c" := "network" #() in
   let: "skA" := mk_aenc_key #() in
+  send "c" (pkey "skA");;
+  ("c", "skA").
+
+Definition alice (b : bool) : val := λ: "network",
+  let: "s" := setup "network" in
+  let: "c" := Fst "s" in
+  let: "skA" := Snd "s" in
   let: "pkA" := pkey "skA" in
-  send "c" "pkA";;
   let: "msg_0" := recv "c" in
   let: "msg_1" := recv "c" in
   let: "msg" := if: #b then "msg_0" else "msg_1" in
@@ -42,15 +49,18 @@ Definition alice (b : bool) : val := λ: "c",
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
 
-Definition alice_guess_wrapped : val := λ: "c",
+Definition alice_guess_wrapped : val := λ: "network",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then alice true "c" else alice false "c").
+  ("b", if: "b" then alice true "network" else alice false "network").
 
 Lemma alice_refinement (b b' : bool) :
   hypercryptis_ctx -∗
-  REL alice b << alice b' : lrel_channel → lrel_bool.
+  REL alice b << alice b' : lrel_attacker → lrel_bool.
 Proof.
-iIntros "#Hctx". rewrite /alice. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
+iIntros "#Hctx". rewrite /alice /setup.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (c c') "#Hc". rel_pures.
 have Hdisj : ∀ sk : aenc_key,
     seed_of_aenc_key sk ∉ ({[sk : term]} : gset term) ∧
     seed_of_aenc_key sk ∉ ({[Spec.pkey sk]} : gset term) ∧
@@ -92,7 +102,7 @@ iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
 { by rewrite [term_of_aenc_key]unlock. }
 { by rewrite [term_of_aenc_key]unlock. }
 rel_apply (refines_send with "Hc Hpub").
-iIntros (? ?) "[-> ->]"=> /=. rel_pures.
+iIntros (? ?) "[-> ->]"=> /=. rel_pures. rel_prims.
 rel_apply (refines_recv with "Hc").
 iIntros (msg_0 msg_0') "#Hmsg_0"=> /=. rel_pures.
 rel_apply (refines_recv with "Hc").
@@ -138,25 +148,25 @@ Qed.
 
 Lemma alice_guess_wrapped_refinement :
   hypercryptis_ctx -∗
-  REL alice_guess_wrapped << alice_guess_wrapped : lrel_channel → LRel (λ p1 p2,
+  REL alice_guess_wrapped << alice_guess_wrapped : lrel_attacker → LRel (λ p1 p2,
     ⌜∃ b g b' g' : bool,
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝).
 Proof.
 iIntros "#Hctx". rewrite /alice_guess_wrapped.
-rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
 rel_apply_l refines_nondet_bool_l. iIntros (choice).
 rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
 - rel_bind_l (alice _ _). rel_bind_r (alice _ _).
   iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
     by iApply alice_refinement. }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
 - rel_bind_l (alice _ _). rel_bind_r (alice _ _).
   iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
     by iApply alice_refinement. }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.

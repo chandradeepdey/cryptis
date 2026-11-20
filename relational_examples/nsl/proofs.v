@@ -12,7 +12,7 @@ From cryptis.hyper.examples.nsl.proofs Require Export base init resp.
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
-From cryptis.hyper.primitives Require Import with_cryptis.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.nsl Require Import impl.
 
@@ -100,17 +100,23 @@ End Claim.
 
 Section Tests.
 
-Lemma setup_refinement c c' :
+Lemma setup_refinement adv adv' :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  REL setup c << setup c' : λ v v',
-    (∃ (skI skI' skR skR' : aenc_key) (pkX pkX' : term),
-      ⌜v = (skI : term, skR : term, pkX)%V⌝ ∗
-      ⌜v' = (skI' : term, skR' : term, pkX')%V⌝ ∗
+  lrel_attacker adv adv' -∗
+  REL setup adv << setup adv' : λ v v',
+    (∃ (chan_init chan_init' chan_resp chan_resp' : val)
+       (skI skI' skR skR' : aenc_key) (pkX pkX' : term),
+      ⌜v = ((chan_init, chan_resp), (skI : term, skR : term, pkX))%V⌝ ∗
+      ⌜v' = ((chan_init', chan_resp'), (skI' : term, skR' : term, pkX'))%V⌝ ∗
+      lrel_channel chan_init chan_init' ∗ lrel_channel chan_resp chan_resp' ∗
       nsl_ctx skI skI' skR skR' (ror_sess skI) ∗ inv rorN (ror_inv skI) ∗
       claim skI ∗ term_token (seed_of_aenc_key skI) (↑sess2N) ∗ PUB⟨pkX, pkX'⟩)%I.
 Proof.
-iIntros "#Hctx #Hc". rewrite /setup. rel_pures.
+iIntros "#Hctx #Hadv". rewrite /setup. rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_init chan_init') "#Hchan_init". rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_resp chan_resp') "#Hchan_resp". rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.
@@ -141,14 +147,15 @@ iDestruct "tokI" as "[tok_sess2 _]".
 iMod (inv_alloc rorN _ (ror_inv skI) with "[tok_sess]") as "#Hror".
 { iNext. by iLeft. }
 rel_prims.
-rel_apply (refines_send with "Hc []").
+rel_apply (refines_send with "Hchan_init []").
 { iNext. by iDestruct "HI" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_prims.
-rel_apply (refines_send with "Hc []").
+rel_apply (refines_send with "Hchan_resp []").
 { iNext. by iDestruct "HR" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
-rel_apply (refines_recv with "Hc").
+rel_apply (refines_recv with "Hchan_init").
 iIntros (pkX pkX') "#HpkX" => /=. rel_pures. rel_values. iModIntro.
+iExists chan_init, chan_init', chan_resp, chan_resp'.
 iExists skI, skI', skR, skR', pkX, pkX'. do 2 (iSplit; first done).
 iFrame "claim tok_sess2 HpkX". by iFrame "#".
 Qed.
@@ -204,20 +211,23 @@ Qed.
 
 Lemma resp_test_refinement b :
   hypercryptis_ctx -∗
-  REL resp_test b << resp_test (negb b) : lrel_channel → ().
+  REL resp_test b << resp_test (negb b) : lrel_attacker → ().
 Proof.
-iIntros "#Hctx". rewrite /resp_test. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
-rel_apply (setup_refinement with "Hctx Hc").
-iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
+iIntros "#Hctx". rewrite /resp_test.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
+rel_apply (setup_refinement with "Hctx Hadv").
+iIntros (? ?) "(%chan_init & %chan_init' & %chan_resp & %chan_resp' &
+                %skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
+                #Hchan_init & #Hchan_resp &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
 rel_pures.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[]").
 { iApply refines_fork. rel_pures.
-  rel_apply (init_refinement with "Hctx Hc Hnsl HpkX").
+  rel_apply (init_refinement with "Hctx Hchan_init Hnsl HpkX").
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
-rel_apply (resp_refinement with "Hctx Hc Hnsl [tok2]").
+rel_apply (resp_refinement with "Hctx Hchan_resp Hnsl [tok2]").
 { by iApply (ror_alloc with "Hctx Hror tok2"). }
 iIntros (? ?) "[[-> ->]|(%pkI & %pkI' & %k & %k' & [-> ->] & #HpkI & Hsess)]" => /=.
 { rel_pures. by rel_values. }
@@ -232,26 +242,29 @@ rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (claim_key with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
-by iApply (reveal_refinement with "Hctx Hc toks sec sec'").
+by iApply (reveal_refinement with "Hctx Hchan_resp toks sec sec'").
 Qed.
 
 Lemma init_test_refinement b :
   hypercryptis_ctx -∗
-  REL init_test b << init_test (negb b) : lrel_channel → ().
+  REL init_test b << init_test (negb b) : lrel_attacker → ().
 Proof.
-iIntros "#Hctx". rewrite /init_test. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
-rel_apply (setup_refinement with "Hctx Hc").
-iIntros (? ?) "(%skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
+iIntros "#Hctx". rewrite /init_test.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
+rel_apply (setup_refinement with "Hctx Hadv").
+iIntros (? ?) "(%chan_init & %chan_init' & %chan_resp & %chan_resp' &
+                %skI & %skI' & %skR & %skR' & %pkX & %pkX' & -> & -> &
+                #Hchan_init & #Hchan_resp &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
 rel_pures. rel_prims.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[tok2]").
 { iApply refines_fork. rel_pures.
-  rel_apply (resp_refinement with "Hctx Hc Hnsl [tok2]").
+  rel_apply (resp_refinement with "Hctx Hchan_resp Hnsl [tok2]").
   { by iApply (ror_alloc with "Hctx Hror tok2"). }
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
-rel_apply (init_refinement with "Hctx Hc Hnsl HpkX").
+rel_apply (init_refinement with "Hctx Hchan_init Hnsl HpkX").
 iIntros (? ?) "[[-> ->]|(%k & %k' & [-> ->] & Hsess)]" => /=.
 { rel_pures. by rel_values. }
 rel_prims.
@@ -265,7 +278,7 @@ rewrite bool_decide_eq_true_2 // bool_decide_eq_true_2; last by apply HX.
 rel_pures.
 iDestruct ("Hsess" with "[//]") as (s s' [-> ->]) "Hs".
 iMod (claim_key with "Hctx Hnsl Hror Hs claim") as "(toks & #sec & #sec')"; [solve_ndisj..|].
-by iApply (reveal_refinement with "Hctx Hc toks sec sec'").
+by iApply (reveal_refinement with "Hctx Hchan_init toks sec sec'").
 Qed.
 
 End Tests.

@@ -120,12 +120,21 @@ Definition store_all : val := rec: "loop" "cs" "ops" :=
 
 Definition op_val (p : Z * Z) : val := (#p.1, #p.2)%V.
 
-Definition game (ops : list (Z * Z)) (k : Z) : val := λ: "c",
+Definition setup : val := λ: "network",
+  let: "chan_client" := "network" #() in
+  let: "chan_server" := "network" #() in
   let: "skI" := mk_aenc_key #() in
   let: "skR" := mk_aenc_key #() in
-  send "c" (pkey "skI");;
-  send "c" (pkey "skR");;
-  Fork (server "c" "skR" (pkey "skI"));;
+  send "chan_client" (pkey "skI");;
+  send "chan_server" (pkey "skR");;
+  Fork (server "chan_server" "skR" (pkey "skI"));;
+  ("chan_client", "skI", "skR").
+
+Definition game (ops : list (Z * Z)) (k : Z) : val := λ: "network",
+  let: "s" := setup "network" in
+  let: "c" := Fst (Fst "s") in
+  let: "skI" := Snd (Fst "s") in
+  let: "skR" := Snd "s" in
   match: client "c" "skI" (pkey "skR") with
     SOME "cs" =>
     store_all "cs" (repr (map op_val ops));;

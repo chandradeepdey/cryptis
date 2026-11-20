@@ -4,7 +4,7 @@ From cryptis.hyper.examples.vote.proofs Require Export base voter arbitrator.
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper.core Require Import public.
-From cryptis.hyper.primitives Require Import simple with_cryptis.
+From cryptis.hyper.primitives Require Import simple with_cryptis attacker.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl.
 
@@ -24,11 +24,13 @@ Implicit Types (st : list (option (term * term))).
 Lemma election_of_refinement cands votes votes' :
   votes ≡ₚ votes' →
   hypercryptis_ctx -∗
-  REL election_of cands votes << election_of cands votes' : lrel_channel → ().
+  REL election_of cands votes << election_of cands votes' : lrel_attacker → ().
 Proof.
 iIntros (Hperm) "#Hctx".
 have Hlen := Permutation_length Hperm.
-rewrite /election_of. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
+rewrite /election_of /setup. rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_arbitrator chan_arbitrator') "#Hchan_arbitrator". rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_arb_key_refinement with "Hctx"). iIntros (skT skT') "#HT" => /=.
 rel_pures.
@@ -42,19 +44,20 @@ rel_apply_l refines_pkeys_l; first lia. rel_apply_r refines_pkeys_r; first lia.
 rel_pures.
 rel_bind_l (send _ _). rel_bind_r (send _ _).
 iApply refines_bind.
-{ iApply (refines_send with "Hc"). iNext. by iDestruct "HT" as "(_ & _ & _ & _ & ? & _)". }
+{ iApply (refines_send with "Hchan_arbitrator"). iNext.
+  by iDestruct "HT" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_apply_l refines_term_of_list_l. rel_apply_r refines_term_of_list_r.
 rel_bind_l (send _ _). rel_bind_r (send _ _).
 iApply refines_bind.
-{ iApply (refines_send with "Hc"). iNext.
+{ iApply (refines_send with "Hchan_arbitrator"). iNext.
   iApply public_of_list. by iApply pub_pkeys. }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_bind_l (fork_voters _ _ _). rel_bind_r (fork_voters _ _ _).
 iApply (refines_bind with "[toks]").
-{ iApply (fork_voters_refinement with "Hctx Hc HT Hkeys toks"); lia. }
+{ iApply (fork_voters_refinement with "Hctx Hadv HT Hkeys toks"); lia. }
 iIntros (? ?) "_" => /=. rel_pures.
-iApply (arbitrator_refinement with "Hctx Hc Hkeys") => //; lia.
+iApply (arbitrator_refinement with "Hctx Hchan_arbitrator Hkeys") => //; lia.
 Qed.
 
 End Proofs.

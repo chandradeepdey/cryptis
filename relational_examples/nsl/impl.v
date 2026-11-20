@@ -17,35 +17,43 @@ From cryptis.examples.nsl Require Export impl.
 Definition reveal (b : bool) : val := λ: "c" "k",
   send "c" (if: #b then "k" else mk_senc_key #()).
 
-Definition setup : val := λ: "c",
+Definition setup : val := λ: "network",
+  let: "chan_init" := "network" #() in
+  let: "chan_resp" := "network" #() in
   let: "skI" := mk_aenc_key #() in
   let: "skR" := mk_aenc_key #() in
-  send "c" (pkey "skI");;
-  send "c" (pkey "skR");;
-  ("skI", "skR", recv "c").
+  send "chan_init" (pkey "skI");;
+  send "chan_resp" (pkey "skR");;
+  (("chan_init", "chan_resp"), ("skI", "skR", recv "chan_init")).
 
-Definition resp_test (b : bool) : val := λ: "c",
-  let: "keys" := setup "c" in
+Definition resp_test (b : bool) : val := λ: "network",
+  let: "s" := setup "network" in
+  let: "c_init" := Fst (Fst "s") in
+  let: "c_resp" := Snd (Fst "s") in
+  let: "keys" := Snd "s" in
   let: "skI" := Fst (Fst "keys") in
   let: "skR" := Snd (Fst "keys") in
   let: "pkX" := Snd "keys" in
-  Fork (init "c" "skI" "pkX";; #());;
-  match: resp "c" "skR" with
+  Fork (init "c_init" "skI" "pkX";; #());;
+  match: resp "c_resp" "skR" with
     SOME "res" =>
     let: "k" := Snd "res" in
-    if: eq_term (Fst "res") (pkey "skI") then reveal b "c" "k" else #()
+    if: eq_term (Fst "res") (pkey "skI") then reveal b "c_resp" "k" else #()
   | NONE => #()
   end.
 
-Definition init_test (b : bool) : val := λ: "c",
-  let: "keys" := setup "c" in
+Definition init_test (b : bool) : val := λ: "network",
+  let: "s" := setup "network" in
+  let: "c_init" := Fst (Fst "s") in
+  let: "c_resp" := Snd (Fst "s") in
+  let: "keys" := Snd "s" in
   let: "skI" := Fst (Fst "keys") in
   let: "skR" := Snd (Fst "keys") in
   let: "pkR" := pkey "skR" in
   let: "pkX" := Snd "keys" in
-  Fork (resp "c" "skR";; #());;
-  match: init "c" "skI" "pkX" with
+  Fork (resp "c_resp" "skR";; #());;
+  match: init "c_init" "skI" "pkX" with
     SOME "k" =>
-    if: eq_term "pkX" "pkR" then reveal b "c" "k" else #()
+    if: eq_term "pkX" "pkR" then reveal b "c_init" "k" else #()
   | NONE => #()
   end.

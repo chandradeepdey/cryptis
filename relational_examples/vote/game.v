@@ -24,26 +24,30 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-Definition election_guess cands votes : val := λ: "c",
-  election_of cands votes "c";;
-  let: "guess" := recv "c" in
+Definition election_guess cands votes : val := λ: "network",
+  let: "chan_guess" := "network" #() in
+  election_of cands votes "network";;
+  let: "guess" := recv "chan_guess" in
   eq_term (TInt 1) "guess".
 
-Definition election_guess_wrapped cands votes0 votes1 : val := λ: "c",
+Definition election_guess_wrapped cands votes0 votes1 : val := λ: "network",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then election_guess cands votes1 "c"
-        else election_guess cands votes0 "c").
+  ("b", if: "b" then election_guess cands votes1 "network"
+        else election_guess cands votes0 "network").
 
 Lemma election_guess_refinement cands votes votes' :
   votes ≡ₚ votes' →
   hypercryptis_ctx -∗
-  REL election_guess cands votes << election_guess cands votes' : lrel_channel → lrel_bool.
+  REL election_guess cands votes << election_guess cands votes' :
+    lrel_attacker → lrel_bool.
 Proof.
 iIntros (Hperm) "#Hctx". rewrite /election_guess.
-rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_guess chan_guess') "#Hchan_guess". rel_pures.
 rel_bind_l (election_of _ _ _). rel_bind_r (election_of _ _ _).
 iApply refines_bind.
-{ iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+{ iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
   by iApply election_of_refinement. }
 iIntros (? ?) "[-> ->]"=> /=.
 rel_pures.
@@ -65,25 +69,25 @@ Lemma election_guess_wrapped_refinement cands votes0 votes1 :
   votes0 ≡ₚ votes1 →
   hypercryptis_ctx -∗
   REL election_guess_wrapped cands votes0 votes1
-   << election_guess_wrapped cands votes0 votes1 : lrel_channel → LRel (λ p1 p2,
+   << election_guess_wrapped cands votes0 votes1 : lrel_attacker → LRel (λ p1 p2,
     ⌜∃ b g b' g' : bool,
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝).
 Proof.
 iIntros (Hperm) "#Hctx". rewrite /election_guess_wrapped.
-rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
 rel_apply_l refines_nondet_bool_l. iIntros (choice).
 rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
 - rel_bind_l (election_guess _ votes1 _). rel_bind_r (election_guess _ votes0 _).
   iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
     by iApply (election_guess_refinement _ (Permutation_sym Hperm) with "Hctx"). }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
 - rel_bind_l (election_guess _ votes0 _). rel_bind_r (election_guess _ votes1 _).
   iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
     by iApply (election_guess_refinement _ Hperm with "Hctx"). }
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.

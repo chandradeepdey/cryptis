@@ -15,30 +15,33 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Definition guess (test : val) : val := λ: "c",
-  test "c";;
-  let: "guess" := recv "c" in
+Definition guess (test : val) : val := λ: "network",
+  let: "chan_guess" := "network" #() in
+  test "network";;
+  let: "guess" := recv "chan_guess" in
   eq_term (TInt 1) "guess".
 
-Definition guess_wrapped (test : bool → val) : val := λ: "c",
+Definition guess_wrapped (test : bool → val) : val := λ: "network",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then guess (test true) "c" else guess (test false) "c").
+  ("b", if: "b" then guess (test true) "network" else guess (test false) "network").
 
 Section Game.
 
 Context `{!relocG Σ, !publicGS Σ}.
 
-Lemma guess_refinement (test test' : val) c c' :
+Lemma guess_refinement (test test' : val) adv adv' :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  (REL test c << test' c' : ()) -∗
-  REL guess test c << guess test' c' : lrel_bool.
+  lrel_attacker adv adv' -∗
+  (REL test adv << test' adv' : ()) -∗
+  REL guess test adv << guess test' adv' : lrel_bool.
 Proof.
-iIntros "#Hctx #Hc Htest". rewrite /guess. rel_pures.
-rel_bind_l (test c). rel_bind_r (test' c').
+iIntros "#Hctx #Hadv Htest". rewrite /guess. rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_guess chan_guess') "#Hchan_guess". rel_pures.
+rel_bind_l (test adv). rel_bind_r (test' adv').
 iApply (refines_bind with "Htest").
 iIntros (? ?) "_" => /=. rel_pures.
-rel_apply (refines_recv with "Hc").
+rel_apply (refines_recv with "Hchan_guess").
 iIntros (g g') "#Hg" => /=.
 rel_prims. rel_values.
 iMod (public_part_bij' (E:=⊤) (TInt 1) (TInt 1) g g'
@@ -48,24 +51,24 @@ iModIntro. iExists (bool_decide (TInt 1 = g)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma guess_wrapped_refinement (test : bool → val) c c' :
+Lemma guess_wrapped_refinement (test : bool → val) adv adv' :
   hypercryptis_ctx -∗
-  lrel_channel c c' -∗
-  (∀ b, REL test b c << test (negb b) c' : ()) -∗
-  REL guess_wrapped test c << guess_wrapped test c' : λ p1 p2,
+  lrel_attacker adv adv' -∗
+  (∀ b, REL test b adv << test (negb b) adv' : ()) -∗
+  REL guess_wrapped test adv << guess_wrapped test adv' : λ p1 p2,
     ⌜∃ b g b' g' : bool,
     p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
 Proof.
-iIntros "#Hctx #Hc Htest". rewrite /guess_wrapped.
+iIntros "#Hctx #Hadv Htest". rewrite /guess_wrapped.
 rel_pures.
 rel_apply_l refines_nondet_bool_l. iIntros (choice).
 rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
 case: choice; rel_pures.
-- rel_apply (guess_refinement with "Hctx Hc Htest").
+- rel_apply (guess_refinement with "Hctx Hadv Htest").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists true, g, false, g.
-- rel_apply (guess_refinement with "Hctx Hc Htest").
+- rel_apply (guess_refinement with "Hctx Hadv Htest").
   iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
   rel_pures. rel_values.
   iPureIntro. by exists false, g, true, g.
@@ -107,9 +110,9 @@ Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : exp
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
-iApply (guess_wrapped_refinement with "Hctx Hc").
-iIntros (b). iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+iIntros "#Hctx". rel_arrow_val. iIntros (adv0 adv0') "#Hadv".
+iApply (guess_wrapped_refinement with "Hctx Hadv").
+iIntros (b). iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
 by iApply resp_test_refinement.
 Qed.
 
@@ -123,8 +126,8 @@ Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : exp
          v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
 move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (c c') "#Hc".
-iApply (guess_wrapped_refinement with "Hctx Hc").
-iIntros (b). iApply (refines_app _ _ _ _ lrel_channel); last by rel_values.
+iIntros "#Hctx". rel_arrow_val. iIntros (adv0 adv0') "#Hadv".
+iApply (guess_wrapped_refinement with "Hctx Hadv").
+iIntros (b). iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
 by iApply init_test_refinement.
 Qed.

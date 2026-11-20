@@ -4,7 +4,7 @@
 From cryptis Require Import lib cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
-From cryptis.hyper.primitives Require Import with_cryptis.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.vote Require Import impl.
 From cryptis.hyper.examples.vote.proofs Require Import base.
@@ -106,16 +106,16 @@ elim: votes votes' => [|v votes IH] [|v' votes'] //= Hlen; iIntros "#Hctx".
   iFrame "#∗". iPureIntro. by split; last split; last lia.
 Qed.
 
-Lemma fork_voters_refinement c c' skT skT' ks ks' votes votes' :
+Lemma fork_voters_refinement adv adv' skT skT' ks ks' votes votes' :
   length votes = length ks → length votes' = length ks' →
-  hypercryptis_ctx -∗ lrel_channel c c' -∗ arb_key skT skT' -∗
+  hypercryptis_ctx -∗ lrel_attacker adv adv' -∗ arb_key skT skT' -∗
   voter_keys skT skT' ks ks' votes votes' -∗ voter_tokens ks -∗
-  REL fork_voters c (Spec.pkey skT) (repr (zip ks votes))
-   << fork_voters c' (Spec.pkey skT') (repr (zip ks' votes')) : ().
+  REL fork_voters adv (Spec.pkey skT) (repr (zip ks votes))
+   << fork_voters adv' (Spec.pkey skT') (repr (zip ks' votes')) : ().
 Proof.
 rewrite /= ![@repr_list]unlock /voter_keys /voter_tokens.
 elim: ks ks' votes votes' => [|sk ks IH] ks' votes votes' Hl Hl';
-  iIntros "#Hctx #Hc #HT #Hkeys toks".
+  iIntros "#Hctx #Hadv #HT #Hkeys toks".
 - iDestruct (big_sepL2_nil_inv_l with "Hkeys") as %->.
   case: votes votes' Hl Hl' => [|??] [|??] //= _ _.
   rel_rec_l. rel_rec_r. rel_pures. by rel_values.
@@ -123,12 +123,14 @@ elim: ks ks' votes votes' => [|sk ks IH] ks' votes votes' Hl Hl';
   case: votes votes' Hl Hl' => [|v votes] [|v' votes'] //= [Hl] [Hl'].
   iDestruct "toks" as "[tok toks]".
   rel_rec_l. rel_rec_r. rel_pures.
+  rel_apply (refines_new_channel with "Hadv").
+  iIntros (chan_voter chan_voter') "#Hchan_voter". rel_pures.
   rel_bind_l (Fork _). rel_bind_r (Fork _).
   iApply (refines_bind with "[tok]").
   { iApply refines_fork. rel_pures.
-    by iApply (voter_refinement with "Hctx Hc HT HV tok"). }
+    by iApply (voter_refinement with "Hctx Hchan_voter HT HV tok"). }
   iIntros (? ?) "_" => /=. rel_pures.
-  by iApply (IH _ votes votes' Hl Hl' with "Hctx Hc HT Hkeys' toks").
+  by iApply (IH _ votes votes' Hl Hl' with "Hctx Hadv HT Hkeys' toks").
 Qed.
 
 End Voter.

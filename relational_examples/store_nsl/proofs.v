@@ -15,7 +15,7 @@ From reloc Require Import reloc.
 From cryptis Require Import cryptis primitives.
 From cryptis.hyper.lib Require Import avl.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
-From cryptis.hyper.primitives Require Import with_cryptis.
+From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import proofmode.
 From cryptis.hyper.examples.nsl.proofs Require Import base init resp.
 From cryptis.hyper.examples.store_nsl Require Import impl.
@@ -182,9 +182,14 @@ Qed.
 
 Lemma store_game_refinement :
   hypercryptis_ctx -∗
-  REL game ops k << game ops' k : lrel_channel → ().
+  REL game ops k << game ops' k : lrel_attacker → ().
 Proof.
-iIntros "#Hctx". rewrite /game. rel_arrow_val. iIntros (c c') "#Hc". rel_pures.
+iIntros "#Hctx". rewrite /game /setup.
+rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_client chan_client') "#Hchan_client". rel_pures.
+rel_apply (refines_new_channel with "Hadv").
+iIntros (chan_server chan_server') "#Hchan_server". rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_honest_key_refinement with "Hctx").
 iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.
@@ -215,18 +220,20 @@ iMod (inv_alloc connIN _ (conn_inv γ (key_sess skI) (key_free skI) Φs)
 { iNext. iLeft. iFrame. }
 iAssert (nsl_ctx skI skI' skR skR' (store_sess skI)) as "#Hnsl"; first by iFrame "#".
 rel_prims.
-rel_apply (refines_send with "Hc []").
+rel_apply (refines_send with "Hchan_client []").
 { iNext. by iDestruct "HI" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_prims.
-rel_apply (refines_send with "Hc []").
+rel_apply (refines_send with "Hchan_server []").
 { iNext. by iDestruct "HR" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
 rel_bind_l (Fork _). rel_bind_r (Fork _).
 iApply (refines_bind with "[tok_sess log1]").
 { iApply refines_fork. rel_prims.
-  by iApply (store_server_refinement with "Hctx Hc Hnsl Hinv tok_sess log1"). }
+  by iApply (store_server_refinement
+                with "Hctx Hchan_server Hnsl Hinv tok_sess log1"). }
 iIntros (? ?) "_" => /=. rel_prims.
-rel_apply (store_client_refinement skI skI' skR skR' γ with "Hctx Hc Hnsl log0").
+rel_apply (store_client_refinement skI skI' skR skR' γ
+             with "Hctx Hchan_client Hnsl log0").
 iIntros (? ?) "[[-> ->]|(%cs & %cs' & [-> ->] & Hh)]" => /=.
 { rel_pures. by rel_values. }
 rel_pures.
@@ -241,7 +248,7 @@ rel_apply (rpc_call_refinement γ (key_sess_agree skI) (key_free_sess skI)
 iIntros (? ?) "(%p & %p' & [-> ->] & Hh & %Hp)" => /=.
 move: Hp. rewrite /store_msg. case: decide => // _ [z [-> ->]].
 iAssert (PUB⟨TInt z, TInt z⟩) as "#Hz"; first by rewrite public_TInt.
-by rel_apply (refines_send with "Hc Hz").
+by rel_apply (refines_send with "Hchan_client Hz").
 Qed.
 
 End Game.

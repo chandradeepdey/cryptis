@@ -1,7 +1,8 @@
 (** Relational adequacy.
 
     [hypercryptis_adequacy] turns a ReLoC refinement between two protocols,
-    as functions of the relational channel [lrel_channel], into a statement
+    as functions of the attacker [lrel_attacker], which builds their
+    channels, into a statement
     about executions: for any attackers [adv] and [adv'] related at
     [lrel_attacker], if the left protocol run against [adv] terminates then
     the right protocol run against [adv'] has a terminating execution whose
@@ -23,7 +24,7 @@ Lemma hypercryptis_adequacy Σ `{!relocPreG Σ, !publicGpreS Σ}
       hypercryptis_ctx -∗ REL adv << adv' : lrel_attacker) →
   (∀ `{!relocG Σ, !publicGS Σ},
       hypercryptis_ctx -∗
-      REL f << f' : lrel_channel → LRel (λ v v', ⌜P v v'⌝)) →
+      REL f << f' : lrel_attacker → LRel (λ v v', ⌜P v v'⌝)) →
   adequate NotStuck (run_network adv f) σ
     (λ v _, ∃ thp' h v',
        rtc erased_step ([run_network adv' f'], σ) (of_val v' :: thp', h) ∧
@@ -42,13 +43,13 @@ Qed.
 Definition network_game (f : val) : expr := (attacker_prims, f)%E.
 
 Definition network_game_ty (τ : type) : type :=
-  (∃: prims_ty * (channel_ty → τ.[ren (+1)]))%ty.
+  (∃: prims_ty * (network_ty → τ.[ren (+1)]))%ty.
 
 Lemma hypercryptis_ctx_refinement Σ `{!relocPreG Σ, !publicGpreS Σ}
     (f f' : val) τ :
   (∀ `{!relocG Σ, !publicGS Σ} Δ,
       hypercryptis_ctx -∗
-      REL f << f' : lrel_channel → interp τ Δ) →
+      REL f << f' : lrel_attacker → interp τ Δ) →
   ∅ ⊨ network_game f ≤ctx≤ network_game f' : network_game_ty τ.
 Proof.
 move=> Hf.
@@ -59,7 +60,7 @@ iApply (refines_pack lrel_term).
 iApply refines_pair.
 { rel_values. iModIntro.
   iPoseProof (attacker_prims_refinement Δ with "Hctx") as "Hp". iExact "Hp". }
-rel_arrow_val. iIntros (c c') "#Hc".
+rel_arrow_val. iIntros (adv adv') "#Hadv".
 iApply (refines_wand with "[]").
 { iApply (refines_app with "[] []"); first by iApply (Hf _ _ Δ with "Hctx").
   by rel_values. }

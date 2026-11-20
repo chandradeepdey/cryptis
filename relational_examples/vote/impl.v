@@ -93,21 +93,30 @@ Definition mk_voters : val := rec: "loop" "votes" :=
     SOME (("sk", Fst "p"), "loop" (Snd "p"))
   end.
 
-Definition fork_voters : val := rec: "loop" "c" "pkT" "voters" :=
+Definition fork_voters : val := rec: "loop" "network" "pkT" "voters" :=
   match: "voters" with
     NONE => #()
   | SOME "p" =>
-    Fork (voter "c" (Fst (Fst "p")) "pkT" (Snd (Fst "p")));;
-    "loop" "c" "pkT" (Snd "p")
+    let: "chan_voter" := "network" #() in
+    Fork (voter "chan_voter" (Fst (Fst "p")) "pkT" (Snd (Fst "p")));;
+    "loop" "network" "pkT" (Snd "p")
   end.
 
-Definition election_of (cands votes : list Z) : val := λ: "c",
+Definition setup : val := λ: "network" "votes",
+  let: "chan_arbitrator" := "network" #() in
   let: "skT" := mk_aenc_key #() in
   let: "pkT" := pkey "skT" in
-  let: "voters" := mk_voters (repr votes) in
+  let: "voters" := mk_voters "votes" in
   let: "pks" := map_list (λ: "p", pkey (Fst "p")) "voters" in
-  send "c" "pkT";;
-  send "c" (term_of_list "pks");;
-  fork_voters "c" "pkT" "voters";;
+  send "chan_arbitrator" "pkT";;
+  send "chan_arbitrator" (term_of_list "pks");;
+  fork_voters "network" "pkT" "voters";;
+  ("chan_arbitrator", "skT", "pks").
+
+Definition election_of (cands votes : list Z) : val := λ: "network",
+  let: "s" := setup "network" (repr votes) in
+  let: "c" := Fst (Fst "s") in
+  let: "skT" := Snd (Fst "s") in
+  let: "pks" := Snd "s" in
   arbitrator "c" "skT" (repr cands) "pks".
 
