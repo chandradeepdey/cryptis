@@ -157,34 +157,32 @@ iAssert (|={⊤}=> ((⌜pkX = Spec.pkey skR⌝ ∗ init_nonce nI nI') ∨
 { case: (decide (pkX = Spec.pkey skR)) => [eX|neX].
   - have eX' := proj1 HX eX. subst pkX pkX'.
     iMod (public_secret_nonce_l (E:=⊤) HnI with "Hctx tt_n")
-      as "(#sec & prot & tok)"; first solve_ndisj.
+      as "[#sec tok]"; first solve_ndisj.
     iMod (public_secret_nonce_r (E:=⊤) HnI' with "Hctx tts_n")
-      as "(#sec' & prot' & tok')"; first solve_ndisj.
+      as "[#sec' tok']"; first solve_ndisj.
     rewrite (term_token_difference nI (↑m3claimN) (⊤ ∖ ↑hypercryptisN));
       last solve_ndisj.
     iDestruct "tok" as "[claim3 tok]".
     iMod (term_meta_set initN nI' with "tok") as "#meta"; first solve_ndisj.
     iMod (term_meta_spec_set initN nI with "tok'") as "#meta'"; first solve_ndisj.
-    iMod (public_prots_l_grow_2 (E:=⊤) (tsup:=Spec.of_list [nI; Spec.pkey skI])
-            with "Hctx prot sec") as "[_ by_pl]";
-      [solve_ndisj | apply not_elem_of_empty | solve_immediate_subterm |].
-    iMod (public_prots_r_grow_2 (E:=⊤) (t'sup:=Spec.of_list [nI'; Spec.pkey skI'])
-            with "Hctx prot' sec'") as "[_ by_pl']";
-      [solve_ndisj | apply not_elem_of_empty | solve_immediate_subterm |].
     iDestruct (term_token_public_token_l with "tt_pl") as "(tt_pl & _ & _)";
       first solve_not_TSeal.
     iDestruct (term_token_public_token_r with "tts_pl") as "(tts_pl & _ & _)";
       first solve_not_TSeal.
     have Htg : ∀ t, is_immediate_subterm t (Spec.tag (Tag m1N) t).
     { move=> t0. rewrite [Spec.tag]unlock. exact: SubtermPairR. }
-    iMod (public_protect_step_l (E:=⊤) (t:=Spec.of_list [nI; Spec.pkey skI])
-            (tsup:=Spec.tag (Tag m1N) (Spec.of_list [nI; Spec.pkey skI]))
-            (Htg _) ltac:(solve_ndisj)
-            with "Hctx by_pl tt_pl") as "by_tg".
-    iMod (public_protect_step_r (E:=⊤) (t':=Spec.of_list [nI'; Spec.pkey skI'])
-            (t'sup:=Spec.tag (Tag m1N) (Spec.of_list [nI'; Spec.pkey skI']))
-            (Htg _) ltac:(solve_ndisj)
-            with "Hctx by_pl' tts_pl") as "by_tg'".
+    iAssert (protected_deposit_l (Spec.tag (Tag m1N) (Spec.of_list [nI; Spec.pkey skI])))
+      with "[tt_pl]" as "by_tg".
+    { iApply (protected_deposit_secret_l
+                (path:=[Spec.of_list [nI; Spec.pkey skI]]) with "[tt_pl] sec").
+      - apply: SubtermPathStep; [exact: Htg | apply: SubtermPathOne; solve_immediate_subterm].
+      - by rewrite /= right_id. }
+    iAssert (protected_deposit_r (Spec.tag (Tag m1N) (Spec.of_list [nI'; Spec.pkey skI'])))
+      with "[tts_pl]" as "by_tg'".
+    { iApply (protected_deposit_secret_r
+                (path:=[Spec.of_list [nI'; Spec.pkey skI']]) with "[tts_pl] sec'").
+      - apply: SubtermPathStep; [exact: Htg | apply: SubtermPathOne; solve_immediate_subterm].
+      - by rewrite /= right_id. }
     iMod (aenc_link (E:=⊤) skR skR' m1N (Spec.of_list [nI; Spec.pkey skI])
             (Spec.of_list [nI'; Spec.pkey skI']) ltac:(solve_ndisj)
             with "Hctx HR [] [] by_tg by_tg' tt_tg tts_tg tt_c tts_c") as "[link [mk mk']]".

@@ -514,16 +514,16 @@ iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)"; first s
 iDestruct (term_token_public_token_r with "tts_pl") as "(tts_pl & _ & _)"; first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
 (* The tagged payload is protected by the chain nonce → payload → tagged payload. *)
-iMod (public_protect_nonce_l (tsup:=pl) Hn ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx tt_n") as "protby_pl".
-iMod (public_protect_step_l (t:=pl) (tsup:=tg) ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx protby_pl tt_pl") as "protby_tg".
-iMod (public_protect_nonce_r (t'sup:=pl') Hn' ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx tts_n") as "protby_pl'".
-iMod (public_protect_step_r (t':=pl') (t'sup:=tg') ltac:(solve_immediate_subterm)
-        ltac:(solve_ndisj) with "Hctx protby_pl' tts_pl") as "protby_tg'".
+iAssert (protected_deposit_l tg) with "[tt_pl tt_n]" as "prot_tg".
+{ iApply (protected_deposit_nonce_l (path:=[pl]) Hn with "[tt_pl] tt_n").
+  - apply: SubtermPathStep; [solve_immediate_subterm | apply: SubtermPathOne; solve_immediate_subterm].
+  - by rewrite /= right_id. }
+iAssert (protected_deposit_r tg') with "[tts_pl tts_n]" as "prot_tg'".
+{ iApply (protected_deposit_nonce_r (path:=[pl']) Hn' with "[tts_pl] tts_n").
+  - apply: SubtermPathStep; [solve_immediate_subterm | apply: SubtermPathOne; solve_immediate_subterm].
+  - by rewrite /= right_id. }
 iMod (public_link (E:=⊤) ltac:(solve_ndisj)
-        with "Hctx protby_tg protby_tg' tt_tg tts_tg") as "#link_tg".
+        with "Hctx prot_tg prot_tg' tt_tg tts_tg") as "#link_tg".
 iAssert (minted tg) as "#mint_tg".
 { rewrite /tg minted_tag /pl minted_TPair. by iSplit. }
 iAssert (minted_spec tg') as "#mint_tg'".

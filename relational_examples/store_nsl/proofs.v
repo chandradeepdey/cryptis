@@ -86,10 +86,9 @@ Definition store_ctx skI γ : iProp :=
 
 Lemma store_alloc skI γ :
   hypercryptis_ctx -∗ store_ctx skI γ -∗ term_token (seed_of_aenc_key skI) (↑sessN) -∗
-  ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' -∗
-    protects_superterms_l s ∅ -∗ protects_superterms_r s' ∅ ={⊤}=∗ store_sess skI s s'.
+  ∀ s s', key_tokens s s' -∗ secret_in_l s -∗ secret_in_r s' ={⊤}=∗ store_sess skI s s'.
 Proof.
-iIntros "#Hctx #Hinv tok" (s s') "(tt_k & tts_k) #sec #sec' prot prot'".
+iIntros "#Hctx #Hinv tok" (s s') "(tt_k & tts_k) #sec #sec'".
 iPoseProof (term_token_minted with "tt_k") as "#mk".
 iPoseProof (term_token_spec_minted_spec with "tts_k") as "#mk'".
 iDestruct (term_token_public_token_l with "tt_k") as "(tt_k & ns & _)";
@@ -98,10 +97,10 @@ iDestruct (term_token_public_token_r with "tts_k") as "(tts_k & ns' & _)";
   first (rewrite /sess_key; solve_not_TSeal).
 iMod (public_secret_step_l (E:=⊤) (t:=s) (tsup:=sess_key s)
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
-        with "Hctx sec prot tt_k") as "[#sec_k _]".
+        with "Hctx sec tt_k") as "#sec_k".
 iMod (public_secret_step_r (E:=⊤) (t':=s') (t'sup:=sess_key s')
         ltac:(rewrite /sess_key [term_of_senc_key]unlock; constructor) ltac:(solve_ndisj)
-        with "Hctx sec' prot' tts_k") as "[#sec_k' _]".
+        with "Hctx sec' tts_k") as "#sec_k'".
 iInv "Hinv" as "[>(free & log0 & log1)|(%k0 & %k0' & >(%s0 & %s0' & _ & #m0 & _) & _)]";
   last by iDestruct (term_meta_token with "tok m0") as "[]".
 iMod (term_meta_set sessN (s, s') with "tok") as "#m1"; first done.

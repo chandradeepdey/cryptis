@@ -1,71 +1,39 @@
 (** * The relation [PUB] and its invariant
 
 [PUB⟨t, t'⟩] says that the attacker cannot tell [t] in the left run apart
-from [t'] in the right run.  The invariant behind it keeps track of which
-terms the two runs treat as the same, and which terms stay secret.
+from [t'] in the right run.
 
 ** Section [Public]
 
-- [Tokens] says where the ghost state of a term lives.  A ciphertext lives on
-  its key, under a namespace for its payload, so that whoever holds the
-  tokens of the key decides how the runs treat the ciphertexts made with it,
-  even the ones that anyone can compute.  Any other term lives on itself.
-  The part of these tokens that decides how the runs treat a term is its
-  public token.  The never-sealed tokens of a key hold the public tokens of
-  all the ciphertexts under it, so each of them can be made public once.
-  - [seal_release_l c] is a part of the public token of a ciphertext [c].
-    In the invariant, it says that [c] does not hold its key back.
-  - [holds_key_l t k] is a token that the key [k] has for each payload [t].
-    In the invariant, it says that the ciphertext of [t] under [k] holds
-    the key back.
-- [States] records what is known about each term.
-  - [linked t t'] means that the runs treat [t] and [t'] as the same term.
-  - [publicly_linked t t'] means the same, and that the attacker may see
-    them.
-  - [secret_in_l t] means that the attacker never sees [t] in the left run.
-- [Prots] records why a term stays hidden.  A term other than a nonce can be
-  hidden only if one of its parts is hidden, for example the nonce inside it,
-  or the key or the payload of a ciphertext.
-- [Relation] defines [PUB].  Two terms are related if they are built the same
-  way from related parts, or if they are publicly linked and either have the
-  same shape with linked parts, which the attacker can only take apart in the
-  same way in both runs, or are both opaque: a nonce, the hash of a secret, or
-  a ciphertext that the attacker can neither make nor open.
-- [Invariant] puts these together.  A ciphertext may be public while its
-  payload is hidden, as long as its key stays hidden too.  So when a
-  ciphertext becomes public, the invariant takes one of two tokens for it:
-  the seal's release if the payloads are related or the decryption key is
-  secret, and the payload's hold on the key otherwise.  Once the payloads
-  are related, the seal's release can be traded for the hold.  A key
-  becomes public by handing in every hold on it, which is possible only
-  when the invariant keeps none of the holds.  Every ciphertext under a
-  public key therefore has its seal's release in the invariant, and
-  related payloads.  [public_deposit_l] is what a term hands over when it
-  becomes public.
+- [Tokens]: the ghost state of a term.  A ciphertext keeps it on its key,
+  so that whoever owns the key decides how its ciphertexts are treated.
+  Any other term keeps it on itself.
+- [States]: whether the runs treat two terms as the same ([linked]),
+  whether the attacker may see them too ([publicly_linked]), and whether a
+  term stays secret ([secret_in_l]).
+- [Subterms]: the parts of a term, and chains of parts.
+- [Relation]: two terms are related if they are built the same way from
+  related parts, or if they are publicly linked and look alike to the
+  attacker.
+- [Invariant]: a hidden term holds back the parts on a chain down to a
+  secret term, a nonce or a linked term, and a term becomes public only
+  when nothing holds it back.  A public ciphertext whose payload is hidden
+  holds its key back the same way.
 
 ** Section [PublicProperties]
 
-- [Constructors] says what [PUB] means for each kind of term.  For a
-  constructor [X], [public_X] covers two [X] terms, and [public_X_term] and
-  [public_term_X] say what may be related to an [X] term.
-- [Ciphertexts] does the same for ciphertexts.
+- [Constructors] and [Ciphertexts]: what may be related to each kind of
+  term.
 - [Protection]: a hidden term is related to nothing.
-- [Release]: once a key is public, the ciphertexts under it have related
-  payloads.  Once the payloads of a public ciphertext are related, the
-  seal's release can be traded for the payload's hold on the key.
-- [LinkedShape]: an opaque term is not built from related parts, and linked
-  parts have the same partners as related ones.
-- [Admission]: a term with an entry in the states map has spent its states
-  token.
+- [Release]: once a key is public, its ciphertexts have related payloads.
+- [Admission]: a term in the states map has used up its states token.
 - [PartBij]: a term is related to at most one term in the other run.
-- [AttackerDecryption]: if the attacker tries to decrypt related terms with
-  related keys, it succeeds in both runs or in neither, and the results are
-  related.
+- [AttackerDecryption]: decrypting related terms with related keys
+  succeeds in both runs or in neither, with related results.
 - [HonestDecryption]: what an honest party gets when it decrypts with its
-  own secret key, in each run.
+  own key.
 
-Lemmas ending in [_fupd] are the ones to use.  The local ones they are built
-from assume that the invariant is already open. *)
+Lemmas ending in [_fupd] open the invariant themselves. *)
 
 From iris.algebra Require Import gmap gset.
 From reloc Require Import reloc.
@@ -85,24 +53,19 @@ Abbreviation holdN := (hypercryptisN.@"hold").
 
 Class publicGpreS Σ := PublicGPreS {
   #[local] publicGpreS_states :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
-  #[local] publicGpreS_prots :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
   #[local] publicGpreS_term_meta :: term_metaGpreS Σ;
 }.
 
 Class publicGS Σ := PublicGS {
   #[global] public_states_inG :: inG Σ (authUR (gmapUR term (authUR (optionUR stateR))));
-  #[global] public_prots_inG :: inG Σ (authUR (gmapUR term (authUR (gset_disjUR term))));
   #[global] public_term_meta_inG :: term_metaGS Σ;
   #[global] public_term_meta_spec_inG :: term_meta_specGS Σ;
   public_states_l : gname;
   public_states_r : gname;
-  public_prots_l : gname;
-  public_prots_r : gname;
 }.
 
 Definition publicΣ : gFunctors :=
   #[GFunctor (authUR (gmapUR term (authUR (optionUR stateR))));
-    GFunctor (authUR (gmapUR term (authUR (gset_disjUR term))));
     term_metaΣ].
 
 #[global] Instance subG_publicGpreS Σ : subG publicΣ Σ → publicGpreS Σ.
@@ -115,10 +78,9 @@ Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 Abbreviation iPropO := (iPropO Σ).
 
-Implicit Types t : term.
+Implicit Types t tsub tsup troot t'sub t'sup t'root : term.
 Implicit Types st : state.
 Implicit Types states_l states_r : gmap term state.
-Implicit Types prots_l prots_r : gmap term (gset term).
 Implicit Types P : term -> term -> iProp.
 
 Section Tokens.
@@ -144,8 +106,11 @@ Definition states_meta_r t' : iProp := term_meta_spec (home_of_term t').1 ((home
 
 Definition prots_token_l t : iProp := term_token (home_of_term t).1 (↑(home_of_term t).2.@"prots").
 Definition prots_token_r t' : iProp := term_token_spec (home_of_term t').1 (↑(home_of_term t').2.@"prots").
-Definition prots_meta_l t : iProp := term_meta (home_of_term t).1 ((home_of_term t).2.@"prots") ().
-Definition prots_meta_r t' : iProp := term_meta_spec (home_of_term t').1 ((home_of_term t').2.@"prots") ().
+
+Definition holds_subterm_l t tsub : iProp :=
+  term_token (home_of_term tsub).1 (↑(home_of_term tsub).2.@"prots".@t).
+Definition holds_subterm_r t' t'sub : iProp :=
+  term_token_spec (home_of_term t'sub).1 (↑(home_of_term t'sub).2.@"prots".@t').
 
 Definition seal_release_l t : iProp := term_token (home_of_term t).1 (↑(home_of_term t).2.@"release").
 Definition seal_release_r t' : iProp := term_token_spec (home_of_term t').1 (↑(home_of_term t').2.@"release").
@@ -157,12 +122,6 @@ Definition holds_key_r t' k' : iProp := term_token_spec k' (↑holdN.@t').
 Proof. apply _. Qed.
 
 #[global] Instance states_meta_r_persistent t' : Persistent (states_meta_r t').
-Proof. apply _. Qed.
-
-#[global] Instance prots_meta_l_persistent t : Persistent (prots_meta_l t).
-Proof. apply _. Qed.
-
-#[global] Instance prots_meta_r_persistent t' : Persistent (prots_meta_r t').
 Proof. apply _. Qed.
 
 Lemma public_token_l_split t :
@@ -189,23 +148,27 @@ Proof. exact: term_meta_set. Qed.
 Lemma states_meta_r_set t' : states_token_r t' ==∗ states_meta_r t'.
 Proof. exact: term_meta_spec_set. Qed.
 
-Lemma prots_meta_l_set t : prots_token_l t ==∗ prots_meta_l t.
-Proof. exact: term_meta_set. Qed.
-
-Lemma prots_meta_r_set t' : prots_token_r t' ==∗ prots_meta_r t'.
-Proof. exact: term_meta_spec_set. Qed.
-
 Lemma states_token_meta_l t : states_token_l t -∗ states_meta_l t -∗ False.
 Proof. exact: term_meta_token. Qed.
 
 Lemma states_token_meta_r t' : states_token_r t' -∗ states_meta_r t' -∗ False.
 Proof. exact: term_meta_spec_token. Qed.
 
-Lemma prots_token_meta_l t : prots_token_l t -∗ prots_meta_l t -∗ False.
-Proof. exact: term_meta_token. Qed.
+Lemma prots_token_holds_subterm_l t tsub : prots_token_l tsub -∗ holds_subterm_l t tsub -∗ False.
+Proof.
+iIntros "tok hold". iDestruct (term_token_disj with "tok hold") as %Hdisj.
+have : ↑(home_of_term tsub).2.@"prots".@t ⊆ (↑(home_of_term tsub).2.@"prots" : coPset)
+  by solve_ndisj.
+pose proof (nclose_non_empty ((home_of_term tsub).2.@"prots".@t)). set_solver.
+Qed.
 
-Lemma prots_token_meta_r t' : prots_token_r t' -∗ prots_meta_r t' -∗ False.
-Proof. exact: term_meta_spec_token. Qed.
+Lemma prots_token_holds_subterm_r t' t'sub : prots_token_r t'sub -∗ holds_subterm_r t' t'sub -∗ False.
+Proof.
+iIntros "tok hold". iDestruct (term_token_spec_disj with "tok hold") as %Hdisj.
+have : ↑(home_of_term t'sub).2.@"prots".@t' ⊆ (↑(home_of_term t'sub).2.@"prots" : coPset)
+  by solve_ndisj.
+pose proof (nclose_non_empty ((home_of_term t'sub).2.@"prots".@t')). set_solver.
+Qed.
 
 Lemma term_token_public_token_l t :
   (∀ k t1, t ≠ TSeal k t1) →
@@ -661,7 +624,7 @@ Qed.
 
 End States.
 
-Section Prots.
+Section Subterms.
 
 Inductive is_immediate_subterm : term → term → Prop :=
   | SubtermPairL t1 t2 : is_immediate_subterm t1 (TPair t1 t2)
@@ -679,166 +642,34 @@ Lemma is_immediate_subterm_sign_key (sk : sign_key) :
   is_immediate_subterm (seed_of_sign_key sk) sk.
 Proof. rewrite [term_of_sign_key]unlock. exact: SubtermKey. Qed.
 
-Definition public_prots_l_auth prots_l : iProp :=
-  own public_prots_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> prots_l)) ∗
-  [∗ map] t ↦ ts ∈ prots_l,
-    own public_prots_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
+Inductive subterm_path : term → list term → term → Prop :=
+  | SubtermPathOne tsub t :
+      is_immediate_subterm tsub t →
+      subterm_path t [] tsub
+  | SubtermPathStep tsub path troot t :
+      is_immediate_subterm tsub t →
+      subterm_path tsub path troot →
+      subterm_path t (tsub :: path) troot.
 
-Definition public_prots_r_auth prots_r : iProp :=
-  own public_prots_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> prots_r)) ∗
-  [∗ map] t' ↦ ts ∈ prots_r,
-    own public_prots_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}).
-
-Definition public_prots_inv prots_l prots_r : iProp :=
-  public_prots_l_auth prots_l ∗
-  public_prots_r_auth prots_r ∗
-  ([∗ set] t ∈ dom prots_l, prots_meta_l t) ∗
-  ([∗ set] t' ∈ dom prots_r, prots_meta_r t').
-
-Definition protects_superterms_l t ts : iProp :=
-  own public_prots_l (◯ {[ t := ●{#1/2} (GSet ts) ]}).
-
-Definition protected_by_subterm_l t tsub : iProp :=
-  own public_prots_l (◯ {[ tsub := ◯ (GSet {[ t ]}) ]}).
-
-Definition protects_superterms_r t' ts : iProp :=
-  own public_prots_r (◯ {[ t' := ●{#1/2} (GSet ts) ]}).
-
-Definition protected_by_subterm_r t' tsub : iProp :=
-  own public_prots_r (◯ {[ tsub := ◯ (GSet {[ t' ]}) ]}).
-
-Lemma public_prots_l_fresh prots_l t :
-  ([∗ set] t' ∈ dom prots_l, prots_meta_l t') -∗
-  prots_token_l t -∗
-  ⌜prots_l !! t = None⌝.
+Lemma is_immediate_subterm_lt tsub t :
+  is_immediate_subterm tsub t → tsize tsub < tsize t.
 Proof.
-iIntros "Hmeta Htt".
-destruct (prots_l !! t) eqn:Heq; last done.
-iDestruct (big_sepS_elem_of _ _ t with "Hmeta") as "Hmeta_t"; first by apply elem_of_dom.
-by iDestruct (prots_token_meta_l with "Htt Hmeta_t") as "[]".
+case => *;
+  [ rewrite (tsize_eq (TPair _ _))
+  | rewrite (tsize_eq (TPair _ _))
+  | rewrite (tsize_eq (TKey _ _))
+  | rewrite (tsize_eq (TSeal _ _))
+  | rewrite (tsize_eq (TSeal _ _))
+  | rewrite (tsize_eq (THash _)) ]; lia.
 Qed.
 
-Lemma public_prots_r_fresh prots_r t' :
-  ([∗ set] t' ∈ dom prots_r, prots_meta_r t') -∗
-  prots_token_r t' -∗
-  ⌜prots_r !! t' = None⌝.
+Lemma subterm_path_lt t path troot :
+  subterm_path t path troot → tsize troot < tsize t.
 Proof.
-iIntros "Hmeta Htts".
-destruct (prots_r !! t') eqn:Heq; last done.
-iDestruct (big_sepS_elem_of _ _ t' with "Hmeta") as "Hmeta_t"; first by apply elem_of_dom.
-by iDestruct (prots_token_meta_r with "Htts Hmeta_t") as "[]".
+elim => [?? /is_immediate_subterm_lt // | ???? /is_immediate_subterm_lt ? _ ?]; lia.
 Qed.
 
-Lemma public_prots_l_lookup prots_l t tsub :
-  own public_prots_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> prots_l)) -∗
-  protected_by_subterm_l t tsub -∗
-  ⌜∃ ts, prots_l !! tsub = Some ts ∧ t ∈ ts⌝.
-Proof.
-iIntros "H1 H2".
-iCombine "H1 H2" gives "%H".
-iPureIntro.
-apply auth_both_valid_discrete in H as [Hincl _].
-apply singleton_included_l in Hincl as (y & <- & Hincl).
-rewrite lookup_fmap in Hincl.
-destruct (prots_l !! tsub) as [ts|]; last first.
-{ apply Some_included_is_Some in Hincl.
-  by apply is_Some_None in Hincl. }
-exists ts. split; first done.
-apply Some_included in Hincl as [Heq | Hincl];
-  first by inversion Heq as [H _]; inversion H.
-apply auth_frag_included in Hincl.
-apply gset_disj_included in Hincl. set_solver.
-Qed.
-
-Lemma public_prots_r_lookup prots_r t' t'sub :
-  own public_prots_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> prots_r)) -∗
-  protected_by_subterm_r t' t'sub -∗
-  ⌜∃ ts, prots_r !! t'sub = Some ts ∧ t' ∈ ts⌝.
-Proof.
-iIntros "H1 H2".
-iCombine "H1 H2" gives "%H".
-iPureIntro.
-apply auth_both_valid_discrete in H as [Hincl _].
-apply singleton_included_l in Hincl as (y & <- & Hincl).
-rewrite lookup_fmap in Hincl.
-destruct (prots_r !! t'sub) as [ts|]; last first.
-{ apply Some_included_is_Some in Hincl.
-  by apply is_Some_None in Hincl. }
-exists ts. split; first done.
-apply Some_included in Hincl as [Heq | Hincl];
-  first by inversion Heq as [H _]; inversion H.
-apply auth_frag_included in Hincl.
-apply gset_disj_included in Hincl. set_solver.
-Qed.
-
-Lemma public_prots_l_lookup_2 prots_l t ts :
-  own public_prots_l (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> prots_l)) -∗
-  protects_superterms_l t ts -∗
-  ⌜prots_l !! t = Some ts⌝.
-Proof.
-iIntros "H1 H2".
-iCombine "H1 H2" gives "%H".
-iPureIntro.
-apply auth_both_valid_discrete in H as [Hincl _].
-apply singleton_included_l in Hincl as (y & <- & Hincl).
-rewrite lookup_fmap in Hincl.
-destruct (prots_l !! t) as [ts'|]; last first.
-{ apply Some_included_is_Some in Hincl.
-  by apply is_Some_None in Hincl. }
-assert (●{#1 / 2} (GSet ts) ≼ ● (GSet ts') ⋅ ◯ (GSet ts')) as H.
-{ by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
-apply auth_auth_dfrac_included in H as [_ Heq].
-by injection Heq as ->.
-Qed.
-
-Lemma public_prots_r_lookup_2 prots_r t' ts :
-  own public_prots_r (● ((λ ts, ● GSet ts ⋅ ◯ GSet ts) <$> prots_r)) -∗
-  protects_superterms_r t' ts -∗
-  ⌜prots_r !! t' = Some ts⌝.
-Proof.
-iIntros "H1 H2".
-iCombine "H1 H2" gives "%H".
-iPureIntro.
-apply auth_both_valid_discrete in H as [Hincl _].
-apply singleton_included_l in Hincl as (y & <- & Hincl).
-rewrite lookup_fmap in Hincl.
-destruct (prots_r !! t') as [ts'|]; last first.
-{ apply Some_included_is_Some in Hincl.
-  by apply is_Some_None in Hincl. }
-assert (●{#1 / 2} (GSet ts) ≼ ● (GSet ts') ⋅ ◯ (GSet ts')) as H.
-{ by apply Some_included in Hincl as [H_eq | ?]=> //; rewrite H_eq. }
-apply auth_auth_dfrac_included in H as [_ Heq].
-by injection Heq as ->.
-Qed.
-
-Lemma public_prots_l_ne t tsub tsub1 :
-  protected_by_subterm_l t tsub -∗
-  protected_by_subterm_l t tsub1 -∗
-  ⌜tsub ≠ tsub1⌝.
-Proof.
-iIntros "Hprot Hprot1".
-iIntros (->).
-iCombine "Hprot Hprot1" gives "%Hvalid". iPureIntro.
-rewrite -auth_frag_op singleton_op -auth_frag_op in Hvalid.
-rewrite auth_frag_valid singleton_valid auth_frag_valid gset_disj_valid_op in Hvalid.
-set_solver.
-Qed.
-
-Lemma public_prots_r_ne t' t'sub t'sub1 :
-  protected_by_subterm_r t' t'sub -∗
-  protected_by_subterm_r t' t'sub1 -∗
-  ⌜t'sub ≠ t'sub1⌝.
-Proof.
-iIntros "Hprot Hprot1".
-iIntros (->).
-iPoseProof (own_valid_2 with "Hprot Hprot1") as "%Hvalid".
-iPureIntro.
-rewrite -auth_frag_op singleton_op -auth_frag_op in Hvalid.
-rewrite auth_frag_valid singleton_valid auth_frag_valid gset_disj_valid_op in Hvalid.
-set_solver.
-Qed.
-
-End Prots.
+End Subterms.
 
 Section Relation.
 
@@ -974,17 +805,17 @@ Section Invariant.
 #[local] Notation "PUB⟨ a , b ⟩" := (public a b)
   (at level 0, no associativity, format "PUB⟨ a , b ⟩").
 
-Definition public_not_PublicLink_l_protected states_l prots_l : Prop :=
-  ∀ t st, states_l !! t = Some st → not_PublicLink st →
-    is_nonce t ∨ (∃ tsub ts1, prots_l !! tsub = Some ts1 ∧ t ∈ ts1).
+Definition protected_deposit_l t : iProp :=
+  ⌜is_nonce t⌝ ∨
+  ∃ path troot, ⌜subterm_path t path troot⌝ ∗
+    ([∗ list] t1 ∈ path, holds_subterm_l t t1) ∗
+    (secret_in_l troot ∨ (⌜is_nonce troot⌝ ∨ ∃ t'root, linked_in_l troot t'root) ∗ holds_subterm_l t troot).
 
-Definition public_not_PublicLink_r_protected states_r prots_r : Prop :=
-  ∀ t' st, states_r !! t' = Some st → not_PublicLink st →
-    is_nonce t' ∨ (∃ t'sub ts1, prots_r !! t'sub = Some ts1 ∧ t' ∈ ts1).
-
-Definition public_not_PublicLink_protected states_l states_r prots_l prots_r : Prop :=
-  public_not_PublicLink_l_protected states_l prots_l ∧
-  public_not_PublicLink_r_protected states_r prots_r.
+Definition protected_deposit_r t' : iProp :=
+  ⌜is_nonce t'⌝ ∨
+  ∃ path t'root, ⌜subterm_path t' path t'root⌝ ∗
+    ([∗ list] t1' ∈ path, holds_subterm_r t' t1') ∗
+    (secret_in_r t'root ∨ (⌜is_nonce t'root⌝ ∨ ∃ troot, linked_in_r troot t'root) ∗ holds_subterm_r t' t'root).
 
 Definition public_deposit_l t t' : iProp :=
   match t, t' with
@@ -1020,22 +851,22 @@ Definition public_deposit_r t t' : iProp :=
   | _, _ => True
   end.
 
-Definition public_PublicLink_l_deposits states_l : iProp :=
+Definition public_states_l_deposits states_l : iProp :=
   [∗ map] t ↦ st ∈ states_l,
     match st with
-    | PublicLink t' => public_deposit_l t t'
-    | _ => True
+    | PublicLink t' => public_deposit_l t t' ∗ prots_token_l t
+    | _ => protected_deposit_l t
     end.
 
-Definition public_PublicLink_r_deposits states_r : iProp :=
+Definition public_states_r_deposits states_r : iProp :=
   [∗ map] t' ↦ st ∈ states_r,
     match st with
-    | PublicLink t => public_deposit_r t t'
-    | _ => True
+    | PublicLink t => public_deposit_r t t' ∗ prots_token_r t'
+    | _ => protected_deposit_r t'
     end.
 
-Definition public_PublicLink_deposits states_l states_r : iProp :=
-  public_PublicLink_l_deposits states_l ∗ public_PublicLink_r_deposits states_r.
+Definition public_states_deposits states_l states_r : iProp :=
+  public_states_l_deposits states_l ∗ public_states_r_deposits states_r.
 
 Definition public_PublicLink_l_consistent states_l : iProp :=
   ∀ t t', ⌜states_l !! t = Some (PublicLink t')⌝ → public t t'.
@@ -1046,46 +877,33 @@ Definition public_PublicLink_r_consistent states_r : iProp :=
 Definition public_PublicLink_consistent states_l states_r : iProp :=
   public_PublicLink_l_consistent states_l ∗ public_PublicLink_r_consistent states_r.
 
-Definition public_prots_l_consistent states_l prots_l : Prop :=
-  ∀ t ts, prots_l !! t = Some ts → ts ≠ ∅ →
-    set_Forall (is_immediate_subterm t) ts ∧
-    (is_nonce t ∨ (∃ tsub ts1, prots_l !! tsub = Some ts1 ∧ t ∈ ts1)) ∧
-    ((states_l !! t = None) ∨ (∃ st, states_l !! t = Some st ∧ not_PublicLink st)).
-
-Definition public_prots_r_consistent states_r prots_r : Prop :=
-  ∀ t' ts, prots_r !! t' = Some ts → ts ≠ ∅ →
-    set_Forall (is_immediate_subterm t') ts ∧
-    (is_nonce t' ∨ (∃ t'sub ts1, prots_r !! t'sub = Some ts1 ∧ t' ∈ ts1)) ∧
-    ((states_r !! t' = None) ∨ (∃ st, states_r !! t' = Some st ∧ not_PublicLink st)).
-
-Definition public_prots_consistent states_l states_r prots_l prots_r : Prop :=
-  public_prots_l_consistent states_l prots_l ∧
-  public_prots_r_consistent states_r prots_r.
-
-Definition public_inv states_l states_r prots_l prots_r : iProp :=
+Definition public_inv states_l states_r : iProp :=
   public_states_inv states_l states_r ∗
-  public_prots_inv prots_l prots_r ∗
-  ⌜public_not_PublicLink_protected states_l states_r prots_l prots_r⌝ ∗
-  public_PublicLink_deposits states_l states_r ∗
-  public_PublicLink_consistent states_l states_r ∗
-  ⌜public_prots_consistent states_l states_r prots_l prots_r⌝.
+  public_states_deposits states_l states_r ∗
+  public_PublicLink_consistent states_l states_r.
 
 Definition public_ctx : iProp :=
-  inv cryptisN (∃ states_l states_r prots_l prots_r, public_inv states_l states_r prots_l prots_r).
+  inv cryptisN (∃ states_l states_r, public_inv states_l states_r).
 
-#[global] Instance public_PublicLink_l_deposits_timeless states_l :
-  Timeless (public_PublicLink_l_deposits states_l).
+#[global] Instance protected_deposit_l_timeless t : Timeless (protected_deposit_l t).
+Proof. rewrite /protected_deposit_l /holds_subterm_l. apply _. Qed.
+
+#[global] Instance protected_deposit_r_timeless t' : Timeless (protected_deposit_r t').
+Proof. rewrite /protected_deposit_r /holds_subterm_r. apply _. Qed.
+
+#[global] Instance public_states_l_deposits_timeless states_l :
+  Timeless (public_states_l_deposits states_l).
 Proof.
 apply big_sepM_timeless => t st.
-rewrite /public_deposit_l /holds_key_l /seal_release_l.
+rewrite /public_deposit_l /holds_key_l /seal_release_l /prots_token_l.
 repeat case_match; apply _.
 Qed.
 
-#[global] Instance public_PublicLink_r_deposits_timeless states_r :
-  Timeless (public_PublicLink_r_deposits states_r).
+#[global] Instance public_states_r_deposits_timeless states_r :
+  Timeless (public_states_r_deposits states_r).
 Proof.
 apply big_sepM_timeless => t' st.
-rewrite /public_deposit_r /holds_key_r /seal_release_r.
+rewrite /public_deposit_r /holds_key_r /seal_release_r /prots_token_r.
 repeat case_match; apply _.
 Qed.
 
@@ -1118,30 +936,21 @@ iMod (own_alloc (● (∅ : gmapUR term (authUR (optionUR stateR)))))
   as "[%public_states_l Hstates_l]"; first by apply auth_auth_valid.
 iMod (own_alloc (● (∅ : gmapUR term (authUR (optionUR stateR)))))
   as "[%public_states_r Hstates_r]"; first by apply auth_auth_valid.
-iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
-  as "[%public_prots_l Hprots_l]"; first by apply auth_auth_valid.
-iMod (own_alloc (● (∅ : gmapUR term (authUR (gset_disjUR term)))))
-  as "[%public_prots_r Hprots_r]"; first by apply auth_auth_valid.
-pose (Hpub := PublicGS _ _ _ _
-                public_states_l public_states_r
-                public_prots_l public_prots_r).
+pose (Hpub := PublicGS _ _ _ public_states_l public_states_r).
 iExists Hpub.
 iMod (inv_alloc cryptisN _
-        (∃ states_l states_r prots_l prots_r, public_inv states_l states_r prots_l prots_r)%I
-        with "[Hstates_l Hstates_r Hprots_l Hprots_r]") as "#Hinv"; last by iFrame "#∗".
-iModIntro. iExists ∅, ∅, ∅, ∅.
-rewrite /public_inv /public_states_inv /public_prots_inv
+        (∃ states_l states_r, public_inv states_l states_r)%I
+        with "[Hstates_l Hstates_r]") as "#Hinv"; last by iFrame "#∗".
+iModIntro. iExists ∅, ∅.
+rewrite /public_inv /public_states_inv
         /public_states_l_auth /public_states_r_auth
-        /public_prots_l_auth /public_prots_r_auth
-        /public_PublicLink_deposits
-        /public_PublicLink_l_deposits /public_PublicLink_r_deposits
+        /public_states_deposits
+        /public_states_l_deposits /public_states_r_deposits
         !fmap_empty !dom_empty_L !big_sepM_empty !big_sepS_empty.
 iFrame. rewrite !left_id.
-iSplit; [|iSplit; [iSplit|]].
-- iPureIntro. split; move=> t ts; by rewrite lookup_empty => ?.
+iSplit.
 - iIntros (t t') "%Hcontra". by rewrite lookup_empty in Hcontra.
 - iIntros (t t') "%Hcontra". by rewrite lookup_empty in Hcontra.
-- iPureIntro. split; move=> t ts; by rewrite lookup_empty => ?.
 Qed.
 
 Section PublicProperties.
@@ -1151,10 +960,9 @@ Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 Abbreviation iPropO := (iPropO Σ).
 
-Implicit Types t : term.
+Implicit Types t tsub tsup troot t'sub t'sup t'root : term.
 Implicit Types st : state.
 Implicit Types states_l states_r : gmap term state.
-Implicit Types prots_l prots_r : gmap term (gset term).
 Implicit Types P : term -> term -> iProp.
 
 Section Constructors.
@@ -1696,134 +1504,184 @@ End Ciphertexts.
 
 Section Protection.
 
-#[local] Lemma public_protected_inv_l states_l prots_l t :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
-  (∃ st, states_l !! t = Some st ∧ not_PublicLink st) ∨ (∃ ts, prots_l !! t = Some ts ∧ ts ≠ ∅) →
-  (∀ t', states_l !! t ≠ Some (PublicLink t')) ∧
-  (is_nonce t ∨
-   ∃ tsub, is_immediate_subterm tsub t ∧
-     ((∃ st, states_l !! tsub = Some st ∧ not_PublicLink st) ∨
-      (∃ ts, prots_l !! tsub = Some ts ∧ ts ≠ ∅))).
+#[local] Lemma same_shape_immediate_subterm_l {t1 t t'} :
+  is_immediate_subterm t1 t →
+  same_shape public t t' -∗ ∃ t1', PUB⟨t1, t1'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons [[st [Hstates Hst]]|[ts [Hprots Hts]]].
-- split; first by move=> t' Ht'; rewrite Hstates in Ht'; case: Ht' Hst => -> [].
-  case: (Hnot_PublicLink _ _ Hstates Hst) => [Ha|[tsub [ts1 [Hprots Hin]]]]; first by left.
-  have Hts1 : ts1 ≠ ∅ by set_solver.
-  case: (Hcons _ _ Hprots Hts1) => [Hsubs _].
-  right. exists tsub. split; first by apply Hsubs. right. by exists ts1.
-- case: (Hcons _ _ Hprots Hts) => [Hsubs [Hchain Hstates]].
-  split.
-  + move=> t' Ht'. case: Hstates => [H|[st [H Hst]]]; rewrite H in Ht'; first congruence.
-    by case: Ht' Hst => -> [].
-  + case: Hchain => [Ha|[tsub [ts1 [Hprots1 Hin]]]]; first by left.
-    have Hts1 : ts1 ≠ ∅ by set_solver.
-    case: (Hcons _ _ Hprots1 Hts1) => [Hsubs1 _].
-    right. exists tsub. split; first by apply Hsubs1. right. by exists ts1.
+move=> Himm.
+destruct Himm; case: t' => /= *; iIntros "#Hs"; try by iDestruct "Hs" as "[]".
+- iDestruct "Hs" as "[H _]". by iExists _.
+- iDestruct "Hs" as "[_ H]". by iExists _.
+- iDestruct "Hs" as "[_ H]". by iExists _.
+- iDestruct "Hs" as "[H _]". by iExists _.
+- iDestruct "Hs" as "[_ H]". by iExists _.
+- by iExists _.
 Qed.
 
-#[local] Lemma public_protected_inv_r states_r prots_r t' :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
-  (∃ st, states_r !! t' = Some st ∧ not_PublicLink st) ∨ (∃ ts, prots_r !! t' = Some ts ∧ ts ≠ ∅) →
-  (∀ t, states_r !! t' ≠ Some (PublicLink t)) ∧
-  (is_nonce t' ∨
-   ∃ t'sub, is_immediate_subterm t'sub t' ∧
-     ((∃ st, states_r !! t'sub = Some st ∧ not_PublicLink st) ∨
-      (∃ ts, prots_r !! t'sub = Some ts ∧ ts ≠ ∅))).
+#[local] Lemma same_shape_immediate_subterm_r {t1' t t'} :
+  is_immediate_subterm t1' t' →
+  same_shape public t t' -∗ ∃ t1, PUB⟨t1, t1'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons [[st [Hstates Hst]]|[ts [Hprots Hts]]].
-- split; first by move=> t Ht; rewrite Hstates in Ht; case: Ht Hst => -> [].
-  case: (Hnot_PublicLink _ _ Hstates Hst) => [Ha|[t'sub [ts1 [Hprots Hin]]]]; first by left.
-  have Hts1 : ts1 ≠ ∅ by set_solver.
-  case: (Hcons _ _ Hprots Hts1) => [Hsubs _].
-  right. exists t'sub. split; first by apply Hsubs. right. by exists ts1.
-- case: (Hcons _ _ Hprots Hts) => [Hsubs [Hchain Hstates]].
-  split.
-  + move=> t Ht. case: Hstates => [H|[st [H Hst]]]; rewrite H in Ht; first congruence.
-    by case: Ht Hst => -> [].
-  + case: Hchain => [Ha|[t'sub [ts1 [Hprots1 Hin]]]]; first by left.
-    have Hts1 : ts1 ≠ ∅ by set_solver.
-    case: (Hcons _ _ Hprots1 Hts1) => [Hsubs1 _].
-    right. exists t'sub. split; first by apply Hsubs1. right. by exists ts1.
+move=> Himm.
+destruct Himm; case: t => /= *; iIntros "#Hs"; try by iDestruct "Hs" as "[]".
+- iDestruct "Hs" as "[H _]". by iExists _.
+- iDestruct "Hs" as "[_ H]". by iExists _.
+- iDestruct "Hs" as "[_ H]". by iExists _.
+- iDestruct "Hs" as "[H _]". by iExists _.
+- iDestruct "Hs" as "[_ H]". by iExists _.
+- by iExists _.
 Qed.
 
-#[local] Lemma public_protected_l states_l prots_l t :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
-  (∃ st, states_l !! t = Some st ∧ not_PublicLink st) ∨ (∃ ts, prots_l !! t = Some ts ∧ ts ≠ ∅) →
+#[local] Lemma subterm_path_public_l states_l m tsup t path troot :
+  tsize t ≤ tsize tsup →
+  (∀ x, tsize x < tsize tsup → m !! x = states_l !! x) →
+  subterm_path t path troot →
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
+  public_states_l_deposits m -∗
+  ([∗ list] t1 ∈ path, holds_subterm_l tsup t1) -∗
+  ∀ t', same_shape public t t' -∗ ∃ t'root, PUB⟨troot, t'root⟩.
+Proof.
+move=> Hle Hagree Hpath.
+elim: Hpath Hle => [troot1 t1 Himm Hle | tsub path1 troot1 t1 Himm Hpath1 IH Hle].
+- iIntros "_ _ _ %t' #Hs". by iApply (same_shape_immediate_subterm_l Himm).
+- iIntros "Hauth Hdeps [Hhold Hrest] %t' #Hs".
+  iDestruct (same_shape_immediate_subterm_l Himm with "Hs") as "[%t'sub #Htsub]".
+  have Hlt1 := is_immediate_subterm_lt Himm.
+  iDestruct (public_cases with "Htsub") as "[Hs1|[Hl1 _]]".
+  + iApply (IH ltac:(lia) with "Hauth Hdeps Hrest Hs1").
+  + iDestruct (publicly_linked_lookup_l with "Hauth Hl1") as %Hpl.
+    have Hm1 : m !! tsub = Some (PublicLink t'sub) by rewrite Hagree; last lia.
+    iDestruct (big_sepM_lookup _ _ _ _ Hm1 with "Hdeps") as "[_ Hprots]".
+    by iDestruct (prots_token_holds_subterm_l with "Hprots Hhold") as "[]".
+Qed.
+
+#[local] Lemma subterm_path_public_r states_r m t'sup t' path t'root :
+  tsize t' ≤ tsize t'sup →
+  (∀ x, tsize x < tsize t'sup → m !! x = states_r !! x) →
+  subterm_path t' path t'root →
+  own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
+  public_states_r_deposits m -∗
+  ([∗ list] t1' ∈ path, holds_subterm_r t'sup t1') -∗
+  ∀ t, same_shape public t t' -∗ ∃ troot, PUB⟨troot, t'root⟩.
+Proof.
+move=> Hle Hagree Hpath.
+elim: Hpath Hle => [t'root1 t'1 Himm Hle | t'sub path1 t'root1 t'1 Himm Hpath1 IH Hle].
+- iIntros "_ _ _ %t #Hs". by iApply (same_shape_immediate_subterm_r Himm).
+- iIntros "Hauth Hdeps [Hhold Hrest] %t #Hs".
+  iDestruct (same_shape_immediate_subterm_r Himm with "Hs") as "[%tsub #Htsub]".
+  have Hlt1 := is_immediate_subterm_lt Himm.
+  iDestruct (public_cases with "Htsub") as "[Hs1|[Hl1 _]]".
+  + iApply (IH ltac:(lia) with "Hauth Hdeps Hrest Hs1").
+  + iDestruct (publicly_linked_lookup_r with "Hauth Hl1") as %Hpl.
+    have Hm1 : m !! t'sub = Some (PublicLink tsub) by rewrite Hagree; last lia.
+    iDestruct (big_sepM_lookup _ _ _ _ Hm1 with "Hdeps") as "[_ Hprots]".
+    by iDestruct (prots_token_holds_subterm_r with "Hprots Hhold") as "[]".
+Qed.
+
+#[local] Lemma public_protected_l states_l m t :
+  (∀ x, tsize x ≤ tsize t → m !! x = states_l !! x) →
+  own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
+  public_states_l_deposits m -∗
+  ∀ st, ⌜states_l !! t = Some st ∧ not_PublicLink st⌝ →
   ∀ t', PUB⟨t, t'⟩ -∗ False.
 Proof.
-move=> Hnot_PublicLink Hcons.
-elim/term_ind': t => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
-  iIntros "Hauth" (t') "#Hpub";
-  case: (public_protected_inv_l Hnot_PublicLink Hcons Hprot) => HnotPublicLink Hsub;
-  iDestruct (public_cases with "Hpub") as "[Hs|[Hl _]]";
-  try (iDestruct (publicly_linked_lookup_l with "Hauth Hl") as %Hlookup;
-       by case: (HnotPublicLink _ Hlookup));
-  case: t' => /= *; try (by iDestruct "Hs" as "[]");
-  case: Hsub => [[]|[tsub [Hsub Hprot']]]; try (by inversion Hsub).
-- iDestruct "Hs" as "[Ha Hb]". inversion Hsub; subst.
-  + iApply (IHa Hprot' with "Hauth Ha").
-  + iApply (IHb Hprot' with "Hauth Hb").
-- iDestruct "Hs" as "[_ Hs]". inversion Hsub; subst.
-  iApply (IH Hprot' with "Hauth Hs").
-- iDestruct "Hs" as "[Hk Hb]". inversion Hsub; subst.
-  + iApply (IHk Hprot' with "Hauth Hk").
-  + iApply (IHb Hprot' with "Hauth Hb").
-- inversion Hsub; subst. iApply (IH Hprot' with "Hauth Hs").
+elim/term_lt_ind: t m => t IH m Hagree.
+iIntros "Hauth Hdeps" (st [Hst Hnotpub] t') "#Hpub".
+iDestruct (public_cases with "Hpub") as "[Hs|[Hl _]]"; last first.
+{ iDestruct (publicly_linked_lookup_l with "Hauth Hl") as %Hpl.
+  by rewrite Hst in Hpl; case: Hpl Hnotpub => -> []. }
+have Hm : m !! t = Some st by rewrite Hagree.
+iDestruct (big_sepM_delete _ _ t _ Hm with "Hdeps") as "[Ht Hdeps]".
+have -> : (match st with
+           | PublicLink t' => public_deposit_l t t' ∗ prots_token_l t
+           | _ => protected_deposit_l t
+           end)%I = protected_deposit_l t by case: (st) Hnotpub.
+iDestruct "Ht" as "[%Hnonce|(%path & %troot & %Hpath & Hpath & Hroot)]".
+{ move/is_nonceP: Hnonce => [a ->].
+  by case: t' => /= *; iDestruct "Hs" as "[]". }
+have Hagree_lt : ∀ x, tsize x < tsize t → delete t m !! x = states_l !! x.
+{ move=> x Hx. rewrite lookup_delete_ne; [apply Hagree; lia | move=> ?; subst x; lia]. }
+iDestruct (subterm_path_public_l (Nat.le_refl _) Hagree_lt Hpath
+             with "Hauth Hdeps Hpath Hs") as "[%t'root #Hpub_root]".
+have Hlt := subterm_path_lt Hpath.
+have Hagree_root : ∀ x, tsize x ≤ tsize troot → delete t m !! x = states_l !! x.
+{ move=> x Hx. apply Hagree_lt. lia. }
+iDestruct "Hroot" as "[#Hsec|[[%Hnonce|[%t'root2 #Hlink]] Hhold]]".
+- iDestruct (secret_in_l_lookup with "Hauth Hsec") as %Hsec.
+  by iApply (IH troot Hlt (delete t m) Hagree_root with "Hauth Hdeps [] Hpub_root").
+- iDestruct (public_nonce_term _ Hnonce with "Hpub_root") as "#Hl".
+  iDestruct (publicly_linked_lookup_l with "Hauth Hl") as %Hst'.
+  have Hm' : delete t m !! troot = Some (PublicLink t'root) by rewrite Hagree_root.
+  iDestruct (big_sepM_lookup _ _ _ _ Hm' with "Hdeps") as "[_ Hprots]".
+  by iDestruct (prots_token_holds_subterm_l with "Hprots Hhold") as "[]".
+- iDestruct (linked_in_l_lookup with "Hauth Hlink") as %[Hst'|[Hst'|Hst']];
+    try by iApply (IH troot Hlt (delete t m) Hagree_root with "Hauth Hdeps [] Hpub_root").
+  have Hm' : delete t m !! troot = Some (PublicLink t'root2) by rewrite Hagree_root.
+  iDestruct (big_sepM_lookup _ _ _ _ Hm' with "Hdeps") as "[_ Hprots]".
+  by iDestruct (prots_token_holds_subterm_l with "Hprots Hhold") as "[]".
 Qed.
 
-#[local] Lemma public_protected_r states_r prots_r t' :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
-  (∃ st, states_r !! t' = Some st ∧ not_PublicLink st) ∨ (∃ ts, prots_r !! t' = Some ts ∧ ts ≠ ∅) →
+#[local] Lemma public_protected_r states_r m t' :
+  (∀ x, tsize x ≤ tsize t' → m !! x = states_r !! x) →
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
+  public_states_r_deposits m -∗
+  ∀ st, ⌜states_r !! t' = Some st ∧ not_PublicLink st⌝ →
   ∀ t, PUB⟨t, t'⟩ -∗ False.
 Proof.
-move=> Hnot_PublicLink Hcons.
-elim/term_ind': t' => [n|a IHa b IHb|a|kt s IH|k IHk b IHb|s IH|pt wf nf] Hprot;
-  iIntros "Hauth" (t) "#Hpub";
-  case: (public_protected_inv_r Hnot_PublicLink Hcons Hprot) => HnotPublicLink Hsub;
-  iDestruct (public_cases with "Hpub") as "[Hs|[Hl _]]";
-  try (iDestruct (publicly_linked_lookup_r with "Hauth Hl") as %Hlookup;
-       by case: (HnotPublicLink _ Hlookup));
-  case: t => /= *; try (by iDestruct "Hs" as "[]");
-  case: Hsub => [[]|[tsub [Hsub Hprot']]]; try (by inversion Hsub).
-- iDestruct "Hs" as "[Ha Hb]". inversion Hsub; subst.
-  + iApply (IHa Hprot' with "Hauth Ha").
-  + iApply (IHb Hprot' with "Hauth Hb").
-- iDestruct "Hs" as "[_ Hs]". inversion Hsub; subst.
-  iApply (IH Hprot' with "Hauth Hs").
-- iDestruct "Hs" as "[Hk Hb]". inversion Hsub; subst.
-  + iApply (IHk Hprot' with "Hauth Hk").
-  + iApply (IHb Hprot' with "Hauth Hb").
-- inversion Hsub; subst. iApply (IH Hprot' with "Hauth Hs").
+elim/term_lt_ind: t' m => t' IH m Hagree.
+iIntros "Hauth Hdeps" (st [Hst Hnotpub] t) "#Hpub".
+iDestruct (public_cases with "Hpub") as "[Hs|[Hl _]]"; last first.
+{ iDestruct (publicly_linked_lookup_r with "Hauth Hl") as %Hpl.
+  by rewrite Hst in Hpl; case: Hpl Hnotpub => -> []. }
+have Hm : m !! t' = Some st by rewrite Hagree.
+iDestruct (big_sepM_delete _ _ t' _ Hm with "Hdeps") as "[Ht Hdeps]".
+have -> : (match st with
+           | PublicLink t => public_deposit_r t t' ∗ prots_token_r t'
+           | _ => protected_deposit_r t'
+           end)%I = protected_deposit_r t' by case: (st) Hnotpub.
+iDestruct "Ht" as "[%Hnonce|(%path & %t'root & %Hpath & Hpath & Hroot)]".
+{ move/is_nonceP: Hnonce => [a' ->].
+  by case: t => /= *; iDestruct "Hs" as "[]". }
+have Hagree_lt : ∀ x, tsize x < tsize t' → delete t' m !! x = states_r !! x.
+{ move=> x Hx. rewrite lookup_delete_ne; [apply Hagree; lia | move=> ?; subst x; lia]. }
+iDestruct (subterm_path_public_r (Nat.le_refl _) Hagree_lt Hpath
+             with "Hauth Hdeps Hpath Hs") as "[%troot #Hpub_root]".
+have Hlt := subterm_path_lt Hpath.
+have Hagree_root : ∀ x, tsize x ≤ tsize t'root → delete t' m !! x = states_r !! x.
+{ move=> x Hx. apply Hagree_lt. lia. }
+iDestruct "Hroot" as "[#Hsec|[[%Hnonce|[%troot2 #Hlink]] Hhold]]".
+- iDestruct (secret_in_r_lookup with "Hauth Hsec") as %Hsec.
+  by iApply (IH t'root Hlt (delete t' m) Hagree_root with "Hauth Hdeps [] Hpub_root").
+- iDestruct (public_term_nonce _ Hnonce with "Hpub_root") as "#Hl".
+  iDestruct (publicly_linked_lookup_r with "Hauth Hl") as %Hst'.
+  have Hm' : delete t' m !! t'root = Some (PublicLink troot) by rewrite Hagree_root.
+  iDestruct (big_sepM_lookup _ _ _ _ Hm' with "Hdeps") as "[_ Hprots]".
+  by iDestruct (prots_token_holds_subterm_r with "Hprots Hhold") as "[]".
+- iDestruct (linked_in_r_lookup with "Hauth Hlink") as %[Hst'|[Hst'|Hst']];
+    try by iApply (IH t'root Hlt (delete t' m) Hagree_root with "Hauth Hdeps [] Hpub_root").
+  have Hm' : delete t' m !! t'root = Some (PublicLink troot2) by rewrite Hagree_root.
+  iDestruct (big_sepM_lookup _ _ _ _ Hm' with "Hdeps") as "[_ Hprots]".
+  by iDestruct (prots_token_holds_subterm_r with "Hprots Hhold") as "[]".
 Qed.
 
-#[local] Lemma secret_in_l_public states_l prots_l {t t'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma secret_in_l_public states_l {t t'} :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
+  public_states_l_deposits states_l -∗
   secret_in_l t -∗ PUB⟨t, t'⟩ -∗ False.
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hstates Hs Ht".
+iIntros "Hstates Hdeps Hs Ht".
 iDestruct (secret_in_l_lookup with "Hstates Hs") as %Hsec.
-by iApply (public_protected_l Hnot_PublicLink Hcons
-             (or_introl (ex_intro _ _ (conj Hsec I))) with "Hstates Ht").
+by iApply (public_protected_l (λ _ _, eq_refl) with "Hstates Hdeps [] Ht").
 Qed.
 
-#[local] Lemma secret_in_r_public states_r prots_r {t t'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma secret_in_r_public states_r {t t'} :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
+  public_states_r_deposits states_r -∗
   secret_in_r t' -∗ PUB⟨t, t'⟩ -∗ False.
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hstates Hs Ht".
+iIntros "Hstates Hdeps Hs Ht".
 iDestruct (secret_in_r_lookup with "Hstates Hs") as %Hsec.
-by iApply (public_protected_r Hnot_PublicLink Hcons
-             (or_introl (ex_intro _ _ (conj Hsec I))) with "Hstates Ht").
+by iApply (public_protected_r (λ _ _, eq_refl) with "Hstates Hdeps [] Ht").
 Qed.
 
 Lemma secret_in_l_public_fupd E t t' :
@@ -1831,11 +1689,8 @@ Lemma secret_in_l_public_fupd E t t' :
   hypercryptis_ctx -∗ secret_in_l t -∗ PUB⟨t, t'⟩ ={E}=∗ False.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Hs #Ht".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
-                  (([Hstates_l _] & _ & _ & _) & _ & [%Hnot_PublicLink_l _] & _ & _ &
-                   [%Hprots_l_cons _]))".
-by iDestruct (secret_in_l_public Hnot_PublicLink_l Hprots_l_cons
-                with "Hstates_l Hs Ht") as "[]".
+iInv "Hinv" as ">(%states_l & %states_r & ([Hstates_l _] & _) & [Hdeps _] & _)".
+by iDestruct (secret_in_l_public with "Hstates_l Hdeps Hs Ht") as "[]".
 Qed.
 
 Lemma secret_in_r_public_fupd E t t' :
@@ -1843,74 +1698,75 @@ Lemma secret_in_r_public_fupd E t t' :
   hypercryptis_ctx -∗ secret_in_r t' -∗ PUB⟨t, t'⟩ ={E}=∗ False.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Hs #Ht".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
-                  ((_ & [Hstates_r _] & _ & _) & _ & [_ %Hnot_PublicLink_r] & _ & _ &
-                   [_ %Hprots_r_cons]))".
-by iDestruct (secret_in_r_public Hnot_PublicLink_r Hprots_r_cons
-                with "Hstates_r Hs Ht") as "[]".
+iInv "Hinv" as ">(%states_l & %states_r & (_ & [Hstates_r _] & _) & [_ Hdeps] & _)".
+by iDestruct (secret_in_r_public with "Hstates_r Hdeps Hs Ht") as "[]".
 Qed.
 
 End Protection.
 
 Section Release.
 
-#[local] Lemma public_TSeal_l_open states_l prots_l {k t k' t' dk dk'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_TSeal_l_open states_l {k t k' t' dk dk'} :
   match k with
   | TKey AEnc s => dk = TKey ADec s
   | TKey SEnc s => dk = TKey SEnc s
   | _ => False
   end →
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
-  public_PublicLink_l_deposits states_l -∗
+  public_states_l_deposits states_l -∗
   publicly_linked_in_l (TSeal k t) (TSeal k' t') -∗
   PUB⟨dk, dk'⟩ -∗
   PUB⟨t, t'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons Hk. iIntros "Hstates Hprot #Hl #Hdk".
+move=> Hk. iIntros "Hstates Hprot #Hl #Hdk".
 iDestruct (publicly_linked_in_l_lookup with "Hstates Hl") as %Hc.
-iDestruct (big_sepM_delete _ _ _ _ Hc with "Hprot") as "[He Hprot]".
-case: k Hk Hc => // - [] // s -> Hc; iSimpl in "He";
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hprot") as "[[He _] Hprot]".
+have Hagree : ∀ x, tsize x ≤ tsize dk → delete (TSeal k t) states_l !! x = states_l !! x.
+{ move=> x Hx. rewrite lookup_delete_ne //. move=> ?; subst x.
+  case: (k) Hk Hx => // - [] // s -> Hx;
+    rewrite (tsize_eq (TSeal _ _)) !tsize_eq in Hx; lia. }
+case: k Hk Hc Hagree => // - [] // s -> Hc Hagree; iSimpl in "He";
   iDestruct "He" as "[[[?|Hsec] _]|[[%x Hlink] Htok]]"; try done.
-all: try by iDestruct (secret_in_l_public Hnot_PublicLink Hcons with "Hstates Hsec Hdk") as "[]".
+all: try by iDestruct (secret_in_l_lookup with "Hstates Hsec") as %Hsec;
+       iDestruct (public_protected_l Hagree with "Hstates Hprot [] Hdk") as "[]".
 all: iDestruct (linked_in_l_lookup with "Hstates Hlink") as %[Hst|[Hst|Hst]];
-  try by iDestruct (public_protected_l Hnot_PublicLink Hcons
-                      (or_introl (ex_intro _ _ (conj Hst I))) with "Hstates Hdk") as "[]".
+  try by iDestruct (public_protected_l Hagree with "Hstates Hprot [] Hdk") as "[]".
 all: match type of Hc with _ !! ?c = _ =>
        have Hst' := Hst; rewrite -(lookup_delete_ne _ c) // in Hst' end.
-all: iDestruct (big_sepM_lookup _ _ _ _ Hst' with "Hprot") as "Hfull".
+all: iDestruct (big_sepM_lookup _ _ _ _ Hst' with "Hprot") as "[Hfull _]".
 all: iSimpl in "Hfull"; iDestruct (term_token_disj with "Hfull Htok") as %Hdisj.
 all: exfalso; have Hsub : ↑holdN.@t ⊆ (↑holdN : coPset) by solve_ndisj.
 all: pose proof (nclose_non_empty (holdN.@t)); set_solver.
 Qed.
 
-#[local] Lemma public_TSeal_r_open states_r prots_r {k t k' t' dk dk'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma public_TSeal_r_open states_r {k t k' t' dk dk'} :
   match k' with
   | TKey AEnc s => dk' = TKey ADec s
   | TKey SEnc s => dk' = TKey SEnc s
   | _ => False
   end →
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
-  public_PublicLink_r_deposits states_r -∗
+  public_states_r_deposits states_r -∗
   publicly_linked_in_r (TSeal k t) (TSeal k' t') -∗
   PUB⟨dk, dk'⟩ -∗
   PUB⟨t, t'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons Hk. iIntros "Hstates Hprot #Hl #Hdk".
+move=> Hk. iIntros "Hstates Hprot #Hl #Hdk".
 iDestruct (publicly_linked_in_r_lookup with "Hstates Hl") as %Hc.
-iDestruct (big_sepM_delete _ _ _ _ Hc with "Hprot") as "[He Hprot]".
-case: k' Hk Hc => // - [] // s -> Hc; iSimpl in "He";
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hprot") as "[[He _] Hprot]".
+have Hagree : ∀ x, tsize x ≤ tsize dk' → delete (TSeal k' t') states_r !! x = states_r !! x.
+{ move=> x Hx. rewrite lookup_delete_ne //. move=> ?; subst x.
+  case: (k') Hk Hx => // - [] // s -> Hx;
+    rewrite (tsize_eq (TSeal _ _)) !tsize_eq in Hx; lia. }
+case: k' Hk Hc Hagree => // - [] // s -> Hc Hagree; iSimpl in "He";
   iDestruct "He" as "[[[?|Hsec] _]|[[%x Hlink] Htok]]"; try done.
-all: try by iDestruct (secret_in_r_public Hnot_PublicLink Hcons with "Hstates Hsec Hdk") as "[]".
+all: try by iDestruct (secret_in_r_lookup with "Hstates Hsec") as %Hsec;
+       iDestruct (public_protected_r Hagree with "Hstates Hprot [] Hdk") as "[]".
 all: iDestruct (linked_in_r_lookup with "Hstates Hlink") as %[Hst|[Hst|Hst]];
-  try by iDestruct (public_protected_r Hnot_PublicLink Hcons
-                      (or_introl (ex_intro _ _ (conj Hst I))) with "Hstates Hdk") as "[]".
+  try by iDestruct (public_protected_r Hagree with "Hstates Hprot [] Hdk") as "[]".
 all: match type of Hc with _ !! ?c = _ =>
        have Hst' := Hst; rewrite -(lookup_delete_ne _ c) // in Hst' end.
-all: iDestruct (big_sepM_lookup _ _ _ _ Hst' with "Hprot") as "Hfull".
+all: iDestruct (big_sepM_lookup _ _ _ _ Hst' with "Hprot") as "[Hfull _]".
 all: iSimpl in "Hfull"; iDestruct (term_token_spec_disj with "Hfull Htok") as %Hdisj.
 all: exfalso; have Hsub : ↑holdN.@t' ⊆ (↑holdN : coPset) by solve_ndisj.
 all: pose proof (nclose_non_empty (holdN.@t')); set_solver.
@@ -1925,21 +1781,21 @@ Lemma public_TSeal_release_AEnc_hold_l_fupd E s t k' t' :
   holds_key_l t (TKey AEnc s).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
-                  ([Hstates_l Hstates_l_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
+iInv "Hinv" as ">(%states_l & %states_r &
+                  ([Hstates_l Hstates_l_frag] & Hstates_rest) &
                   [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
 iDestruct (publicly_linked_in_l_lookup with "Hstates_l Hl") as %Hc.
-iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_l") as "[He Hothers]".
-iAssert (holds_key_l t (TKey AEnc s) ∗ public_PublicLink_l_deposits states_l)%I
-  with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_l]".
-{ rewrite /public_PublicLink_l_deposits (big_sepM_delete _ states_l _ _ Hc).
-  iFrame "Hothers".
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_l") as "[[He Hprots] Hothers]".
+iAssert (holds_key_l t (TKey AEnc s) ∗ public_states_l_deposits states_l)%I
+  with "[He Hprots Hothers Hseal]" as "[Hkey Hpublic_deposit_l]".
+{ rewrite /public_states_l_deposits (big_sepM_delete _ states_l _ _ Hc).
+  iFrame "Hothers Hprots".
   iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
   - iDestruct (term_token_disj with "Hseal Hseal'") as %Hdisj; exfalso;
       pose proof (nclose_non_empty (seal_namespace t.@"release")); set_solver.
   - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
 iModIntro. iSplitR "Hkey"; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
 Lemma public_TSeal_release_AEnc_hold_r_fupd E s' t' k t :
@@ -1951,21 +1807,21 @@ Lemma public_TSeal_release_AEnc_hold_r_fupd E s' t' k t :
   holds_key_r t' (TKey AEnc s').
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
-                  (Hstates_l & [Hstates_r Hstates_r_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
+iInv "Hinv" as ">(%states_l & %states_r &
+                  (Hstates_l & [Hstates_r Hstates_r_frag] & Hstates_rest) &
                   [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
 iDestruct (publicly_linked_in_r_lookup with "Hstates_r Hl") as %Hc.
-iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_r") as "[He Hothers]".
-iAssert (holds_key_r t' (TKey AEnc s') ∗ public_PublicLink_r_deposits states_r)%I
-  with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_r]".
-{ rewrite /public_PublicLink_r_deposits (big_sepM_delete _ states_r _ _ Hc).
-  iFrame "Hothers".
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_r") as "[[He Hprots] Hothers]".
+iAssert (holds_key_r t' (TKey AEnc s') ∗ public_states_r_deposits states_r)%I
+  with "[He Hprots Hothers Hseal]" as "[Hkey Hpublic_deposit_r]".
+{ rewrite /public_states_r_deposits (big_sepM_delete _ states_r _ _ Hc).
+  iFrame "Hothers Hprots".
   iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
   - iDestruct (term_token_spec_disj with "Hseal Hseal'") as %Hdisj; exfalso;
       pose proof (nclose_non_empty (seal_namespace t'.@"release")); set_solver.
   - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
 iModIntro. iSplitR "Hkey"; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
 Lemma public_TSeal_release_SEnc_hold_l_fupd E s t k' t' :
@@ -1977,21 +1833,21 @@ Lemma public_TSeal_release_SEnc_hold_l_fupd E s t k' t' :
   holds_key_l t (TKey SEnc s).
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
-                  ([Hstates_l Hstates_l_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
+iInv "Hinv" as ">(%states_l & %states_r &
+                  ([Hstates_l Hstates_l_frag] & Hstates_rest) &
                   [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
 iDestruct (publicly_linked_in_l_lookup with "Hstates_l Hl") as %Hc.
-iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_l") as "[He Hothers]".
-iAssert (holds_key_l t (TKey SEnc s) ∗ public_PublicLink_l_deposits states_l)%I
-  with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_l]".
-{ rewrite /public_PublicLink_l_deposits (big_sepM_delete _ states_l _ _ Hc).
-  iFrame "Hothers".
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_l") as "[[He Hprots] Hothers]".
+iAssert (holds_key_l t (TKey SEnc s) ∗ public_states_l_deposits states_l)%I
+  with "[He Hprots Hothers Hseal]" as "[Hkey Hpublic_deposit_l]".
+{ rewrite /public_states_l_deposits (big_sepM_delete _ states_l _ _ Hc).
+  iFrame "Hothers Hprots".
   iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
   - iDestruct (term_token_disj with "Hseal Hseal'") as %Hdisj; exfalso;
       pose proof (nclose_non_empty (seal_namespace t.@"release")); set_solver.
   - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
 iModIntro. iSplitR "Hkey"; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
 Lemma public_TSeal_release_SEnc_hold_r_fupd E s' t' k t :
@@ -2003,159 +1859,143 @@ Lemma public_TSeal_release_SEnc_hold_r_fupd E s' t' k t :
   holds_key_r t' (TKey SEnc s').
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Ht Hseal #Hl".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r &
-                  (Hstates_l & [Hstates_r Hstates_r_frag] & Hstates_rest) & Hprots & Hnot_PublicLink &
+iInv "Hinv" as ">(%states_l & %states_r &
+                  (Hstates_l & [Hstates_r Hstates_r_frag] & Hstates_rest) &
                   [Hpublic_deposit_l Hpublic_deposit_r] & Hrest)".
 iDestruct (publicly_linked_in_r_lookup with "Hstates_r Hl") as %Hc.
-iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_r") as "[He Hothers]".
-iAssert (holds_key_r t' (TKey SEnc s') ∗ public_PublicLink_r_deposits states_r)%I
-  with "[He Hothers Hseal]" as "[Hkey Hpublic_deposit_r]".
-{ rewrite /public_PublicLink_r_deposits (big_sepM_delete _ states_r _ _ Hc).
-  iFrame "Hothers".
+iDestruct (big_sepM_delete _ _ _ _ Hc with "Hpublic_deposit_r") as "[[He Hprots] Hothers]".
+iAssert (holds_key_r t' (TKey SEnc s') ∗ public_states_r_deposits states_r)%I
+  with "[He Hprots Hothers Hseal]" as "[Hkey Hpublic_deposit_r]".
+{ rewrite /public_states_r_deposits (big_sepM_delete _ states_r _ _ Hc).
+  iFrame "Hothers Hprots".
   iSimpl in "He"; iSimpl; iDestruct "He" as "[[_ Hseal']|[_ Hkey]]".
   - iDestruct (term_token_spec_disj with "Hseal Hseal'") as %Hdisj; exfalso;
       pose proof (nclose_non_empty (seal_namespace t'.@"release")); set_solver.
   - iFrame "Hkey"; iLeft; iFrame "Hseal"; by iLeft. }
 iModIntro. iSplitR "Hkey"; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
 End Release.
 
 Section LinkedShape.
 
-#[local] Lemma public_linked_in_l states_l prots_l :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_linked_in_l states_l :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
+  public_states_l_deposits states_l -∗
   public_PublicLink_l_consistent states_l -∗
   ∀ t t1' t2', PUB⟨t, t1'⟩ -∗ linked_in_l t t2' -∗ PUB⟨t, t2'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hauth HPublicLink_consistent" (t t1' t2') "#H1 #H2".
+iIntros "Hauth Hdeps HPublicLink_consistent" (t t1' t2') "#H1 #H2".
 iDestruct (linked_in_l_lookup with "Hauth H2") as %[HPending_t|[HPending_t|HPublicLink_t]].
-- by iPoseProof (public_protected_l Hnot_PublicLink Hcons (or_introl (ex_intro _ _ (conj HPending_t I)))
-                  with "Hauth H1") as "[]".
-- by iPoseProof (public_protected_l Hnot_PublicLink Hcons (or_introl (ex_intro _ _ (conj HPending_t I)))
-                  with "Hauth H1") as "[]".
+- by iPoseProof (public_protected_l (λ _ _, eq_refl) with "Hauth Hdeps [] H1") as "[]".
+- by iPoseProof (public_protected_l (λ _ _, eq_refl) with "Hauth Hdeps [] H1") as "[]".
 - by iApply ("HPublicLink_consistent" with "[//]").
 Qed.
 
-#[local] Lemma public_linked_in_r states_r prots_r :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma public_linked_in_r states_r :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
+  public_states_r_deposits states_r -∗
   public_PublicLink_r_consistent states_r -∗
   ∀ t1 t2 t', PUB⟨t1, t'⟩ -∗ linked_in_r t2 t' -∗ PUB⟨t2, t'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hauth HPublicLink_consistent" (t1 t2 t') "#H1 #H2".
+iIntros "Hauth Hdeps HPublicLink_consistent" (t1 t2 t') "#H1 #H2".
 iDestruct (linked_in_r_lookup with "Hauth H2") as %[HPending_t|[HPending_t|HPublicLink_t]].
-- by iPoseProof (public_protected_r Hnot_PublicLink Hcons (or_introl (ex_intro _ _ (conj HPending_t I)))
-                  with "Hauth H1") as "[]".
-- by iPoseProof (public_protected_r Hnot_PublicLink Hcons (or_introl (ex_intro _ _ (conj HPending_t I)))
-                  with "Hauth H1") as "[]".
+- by iPoseProof (public_protected_r (λ _ _, eq_refl) with "Hauth Hdeps [] H1") as "[]".
+- by iPoseProof (public_protected_r (λ _ _, eq_refl) with "Hauth Hdeps [] H1") as "[]".
 - by iApply ("HPublicLink_consistent" with "[//]").
 Qed.
 
-#[local] Lemma opaque_l_same_shape states_l prots_l {t t'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma opaque_l_same_shape states_l {t t'} :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
+  public_states_l_deposits states_l -∗
   opaque_l t -∗ same_shape public t t' -∗ False.
 Proof.
-move=> Hnot_PublicLink Hcons.
 case: t => [n|a b|a|kt s|k b|s|pt wf nf]; case: t' => /= *;
-  iIntros "Hstates #Ho #Hs"; try (by iDestruct "Ho" as "[]"); try (by iDestruct "Hs" as "[]").
+  iIntros "Hstates Hdeps #Ho #Hs"; try (by iDestruct "Ho" as "[]"); try (by iDestruct "Hs" as "[]").
 - iDestruct "Hs" as "[Hk Hb]".
   case: k => [?|? ?|?|kt s|? ?|?|? ? ?]; try (by iDestruct "Ho" as "[]").
   case: kt; try (by iDestruct "Ho" as "[]").
   + iDestruct "Ho" as "[_ Ho]".
-    by iApply (secret_in_l_public Hnot_PublicLink Hcons with "Hstates Ho Hb").
-  + by iApply (secret_in_l_public Hnot_PublicLink Hcons with "Hstates Ho Hk").
-- by iApply (secret_in_l_public Hnot_PublicLink Hcons with "Hstates Ho Hs").
+    by iApply (secret_in_l_public with "Hstates Hdeps Ho Hb").
+  + by iApply (secret_in_l_public with "Hstates Hdeps Ho Hk").
+- by iApply (secret_in_l_public with "Hstates Hdeps Ho Hs").
 Qed.
 
-#[local] Lemma opaque_r_same_shape states_r prots_r {t t'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma opaque_r_same_shape states_r {t t'} :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
+  public_states_r_deposits states_r -∗
   opaque_r t' -∗ same_shape public t t' -∗ False.
 Proof.
-move=> Hnot_PublicLink Hcons.
 case: t' => [n|a b|a|kt s|k b|s|pt wf nf]; case: t => /= *;
-  iIntros "Hstates #Ho #Hs"; try (by iDestruct "Ho" as "[]"); try (by iDestruct "Hs" as "[]").
+  iIntros "Hstates Hdeps #Ho #Hs"; try (by iDestruct "Ho" as "[]"); try (by iDestruct "Hs" as "[]").
 - iDestruct "Hs" as "[Hk Hb]".
   case: k => [?|? ?|?|kt s|? ?|?|? ? ?]; try (by iDestruct "Ho" as "[]").
   case: kt; try (by iDestruct "Ho" as "[]").
   + iDestruct "Ho" as "[_ Ho]".
-    by iApply (secret_in_r_public Hnot_PublicLink Hcons with "Hstates Ho Hb").
-  + by iApply (secret_in_r_public Hnot_PublicLink Hcons with "Hstates Ho Hk").
-- by iApply (secret_in_r_public Hnot_PublicLink Hcons with "Hstates Ho Hs").
+    by iApply (secret_in_r_public with "Hstates Hdeps Ho Hb").
+  + by iApply (secret_in_r_public with "Hstates Hdeps Ho Hk").
+- by iApply (secret_in_r_public with "Hstates Hdeps Ho Hs").
 Qed.
 
-#[local] Lemma linked_shape_same_shape_l states_l prots_l {t t1' t2'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma linked_shape_same_shape_l states_l {t t1' t2'} :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
   public_PublicLink_l_consistent states_l -∗
-  public_PublicLink_l_deposits states_l -∗
+  public_states_l_deposits states_l -∗
   publicly_linked t t2' -∗
   same_shape public t t1' -∗
   linked_shape public t t2' -∗
   same_shape public t t2'.
 Proof.
-move=> Hnot_PublicLink Hcons.
 case: t => [n|a b|a|kt s|k b|s|pt wf nf];
   case: t2' => [n2|a2 b2|a2|kt2 s2|k2 b2|s2|pt2 wf2 nf2] /=;
   iIntros "Hstates #HPublicLink_consistent Hprot #Hpl #Hs #Hl"; try (by iDestruct "Hl" as "[]");
   case: t1' => /= *; try (by iDestruct "Hs" as "[]").
 - iDestruct "Hs" as "[_ Hs]". iDestruct "Hl" as "(<- & [Hl _] & _)". iSplit; first done.
-  by iApply (public_linked_in_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hs Hl").
+  by iApply (public_linked_in_l with "Hstates Hprot HPublicLink_consistent Hs Hl").
 - iDestruct "Hs" as "[Hk Hb]". iDestruct "Hl" as "[[Hkl _] #Hl]".
-  iPoseProof (public_linked_in_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hk Hkl") as "#Hk2".
+  iPoseProof (public_linked_in_l with "Hstates Hprot HPublicLink_consistent Hk Hkl") as "#Hk2".
   iSplit; first done.
   case: k => [?|? ?|?|kt s|? ?|?|? ? ?]; try (by iDestruct "Hl" as "[]").
   case: k2 => [?|? ?|?|kt' s'|? ?|?|? ? ?]; try (by iDestruct "Hl" as "[]").
   case: kt; case: kt'; try (by iDestruct "Hl" as "[]").
   + iDestruct "Hl" as "[Hb2|[Hb2 _]]"; first done.
-    by iApply (public_linked_in_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hb Hb2").
+    by iApply (public_linked_in_l with "Hstates Hprot HPublicLink_consistent Hb Hb2").
   + by iDestruct "Hl" as "[_ Hb2]".
   + iDestruct "Hpl" as "[Hpl _]".
-    by iApply (public_TSeal_l_open Hnot_PublicLink Hcons with "Hstates Hprot Hpl Hk2").
+    by iApply (public_TSeal_l_open with "Hstates Hprot Hpl Hk2").
 - iDestruct "Hl" as "[Hl _]".
-  by iApply (public_linked_in_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hs Hl").
+  by iApply (public_linked_in_l with "Hstates Hprot HPublicLink_consistent Hs Hl").
 Qed.
 
-#[local] Lemma linked_shape_same_shape_r states_r prots_r {t1 t2 t'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma linked_shape_same_shape_r states_r {t1 t2 t'} :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
   public_PublicLink_r_consistent states_r -∗
-  public_PublicLink_r_deposits states_r -∗
+  public_states_r_deposits states_r -∗
   publicly_linked t2 t' -∗
   same_shape public t1 t' -∗
   linked_shape public t2 t' -∗
   same_shape public t2 t'.
 Proof.
-move=> Hnot_PublicLink Hcons.
 case: t' => [n|a b|a|kt s|k b|s|pt wf nf];
   case: t2 => [n2|a2 b2|a2|kt2 s2|k2 b2|s2|pt2 wf2 nf2] /=;
   iIntros "Hstates #HPublicLink_consistent Hprot #Hpl #Hs #Hl"; try (by iDestruct "Hl" as "[]");
   case: t1 => /= *; try (by iDestruct "Hs" as "[]").
 - iDestruct "Hs" as "[_ Hs]". iDestruct "Hl" as "(%Heq & [_ Hl] & _)". subst kt2. iSplit; first done.
-  by iApply (public_linked_in_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hs Hl").
+  by iApply (public_linked_in_r with "Hstates Hprot HPublicLink_consistent Hs Hl").
 - iDestruct "Hs" as "[Hk Hb]". iDestruct "Hl" as "[[_ Hkl] #Hl]".
-  iPoseProof (public_linked_in_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hk Hkl") as "#Hk2".
+  iPoseProof (public_linked_in_r with "Hstates Hprot HPublicLink_consistent Hk Hkl") as "#Hk2".
   iSplit; first done.
   case: k2 => [?|? ?|?|kt' s'|? ?|?|? ? ?]; try (by iDestruct "Hl" as "[]").
   case: k => [?|? ?|?|kt s|? ?|?|? ? ?]; try (by iDestruct "Hl" as "[]").
   case: kt; case: kt'; try (by iDestruct "Hl" as "[]").
   + iDestruct "Hl" as "[Hb2|[_ Hb2]]"; first done.
-    by iApply (public_linked_in_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hb Hb2").
+    by iApply (public_linked_in_r with "Hstates Hprot HPublicLink_consistent Hb Hb2").
   + by iDestruct "Hl" as "[_ Hb2]".
   + iDestruct "Hpl" as "[_ Hpl]".
-    by iApply (public_TSeal_r_open Hnot_PublicLink Hcons with "Hstates Hprot Hpl Hk2").
+    by iApply (public_TSeal_r_open with "Hstates Hprot Hpl Hk2").
 - iDestruct "Hl" as "[_ Hl]".
-  by iApply (public_linked_in_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hs Hl").
+  by iApply (public_linked_in_r with "Hstates Hprot HPublicLink_consistent Hs Hl").
 Qed.
 
 End LinkedShape.
@@ -2167,7 +2007,7 @@ Lemma linked_in_l_states_token_fupd E t t' :
   hypercryptis_ctx -∗ linked_in_l t t' -∗ states_token_l t ={E}=∗ False.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Hl tok".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r & ([Hstates_l _] & _ & Hmeta & _) & _)".
+iInv "Hinv" as ">(%states_l & %states_r & ([Hstates_l _] & _ & Hmeta & _) & _)".
 iDestruct (linked_in_l_lookup with "Hstates_l Hl") as %Hlookup.
 iDestruct (public_states_l_fresh with "Hmeta tok") as %Hfresh.
 exfalso. rewrite Hfresh in Hlookup. by case: Hlookup => [|[|]].
@@ -2178,7 +2018,7 @@ Lemma linked_in_r_states_token_fupd E t t' :
   hypercryptis_ctx -∗ linked_in_r t t' -∗ states_token_r t' ={E}=∗ False.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Hl tok".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r & (_ & [Hstates_r _] & _ & Hmeta) & _)".
+iInv "Hinv" as ">(%states_l & %states_r & (_ & [Hstates_r _] & _ & Hmeta) & _)".
 iDestruct (linked_in_r_lookup with "Hstates_r Hl") as %Hlookup.
 iDestruct (public_states_r_fresh with "Hmeta tok") as %Hfresh.
 exfalso. rewrite Hfresh in Hlookup. by case: Hlookup => [|[|]].
@@ -2188,67 +2028,61 @@ End Admission.
 
 Section PartBij.
 
-#[local] Lemma public_part_bij_1_shape states_l prots_l {t t1' t2'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_part_bij_1_shape states_l {t t1' t2'} :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
   public_PublicLink_l_consistent states_l -∗
-  public_PublicLink_l_deposits states_l -∗
+  public_states_l_deposits states_l -∗
   PUB⟨t, t1'⟩ -∗
   PUB⟨t, t2'⟩ -∗
   ⌜t1' = t2'⌝ ∨
   (same_shape public t t1' ∧ same_shape public t t2').
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hstates #HPublicLink_consistent Hprot #H1 #H2".
+iIntros "Hstates #HPublicLink_consistent Hprot #H1 #H2".
 iDestruct (public_cases with "H1") as "[Hs1|(Hl1 & [Hk1|[Ho1 _]])]";
 iDestruct (public_cases with "H2") as "[Hs2|(Hl2 & [Hk2|[Ho2 _]])]";
   try (iLeft; by iApply (publicly_linked_agree_l with "Hl1 Hl2")).
 - iRight. by iSplit.
 - iRight. iSplit; first done.
-  by iApply (linked_shape_same_shape_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hprot Hl2 Hs1 Hk2").
-- by iDestruct (opaque_l_same_shape Hnot_PublicLink Hcons with "Hstates Ho2 Hs1") as "[]".
+  by iApply (linked_shape_same_shape_l with "Hstates HPublicLink_consistent Hprot Hl2 Hs1 Hk2").
+- by iDestruct (opaque_l_same_shape with "Hstates Hprot Ho2 Hs1") as "[]".
 - iRight. iSplit; last done.
-  by iApply (linked_shape_same_shape_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hprot Hl1 Hs2 Hk1").
-- by iDestruct (opaque_l_same_shape Hnot_PublicLink Hcons with "Hstates Ho1 Hs2") as "[]".
+  by iApply (linked_shape_same_shape_l with "Hstates HPublicLink_consistent Hprot Hl1 Hs2 Hk1").
+- by iDestruct (opaque_l_same_shape with "Hstates Hprot Ho1 Hs2") as "[]".
 Qed.
 
-#[local] Lemma public_part_bij_2_shape states_r prots_r {t1 t2 t'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma public_part_bij_2_shape states_r {t1 t2 t'} :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
   public_PublicLink_r_consistent states_r -∗
-  public_PublicLink_r_deposits states_r -∗
+  public_states_r_deposits states_r -∗
   PUB⟨t1, t'⟩ -∗
   PUB⟨t2, t'⟩ -∗
   ⌜t1 = t2⌝ ∨
   (same_shape public t1 t' ∧ same_shape public t2 t').
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hstates #HPublicLink_consistent Hprot #H1 #H2".
+iIntros "Hstates #HPublicLink_consistent Hprot #H1 #H2".
 iDestruct (public_cases with "H1") as "[Hs1|(Hl1 & [Hk1|[_ Ho1]])]";
 iDestruct (public_cases with "H2") as "[Hs2|(Hl2 & [Hk2|[_ Ho2]])]";
   try (iLeft; by iApply (publicly_linked_agree_r with "Hl1 Hl2")).
 - iRight. by iSplit.
 - iRight. iSplit; first done.
-  by iApply (linked_shape_same_shape_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hprot Hl2 Hs1 Hk2").
-- by iDestruct (opaque_r_same_shape Hnot_PublicLink Hcons with "Hstates Ho2 Hs1") as "[]".
+  by iApply (linked_shape_same_shape_r with "Hstates HPublicLink_consistent Hprot Hl2 Hs1 Hk2").
+- by iDestruct (opaque_r_same_shape with "Hstates Hprot Ho2 Hs1") as "[]".
 - iRight. iSplit; last done.
-  by iApply (linked_shape_same_shape_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hprot Hl1 Hs2 Hk1").
-- by iDestruct (opaque_r_same_shape Hnot_PublicLink Hcons with "Hstates Ho1 Hs2") as "[]".
+  by iApply (linked_shape_same_shape_r with "Hstates HPublicLink_consistent Hprot Hl1 Hs2 Hk1").
+- by iDestruct (opaque_r_same_shape with "Hstates Hprot Ho1 Hs2") as "[]".
 Qed.
 
-#[local] Lemma public_part_bij_1_auth states_l prots_l {t t1' t2'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_part_bij_1_auth states_l {t t1' t2'} :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
   public_PublicLink_l_consistent states_l -∗
-  public_PublicLink_l_deposits states_l -∗
+  public_states_l_deposits states_l -∗
   PUB⟨t, t1'⟩ -∗
   PUB⟨t, t2'⟩ -∗
   ⌜t1' = t2'⌝.
 Proof.
-move=> Hnot_PublicLink_l Hprots_l_cons. iIntros "Hstates_l HPublicLink_consistent Hprot #H1 #H2".
+iIntros "Hstates_l HPublicLink_consistent Hprot #H1 #H2".
 iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t2') "H1 H2";
-  iDestruct (public_part_bij_1_shape Hnot_PublicLink_l Hprots_l_cons
+  iDestruct (public_part_bij_1_shape
                with "Hstates_l HPublicLink_consistent Hprot H1 H2") as "#Hc";
   iDestruct "Hc" as "[%|[Hs1 Hs2]]"; try done;
   case: t1' => /= *; try (by iDestruct "Hs1" as "[]");
@@ -2265,16 +2099,14 @@ iInduction t as [n|a b|a|kt s|k b|s|pt wf nf] "IH" using term_ind' forall (t1' t
 - by iDestruct ("IH" with "Hstates_l HPublicLink_consistent Hprot Hs1 Hs2") as %->.
 Qed.
 
-#[local] Lemma public_part_bij_1_open states_l states_r prots_l prots_r t t1' t2' :
-  public_inv states_l states_r prots_l prots_r -∗
+#[local] Lemma public_part_bij_1_open states_l states_r t t1' t2' :
+  public_inv states_l states_r -∗
   PUB⟨t, t1'⟩ -∗
   PUB⟨t, t2'⟩ -∗
   ⌜t1' = t2'⌝.
 Proof.
-iIntros "(([Hstates_l _] & _ & _ & _) & _ & [%Hnot_PublicLink_l _] & [Hprot _] &
-          [HPublicLink_consistent _] & [%Hprots_l_cons _]) #H1 #H2".
-by iApply (public_part_bij_1_auth Hnot_PublicLink_l Hprots_l_cons
-            with "Hstates_l HPublicLink_consistent Hprot H1 H2").
+iIntros "(([Hstates_l _] & _) & [Hprot _] & [HPublicLink_consistent _]) #H1 #H2".
+by iApply (public_part_bij_1_auth with "Hstates_l HPublicLink_consistent Hprot H1 H2").
 Qed.
 
 Lemma public_part_bij_1_fupd E t t1' t2' :
@@ -2285,25 +2117,23 @@ Lemma public_part_bij_1_fupd E t t1' t2' :
   |={E}=> ⌜t1' = t2'⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r & Hbody)".
+iInv "Hinv" as ">(%states_l & %states_r & Hbody)".
 iDestruct (public_part_bij_1_open with "Hbody H1 H2") as %Heq.
 iModIntro. iSplitL; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
-#[local] Lemma public_part_bij_2_auth states_r prots_r {t1 t2 t'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma public_part_bij_2_auth states_r {t1 t2 t'} :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
   public_PublicLink_r_consistent states_r -∗
-  public_PublicLink_r_deposits states_r -∗
+  public_states_r_deposits states_r -∗
   PUB⟨t1, t'⟩ -∗
   PUB⟨t2, t'⟩ -∗
   ⌜t1 = t2⌝.
 Proof.
-move=> Hnot_PublicLink_r Hprots_r_cons. iIntros "Hstates_r HPublicLink_consistent Hprot #H1 #H2".
+iIntros "Hstates_r HPublicLink_consistent Hprot #H1 #H2".
 iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' forall (t1 t2) "H1 H2";
-  iDestruct (public_part_bij_2_shape Hnot_PublicLink_r Hprots_r_cons
+  iDestruct (public_part_bij_2_shape
                with "Hstates_r HPublicLink_consistent Hprot H1 H2") as "#Hc";
   iDestruct "Hc" as "[%|[Hs1 Hs2]]"; try done;
   case: t1 => /= *; try (by iDestruct "Hs1" as "[]");
@@ -2320,16 +2150,14 @@ iInduction t' as [n'|a' b'|a'|kt' s'|k' b'|s'|pt' wf' nf'] "IH" using term_ind' 
 - by iDestruct ("IH" with "Hstates_r HPublicLink_consistent Hprot Hs1 Hs2") as %->.
 Qed.
 
-#[local] Lemma public_part_bij_2_open states_l states_r prots_l prots_r t1 t2 t' :
-  public_inv states_l states_r prots_l prots_r -∗
+#[local] Lemma public_part_bij_2_open states_l states_r t1 t2 t' :
+  public_inv states_l states_r -∗
   PUB⟨t1, t'⟩ -∗
   PUB⟨t2, t'⟩ -∗
   ⌜t1 = t2⌝.
 Proof.
-iIntros "((_ & [Hstates_r _] & _ & _) & _ & [_ %Hnot_PublicLink_r] & [_ Hprot] &
-          [_ HPublicLink_consistent_r] & [_ %Hprots_r_cons]) #H1 #H2".
-by iApply (public_part_bij_2_auth Hnot_PublicLink_r Hprots_r_cons
-            with "Hstates_r HPublicLink_consistent_r Hprot H1 H2").
+iIntros "((_ & [Hstates_r _] & _) & [_ Hprot] & [_ HPublicLink_consistent_r]) #H1 #H2".
+by iApply (public_part_bij_2_auth with "Hstates_r HPublicLink_consistent_r Hprot H1 H2").
 Qed.
 
 Lemma public_part_bij_2_fupd E t1 t2 t' :
@@ -2340,10 +2168,10 @@ Lemma public_part_bij_2_fupd E t1 t2 t' :
   |={E}=> ⌜t1 = t2⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #H1 #H2".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r & Hbody)".
+iInv "Hinv" as ">(%states_l & %states_r & Hbody)".
 iDestruct (public_part_bij_2_open with "Hbody H1 H2") as %Heq.
 iModIntro. iSplitL; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
 Lemma public_part_bij E t t' :
@@ -2377,18 +2205,16 @@ End PartBij.
 
 Section AttackerDecryption.
 
-#[local] Lemma public_open_auth states_l prots_l {k k' t t' t1 t1'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_open_auth {states_l k k' t t' t1 t1'} :
   Spec.open k t = Some t1 →
   Spec.open k' t' = Some t1' →
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
-  public_PublicLink_l_deposits states_l -∗
+  public_states_l_deposits states_l -∗
   PUB⟨k, k'⟩ -∗
   PUB⟨t, t'⟩ -∗
   PUB⟨t1, t1'⟩.
 Proof.
-move=> Hnot_PublicLink Hcons. rewrite /Spec.open.
+rewrite /Spec.open.
 case: t => // k_t t.
 case: t' => // k_t' t'.
 case: decide => // k_t_k [<-].
@@ -2400,26 +2226,25 @@ all: try (rewrite public_TKey; by iDestruct "Hk" as "[% _]").
 all: iDestruct (public_TSeal with "Ht") as "[[_ Ht1]|(_ & _ & [Hl _] & [[_ #Hrest]|[Ho _]])]";
   first done.
 all: try iSimpl in "Ho"; try iSimpl in "Hrest".
-- by iApply (public_TSeal_l_open Hnot_PublicLink Hcons with "Hstates Hprot Hl Hk").
+- by iApply (public_TSeal_l_open with "Hstates Hprot Hl Hk").
 - iDestruct "Ho" as "[Ho _]".
-  by iDestruct (secret_in_l_public Hnot_PublicLink Hcons with "Hstates Ho Hk") as "[]".
+  by iDestruct (secret_in_l_public with "Hstates Hprot Ho Hk") as "[]".
 - by iDestruct "Hrest" as "[_ ?]".
 - by iDestruct "Ho" as "[]".
-- by iApply (public_TSeal_l_open Hnot_PublicLink Hcons with "Hstates Hprot Hl Hk").
-- by iDestruct (secret_in_l_public Hnot_PublicLink Hcons with "Hstates Ho Hk") as "[]".
+- by iApply (public_TSeal_l_open with "Hstates Hprot Hl Hk").
+- by iDestruct (secret_in_l_public with "Hstates Hprot Ho Hk") as "[]".
 Qed.
 
-#[local] Lemma public_open_inv {states_l states_r prots_l prots_r k k' t t' t1 t1'} :
+#[local] Lemma public_open_inv {states_l states_r k k' t t' t1 t1'} :
   Spec.open k t = Some t1 →
   Spec.open k' t' = Some t1' →
-  public_inv states_l states_r prots_l prots_r -∗
+  public_inv states_l states_r -∗
   PUB⟨k, k'⟩ -∗
   PUB⟨t, t'⟩ -∗
   PUB⟨t1, t1'⟩.
 Proof.
-iIntros (Ho Ho') "(([Hstates_l _] & _ & _ & _) & _ & [%Hnot_PublicLink_l _] & [Hprot _] & _ &
-                  [%Hprots_l_cons _]) #Hk #Ht".
-by iApply (public_open_auth Hnot_PublicLink_l Hprots_l_cons Ho Ho' with "Hstates_l Hprot Hk Ht").
+iIntros (Ho Ho') "(([Hstates_l _] & _) & [Hprot _] & _) #Hk #Ht".
+by iApply (public_open_auth Ho Ho' with "Hstates_l Hprot Hk Ht").
 Qed.
 
 Lemma public_open E k k' t t' t1 t1' :
@@ -2432,58 +2257,53 @@ Lemma public_open E k k' t t' t1 t1' :
   PUB⟨t1, t1'⟩.
 Proof.
 iIntros (HE Ho Ho') "#(_ & _ & Hinv) #Hk #Ht".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r & Hbody)".
+iInv "Hinv" as ">(%states_l & %states_r & Hbody)".
 iDestruct (public_open_inv Ho Ho' with "Hbody Hk Ht") as "#Ht1".
 iModIntro. iSplitL; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
-#[local] Lemma public_TSeal_key_l states_l prots_l {k b k' b' k1'} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_TSeal_key_l states_l {k b k' b' k1'} :
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
+  public_states_l_deposits states_l -∗
   public_PublicLink_l_consistent states_l -∗
   PUB⟨TSeal k b, TSeal k' b'⟩ -∗
   PUB⟨k, k1'⟩ -∗
   PUB⟨k, k'⟩ ∨ opaque_l (TSeal k b).
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hstates #HPublicLink_consistent #Ht #Hk".
+iIntros "Hstates Hdeps #HPublicLink_consistent #Ht #Hk".
 iDestruct (public_TSeal with "Ht") as "[[? _]|(_ & _ & _ & [[[Hlink _] _]|[? _]])]".
 - by iLeft.
 - iLeft.
-  by iApply (public_linked_in_l Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hk Hlink").
+  by iApply (public_linked_in_l with "Hstates Hdeps HPublicLink_consistent Hk Hlink").
 - by iRight.
 Qed.
 
-#[local] Lemma public_TSeal_key_r states_r prots_r {k b k' b' k1} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma public_TSeal_key_r states_r {k b k' b' k1} :
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
+  public_states_r_deposits states_r -∗
   public_PublicLink_r_consistent states_r -∗
   PUB⟨TSeal k b, TSeal k' b'⟩ -∗
   PUB⟨k1, k'⟩ -∗
   PUB⟨k, k'⟩ ∨ opaque_r (TSeal k' b').
 Proof.
-move=> Hnot_PublicLink Hcons. iIntros "Hstates #HPublicLink_consistent #Ht #Hk".
+iIntros "Hstates Hdeps #HPublicLink_consistent #Ht #Hk".
 iDestruct (public_TSeal with "Ht") as "[[? _]|(_ & _ & _ & [[[_ Hlink] _]|[_ ?]])]".
 - by iLeft.
 - iLeft.
-  by iApply (public_linked_in_r Hnot_PublicLink Hcons with "Hstates HPublicLink_consistent Hk Hlink").
+  by iApply (public_linked_in_r with "Hstates Hdeps HPublicLink_consistent Hk Hlink").
 - by iRight.
 Qed.
 
-#[local] Lemma public_open_l_auth states_l prots_l {k k' t t' t1} :
-  public_not_PublicLink_l_protected states_l prots_l →
-  public_prots_l_consistent states_l prots_l →
+#[local] Lemma public_open_l_auth {states_l k k' t t' t1} :
   Spec.open k t = Some t1 →
   own public_states_l (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_l)) -∗
   public_PublicLink_l_consistent states_l -∗
-  public_PublicLink_l_deposits states_l -∗
+  public_states_l_deposits states_l -∗
   PUB⟨k, k'⟩ -∗
   PUB⟨t, t'⟩ -∗
   ⌜is_Some (Spec.open k' t')⌝.
 Proof.
-move=> Hnot_PublicLink_l Hprots_l_cons.
 rewrite {1}/Spec.open. case: t => // k_t b.
 case: decide => // Hkey _.
 move: Hkey; rewrite /Spec.open_key /Spec.to_key.
@@ -2497,28 +2317,27 @@ case: kt Hkey => // - [<-] {k}; iIntros "Hstates_l HPublicLink_consistent Hprot 
 - (* Asymmetric encryption, [t'] is a ciphertext. *)
   iAssert (PUB⟨TKey AEnc s, TKey AEnc s''⟩) as "#Hpk"; first by iApply (public_pkey with "Hk").
   iAssert (PUB⟨TKey AEnc s, k_t'⟩ ∨ opaque_l (TSeal (TKey AEnc s) b))%I as "#[Hkk|Ho]".
-  { by iApply (public_TSeal_key_l Hnot_PublicLink_l Hprots_l_cons
-                 with "Hstates_l HPublicLink_consistent Ht Hpk"). }
-  + iDestruct (public_part_bij_1_auth Hnot_PublicLink_l Hprots_l_cons
+  { by iApply (public_TSeal_key_l with "Hstates_l Hprot HPublicLink_consistent Ht Hpk"). }
+  + iDestruct (public_part_bij_1_auth
                  with "Hstates_l HPublicLink_consistent Hprot Hpk Hkk") as %<-.
     iPureIntro. by apply: Hdone.
   + iSimpl in "Ho". iDestruct "Ho" as "[Ho _]". iExFalso.
-    by iApply (secret_in_l_public Hnot_PublicLink_l Hprots_l_cons with "Hstates_l Ho Hk").
+    by iApply (secret_in_l_public with "Hstates_l Hprot Ho Hk").
 - (* Asymmetric encryption, [t'] is not a ciphertext: impossible. *)
   iSimpl in "Hsec". iDestruct "Hsec" as "[Hsec _]". iExFalso.
-  by iApply (secret_in_l_public Hnot_PublicLink_l Hprots_l_cons with "Hstates_l Hsec Hk").
+  by iApply (secret_in_l_public with "Hstates_l Hprot Hsec Hk").
 - (* Signature, [t'] is a ciphertext. *)
   iDestruct (public_TSeal with "Ht") as "[[Hkk _]|(_ & _ & _ & [[_ Hbox]|[Ho _]])]".
   + iDestruct (public_TKey_term with "Hkk") as %[s' ->].
     iAssert (PUB⟨TKey Verify s, TKey Verify s'⟩) as "#Hv";
       first by iApply (public_pkey with "Hkk").
-    iDestruct (public_part_bij_1_auth Hnot_PublicLink_l Hprots_l_cons
+    iDestruct (public_part_bij_1_auth
                  with "Hstates_l HPublicLink_consistent Hprot Hv Hk") as %[= <-].
     iPureIntro. by apply: Hdone.
   + case: k_t' => [?|? ?|?|kt' s'|? ?|?|? ? ?]; try by iDestruct "Hbox" as "[]".
     case: kt'; try by iDestruct "Hbox" as "[]".
     iDestruct "Hbox" as "[Hv _]".
-    iDestruct (public_part_bij_1_auth Hnot_PublicLink_l Hprots_l_cons
+    iDestruct (public_part_bij_1_auth
                  with "Hstates_l HPublicLink_consistent Hprot Hv Hk") as %[= <-].
     iPureIntro. by apply: Hdone.
   + iSimpl in "Ho". by iDestruct "Ho" as "[]".
@@ -2526,30 +2345,26 @@ case: kt Hkey => // - [<-] {k}; iIntros "Hstates_l HPublicLink_consistent Hprot 
   iSimpl in "Hsec". by iDestruct "Hsec" as "[]".
 - (* Symmetric encryption, [t'] is a ciphertext. *)
   iAssert (PUB⟨TKey SEnc s, k_t'⟩ ∨ opaque_l (TSeal (TKey SEnc s) b))%I as "#[Hkk|Ho]".
-  { by iApply (public_TSeal_key_l Hnot_PublicLink_l Hprots_l_cons
-                 with "Hstates_l HPublicLink_consistent Ht Hk"). }
-  + iDestruct (public_part_bij_1_auth Hnot_PublicLink_l Hprots_l_cons
+  { by iApply (public_TSeal_key_l with "Hstates_l Hprot HPublicLink_consistent Ht Hk"). }
+  + iDestruct (public_part_bij_1_auth
                  with "Hstates_l HPublicLink_consistent Hprot Hk Hkk") as %<-.
     iPureIntro. by apply: Hdone.
   + iSimpl in "Ho". iExFalso.
-    by iApply (secret_in_l_public Hnot_PublicLink_l Hprots_l_cons with "Hstates_l Ho Hk").
+    by iApply (secret_in_l_public with "Hstates_l Hprot Ho Hk").
 - (* Symmetric encryption, [t'] is not a ciphertext: impossible. *)
   iSimpl in "Hsec". iExFalso.
-  by iApply (secret_in_l_public Hnot_PublicLink_l Hprots_l_cons with "Hstates_l Hsec Hk").
+  by iApply (secret_in_l_public with "Hstates_l Hprot Hsec Hk").
 Qed.
 
-#[local] Lemma public_open_r_auth states_r prots_r {k k' t t' t1'} :
-  public_not_PublicLink_r_protected states_r prots_r →
-  public_prots_r_consistent states_r prots_r →
+#[local] Lemma public_open_r_auth {states_r k k' t t' t1'} :
   Spec.open k' t' = Some t1' →
   own public_states_r (● ((λ st, ● Some st ⋅ ◯ Some st) <$> states_r)) -∗
   public_PublicLink_r_consistent states_r -∗
-  public_PublicLink_r_deposits states_r -∗
+  public_states_r_deposits states_r -∗
   PUB⟨k, k'⟩ -∗
   PUB⟨t, t'⟩ -∗
   ⌜is_Some (Spec.open k t)⌝.
 Proof.
-move=> Hnot_PublicLink_r Hprots_r_cons.
 rewrite {1}/Spec.open. case: t' => // k_t' b'.
 case: decide => // Hkey _.
 move: Hkey; rewrite /Spec.open_key /Spec.to_key.
@@ -2562,58 +2377,53 @@ case: kt' Hkey => // - [<-] {k'}; iIntros "Hstates_r HPublicLink_consistent Hpro
   iDestruct (public_term_TSeal with "Ht") as "[(%k_t & %b & ->)|(_ & _ & Hsec)]".
 - iAssert (PUB⟨TKey AEnc s'', TKey AEnc s'⟩) as "#Hpk"; first by iApply (public_pkey with "Hk").
   iAssert (PUB⟨k_t, TKey AEnc s'⟩ ∨ opaque_r (TSeal (TKey AEnc s') b'))%I as "#[Hkk|Ho]".
-  { by iApply (public_TSeal_key_r Hnot_PublicLink_r Hprots_r_cons
-                 with "Hstates_r HPublicLink_consistent Ht Hpk"). }
-  + iDestruct (public_part_bij_2_auth Hnot_PublicLink_r Hprots_r_cons
+  { by iApply (public_TSeal_key_r with "Hstates_r Hprot HPublicLink_consistent Ht Hpk"). }
+  + iDestruct (public_part_bij_2_auth
                  with "Hstates_r HPublicLink_consistent Hprot Hpk Hkk") as %<-.
     iPureIntro. by apply: Hdone.
   + iSimpl in "Ho". iDestruct "Ho" as "[Ho _]". iExFalso.
-    by iApply (secret_in_r_public Hnot_PublicLink_r Hprots_r_cons with "Hstates_r Ho Hk").
+    by iApply (secret_in_r_public with "Hstates_r Hprot Ho Hk").
 - iSimpl in "Hsec". iDestruct "Hsec" as "[Hsec _]". iExFalso.
-  by iApply (secret_in_r_public Hnot_PublicLink_r Hprots_r_cons with "Hstates_r Hsec Hk").
+  by iApply (secret_in_r_public with "Hstates_r Hprot Hsec Hk").
 - iDestruct (public_TSeal with "Ht") as "[[Hkk _]|(_ & _ & _ & [[_ Hbox]|[_ Ho]])]".
   + iDestruct (public_term_TKey with "Hkk") as %[s ->].
     iAssert (PUB⟨TKey Verify s, TKey Verify s'⟩) as "#Hv";
       first by iApply (public_pkey with "Hkk").
-    iDestruct (public_part_bij_2_auth Hnot_PublicLink_r Hprots_r_cons
+    iDestruct (public_part_bij_2_auth
                  with "Hstates_r HPublicLink_consistent Hprot Hv Hk") as %[= <-].
     iPureIntro. by apply: Hdone.
   + case: k_t => [?|? ?|?|kt s|? ?|?|? ? ?]; try by iDestruct "Hbox" as "[]".
     case: kt; try by iDestruct "Hbox" as "[]".
     iDestruct "Hbox" as "[Hv _]".
-    iDestruct (public_part_bij_2_auth Hnot_PublicLink_r Hprots_r_cons
+    iDestruct (public_part_bij_2_auth
                  with "Hstates_r HPublicLink_consistent Hprot Hv Hk") as %[= <-].
     iPureIntro. by apply: Hdone.
   + iSimpl in "Ho". by iDestruct "Ho" as "[]".
 - iSimpl in "Hsec". by iDestruct "Hsec" as "[]".
 - iAssert (PUB⟨k_t, TKey SEnc s'⟩ ∨ opaque_r (TSeal (TKey SEnc s') b'))%I as "#[Hkk|Ho]".
-  { by iApply (public_TSeal_key_r Hnot_PublicLink_r Hprots_r_cons
-                 with "Hstates_r HPublicLink_consistent Ht Hk"). }
-  + iDestruct (public_part_bij_2_auth Hnot_PublicLink_r Hprots_r_cons
+  { by iApply (public_TSeal_key_r with "Hstates_r Hprot HPublicLink_consistent Ht Hk"). }
+  + iDestruct (public_part_bij_2_auth
                  with "Hstates_r HPublicLink_consistent Hprot Hk Hkk") as %<-.
     iPureIntro. by apply: Hdone.
   + iSimpl in "Ho". iExFalso.
-    by iApply (secret_in_r_public Hnot_PublicLink_r Hprots_r_cons with "Hstates_r Ho Hk").
+    by iApply (secret_in_r_public with "Hstates_r Hprot Ho Hk").
 - iSimpl in "Hsec". iExFalso.
-  by iApply (secret_in_r_public Hnot_PublicLink_r Hprots_r_cons with "Hstates_r Hsec Hk").
+  by iApply (secret_in_r_public with "Hstates_r Hprot Hsec Hk").
 Qed.
 
-#[local] Lemma public_open_open states_l states_r prots_l prots_r k k' t t' :
-  public_inv states_l states_r prots_l prots_r -∗
+#[local] Lemma public_open_open states_l states_r k k' t t' :
+  public_inv states_l states_r -∗
   PUB⟨k, k'⟩ -∗
   PUB⟨t, t'⟩ -∗
   ⌜is_Some (Spec.open k t) ↔ is_Some (Spec.open k' t')⌝.
 Proof.
-iIntros "(([Hstates_l _] & [Hstates_r _] & _ & _) & _ & [%Hnot_PublicLink_l %Hnot_PublicLink_r] &
-          [Hprot_l Hprot_r] &
-          [HPublicLink_consistent HPublicLink_consistent_r] & [%Hprots_l_cons %Hprots_r_cons]) #Hk #Ht".
+iIntros "(([Hstates_l _] & [Hstates_r _] & _) & [Hprot_l Hprot_r] &
+          [HPublicLink_consistent HPublicLink_consistent_r]) #Hk #Ht".
 iSplit.
 - iIntros "%Hopen". case: Hopen => t1 Hopen.
-  by iApply (public_open_l_auth Hnot_PublicLink_l Hprots_l_cons Hopen
-               with "Hstates_l HPublicLink_consistent Hprot_l Hk Ht").
+  by iApply (public_open_l_auth Hopen with "Hstates_l HPublicLink_consistent Hprot_l Hk Ht").
 - iIntros "%Hopen". case: Hopen => t1' Hopen.
-  by iApply (public_open_r_auth Hnot_PublicLink_r Hprots_r_cons Hopen
-               with "Hstates_r HPublicLink_consistent_r Hprot_r Hk Ht").
+  by iApply (public_open_r_auth Hopen with "Hstates_r HPublicLink_consistent_r Hprot_r Hk Ht").
 Qed.
 
 Lemma public_open_fupd E k k' t t' :
@@ -2624,10 +2434,10 @@ Lemma public_open_fupd E k k' t t' :
   |={E}=> ⌜is_Some (Spec.open k t) ↔ is_Some (Spec.open k' t')⌝.
 Proof.
 iIntros (HE) "#(_ & _ & Hinv) #Hk #Ht".
-iInv "Hinv" as ">(%states_l & %states_r & %prots_l & %prots_r & Hbody)".
+iInv "Hinv" as ">(%states_l & %states_r & Hbody)".
 iDestruct (public_open_open with "Hbody Hk Ht") as %Hiff.
 iModIntro. iSplitL; last done.
-iModIntro. iExists states_l, states_r, prots_l, prots_r. iFrame.
+iModIntro. iExists states_l, states_r. iFrame.
 Qed.
 
 End AttackerDecryption.

@@ -239,13 +239,13 @@ Definition seal_step sk sk' e (Q : iProp) : iProp :=
     protects.  The result is a step, to be run with the key's invariant
     open, that relates the two ciphertexts, and the tokens of the
     ciphertexts that mark them as sealed. *)
-Lemma aenc_link E sk sk' (N : namespace) m m' {tsub tsub'} :
+Lemma aenc_link E sk sk' (N : namespace) m m' :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
   honest_key sk sk' -∗
   minted m -∗ minted_spec m' -∗
-  protected_by_subterm_l (Spec.tag (Tag N) m) tsub -∗
-  protected_by_subterm_r (Spec.tag (Tag N) m') tsub' -∗
+  protected_deposit_l (Spec.tag (Tag N) m) -∗
+  protected_deposit_r (Spec.tag (Tag N) m') -∗
   term_token (Spec.tag (Tag N) m) ⊤ -∗
   term_token_spec (Spec.tag (Tag N) m') ⊤ -∗
   term_token (Spec.enc (Spec.pkey sk) (Tag N) m) ⊤ -∗
@@ -359,17 +359,17 @@ rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with 
 iIntros (sk') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.
 iMod (public_secret_nonce_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
-  as "(#secret_s & prot_s & token_s)".
+  as "[#secret_s token_s]".
 iMod (public_secret_nonce_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
-  as "(#secret_s' & prot_s' & _)".
+  as "[#secret_s' _]".
 iDestruct (term_token_public_token_l with "token_sk") as "(token_sk & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_sk'") as "(token_sk' & _ & _)";
   first solve_not_TSeal.
 iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key sk) ltac:(solve_ndisj)
-        with "Hctx secret_s prot_s token_sk") as "[#secret_sk _]".
+        with "Hctx secret_s token_sk") as "#secret_sk".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key sk') ltac:(solve_ndisj)
-        with "Hctx secret_s' prot_s' token_sk'") as "[#secret_sk' _]".
+        with "Hctx secret_s' token_sk'") as "#secret_sk'".
 iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & seals & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & seals' & _)";
@@ -448,8 +448,8 @@ Qed.
 
 (** What the initiator needs to encrypt the responder's nonce. *)
 Definition m3_tokens nR nR' : iProp :=
-  protected_by_subterm_l (Spec.tag (Tag m3N) nR) nR ∗
-  protected_by_subterm_r (Spec.tag (Tag m3N) nR') nR' ∗
+  protected_deposit_l (Spec.tag (Tag m3N) nR) ∗
+  protected_deposit_r (Spec.tag (Tag m3N) nR') ∗
   term_token (Spec.tag (Tag m3N) nR) ⊤ ∗
   term_token_spec (Spec.tag (Tag m3N) nR') ⊤ ∗
   term_token (Spec.enc (Spec.pkey skR) (Tag m3N) nR) ⊤ ∗

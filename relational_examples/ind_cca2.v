@@ -319,20 +319,20 @@ rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with 
 iIntros (skA') "%Hnonce_a' #mint_spec_skA' token_spec_a token_spec_skA' token_spec_pkA'".
 split_term_tokens. rel_prims.
 iMod (public_secret_nonce_l (E:=⊤) Hnonce_a ltac:(solve_ndisj)
-        with "Hctx token_a") as "(#secret_a & prot_a & token_a)".
+        with "Hctx token_a") as "[#secret_a token_a]".
 rewrite (term_token_difference (seed_of_aenc_key skA) (↑storeN)
            (⊤ ∖ ↑hypercryptisN)); last solve_ndisj.
 iDestruct "token_a" as "[token_store _]".
 iMod (public_secret_nonce_r (E:=⊤) Hnonce_a' ltac:(solve_ndisj)
-        with "Hctx token_spec_a") as "(#secret_a' & prot_a' & _)".
+        with "Hctx token_spec_a") as "[#secret_a' _]".
 iDestruct (term_token_public_token_l with "token_skA") as "(token_skA & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_spec_skA'") as "(token_spec_skA' & _ & _)";
   first solve_not_TSeal.
 iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key skA) ltac:(solve_ndisj)
-        with "Hctx secret_a prot_a token_skA") as "[#secret_skA _]".
+        with "Hctx secret_a token_skA") as "#secret_skA".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key skA') ltac:(solve_ndisj)
-        with "Hctx secret_a' prot_a' token_spec_skA'") as "[#secret_skA' _]".
+        with "Hctx secret_a' token_spec_skA'") as "#secret_skA'".
 iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & seals_a & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_spec_pkA'") as "(token_spec_pkA' & seals_a' & _)";

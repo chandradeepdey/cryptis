@@ -288,17 +288,17 @@ rel_apply_r (refines_mk_aenc_key_r _ _ (λ t, {[t]}) (λ t, {[t]}) _ Hdisj with 
 iIntros (skT') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.
 iMod (public_secret_nonce_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
-  as "(#secret_s & prot_s & _)".
+  as "[#secret_s _]".
 iMod (public_secret_nonce_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
-  as "(#secret_s' & prot_s' & _)".
+  as "[#secret_s' _]".
 iDestruct (term_token_public_token_l with "token_sk") as "(token_sk & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_sk'") as "(token_sk' & _ & _)";
   first solve_not_TSeal.
 iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key skT) ltac:(solve_ndisj)
-        with "Hctx secret_s prot_s token_sk") as "[#secret_sk _]".
+        with "Hctx secret_s token_sk") as "#secret_sk".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key skT') ltac:(solve_ndisj)
-        with "Hctx secret_s' prot_s' token_sk'") as "[#secret_sk' _]".
+        with "Hctx secret_s' token_sk'") as "#secret_sk'".
 iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & seals & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & seals' & _)";
@@ -342,9 +342,9 @@ iIntros (skV') "%Hnonce' #mint_sk' token_s' token_sk' token_pk'".
 split_term_tokens.
 (* Seeds: secret; they protect the signing keys, which are secret in turn. *)
 iMod (public_secret_nonce_l (E:=⊤) Hnonce ltac:(solve_ndisj) with "Hctx token_s")
-  as "(#secret_s & prot_s & token_s)".
+  as "[#secret_s token_s]".
 iMod (public_secret_nonce_r (E:=⊤) Hnonce' ltac:(solve_ndisj) with "Hctx token_s'")
-  as "(#secret_s' & prot_s' & _)".
+  as "[#secret_s' _]".
 rewrite (term_token_difference (seed_of_sign_key skV) (↑signedN)
            (⊤ ∖ ↑hypercryptisN)); last solve_ndisj.
 iDestruct "token_s" as "[token_signed _]".
@@ -353,9 +353,9 @@ iDestruct (term_token_public_token_l with "token_sk") as "(token_sk & seals & _)
 iDestruct (term_token_public_token_r with "token_sk'") as "(token_sk' & seals' & _)";
   first solve_not_TSeal.
 iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_sign_key skV)
-        ltac:(solve_ndisj) with "Hctx secret_s prot_s token_sk") as "[#secret_sk _]".
+        ltac:(solve_ndisj) with "Hctx secret_s token_sk") as "#secret_sk".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_sign_key skV')
-        ltac:(solve_ndisj) with "Hctx secret_s' prot_s' token_sk'") as "[#secret_sk' _]".
+        ltac:(solve_ndisj) with "Hctx secret_s' token_sk'") as "#secret_sk'".
 iDestruct (term_token_public_token_l with "token_pk") as "(token_pk & _ & _)";
   first solve_not_TSeal.
 iDestruct (term_token_public_token_r with "token_pk'") as "(token_pk' & _ & _)";
