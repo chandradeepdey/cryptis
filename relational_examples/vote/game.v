@@ -111,18 +111,13 @@ by split;
   iIntros "#Hctx"; iApply (election_of_refinement with "Hctx").
 Qed.
 
-Theorem election_secure Σ `{!relocPreG Σ, !publicGpreS Σ} cands votes0 votes1
-    (adv adv' : expr) σ :
+Theorem election_secure cands votes0 votes1 :
   votes0 ≡ₚ votes1 →
-  attacker_valid adv adv' →
-  adequate NotStuck (run_network adv (election_guess_wrapped cands votes0 votes1)) σ
-    (λ v _, ∃ thp' h v',
-       rtc erased_step
-         ([run_network adv' (election_guess_wrapped cands votes0 votes1)], σ)
-         (of_val v' :: thp', h) ∧
-       ∃ b g b' g' : bool,
-         v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+  hypercryptis_secure (election_guess_wrapped cands votes0 votes1) (λ v v',
+    ∃ b g b' g' : bool,
+      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hperm Hadv. apply: hypercryptis_adequacy => // ? ?.
+move=> Hperm ? ? ? ?.
+apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
 iIntros "#Hctx". by iApply election_guess_wrapped_refinement.
 Qed.

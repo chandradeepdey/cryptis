@@ -100,33 +100,27 @@ by split;
   [iApply (init_test_refinement true) | iApply (init_test_refinement false)].
 Qed.
 
-Theorem nsl_resp_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : expr) σ :
-  attacker_valid adv adv' →
-  adequate NotStuck (run_network adv (guess_wrapped resp_test)) σ
-    (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network adv' (guess_wrapped resp_test)], σ)
-         (of_val v' :: thp', h) ∧
-       ∃ b g b' g' : bool,
-         v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Theorem nsl_resp_ror_secure :
+  hypercryptis_secure (guess_wrapped resp_test) (λ v v',
+    ∃ b g b' g' : bool,
+      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (adv0 adv0') "#Hadv".
+move=> ? ? ? ?.
+apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
+iIntros "#Hctx". rel_arrow_val. iIntros (adv adv') "#Hadv".
 iApply (guess_wrapped_refinement with "Hctx Hadv").
 iIntros (b). iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
 by iApply resp_test_refinement.
 Qed.
 
-Theorem nsl_init_ror_secure Σ `{!relocPreG Σ, !publicGpreS Σ} (adv adv' : expr) σ :
-  attacker_valid adv adv' →
-  adequate NotStuck (run_network adv (guess_wrapped init_test)) σ
-    (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network adv' (guess_wrapped init_test)], σ)
-         (of_val v' :: thp', h) ∧
-       ∃ b g b' g' : bool,
-         v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Theorem nsl_init_ror_secure :
+  hypercryptis_secure (guess_wrapped init_test) (λ v v',
+    ∃ b g b' g' : bool,
+      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (adv0 adv0') "#Hadv".
+move=> ? ? ? ?.
+apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
+iIntros "#Hctx". rel_arrow_val. iIntros (adv adv') "#Hadv".
 iApply (guess_wrapped_refinement with "Hctx Hadv").
 iIntros (b). iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
 by iApply init_test_refinement.

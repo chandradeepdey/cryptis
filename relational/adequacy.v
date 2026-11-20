@@ -2,13 +2,14 @@
 
     [hypercryptis_adequacy] turns a ReLoC refinement between two protocols,
     as functions of the attacker [lrel_attacker], which builds their
-    channels, into a statement
-    about executions: for any attackers [adv] and [adv'] related at
-    [lrel_attacker], if the left protocol run against [adv] terminates then
-    the right protocol run against [adv'] has a terminating execution whose
-    result is related as specified.  [hypercryptis_ctx_refinement] turns the
-    same refinement into a contextual refinement between the two games
-    ([network_game]). *)
+    channels, into a statement about executions: for any attackers [adv]
+    and [adv'] related at [lrel_attacker], if the left protocol run against
+    [adv] terminates then the right protocol run against [adv'] has a
+    terminating execution whose result is related as specified.
+    [hypercryptis_secure f P] states this for the same protocol [f] on both
+    sides, against every pair of valid attackers ([attacker_valid]).
+    [hypercryptis_ctx_refinement] turns the same refinement into a
+    contextual refinement between the two games ([network_game]). *)
 
 From reloc Require Import reloc.
 From cryptis.hyper.core Require Import public.
@@ -39,6 +40,13 @@ apply: (refines_adequate Σ (λ _, LRel (λ v v', ⌜P v v'⌝)%I)).
   iApply (refines_app with "[] []"); last by iApply (Hadv with "Hctx").
   iApply run_network_refinement.
 Qed.
+
+Definition hypercryptis_secure (f : val) (P : val → val → Prop) : Prop :=
+  ∀ adv adv' σ, attacker_valid adv adv' →
+  adequate NotStuck (run_network adv f) σ
+    (λ v _, ∃ thp' h v',
+       rtc erased_step ([run_network adv' f], σ) (of_val v' :: thp', h) ∧
+       P v v').
 
 Definition network_game (f : val) : expr := (attacker_prims, f)%E.
 

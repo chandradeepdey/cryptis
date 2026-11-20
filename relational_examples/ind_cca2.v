@@ -472,15 +472,12 @@ by split;
   iIntros "#Hctx"; iApply (alice_refinement with "Hctx").
 Qed.
 
-Theorem ind_cca2_secure Σ `{!relocPreG Σ, !publicGpreS Σ} N (adv adv' : expr) σ :
-  attacker_valid adv adv' →
-  adequate NotStuck (run_network adv (alice_guess_wrapped N)) σ
-    (λ v _, ∃ thp' h v',
-       rtc erased_step ([run_network adv' (alice_guess_wrapped N)], σ)
-         (of_val v' :: thp', h) ∧
-       ∃ b g b' g' : bool,
-         v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Theorem ind_cca2_secure N :
+  hypercryptis_secure (alice_guess_wrapped N) (λ v v',
+    ∃ b g b' g' : bool,
+      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
 Proof.
-move=> Hadv. apply: hypercryptis_adequacy => // ? ?.
+move=> ? ? ? ?.
+apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
 iIntros "#Hctx". by iApply alice_guess_wrapped_refinement.
 Qed.
