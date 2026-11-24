@@ -371,21 +371,6 @@ Lemma dec_sign_key (sk : sign_key) c t :
   dec (pkey sk) c (TSeal sk (tag c t)) = Some t.
 Proof. by rewrite /dec /open decide_True ?open_key_sign // tagK. Qed.
 
-Lemma untuple_Some t t1 t2 : untuple t = Some (t1, t2) ↔ t = TPair t1 t2.
-Proof. by rewrite /untuple; split; [case: t => // ?? [-> ->]|move=> ->]. Qed.
-
-Definition nondet_aenc pk N n t := enc pk N (TPair n t).
-
-Definition nondet_adec k N c :=
-  match dec k N c with
-  | Some pl => match untuple pl with Some p => Some p.2 | None => None end
-  | None => None
-  end.
-
-Lemma nondet_adec_aenc (sk : aenc_key) N n t :
-  nondet_adec sk N (nondet_aenc (pkey sk) N n t) = Some t.
-Proof. by rewrite /nondet_adec /nondet_aenc dec_aenc_key. Qed.
-
 Definition zero : term := TInt 0.
 
 End Spec.

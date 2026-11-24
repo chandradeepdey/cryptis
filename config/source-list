@@ -214,6 +214,7 @@ relational/adequacy.v
 
 # Relational case studies
 
+relational_examples/nondet_aenc.v
 relational_examples/ind_cpa.v
 relational_examples/ind_cca2.v
 

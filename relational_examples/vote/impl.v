@@ -13,6 +13,7 @@ From stdpp Require Import namespaces.
 From iris.heap_lang Require Import notation.
 From cryptis Require Import lib cryptis primitives.
 From cryptis.hyper.primitives Require Import with_cryptis.
+From cryptis.hyper.examples Require Import nondet_aenc.
 From cryptis.lib Require Import avl.
 
 Abbreviation voteN := (nroot.@"vote").

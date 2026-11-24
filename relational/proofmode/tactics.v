@@ -31,7 +31,7 @@ From cryptis.hyper.lib Require Import refines.
 From cryptis.hyper.core Require Import minted_spec public.
 
 Ltac minted_simpl :=
-  rewrite /Spec.nondet_aenc /Spec.enc
+  rewrite /Spec.enc
     ?(minted_TSeal, minted_tag, minted_of_list, minted_TPair, minted_THash,
       minted_TInt, minted_senc, minted_TKey, minted_spec_TSeal, minted_spec_tag,
       minted_spec_of_list, minted_spec_TPair, minted_spec_THash, minted_spec_TInt,
@@ -41,13 +41,13 @@ Ltac unfold_sets := repeat match goal with x := _ |- _ => subst x end.
 
 Ltac solve_subterm :=
   unfold_sets;
-  rewrite /Spec.nondet_aenc /Spec.enc ?[Spec.tag]unlock ?[Spec.of_list]unlock
+  rewrite /Spec.enc ?[Spec.tag]unlock ?[Spec.of_list]unlock
     ?[term_of_senc_key]unlock /=;
   eauto 20 using STRefl, STPair1, STPair2, STKey, STSeal1, STSeal2, STHash.
 
 Ltac solve_immediate_subterm :=
   unfold_sets;
-  rewrite /Spec.nondet_aenc /Spec.enc ?[Spec.tag]unlock ?[Spec.of_list]unlock /=;
+  rewrite /Spec.enc ?[Spec.tag]unlock ?[Spec.of_list]unlock /=;
   first [exact: SubtermPairL | exact: SubtermPairR].
 
 Ltac unfold_nonces :=
@@ -68,7 +68,7 @@ Ltac solve_not_TSeal :=
 Ltac solve_term_disj :=
   unfold_sets;
   unfold_nonces;
-  rewrite /Spec.nondet_aenc /Spec.enc ?[Spec.tag]unlock ?[Spec.of_list]unlock ?[Tag]unlock
+  rewrite /Spec.enc ?[Spec.tag]unlock ?[Spec.of_list]unlock ?[Tag]unlock
     ?[term_of_senc_key]unlock /=;
   set_solver.
 

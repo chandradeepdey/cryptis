@@ -12,9 +12,7 @@ In the `cryptis` directory you will find:
 - `core/*`, `cryptis`: Core Cryptis components: cryptographic terms, the
   `public` predicate, encryption predicates, and term metadata.
 - `primitives/*`, `primitives`: HeapLang functions for manipulating
-  cryptographic terms, including nondeterministic public-key encryption
-  (`nondet_aenc`), which pairs a fresh nonce with the plaintext so that equal
-  plaintexts give different ciphertexts.  Definition of the attacker.
+  cryptographic terms.  Definition of the attacker.
 - `tactics`: Ltac tactics for symbolically executing the main HeapLang functions
   on terms.
 
@@ -73,8 +71,9 @@ for proving that two runs of a protocol are indistinguishable to the attacker:
 
 Its case studies live in `relational_examples`:
 
-- `ind_cpa`, `ind_cca2`: IND-CPA and IND-CCA2 for nondeterministic public-key
-  encryption.
+- `nondet_aenc`: Nondeterministic public-key encryption, pairing each
+  plaintext with a fresh nonce.
+- `ind_cpa`, `ind_cca2`: IND-CPA and IND-CCA2 for `nondet_aenc`.
 - `nsl`: Real-or-random secrecy of the Needham–Schroeder–Lowe session key, for
   the programs of `examples/nsl`.
 - `vote`: Vote privacy for an election with any number of voters and

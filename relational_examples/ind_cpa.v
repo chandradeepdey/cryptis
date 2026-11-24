@@ -3,9 +3,10 @@
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper Require Import lib.
-From cryptis.hyper.core Require Import minted_spec public.
+From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
 From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import adequacy proofmode.
+From cryptis.hyper.examples Require Import nondet_aenc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -85,10 +86,10 @@ iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key skA) ltac:(so
         with "Hctx secret_a token_skA") as "#secret_skA".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key skA') ltac:(solve_ndisj)
         with "Hctx secret_a' token_spec_skA'") as "#secret_skA'".
-iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & seals_a & _)";
+iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & seals_a & holds_a & _)";
   first solve_not_TSeal.
-iDestruct (term_token_public_token_r with "token_spec_pkA'") as "(token_spec_pkA' & seals_a' & _)";
-  first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "token_spec_pkA'")
+  as "(token_spec_pkA' & seals_a' & holds_a' & _)"; first solve_not_TSeal.
 iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] [] [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
 { iIntros "!> #elem". rewrite public_aenc_key. iRight.
@@ -115,18 +116,16 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (refines_nondet_aenc (λ _, ∅) (λ _, ∅) skA skA'
-  with "Hctx mint_skA mint_spec_skA' elem_pkA mint_msg mint_spec_msg' [] [] [] []").
-{ iPureIntro. set_solver. }
-{ iPureIntro. set_solver. }
-{ by iIntros (?); rewrite big_sepS_empty. }
-{ by iIntros (?); rewrite big_sepS_empty. }
-iIntros (n n') "_ _ _ _ _ _ _ _ upd".
-iMod ("upd" $! ⊤ (↑sealN) (↑sealN)
-        with "[] [] [] [] [$seals_a $seals_a']") as "(_ & _ & #Hcmsg)";
-  [iPureIntro; solve_ndisj | iPureIntro; apply nclose_subseteq.. | |].
-{ iIntros "rel rel'". rewrite /Spec.nondet_aenc /Spec.enc [term_of_aenc_key]unlock /=.
-  iSplitL "rel"; iLeft; iFrame; by iRight. }
+rel_apply (refines_nondet_aenc skA skA' (N.@"m")
+  with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg'").
+{ by iApply secret_in_linked. }
+iIntros (p p') "_ _ _ _ upd".
+iMod ("upd" $! ⊤ with "[] [seals_a seals_a'] [holds_a] [holds_a']") as "(_ & _ & #Hcmsg)".
+{ iPureIntro. solve_ndisj. }
+{ iSplitL "seals_a"; [iApply (term_token_drop with "seals_a") |
+                      iApply (term_token_spec_drop with "seals_a'")]; solve_ndisj. }
+{ iApply (term_token_drop with "holds_a"). solve_ndisj. }
+{ iApply (term_token_spec_drop with "holds_a'"). solve_ndisj. }
 iModIntro.
 rel_apply (refines_send with "Hc Hcmsg").
 iIntros (? ?) "[-> ->]"=> /=. rel_pures.

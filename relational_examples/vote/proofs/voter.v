@@ -6,6 +6,7 @@ From reloc Require Import reloc.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
 From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import proofmode.
+From cryptis.hyper.examples Require Import nondet_aenc.
 From cryptis.hyper.examples.vote Require Import impl.
 From cryptis.hyper.examples.vote.proofs Require Import base.
 
@@ -37,26 +38,23 @@ iIntros "(%HnonceV & %HnonceV' & #mint_V & #mint_V' & #pub_pkV & _ & _ &
 iAssert (minted (Spec.pkey skT)) as "#mint_pkT"; first by rewrite minted_pkey.
 iAssert (minted_spec (Spec.pkey skT')) as "#mint_pkT'"; first by rewrite minted_spec_pkey.
 rewrite /ballot. rel_pures.
-rel_apply (refines_nondet_aenc (λ _, ∅) (λ _, ∅) skT skT'
-  with "Hctx mint_T mint_T' elem_pkT mint_v mint_v' [] [] [] []").
-{ iPureIntro. set_solver. }
-{ iPureIntro. set_solver. }
-{ by iIntros (?); rewrite big_sepS_empty. }
-{ by iIntros (?); rewrite big_sepS_empty. }
-iIntros (n n') "%Hn %Hn' #mint_n #mint_n' _ _ tc tc' upd".
+rel_apply (refines_nondet_aenc skT skT' (voteN.@"vote")
+  with "Hctx mint_T mint_T' elem_pkT [] mint_v mint_v'").
+{ by iApply secret_in_linked. }
+iIntros (p p') "%Ho %Ho' tc tc' upd".
 (* The urn records the ballot, which relates the ciphertexts. *)
-iMod (urn_inv_seal (E:=⊤) skT skT' _ _ (PUB⟨ballot_ct skT n v, ballot_ct skT' n' v'⟩)
+iMod (urn_inv_seal (E:=⊤) skT skT' p p'
+        (PUB⟨TSeal (Spec.pkey skT) p, TSeal (Spec.pkey skT') p'⟩)
         ltac:(solve_ndisj) with "Hurn [tc] [tc'] [upd]") as "#pub_c".
 { iApply (term_token_drop with "tc"). solve_ndisj. }
 { iApply (term_token_spec_drop with "tc'"). solve_ndisj. }
-{ iIntros (Ek Ek') "%sub %sub' ns".
-  iMod ("upd" $! (⊤ ∖ ↑urnN) Ek Ek' with "[] [//] [//] [] ns") as "($ & _ & $)";
-    [iPureIntro; solve_ndisj | | done].
-  iIntros "rel rel'". rewrite /Spec.nondet_aenc /Spec.enc [term_of_aenc_key]unlock /=.
-  iSplitL "rel"; iLeft; iFrame; by iRight. }
-iAssert (PUB⟨ballot_body skT n v, ballot_body skT' n' v'⟩) as "#pub_tgc".
+{ iIntros "ns hold hold'".
+  iMod ("upd" $! (⊤ ∖ ↑urnN) with "[%] ns hold hold'") as "(_ & _ & $)";
+    [solve_ndisj | done]. }
+iAssert (PUB⟨ballot_body (TSeal (Spec.pkey skT) p),
+             ballot_body (TSeal (Spec.pkey skT') p')⟩) as "#pub_tgc".
 { rewrite /ballot_body public_tag. by iSplit. }
-iMod (ballot_inv_sign _ _ _ _ _ _ n n' with "Hctx Hballot token pub_tgc []") as "#pub_sig";
+iMod (ballot_inv_sign _ _ Ho Ho' with "Hctx Hballot token pub_tgc []") as "#pub_sig";
   [solve_ndisj..| |].
 { iIntros "!> #Hsu".
   by iApply (pub_sign with "mint_V mint_V' secret_V secret_V' pub_pkV pub_tgc Hsu"). }

@@ -17,6 +17,7 @@ From cryptis.hyper.core Require Import public.
 From cryptis.hyper.primitives Require Import simple with_cryptis.
 From cryptis.hyper.lib Require Import avl.
 From cryptis.hyper Require Import proofmode.
+From cryptis.hyper.examples Require Import nondet_aenc.
 From cryptis.hyper.examples.vote Require Import impl.
 From cryptis.hyper.examples.vote.proofs Require Import base.
 
@@ -39,7 +40,7 @@ Definition slot_empty (p : term * option term) : bool :=
   match p.2 with None => true | Some _ => false end.
 
 Definition vote_of skT (t : term) : option Z :=
-  match Spec.nondet_adec skT (Tag (voteN.@"vote")) t with
+  match nondet_open skT (Tag (voteN.@"vote")) t with
   | Some v => Spec.to_int v
   | None => None
   end.
@@ -72,7 +73,8 @@ Fixpoint slots_ok skT skT' votes votes' st {struct st} : Prop :=
     match o with
     | None => True
     | Some (ct, ct') =>
-      ∃ n n', ct = ballot_ct skT n (TInt v) ∧ ct' = ballot_ct skT' n' (TInt v')
+      nondet_open skT (Tag (voteN.@"vote")) ct = Some (TInt v) ∧
+      nondet_open skT' (Tag (voteN.@"vote")) ct' = Some (TInt v')
     end ∧ slots_ok skT skT' votes votes' st
   | _, _, _ => False
   end.
@@ -102,9 +104,6 @@ case: o => [p|] /=; last by split; [discriminate | move=> /Forall_cons [[? ?] _]
 rewrite IH // Forall_cons. split; [by split; eauto | by case].
 Qed.
 
-Lemma vote_of_ballot skT n (v : Z) : vote_of skT (ballot_ct skT n (TInt v)) = Some v.
-Proof. by rewrite /vote_of /ballot_ct Spec.nondet_adec_aenc. Qed.
-
 Lemma tally_slots_l_eq skT skT' ks votes votes' st acc :
   length st = length ks → length votes = length ks →
   slots_ok skT skT' votes votes' st → Forall is_Some st →
@@ -112,8 +111,8 @@ Lemma tally_slots_l_eq skT skT' ks votes votes' st acc :
 Proof.
 elim: st ks votes votes' acc => [|o st IH] [|sk ks] [|v votes] votes' acc //= [Hst] [Hv].
 case: votes' => [|v' votes'] //= [Ho Hok] /Forall_cons [Hsome Hall].
-case: o Ho Hsome => [[ct ct'] [n [n' [-> ->]]] _|_ []] //=.
-rewrite /tally_step /= vote_of_ballot -/(slots_l (pkeys ks) st).
+case: o Ho Hsome => [[ct ct'] [Ho _] _|_ []] //=.
+rewrite /tally_step /vote_of /= Ho -/(slots_l (pkeys ks) st).
 by rewrite (IH ks votes votes' acc Hst Hv Hok Hall).
 Qed.
 
@@ -124,8 +123,8 @@ Lemma tally_slots_r_eq skT skT' ks' votes votes' st acc :
 Proof.
 elim: st ks' votes votes' acc => [|o st IH] [|sk ks'] votes [|v' votes'] acc //= [Hst] [Hv'].
 case: votes => [|v votes] //= [Ho Hok] /Forall_cons [Hsome Hall].
-case: o Ho Hsome => [[ct ct'] [n [n' [-> ->]]] _|_ []] //=.
-rewrite /tally_step /= vote_of_ballot -/(slots_r (pkeys ks') st).
+case: o Ho Hsome => [[ct ct'] [_ Ho'] _|_ []] //=.
+rewrite /tally_step /vote_of /= Ho' -/(slots_r (pkeys ks') st).
 by rewrite (IH ks' votes votes' acc Hst Hv' Hok Hall).
 Qed.
 
@@ -198,7 +197,7 @@ Proof.
 iIntros "Hm post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_l; last by iApply ("post" with "Hm").
 rel_apply_l refines_nondet_adec_l. rewrite /vote_of.
-case: (Spec.nondet_adec _ _ _) => [v|] /=; rel_pures_l;
+case: (nondet_open _ _ _) => [v|] /=; rel_pures_l;
   last by iApply ("post" with "Hm").
 rel_apply_l refines_to_int_l.
 case: (Spec.to_int v) => [k|] /=; rel_pures_l; last by iApply ("post" with "Hm").
@@ -215,7 +214,7 @@ Proof.
 iIntros "Hm post". rewrite /tally_vote /tally_step.
 case: p => [pk [ct|]] /=; rel_pures_r; last by iApply ("post" with "Hm").
 rel_apply_r refines_nondet_adec_r. rewrite /vote_of.
-case: (Spec.nondet_adec _ _ _) => [v|] /=; rel_pures_r;
+case: (nondet_open _ _ _) => [v|] /=; rel_pures_r;
   last by iApply ("post" with "Hm").
 rel_apply_r refines_to_int_r.
 case: (Spec.to_int v) => [k|] /=; rel_pures_r; last by iApply ("post" with "Hm").
@@ -390,7 +389,7 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
   case: st Hst Hok => [|o st] //= [Hst].
   case: votes votes' Hv Hv' => [|v votes] [|v' votes'] //= [Hv] [Hv'] [Ho Hok].
   rel_rec_l. rel_rec_r. rel_pures.
-  iMod (pub_verify_cases with "Hctx HV Hm") as "[[%HnL %HnR]|(%n & %n' & -> & ->)]".
+  iMod (pub_verify_cases with "Hctx HV Hm") as "[[%HnL %HnR]|(%ct & %ct' & %Hop & %Hop' & -> & ->)]".
   + rel_apply_l refines_verify'_l. iModIntro. iSplit.
     { iIntros (u _ Hdec). by rewrite HnL in Hdec. }
     iIntros "_". rel_pures_l.
@@ -411,9 +410,8 @@ elim: ks ks' st votes votes' => [|sk ks IH] ks' st votes votes' Hst Hv Hv' Hok;
     { iIntros (Hdec). by rewrite Spec.dec_sign_key in Hdec. }
     iIntros (u' e' _). case: e' => /Spec.tag_inj [_ <-].
     rel_pures. rel_values. iModIntro.
-    iExists (Some (ballot_ct skT n (TInt v), ballot_ct skT' n' (TInt v')) :: st).
-    iPureIntro. do 2 (split; first done). split; first done. split; last done.
-    by exists n, n'.
+    iExists (Some (ct, ct') :: st).
+    iPureIntro. do 2 (split; first done). split; first done. by split.
 Qed.
 
 Lemma collect_refinement c c' skT skT' ks ks' votes votes' st :

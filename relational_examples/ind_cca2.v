@@ -16,6 +16,7 @@ From cryptis.hyper Require Import lib.
 From cryptis.hyper.core Require Import minted_spec term_meta_spec public.
 From cryptis.hyper.primitives Require Import with_cryptis attacker.
 From cryptis.hyper Require Import adequacy proofmode.
+From cryptis.hyper.examples Require Import nondet_aenc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -82,9 +83,6 @@ Definition alice (b : bool) : val := λ: "sys",
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
 
-#[local] Abbreviation challenge_ns pl :=
-  (seal_namespace (Spec.tag (Tag (N.@"m")) pl)).
-
 Section Cell.
 
 Definition cell_inv skA skA' (l l' : loc) : iProp :=
@@ -92,17 +90,17 @@ Definition cell_inv skA skA' (l l' : loc) : iProp :=
    term_token (Spec.pkey skA) (↑sealN) ∗
    term_token_spec (Spec.pkey skA') (↑sealN)) ∨
   (∃ pl pl',
-    l ↦ SOMEV (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl) ∗
-    l' ↦ₛ SOMEV (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl') ∗
+    l ↦ SOMEV (TSeal (Spec.pkey skA) pl) ∗
+    l' ↦ₛ SOMEV (TSeal (Spec.pkey skA') pl') ∗
     term_token (Spec.pkey skA)
-      (↑sealN ∖ ↑challenge_ns pl) ∗
+      (↑sealN ∖ ↑seal_namespace pl) ∗
     term_token_spec (Spec.pkey skA')
-      (↑sealN ∖ ↑challenge_ns pl') ∗
-    publicly_linked (Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl)
-      (Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl') ∗
+      (↑sealN ∖ ↑seal_namespace pl') ∗
+    publicly_linked (TSeal (Spec.pkey skA) pl)
+      (TSeal (Spec.pkey skA') pl') ∗
     term_meta (seed_of_aenc_key skA) storeN () ∗
-    PUB⟨Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl,
-        Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'⟩).
+    PUB⟨TSeal (Spec.pkey skA) pl,
+        TSeal (Spec.pkey skA') pl'⟩).
 
 Lemma cell_unsealed_l E skA t t' u :
   ↑cryptisN ⊆ E →
@@ -132,13 +130,13 @@ iApply (linked_in_r_states_token_fupd _ _ HE with "ctx [Hl] [tok]").
 - rewrite /states_token_r /=. iApply (term_token_spec_drop with "tok"). rewrite /seal_namespace. solve_ndisj.
 Qed.
 
-Lemma challenge_ns_disj pl u :
-  u ≠ Spec.tag (Tag (N.@"m")) pl →
+Lemma seal_namespace_disj pl u :
+  u ≠ pl →
   (↑seal_namespace u.@"states" : coPset) ⊆
-  ↑sealN ∖ ↑challenge_ns pl.
+  ↑sealN ∖ ↑seal_namespace pl.
 Proof.
 move=> ne. apply subseteq_difference_r; last by rewrite /seal_namespace; solve_ndisj.
-have Hd : (↑seal_namespace u : coPset) ## ↑challenge_ns pl.
+have Hd : (↑seal_namespace u : coPset) ## ↑seal_namespace pl.
 { rewrite /seal_namespace. by apply ndot_ne_disjoint. }
 have : ↑seal_namespace u.@"states" ⊆ (↑seal_namespace u : coPset)
   by solve_ndisj.
@@ -150,15 +148,15 @@ Lemma cell_challenge_l E skA pl t t' u :
   Spec.open skA t = Some u →
   hypercryptis_ctx -∗
   term_token (Spec.pkey skA)
-    (↑sealN ∖ ↑challenge_ns pl) -∗
+    (↑sealN ∖ ↑seal_namespace pl) -∗
   publicly_linked t t' ={E}=∗
-  ⌜u = Spec.tag (Tag (N.@"m")) pl⌝ ∗
+  ⌜u = pl⌝ ∗
   term_token (Spec.pkey skA)
-    (↑sealN ∖ ↑challenge_ns pl).
+    (↑sealN ∖ ↑seal_namespace pl).
 Proof.
-move=> HE Ho. case: (decide (u = Spec.tag (Tag (N.@"m")) pl)) => [-> | ne].
+move=> HE Ho. case: (decide (u = pl)) => [-> | ne].
 { by iIntros "_ $ _". }
-have Hsub := challenge_ns_disj ne.
+have Hsub := seal_namespace_disj ne.
 move/Spec.open_aenc_key_Some: Ho => ->. rewrite Spec.aenc_key_pkey in Hsub *.
 iIntros "#ctx tok #[Hl _]".
 iMod (linked_in_l_states_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
@@ -171,15 +169,15 @@ Lemma cell_challenge_r E skA' pl' t t' u' :
   Spec.open skA' t' = Some u' →
   hypercryptis_ctx -∗
   term_token_spec (Spec.pkey skA')
-    (↑sealN ∖ ↑challenge_ns pl') -∗
+    (↑sealN ∖ ↑seal_namespace pl') -∗
   publicly_linked t t' ={E}=∗
-  ⌜u' = Spec.tag (Tag (N.@"m")) pl'⌝ ∗
+  ⌜u' = pl'⌝ ∗
   term_token_spec (Spec.pkey skA')
-    (↑sealN ∖ ↑challenge_ns pl').
+    (↑sealN ∖ ↑seal_namespace pl').
 Proof.
-move=> HE Ho. case: (decide (u' = Spec.tag (Tag (N.@"m")) pl')) => [-> | ne].
+move=> HE Ho. case: (decide (u' = pl')) => [-> | ne].
 { by iIntros "_ $ _". }
-have Hsub := challenge_ns_disj ne.
+have Hsub := seal_namespace_disj ne.
 move/Spec.open_aenc_key_Some: Ho => ->. rewrite Spec.aenc_key_pkey in Hsub *.
 iIntros "#ctx tok #[_ Hl]".
 iMod (linked_in_r_states_token_fupd _ _ HE with "ctx [Hl] [tok]") as "[]".
@@ -266,18 +264,18 @@ iMod (oracle_open_refinement with "Hctx Hcell Hpk Hlink Ht")
     rel_apply (refines_send with "Hc Hu").
     iIntros (? ?) "[-> ->]"=> /=.
     rel_pures. by iApply "IH".
-  + set ct := Spec.enc (Spec.pkey skA) (Tag (N.@"m")) pl.
-    set ct' := Spec.enc (Spec.pkey skA') (Tag (N.@"m")) pl'.
+  + set ct := TSeal (Spec.pkey skA) pl.
+    set ct' := TSeal (Spec.pkey skA') pl'.
     iAssert (|={⊤ ∖ ↑cellN}=> (⌜ct = t⌝ ∨ (⌜ct ≠ t⌝ ∗ PUB⟨u, u'⟩)) ∗
       term_token (Spec.pkey skA)
-        (↑sealN ∖ ↑challenge_ns pl))%I
+        (↑sealN ∖ ↑seal_namespace pl))%I
       with "[seals]" as ">[#Hcase seals]".
     { iDestruct "Hu" as "[#Hu|#Hin]".
       - iFrame. iModIntro. case: (decide (ct = t)) => [e|ne]; first by iLeft.
         iRight. by iSplit.
       - iMod (cell_challenge_l (E:=⊤ ∖ ↑cellN) _ _ ltac:(solve_ndisj) eL with "Hctx seals Hin") as "[-> $]".
         iLeft. iPureIntro. move/Spec.open_aenc_key_Some: eL => ->.
-        by rewrite /ct /Spec.enc. }
+        by rewrite /ct. }
     iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
     rel_load_r.
     iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
@@ -343,9 +341,10 @@ iMod (public_secret_step_l (E:=⊤) (is_immediate_subterm_aenc_key skA) ltac:(so
         with "Hctx secret_a token_skA") as "#secret_skA".
 iMod (public_secret_step_r (E:=⊤) (is_immediate_subterm_aenc_key skA') ltac:(solve_ndisj)
         with "Hctx secret_a' token_spec_skA'") as "#secret_skA'".
-iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & seals_a & _)";
+iDestruct (term_token_public_token_l with "token_pkA") as "(token_pkA & seals_a & holds_a & _)";
   first solve_not_TSeal.
-iDestruct (term_token_public_token_r with "token_spec_pkA'") as "(token_spec_pkA' & seals_a' & _)";
+iDestruct (term_token_public_token_r with "token_spec_pkA'")
+  as "(token_spec_pkA' & seals_a' & holds_a' & _)";
   first solve_not_TSeal.
 iMod (public_publish (E:=⊤) ltac:(solve_ndisj)
         with "Hctx [] [] [] token_pkA token_spec_pkA'") as "[#elem_pkA #Hpub]".
@@ -386,13 +385,10 @@ iApply (refines_bind _ _ _ (λ v v', ∃ m m' : term, ⌜v = m⌝ ∧ ⌜v' = m'
   - iExists msg_1, msg_1'; iFrame "#"; eauto. }
 iIntros (? ?) "(%msg & %msg' & -> & -> & #mint_msg & #mint_spec_msg')"=> /=.
 rel_pures.
-rel_apply (refines_nondet_aenc (λ _, ∅) (λ _, ∅) skA skA'
-  with "Hctx mint_skA mint_spec_skA' elem_pkA mint_msg mint_spec_msg' [] [] [] []").
-{ iPureIntro. set_solver. }
-{ iPureIntro. set_solver. }
-{ by iIntros (?); rewrite big_sepS_empty. }
-{ by iIntros (?); rewrite big_sepS_empty. }
-iIntros (n n') "_ _ _ _ _ _ _ _ link". iModIntro. rel_pures.
+rel_apply (refines_nondet_aenc skA skA' (N.@"m")
+  with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg'").
+{ by iApply secret_in_linked. }
+iIntros (p p') "_ _ _ _ upd". iModIntro. rel_pures.
 (* Store the challenge and link it. *)
 rel_store_l_atomic.
 iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl0 & %pl0' & Hl & Hl' & _ & _ & _ & >#Hstore0 & _)]" "Hclose";
@@ -400,16 +396,20 @@ iInv cellN as "[(Hl & Hl' & >seals & >seals')|(%pl0 & %pl0' & Hl & Hl' & _ & _ &
 { by iDestruct (term_meta_token with "token_store Hstore0") as "[]". }
 iMod (term_meta_set storeN () (↑storeN) (seed_of_aenc_key skA) ltac:(done)
         with "token_store") as "#Hstore".
-iMod ("link" $! (⊤ ∖ ↑cellN) (↑sealN)
-        (↑sealN)
-        with "[] [] [] [] [$seals $seals']") as "([seals seals'] & #Hsu & #Hct)";
-  [iPureIntro; solve_ndisj | iPureIntro; apply nclose_subseteq.. | |].
-{ iIntros "rel rel'". rewrite /Spec.nondet_aenc /Spec.enc [term_of_aenc_key]unlock /=.
-  iSplitL "rel"; iLeft; iFrame; by iRight. }
+rewrite (term_token_difference _ (↑seal_namespace p) (↑sealN));
+  last by rewrite /seal_namespace; solve_ndisj.
+rewrite (term_token_spec_difference _ (↑seal_namespace p') (↑sealN));
+  last by rewrite /seal_namespace; solve_ndisj.
+iDestruct "seals" as "[seal_p seals]". iDestruct "seals'" as "[seal_p' seals']".
+iMod ("upd" $! (⊤ ∖ ↑cellN) with "[] [$seal_p $seal_p'] [holds_a] [holds_a']")
+  as "(_ & #Hsu & #Hct)".
+{ iPureIntro. solve_ndisj. }
+{ iApply (term_token_drop with "holds_a"). solve_ndisj. }
+{ iApply (term_token_spec_drop with "holds_a'"). solve_ndisj. }
 iModIntro. iExists _. iFrame "Hl". iIntros "!> Hl".
 rel_store_r.
 iMod ("Hclose" with "[Hl Hl' seals seals']") as "_".
-{ iNext. iRight. iExists (TPair n msg), (TPair n' msg'). by iFrame "#∗". }
+{ iNext. iRight. iExists p, p'. by iFrame "#∗". }
 rel_pures.
 rel_apply (refines_send with "Hchan_alice Hct").
 iIntros (? ?) "[-> ->]"=> /=.
