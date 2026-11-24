@@ -3,12 +3,11 @@
 The attacker is a program that builds network channels, each a pair of
 functions that the protocol calls to send and to receive a term.  The protocol
 opens a channel for each of its parties.  The attacker reads every message,
-and it delivers, withholds, replays or forges messages at will.  Two attackers
+and it delivers, withholds, replays or forges messages at will.  It also
+starts the protocol's threads and decides which one runs next.  Two attackers
 [adv] and [adv'] are valid ([attacker_valid]) when they are related, as
-programs that build related channels.
+programs that build related channels and run related threads.
 
-- [Network] runs a protocol against the attacker ([run_network_refinement]),
-  and opens a channel ([refines_new_channel]).
 - [Primitives] gives each primitive of the attacker a contract in the style
   of a type.  These types keep terms abstract, so the attacker cannot look
   inside them.
@@ -24,44 +23,6 @@ From cryptis.hyper.primitives Require Import simple comp with_cryptis.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-Definition run_network : val := λ: "adv" "f",
-  "f" "adv".
-
-Section Network.
-
-Context `{!relocG Σ, !publicGS Σ}.
-
-Definition lrel_attacker : lrel Σ := (() → lrel_channel)%lrel.
-
-Lemma refines_new_channel adv adv' :
-  lrel_attacker adv adv' -∗ REL adv #() << adv' #() : lrel_channel.
-Proof.
-iIntros "#Hadv". iApply (refines_app _ _ _ _ ()%lrel); by rel_values.
-Qed.
-
-Lemma refines_run_network (adv adv' : expr) (f f' : val) (A : val → val → iProp Σ) :
-  (REL adv << adv' : lrel_attacker) -∗
-  (∀ adv adv', lrel_attacker adv adv' -∗ REL f adv << f' adv' : A) -∗
-  REL run_network adv f << run_network adv' f' : A.
-Proof.
-iIntros "Hadv Hf". rewrite /run_network.
-rel_bind_l adv. rel_bind_r adv'.
-iApply (refines_bind with "Hadv"). iIntros (a a') "#Ha /=".
-rel_pures_l. rel_pures_r. by iApply "Hf".
-Qed.
-
-Lemma run_network_refinement (A : lrel Σ) :
-  ⊢ REL run_network << run_network : lrel_attacker → (lrel_attacker → A) → A.
-Proof.
-rel_arrow_val. iIntros (adv adv') "#Hadv".
-rewrite /run_network. rel_pures_l. rel_pures_r.
-rel_arrow_val. iIntros (f f') "#Hf".
-rel_pures_l. rel_pures_r.
-iApply (refines_app _ _ _ _ lrel_attacker); by rel_values.
-Qed.
-
-End Network.
 
 Definition attacker_valid (adv adv' : expr) : Prop :=
   ∀ Σ `(!relocG Σ, !publicGS Σ),
@@ -285,9 +246,10 @@ Section Typed.
 
 Definition channel_ty : type := ((#0 → ()) * (() → #0))%ty.
 
-Definition network_ty : type := (() → channel_ty)%ty.
+Definition sys_ty : type :=
+  ((() → channel_ty) * ((() → ()) → ()) * (() → ()))%ty.
 
-Definition attacker_ty : type := (prims_ty → network_ty)%ty.
+Definition attacker_ty : type := (prims_ty → sys_ty)%ty.
 
 Lemma attacker_valid_typed e :
   ∅ ⊢ₜ e : attacker_ty →

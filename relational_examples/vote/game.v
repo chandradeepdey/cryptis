@@ -24,16 +24,16 @@ Implicit Types (skT : aenc_key) (skV : sign_key).
 Implicit Types (votes cands : list Z) (ks : list sign_key).
 Implicit Types (st : list (option (term * term))).
 
-Definition election_guess cands votes : val := λ: "network",
-  let: "chan_guess" := "network" #() in
-  election_of cands votes "network";;
+Definition election_guess cands votes : val := λ: "sys",
+  let: "chan_guess" := new_channel "sys" in
+  election_of cands votes "sys";;
   let: "guess" := recv "chan_guess" in
   eq_term (TInt 1) "guess".
 
-Definition election_guess_wrapped cands votes0 votes1 : val := λ: "network",
+Definition election_guess_wrapped cands votes0 votes1 : val := λ: "sys",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then election_guess cands votes1 "network"
-        else election_guess cands votes0 "network").
+  ("b", if: "b" then election_guess cands votes1 "sys"
+        else election_guess cands votes0 "sys").
 
 Lemma election_guess_refinement cands votes votes' :
   votes ≡ₚ votes' →
@@ -101,9 +101,9 @@ End Game.
     contextually equivalent elections. *)
 Theorem election_game_ctx_equiv cands votes votes' :
   votes ≡ₚ votes' →
-  ∅ ⊨ network_game (election_of cands votes)
-      =ctx= network_game (election_of cands votes') :
-      network_game_ty TUnit.
+  ∅ ⊨ hypercryptis_game (election_of cands votes)
+      =ctx= hypercryptis_game (election_of cands votes') :
+      hypercryptis_game_ty TUnit.
 Proof.
 move=> Hperm.
 by split;

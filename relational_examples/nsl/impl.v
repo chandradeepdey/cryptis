@@ -12,29 +12,30 @@
 
 From iris.heap_lang Require Import notation.
 From cryptis Require Import primitives.
+From cryptis.hyper.primitives Require Import with_cryptis.
 From cryptis.examples.nsl Require Export impl.
 
 Definition reveal (b : bool) : val := λ: "c" "k",
   send "c" (if: #b then "k" else mk_senc_key #()).
 
-Definition setup : val := λ: "network",
-  let: "chan_init" := "network" #() in
-  let: "chan_resp" := "network" #() in
+Definition setup : val := λ: "sys",
+  let: "chan_init" := new_channel "sys" in
+  let: "chan_resp" := new_channel "sys" in
   let: "skI" := mk_aenc_key #() in
   let: "skR" := mk_aenc_key #() in
   send "chan_init" (pkey "skI");;
   send "chan_resp" (pkey "skR");;
   (("chan_init", "chan_resp"), ("skI", "skR", recv "chan_init")).
 
-Definition resp_test (b : bool) : val := λ: "network",
-  let: "s" := setup "network" in
+Definition resp_test (b : bool) : val := λ: "sys",
+  let: "s" := setup "sys" in
   let: "c_init" := Fst (Fst "s") in
   let: "c_resp" := Snd (Fst "s") in
   let: "keys" := Snd "s" in
   let: "skI" := Fst (Fst "keys") in
   let: "skR" := Snd (Fst "keys") in
   let: "pkX" := Snd "keys" in
-  Fork (init "c_init" "skI" "pkX";; #());;
+  spawn "sys" (λ: <>, init "c_init" "skI" "pkX";; #());;
   match: resp "c_resp" "skR" with
     SOME "res" =>
     let: "k" := Snd "res" in
@@ -42,8 +43,8 @@ Definition resp_test (b : bool) : val := λ: "network",
   | NONE => #()
   end.
 
-Definition init_test (b : bool) : val := λ: "network",
-  let: "s" := setup "network" in
+Definition init_test (b : bool) : val := λ: "sys",
+  let: "s" := setup "sys" in
   let: "c_init" := Fst (Fst "s") in
   let: "c_resp" := Snd (Fst "s") in
   let: "keys" := Snd "s" in
@@ -51,7 +52,7 @@ Definition init_test (b : bool) : val := λ: "network",
   let: "skR" := Snd (Fst "keys") in
   let: "pkR" := pkey "skR" in
   let: "pkX" := Snd "keys" in
-  Fork (resp "c_resp" "skR";; #());;
+  spawn "sys" (λ: <>, resp "c_resp" "skR";; #());;
   match: init "c_init" "skI" "pkX" with
     SOME "k" =>
     if: eq_term "pkX" "pkR" then reveal b "c_init" "k" else #()

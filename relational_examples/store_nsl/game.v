@@ -16,8 +16,8 @@ Unset Printing Implicit Defensive.
 
 Theorem store_nsl_game_ctx_equiv ops ops' k :
   NoDup ops.*1 → ops ≡ₚ ops' →
-  ∅ ⊨ network_game (game ops k) =ctx= network_game (game ops' k) :
-      network_game_ty TUnit.
+  ∅ ⊨ hypercryptis_game (game ops k) =ctx= hypercryptis_game (game ops' k) :
+      hypercryptis_game_ty TUnit.
 Proof.
 move=> Hnd Hp.
 have Hnd' : NoDup ops'.*1 by rewrite -Hp.

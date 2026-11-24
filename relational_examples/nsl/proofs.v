@@ -221,9 +221,9 @@ iIntros (? ?) "(%chan_init & %chan_init' & %chan_resp & %chan_resp' &
                 #Hchan_init & #Hchan_resp &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
 rel_pures.
-rel_bind_l (Fork _). rel_bind_r (Fork _).
+rel_bind_l (spawn _ _). rel_bind_r (spawn _ _).
 iApply (refines_bind with "[]").
-{ iApply refines_fork. rel_pures.
+{ iApply (refines_spawn with "Hadv"). rel_pures.
   rel_apply (init_refinement with "Hctx Hchan_init Hnsl HpkX").
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }
 iIntros (? ?) "_" => /=. rel_pures.
@@ -257,9 +257,9 @@ iIntros (? ?) "(%chan_init & %chan_init' & %chan_resp & %chan_resp' &
                 #Hchan_init & #Hchan_resp &
                 #Hnsl & #Hror & claim & tok2 & #HpkX)" => /=.
 rel_pures. rel_prims.
-rel_bind_l (Fork _). rel_bind_r (Fork _).
+rel_bind_l (spawn _ _). rel_bind_r (spawn _ _).
 iApply (refines_bind with "[tok2]").
-{ iApply refines_fork. rel_pures.
+{ iApply (refines_spawn with "Hadv"). rel_pures.
   rel_apply (resp_refinement with "Hctx Hchan_resp Hnsl [tok2]").
   { by iApply (ror_alloc with "Hctx Hror tok2"). }
   iIntros (? ?) "_" => /=. rel_pures. by rel_values. }

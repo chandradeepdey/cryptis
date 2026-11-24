@@ -1,6 +1,8 @@
 (** Relational specs of the primitives of [cryptis/primitives/with_cryptis.v]:
     the network channel, creating nonces and keys, checking the type of a key,
-    and nondeterministic encryption. *)
+    and nondeterministic encryption; and the primitives through which a
+    protocol asks the attacker for a channel, a thread or its turn, with a
+    lock built on them ([Locks]). *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
@@ -13,6 +15,28 @@ From cryptis.hyper.proofmode Require Import classes updates tactics.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
+Definition new_channel : val := λ: "sys",
+  Fst (Fst "sys") #().
+
+Definition spawn : val := λ: "sys" "f",
+  let: "started" := ref #false in
+  Snd (Fst "sys")
+    (λ: <>, if: CAS "started" #false #true then "f" #() else #()).
+
+Definition yield : val := λ: "sys",
+  Snd "sys" #().
+
+Definition newlock : val := λ: <>, ref #false.
+
+Definition acquire : val := rec: "acquire" "sys" "l" :=
+  if: CAS "l" #false #true then #()
+  else yield "sys";; "acquire" "sys" "l".
+
+Definition release : val := λ: "l", "l" <- #false.
+
+Abbreviation spawnN := (hypercryptisN.@"spawn").
+Abbreviation lockN := (hypercryptisN.@"lock").
 
 Section Proofs.
 
@@ -35,6 +59,9 @@ Proof. iIntros "#H". iExists t, t'. by eauto. Qed.
 
 Definition lrel_channel : lrel Σ := ((lrel_term → ()) * (() → lrel_term))%lrel.
 
+Definition lrel_attacker : lrel Σ :=
+  ((() → lrel_channel) * ((() → ()) → ()) * (() → ()))%lrel.
+
 Lemma refines_send c c' t t' :
   lrel_channel c c' -∗
   (▷ PUB⟨t, t'⟩) -∗
@@ -54,6 +81,62 @@ iDestruct 1 as (sf sf' rf rf') "(-> & -> & _ & #H)".
 iIntros "HΨ"; rewrite /recv; rel_pures_l; rel_pures_r.
 iApply (refines_wand with "[]"); first by iApply "H".
 iIntros "%v %v' (%t & %t' & -> & -> & #Ht) !>". by iApply "HΨ".
+Qed.
+
+Lemma refines_new_channel adv adv' :
+  lrel_attacker adv adv' -∗ REL new_channel adv << new_channel adv' : lrel_channel.
+Proof.
+iIntros "#Hadv".
+iDestruct "Hadv" as (p p' y y') "(-> & -> & Hp & _)".
+iDestruct "Hp" as (nc nc' sp sp') "(-> & -> & #Hnc & _)".
+rewrite /new_channel. rel_pures_l. rel_pures_r.
+iApply (refines_app _ _ _ _ ()%lrel); by rel_values.
+Qed.
+
+Lemma refines_yield adv adv' :
+  lrel_attacker adv adv' -∗ REL yield adv << yield adv' : ().
+Proof.
+iIntros "#Hadv".
+iDestruct "Hadv" as (p p' y y') "(-> & -> & _ & #Hy)".
+rewrite /yield. rel_pures_l. rel_pures_r.
+iApply (refines_app _ _ _ _ ()%lrel); by rel_values.
+Qed.
+
+Lemma refines_spawn adv adv' (f f' : val) :
+  lrel_attacker adv adv' -∗
+  (REL f #() << f' #() : ()) -∗
+  REL spawn adv f << spawn adv' f' : ().
+Proof.
+iIntros "#Hadv Hf".
+iDestruct "Hadv" as (p p' y y') "(-> & -> & Hp & _)".
+iDestruct "Hp" as (nc nc' sp sp') "(-> & -> & _ & #Hsp)".
+rewrite /spawn. rel_pures_l. rel_pures_r.
+rel_alloc_l s as "Hs". rel_alloc_r s' as "Hs'".
+rel_pures_l. rel_pures_r.
+iMod (inv_alloc spawnN _
+        ((s ↦ #false ∗ s' ↦ₛ #false ∗ REL f #() << f' #() : ()) ∨
+         (s ↦ #true ∗ s' ↦ₛ #true))%I
+        with "[Hs Hs' Hf]") as "#Hinv".
+{ iNext. iLeft. iFrame. }
+iApply (refines_app _ _ _ _ (() → ())%lrel); first by rel_values.
+rel_values. iIntros "!> !> %v %v' [-> ->]".
+rel_pures_l. rel_pures_r.
+rel_cmpxchg_l_atomic.
+iInv spawnN as "[(Hs & Hs' & Hf)|(Hs & Hs')]" "Hclose".
+- iModIntro. iExists _. iFrame "Hs". iSplit.
+  { by iIntros (?). }
+  iIntros (_). iNext. iIntros "Hs".
+  rel_cmpxchg_suc_r. rel_pures_l. rel_pures_r.
+  iMod ("Hclose" with "[Hs Hs']") as "_".
+  { iNext. iRight. iFrame. }
+  iApply "Hf".
+- iModIntro. iExists _. iFrame "Hs". iSplit; last first.
+  { by iIntros (?). }
+  iIntros (_). iNext. iIntros "Hs".
+  rel_cmpxchg_fail_r. rel_pures_l. rel_pures_r.
+  iMod ("Hclose" with "[Hs Hs']") as "_".
+  { iNext. iRight. iFrame. }
+  by rel_values.
 Qed.
 
 Lemma refines_mk_nonce_l K e (T': term → gset term) Ψ :
@@ -678,6 +761,75 @@ Definition rel_prim_r_nondet_adec (v1 v2 v3 : val) : RelPrimR Σ (nondet_adec v1
   refines_nondet_adec_r.
 
 End Proofs.
+
+Section Locks.
+
+Context `{!relocG Σ, !publicGS Σ}.
+
+Definition lock_inv (l l' : loc) (R : iProp Σ) : iProp Σ :=
+  (l ↦ #false ∗ l' ↦ₛ #false ∗ R) ∨ (l ↦ #true ∗ l' ↦ₛ #true).
+
+Definition is_lock (l l' : loc) (R : iProp Σ) : iProp Σ :=
+  inv lockN (lock_inv l l' R).
+
+Lemma refines_newlock R Ψ :
+  R -∗
+  (∀ l l' : loc, is_lock l l' R -∗ Ψ #l #l') -∗
+  REL newlock #() << newlock #() : Ψ.
+Proof.
+iIntros "HR HΨ". rewrite /newlock. rel_pures_l. rel_pures_r.
+rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
+iMod (inv_alloc lockN _ (lock_inv l l' R) with "[Hl Hl' HR]") as "#Hlock".
+{ iNext. iLeft. iFrame. }
+rel_values. iModIntro. by iApply "HΨ".
+Qed.
+
+Lemma refines_acquire adv adv' (l l' : loc) R Ψ :
+  lrel_attacker adv adv' -∗
+  is_lock l l' R -∗
+  (R -∗ Ψ #() #()) -∗
+  REL acquire adv #l << acquire adv' #l' : Ψ.
+Proof.
+iIntros "#Hadv #Hlock HΨ".
+iLöb as "IH".
+rel_rec_l. rel_rec_r. rel_pures_l. rel_pures_r.
+rel_cmpxchg_l_atomic.
+iInv lockN as "[(Hl & Hl' & HR)|(Hl & Hl')]" "Hclose".
+- iModIntro. iExists _. iFrame "Hl". iSplit.
+  { by iIntros (?). }
+  iIntros (_). iNext. iIntros "Hl".
+  rel_cmpxchg_suc_r. rel_pures_l. rel_pures_r.
+  iMod ("Hclose" with "[Hl Hl']") as "_".
+  { iNext. iRight. iFrame. }
+  rel_values. iModIntro. by iApply "HΨ".
+- iModIntro. iExists _. iFrame "Hl". iSplit; last first.
+  { by iIntros (?). }
+  iIntros (_). iNext. iIntros "Hl".
+  rel_cmpxchg_fail_r. rel_pures_l. rel_pures_r.
+  iMod ("Hclose" with "[Hl Hl']") as "_".
+  { iNext. iRight. iFrame. }
+  rel_bind_l (yield _). rel_bind_r (yield _).
+  iApply refines_bind; first by iApply refines_yield.
+  iIntros (? ?) "[-> ->] /=". rel_pures_l. rel_pures_r.
+  by iApply ("IH" with "HΨ").
+Qed.
+
+Lemma refines_release (l l' : loc) R Ψ :
+  is_lock l l' R -∗
+  R -∗
+  Ψ #() #() -∗
+  REL release #l << release #l' : Ψ.
+Proof.
+iIntros "#Hlock HR HΨ". rewrite /release. rel_pures_l. rel_pures_r.
+rel_store_l_atomic.
+iInv lockN as "[(Hl & Hl' & _)|(Hl & Hl')]" "Hclose";
+  iModIntro; iExists _; iFrame "Hl"; iIntros "!> Hl";
+  rel_store_r;
+  iMod ("Hclose" with "[Hl Hl' HR]") as "_"; try (iNext; iLeft; iFrame);
+  by rel_values.
+Qed.
+
+End Locks.
 
 #[global] Hint Resolve
   rel_prim_l_nondet_adec rel_prim_r_nondet_adec

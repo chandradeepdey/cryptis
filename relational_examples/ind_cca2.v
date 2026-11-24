@@ -58,18 +58,18 @@ Definition oracle : val := rec: "loop" "c" "sk" "chal" :=
    end);;
   "loop" "c" "sk" "chal".
 
-Definition setup : val := λ: "network",
-  let: "chan_alice" := "network" #() in
-  let: "chan_oracle" := "network" #() in
+Definition setup : val := λ: "sys",
+  let: "chan_alice" := new_channel "sys" in
+  let: "chan_oracle" := new_channel "sys" in
   let: "skA" := mk_aenc_key #() in
   let: "pkA" := pkey "skA" in
   let: "chal" := ref NONE in
-  Fork (oracle "chan_oracle" "skA" "chal");;
+  spawn "sys" (λ: <>, oracle "chan_oracle" "skA" "chal");;
   send "chan_alice" "pkA";;
   ("chan_alice", "skA", "chal").
 
-Definition alice (b : bool) : val := λ: "network",
-  let: "s" := setup "network" in
+Definition alice (b : bool) : val := λ: "sys",
+  let: "s" := setup "sys" in
   let: "c" := Fst (Fst "s") in
   let: "skA" := Snd (Fst "s") in
   let: "chal" := Snd "s" in
@@ -83,9 +83,9 @@ Definition alice (b : bool) : val := λ: "network",
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
 
-Definition alice_guess_wrapped : val := λ: "network",
+Definition alice_guess_wrapped : val := λ: "sys",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then alice true "network" else alice false "network").
+  ("b", if: "b" then alice true "sys" else alice false "sys").
 
 #[local] Abbreviation challenge_ns pl :=
   (seal_namespace (Spec.tag (Tag (N.@"m")) pl)).
@@ -363,8 +363,10 @@ rel_alloc_l l as "Hl". rel_alloc_r l' as "Hl'".
 rel_pures.
 iMod (inv_alloc cellN _ (cell_inv skA skA' l l') with "[Hl Hl' seals_a seals_a']") as "#Hcell".
 { iNext. iLeft. iFrame. }
-rel_apply refines_fork.
-{ iApply (oracle_refinement with "Hctx Hcell Hchan_oracle Hpub elem_pkA"). }
+rel_bind_l (spawn _ _). rel_bind_r (spawn _ _).
+iApply refines_bind.
+{ iApply (refines_spawn with "Hadv"). rel_pures.
+  iApply (oracle_refinement with "Hctx Hcell Hchan_oracle Hpub elem_pkA"). }
 iIntros (? ?) "_" => /=.
 rel_pures.
 rel_apply (refines_send with "Hchan_alice Hpub").
@@ -464,8 +466,8 @@ End CCA2.
     every ciphertext but the challenge, no well-typed context can tell which
     of the attacker's two messages Alice encrypts. *)
 Theorem ind_cca2_game_ctx_equiv N b b' :
-  ∅ ⊨ network_game (alice N b) =ctx= network_game (alice N b') :
-      network_game_ty TBool.
+  ∅ ⊨ hypercryptis_game (alice N b) =ctx= hypercryptis_game (alice N b') :
+      hypercryptis_game_ty TBool.
 Proof.
 by split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;

@@ -18,6 +18,7 @@ back.
 From stdpp Require Import namespaces.
 From iris.heap_lang Require Import notation.
 From cryptis Require Import lib cryptis primitives.
+From cryptis.hyper.primitives Require Import with_cryptis.
 From cryptis.lib Require Import avl.
 From cryptis.examples.nsl Require Import impl.
 
@@ -120,18 +121,18 @@ Definition store_all : val := rec: "loop" "cs" "ops" :=
 
 Definition op_val (p : Z * Z) : val := (#p.1, #p.2)%V.
 
-Definition setup : val := λ: "network",
-  let: "chan_client" := "network" #() in
-  let: "chan_server" := "network" #() in
+Definition setup : val := λ: "sys",
+  let: "chan_client" := new_channel "sys" in
+  let: "chan_server" := new_channel "sys" in
   let: "skI" := mk_aenc_key #() in
   let: "skR" := mk_aenc_key #() in
   send "chan_client" (pkey "skI");;
   send "chan_server" (pkey "skR");;
-  Fork (server "chan_server" "skR" (pkey "skI"));;
+  spawn "sys" (λ: <>, server "chan_server" "skR" (pkey "skI"));;
   ("chan_client", "skI", "skR").
 
-Definition game (ops : list (Z * Z)) (k : Z) : val := λ: "network",
-  let: "s" := setup "network" in
+Definition game (ops : list (Z * Z)) (k : Z) : val := λ: "sys",
+  let: "s" := setup "sys" in
   let: "c" := Fst (Fst "s") in
   let: "skI" := Snd (Fst "s") in
   let: "skR" := Snd "s" in

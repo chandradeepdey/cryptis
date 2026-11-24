@@ -31,14 +31,14 @@ A --> *: if b then {nonce, msg_0}@pkA else {nonce, msg_1}@pkA
 ]]
 *)
 
-Definition setup : val := λ: "network",
-  let: "c" := "network" #() in
+Definition setup : val := λ: "sys",
+  let: "c" := new_channel "sys" in
   let: "skA" := mk_aenc_key #() in
   send "c" (pkey "skA");;
   ("c", "skA").
 
-Definition alice (b : bool) : val := λ: "network",
-  let: "s" := setup "network" in
+Definition alice (b : bool) : val := λ: "sys",
+  let: "s" := setup "sys" in
   let: "c" := Fst "s" in
   let: "skA" := Snd "s" in
   let: "pkA" := pkey "skA" in
@@ -49,9 +49,9 @@ Definition alice (b : bool) : val := λ: "network",
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
 
-Definition alice_guess_wrapped : val := λ: "network",
+Definition alice_guess_wrapped : val := λ: "sys",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then alice true "network" else alice false "network").
+  ("b", if: "b" then alice true "sys" else alice false "sys").
 
 Lemma alice_refinement (b b' : bool) :
   hypercryptis_ctx -∗
@@ -178,8 +178,8 @@ End CPA.
 (** IND-CPA as a contextual equivalence: no well-typed context can tell
     which of the attacker's two messages Alice encrypts. *)
 Theorem ind_cpa_game_ctx_equiv N b b' :
-  ∅ ⊨ network_game (alice N b) =ctx= network_game (alice N b') :
-      network_game_ty TBool.
+  ∅ ⊨ hypercryptis_game (alice N b) =ctx= hypercryptis_game (alice N b') :
+      hypercryptis_game_ty TBool.
 Proof.
 by split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;

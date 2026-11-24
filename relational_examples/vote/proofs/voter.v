@@ -125,9 +125,9 @@ elim: ks ks' votes votes' => [|sk ks IH] ks' votes votes' Hl Hl';
   rel_rec_l. rel_rec_r. rel_pures.
   rel_apply (refines_new_channel with "Hadv").
   iIntros (chan_voter chan_voter') "#Hchan_voter". rel_pures.
-  rel_bind_l (Fork _). rel_bind_r (Fork _).
+  rel_bind_l (spawn _ _). rel_bind_r (spawn _ _).
   iApply (refines_bind with "[tok]").
-  { iApply refines_fork. rel_pures.
+  { iApply (refines_spawn with "Hadv"). rel_pures.
     by iApply (voter_refinement with "Hctx Hchan_voter HT HV tok"). }
   iIntros (? ?) "_" => /=. rel_pures.
   by iApply (IH _ votes votes' Hl Hl' with "Hctx Hadv HT Hkeys' toks").

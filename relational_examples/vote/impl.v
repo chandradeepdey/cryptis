@@ -12,6 +12,7 @@
 From stdpp Require Import namespaces.
 From iris.heap_lang Require Import notation.
 From cryptis Require Import lib cryptis primitives.
+From cryptis.hyper.primitives Require Import with_cryptis.
 From cryptis.lib Require Import avl.
 
 Abbreviation voteN := (nroot.@"vote").
@@ -93,28 +94,28 @@ Definition mk_voters : val := rec: "loop" "votes" :=
     SOME (("sk", Fst "p"), "loop" (Snd "p"))
   end.
 
-Definition fork_voters : val := rec: "loop" "network" "pkT" "voters" :=
+Definition fork_voters : val := rec: "loop" "sys" "pkT" "voters" :=
   match: "voters" with
     NONE => #()
   | SOME "p" =>
-    let: "chan_voter" := "network" #() in
-    Fork (voter "chan_voter" (Fst (Fst "p")) "pkT" (Snd (Fst "p")));;
-    "loop" "network" "pkT" (Snd "p")
+    let: "chan_voter" := new_channel "sys" in
+    spawn "sys" (λ: <>, voter "chan_voter" (Fst (Fst "p")) "pkT" (Snd (Fst "p")));;
+    "loop" "sys" "pkT" (Snd "p")
   end.
 
-Definition setup : val := λ: "network" "votes",
-  let: "chan_arbitrator" := "network" #() in
+Definition setup : val := λ: "sys" "votes",
+  let: "chan_arbitrator" := new_channel "sys" in
   let: "skT" := mk_aenc_key #() in
   let: "pkT" := pkey "skT" in
   let: "voters" := mk_voters "votes" in
   let: "pks" := map_list (λ: "p", pkey (Fst "p")) "voters" in
   send "chan_arbitrator" "pkT";;
   send "chan_arbitrator" (term_of_list "pks");;
-  fork_voters "network" "pkT" "voters";;
+  fork_voters "sys" "pkT" "voters";;
   ("chan_arbitrator", "skT", "pks").
 
-Definition election_of (cands votes : list Z) : val := λ: "network",
-  let: "s" := setup "network" (repr votes) in
+Definition election_of (cands votes : list Z) : val := λ: "sys",
+  let: "s" := setup "sys" (repr votes) in
   let: "c" := Fst (Fst "s") in
   let: "skT" := Snd (Fst "s") in
   let: "pks" := Snd "s" in

@@ -15,15 +15,15 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Definition guess (test : val) : val := λ: "network",
-  let: "chan_guess" := "network" #() in
-  test "network";;
+Definition guess (test : val) : val := λ: "sys",
+  let: "chan_guess" := new_channel "sys" in
+  test "sys";;
   let: "guess" := recv "chan_guess" in
   eq_term (TInt 1) "guess".
 
-Definition guess_wrapped (test : bool → val) : val := λ: "network",
+Definition guess_wrapped (test : bool → val) : val := λ: "sys",
   let: "b" := nondet_bool #() in
-  ("b", if: "b" then guess (test true) "network" else guess (test false) "network").
+  ("b", if: "b" then guess (test true) "sys" else guess (test false) "sys").
 
 Section Game.
 
@@ -80,8 +80,8 @@ End Game.
     equivalence: when R's peer is I, no well-typed context can tell the
     session key from a fresh key. *)
 Theorem nsl_resp_ror_game_ctx_equiv :
-  ∅ ⊨ network_game (resp_test true) =ctx= network_game (resp_test false) :
-      network_game_ty TUnit.
+  ∅ ⊨ hypercryptis_game (resp_test true) =ctx= hypercryptis_game (resp_test false) :
+      hypercryptis_game_ty TUnit.
 Proof.
 by split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;
@@ -91,8 +91,8 @@ Qed.
 
 (** The same fact for the initiator's session key, when I's peer is R. *)
 Theorem nsl_init_ror_game_ctx_equiv :
-  ∅ ⊨ network_game (init_test true) =ctx= network_game (init_test false) :
-      network_game_ty TUnit.
+  ∅ ⊨ hypercryptis_game (init_test true) =ctx= hypercryptis_game (init_test false) :
+      hypercryptis_game_ty TUnit.
 Proof.
 by split;
   apply: (hypercryptis_ctx_refinement (Σ:=#[relocΣ; publicΣ])) => ? ? Δ;

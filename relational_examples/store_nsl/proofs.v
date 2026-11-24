@@ -226,9 +226,9 @@ iIntros (? ?) "[-> ->]" => /=. rel_prims.
 rel_apply (refines_send with "Hchan_server []").
 { iNext. by iDestruct "HR" as "(_ & _ & _ & _ & ? & _)". }
 iIntros (? ?) "[-> ->]" => /=. rel_pures.
-rel_bind_l (Fork _). rel_bind_r (Fork _).
+rel_bind_l (spawn _ _). rel_bind_r (spawn _ _).
 iApply (refines_bind with "[tok_sess log1]").
-{ iApply refines_fork. rel_prims.
+{ iApply (refines_spawn with "Hadv"). rel_pures. rel_prims.
   by iApply (store_server_refinement
                 with "Hctx Hchan_server Hnsl Hinv tok_sess log1"). }
 iIntros (? ?) "_" => /=. rel_prims.
