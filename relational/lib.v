@@ -63,11 +63,12 @@ wp_apply nondet_bool_spec=> //.
 eauto.
 Qed.
 
-Lemma refines_nondet_bool_r K e b Ψ :
-  (REL e << fill K (#b : expr) : Ψ) -∗
-  REL e << fill K (nondet_bool #()) : Ψ.
+Lemma refines_nondet_bool_r E K e b Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (#b : expr) @ E : Ψ) -∗
+  REL e << fill K (nondet_bool #()) @ E : Ψ.
 Proof.
-iIntros "H".
+iIntros (?) "H".
 rel_rec_r. rel_alloc_r l as "Hl".
 rel_pures_r.
 rel_fork_r j as "Hj".
@@ -76,15 +77,17 @@ case: b; last tp_store j.
 all: rel_load_r=> //.
 Qed.
 
-#[local] Lemma refines_nondet_nat_loop_r K e m n Ψ :
-  (REL e << fill K (#(n + m)%nat : expr) : Ψ) -∗
-  REL e << fill K (nondet_nat_loop #m) : Ψ.
+#[local] Lemma refines_nondet_nat_loop_r E K e m n Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (#(n + m)%nat : expr) @ E : Ψ) -∗
+  REL e << fill K (nondet_nat_loop #m) @ E : Ψ.
 Proof.
+move=> ?.
 elim : n m => [|n' IHn'] m /=; iIntros "H";
 rel_rec_r.
-- rel_apply_r (refines_nondet_bool_r _ _ true).
+- rel_apply_r (refines_nondet_bool_r _ _ _ true)=> //.
   by rel_pures_r.
-- rel_apply_r (refines_nondet_bool_r _ _ false).
+- rel_apply_r (refines_nondet_bool_r _ _ _ false)=> //.
   rel_pures_r.
   have ->: (m + 1)%Z = m + 1 by lia.
   have <-: n' + (m + 1) = S (n' + m) by lia.
@@ -99,12 +102,13 @@ iIntros "H". iApply refines_wp_l.
 by wp_apply wp_nondet_nat.
 Qed.
 
-Lemma refines_nondet_nat_r K e n Ψ :
-  (REL e << fill K (#n: expr) : Ψ) -∗
-  REL e << fill K (nondet_nat #()) : Ψ.
+Lemma refines_nondet_nat_r E K e n Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (#n: expr) @ E : Ψ) -∗
+  REL e << fill K (nondet_nat #()) @ E : Ψ.
 Proof.
-iIntros "H". rel_rec_r.
-rel_apply_r (refines_nondet_nat_loop_r _ _ 0 n).
+iIntros (?) "H". rel_rec_r.
+rel_apply_r (refines_nondet_nat_loop_r _ _ _ 0 n)=> //.
 have ->: n + 0 = n by lia.
 done.
 Qed.
@@ -117,15 +121,16 @@ iIntros "H". iApply refines_wp_l.
 by wp_apply wp_nondet_int.
 Qed.
 
-Lemma refines_nondet_int_r K e (n : Z) Ψ :
-  (REL fill K e << fill K (#n : expr) : Ψ) -∗
-  REL fill K e << fill K (nondet_int #()) : Ψ.
+Lemma refines_nondet_int_r E K e (n : Z) Ψ :
+  ↑specN ⊆ E →
+  (REL e << fill K (#n : expr) @ E : Ψ) -∗
+  REL e << fill K (nondet_int #()) @ E : Ψ.
 Proof.
-iIntros "H". rel_rec_r.
+iIntros (?) "H". rel_rec_r.
 pose n' := if (0 <=? n)%Z then Z.to_nat n else Z.to_nat (-n).
-rel_apply_r (refines_nondet_nat_r _ _ n').
+rel_apply_r (refines_nondet_nat_r _ _ _ n')=> //.
 rel_pures_r.
-rel_apply_r (refines_nondet_bool_r _ _ (0 <=? n)%Z).
+rel_apply_r (refines_nondet_bool_r _ _ _ (0 <=? n)%Z)=> //.
 case Hn: (0 <=? n)%Z in n' *; rel_pures_r.
 - by have ->: n = n' by lia.
 - by have ->: n = (- n')%Z by lia.

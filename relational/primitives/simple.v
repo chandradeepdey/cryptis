@@ -219,8 +219,8 @@ Proof. iIntros "?". by iApply refines_wp_l; wp_apply wp_derive_sign_key. Qed.
 
 Lemma refines_derive_sign_key_r E K e t Ψ :
   ↑specN ⊆ E →
-  (REL e << fill K (SignKey t : expr) : Ψ) -∗
-  REL e << fill K (derive_sign_key t) : Ψ.
+  (REL e << fill K (SignKey t : expr) @ E : Ψ) -∗
+  REL e << fill K (derive_sign_key t) @ E : Ψ.
 Proof.
 iIntros (?) "post". rel_rec_r. rel_apply_r refines_key_r.
 have <- : SignKey t = TKey Sign t :> term by rewrite [term_of_sign_key]unlock.
