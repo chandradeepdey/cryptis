@@ -17,7 +17,10 @@ from [t'] in the right run.
   attacker.
 - [Invariant]: a hidden term holds back the parts on a chain down to a
   secret term, a nonce or a linked term, and a term becomes public only
-  when nothing holds it back.  A public ciphertext whose payload is hidden
+  when nothing holds it back.  A hidden term records the chain it is
+  protected via when it enters the states map, so that whoever knows the
+  record can later tell which parts it holds back.  A public ciphertext
+  whose payload is hidden
   holds its key back the same way.
 
 ** Section [PublicProperties]
@@ -78,7 +81,7 @@ Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 Abbreviation iPropO := (iPropO Σ).
 
-Implicit Types t tsub tsup troot t'sub t'sup t'root : term.
+Implicit Types t tsub tsup troot tprot t'sub t'sup t'root t'prot : term.
 Implicit Types st : state.
 Implicit Types states_l states_r : gmap term state.
 Implicit Types P : term -> term -> iProp.
@@ -101,8 +104,12 @@ Definition never_sealed_under k k' E E' : iProp :=
 
 Definition states_token_l t : iProp := term_token (home_of_term t).1 (↑(home_of_term t).2.@"states").
 Definition states_token_r t' : iProp := term_token_spec (home_of_term t').1 (↑(home_of_term t').2.@"states").
-Definition states_meta_l t : iProp := term_meta (home_of_term t).1 ((home_of_term t).2.@"states") ().
-Definition states_meta_r t' : iProp := term_meta_spec (home_of_term t').1 ((home_of_term t').2.@"states") ().
+Definition states_meta_l t : iProp := term_meta (home_of_term t).1 ((home_of_term t).2.@"states".@"in") ().
+Definition states_meta_r t' : iProp := term_meta_spec (home_of_term t').1 ((home_of_term t').2.@"states".@"in") ().
+Definition protected_via_l t (path : list term) tprot : iProp :=
+  term_meta (home_of_term t).1 ((home_of_term t).2.@"states".@"via") (path, tprot).
+Definition protected_via_r t' (path : list term) t'prot : iProp :=
+  term_meta_spec (home_of_term t').1 ((home_of_term t').2.@"states".@"via") (path, t'prot).
 
 Definition prots_token_l t : iProp := term_token (home_of_term t).1 (↑(home_of_term t).2.@"prots").
 Definition prots_token_r t' : iProp := term_token_spec (home_of_term t').1 (↑(home_of_term t').2.@"prots").
@@ -117,6 +124,14 @@ Definition seal_release_r t' : iProp := term_token_spec (home_of_term t').1 (↑
 
 Definition holds_key_l t k : iProp := term_token k (↑holdN.@t).
 Definition holds_key_r t' k' : iProp := term_token_spec k' (↑holdN.@t').
+
+#[global] Instance protected_via_l_persistent t path tprot :
+  Persistent (protected_via_l t path tprot).
+Proof. apply _. Qed.
+
+#[global] Instance protected_via_r_persistent t' path t'prot :
+  Persistent (protected_via_r t' path t'prot).
+Proof. apply _. Qed.
 
 #[global] Instance states_meta_l_persistent t : Persistent (states_meta_l t).
 Proof. apply _. Qed.
@@ -143,16 +158,48 @@ iDestruct "tok" as "[$ tok]". iApply (term_token_spec_drop with "tok"). solve_nd
 Qed.
 
 Lemma states_meta_l_set t : states_token_l t ==∗ states_meta_l t.
-Proof. exact: term_meta_set. Qed.
+Proof. iIntros "tok". iApply (term_meta_set with "tok"). solve_ndisj. Qed.
 
 Lemma states_meta_r_set t' : states_token_r t' ==∗ states_meta_r t'.
-Proof. exact: term_meta_spec_set. Qed.
+Proof. iIntros "tok". iApply (term_meta_spec_set with "tok"). solve_ndisj. Qed.
+
+Lemma protected_via_l_set t path tprot :
+  states_token_l t ==∗ states_meta_l t ∗ protected_via_l t path tprot.
+Proof.
+iIntros "tok".
+iMod (term_meta_set' (N:=(home_of_term t).2.@"states".@"in") () with "tok") as "[$ tok]";
+  first solve_ndisj.
+iApply (term_meta_set with "tok"). solve_ndisj.
+Qed.
+
+Lemma protected_via_r_set t' path t'prot :
+  states_token_r t' ==∗ states_meta_r t' ∗ protected_via_r t' path t'prot.
+Proof.
+iIntros "tok".
+iMod (term_meta_spec_set' (N:=(home_of_term t').2.@"states".@"in") () with "tok")
+  as "[$ tok]"; first solve_ndisj.
+iApply (term_meta_spec_set with "tok"). solve_ndisj.
+Qed.
+
+Lemma protected_via_l_agree t path1 tprot1 path2 tprot2 :
+  protected_via_l t path1 tprot1 -∗ protected_via_l t path2 tprot2 -∗
+  ⌜path1 = path2 ∧ tprot1 = tprot2⌝.
+Proof.
+iIntros "H1 H2". by iDestruct (term_meta_agree with "H1 H2") as %[= -> ->].
+Qed.
+
+Lemma protected_via_r_agree t' path1 t'prot1 path2 t'prot2 :
+  protected_via_r t' path1 t'prot1 -∗ protected_via_r t' path2 t'prot2 -∗
+  ⌜path1 = path2 ∧ t'prot1 = t'prot2⌝.
+Proof.
+iIntros "H1 H2". by iDestruct (term_meta_spec_agree with "H1 H2") as %[= -> ->].
+Qed.
 
 Lemma states_token_meta_l t : states_token_l t -∗ states_meta_l t -∗ False.
-Proof. exact: term_meta_token. Qed.
+Proof. iIntros "tok meta". iApply (term_meta_token with "tok meta"). solve_ndisj. Qed.
 
 Lemma states_token_meta_r t' : states_token_r t' -∗ states_meta_r t' -∗ False.
-Proof. exact: term_meta_spec_token. Qed.
+Proof. iIntros "tok meta". iApply (term_meta_spec_token with "tok meta"). solve_ndisj. Qed.
 
 Lemma prots_token_holds_subterm_l t tsub : prots_token_l tsub -∗ holds_subterm_l t tsub -∗ False.
 Proof.
@@ -805,17 +852,29 @@ Section Invariant.
 #[local] Notation "PUB⟨ a , b ⟩" := (public a b)
   (at level 0, no associativity, format "PUB⟨ a , b ⟩").
 
+Definition protected_by_chain_l t path tprot : iProp :=
+  ⌜subterm_path t path tprot⌝ ∗
+  ([∗ list] t1 ∈ path, holds_subterm_l t t1) ∗
+  (secret_in_l tprot ∨ (⌜is_nonce tprot⌝ ∨ ∃ t'prot, linked_in_l tprot t'prot) ∗ holds_subterm_l t tprot).
+
+Definition protected_by_chain_r t' path t'prot : iProp :=
+  ⌜subterm_path t' path t'prot⌝ ∗
+  ([∗ list] t1' ∈ path, holds_subterm_r t' t1') ∗
+  (secret_in_r t'prot ∨ (⌜is_nonce t'prot⌝ ∨ ∃ tprot, linked_in_r tprot t'prot) ∗ holds_subterm_r t' t'prot).
+
 Definition protected_deposit_l t : iProp :=
-  ⌜is_nonce t⌝ ∨
-  ∃ path troot, ⌜subterm_path t path troot⌝ ∗
-    ([∗ list] t1 ∈ path, holds_subterm_l t t1) ∗
-    (secret_in_l troot ∨ (⌜is_nonce troot⌝ ∨ ∃ t'root, linked_in_l troot t'root) ∗ holds_subterm_l t troot).
+  ⌜is_nonce t⌝ ∨ ∃ path tprot, protected_by_chain_l t path tprot.
 
 Definition protected_deposit_r t' : iProp :=
+  ⌜is_nonce t'⌝ ∨ ∃ path t'prot, protected_by_chain_r t' path t'prot.
+
+Definition protects_deposit_l t : iProp :=
+  ⌜is_nonce t⌝ ∨
+  ∃ path tprot, protected_by_chain_l t path tprot ∗ protected_via_l t path tprot.
+
+Definition protects_deposit_r t' : iProp :=
   ⌜is_nonce t'⌝ ∨
-  ∃ path t'root, ⌜subterm_path t' path t'root⌝ ∗
-    ([∗ list] t1' ∈ path, holds_subterm_r t' t1') ∗
-    (secret_in_r t'root ∨ (⌜is_nonce t'root⌝ ∨ ∃ troot, linked_in_r troot t'root) ∗ holds_subterm_r t' t'root).
+  ∃ path t'prot, protected_by_chain_r t' path t'prot ∗ protected_via_r t' path t'prot.
 
 Definition public_deposit_l t t' : iProp :=
   match t, t' with
@@ -855,14 +914,14 @@ Definition public_states_l_deposits states_l : iProp :=
   [∗ map] t ↦ st ∈ states_l,
     match st with
     | PublicLink t' => public_deposit_l t t' ∗ prots_token_l t
-    | _ => protected_deposit_l t
+    | _ => protects_deposit_l t
     end.
 
 Definition public_states_r_deposits states_r : iProp :=
   [∗ map] t' ↦ st ∈ states_r,
     match st with
     | PublicLink t => public_deposit_r t t' ∗ prots_token_r t'
-    | _ => protected_deposit_r t'
+    | _ => protects_deposit_r t'
     end.
 
 Definition public_states_deposits states_l states_r : iProp :=
@@ -886,10 +945,40 @@ Definition public_ctx : iProp :=
   inv cryptisN (∃ states_l states_r, public_inv states_l states_r).
 
 #[global] Instance protected_deposit_l_timeless t : Timeless (protected_deposit_l t).
-Proof. rewrite /protected_deposit_l /holds_subterm_l. apply _. Qed.
+Proof. rewrite /protected_deposit_l /protected_by_chain_l /holds_subterm_l. apply _. Qed.
 
 #[global] Instance protected_deposit_r_timeless t' : Timeless (protected_deposit_r t').
-Proof. rewrite /protected_deposit_r /holds_subterm_r. apply _. Qed.
+Proof. rewrite /protected_deposit_r /protected_by_chain_r /holds_subterm_r. apply _. Qed.
+
+#[global] Instance protects_deposit_l_timeless t : Timeless (protects_deposit_l t).
+Proof. rewrite /protects_deposit_l /protected_by_chain_l /holds_subterm_l. apply _. Qed.
+
+#[global] Instance protects_deposit_r_timeless t' : Timeless (protects_deposit_r t').
+Proof. rewrite /protects_deposit_r /protected_by_chain_r /holds_subterm_r. apply _. Qed.
+
+Lemma protects_deposit_protected_l t : protects_deposit_l t -∗ protected_deposit_l t.
+Proof. iIntros "[?|(%path & %tprot & ? & _)]"; [by iLeft | iRight; by iExists _, _]. Qed.
+
+Lemma protects_deposit_protected_r t' : protects_deposit_r t' -∗ protected_deposit_r t'.
+Proof. iIntros "[?|(%path & %t'prot & ? & _)]"; [by iLeft | iRight; by iExists _, _]. Qed.
+
+Lemma protects_deposit_chain_l t path tprot :
+  ¬ is_nonce t →
+  protected_via_l t path tprot -∗ protects_deposit_l t -∗
+  protected_by_chain_l t path tprot.
+Proof.
+iIntros (Ht) "#via [%Hn|(%path1 & %tprot1 & prot & via1)]"; first by case: (Ht Hn).
+by iDestruct (protected_via_l_agree with "via via1") as %[-> ->].
+Qed.
+
+Lemma protects_deposit_chain_r t' path t'prot :
+  ¬ is_nonce t' →
+  protected_via_r t' path t'prot -∗ protects_deposit_r t' -∗
+  protected_by_chain_r t' path t'prot.
+Proof.
+iIntros (Ht) "#via [%Hn|(%path1 & %t'prot1 & prot & via1)]"; first by case: (Ht Hn).
+by iDestruct (protected_via_r_agree with "via via1") as %[-> ->].
+Qed.
 
 #[global] Instance public_states_l_deposits_timeless states_l :
   Timeless (public_states_l_deposits states_l).
@@ -960,7 +1049,7 @@ Context `{!relocG Σ, !publicGS Σ}.
 Abbreviation iProp := (iProp Σ).
 Abbreviation iPropO := (iPropO Σ).
 
-Implicit Types t tsub tsup troot t'sub t'sup t'root : term.
+Implicit Types t tsub tsup troot tprot t'sub t'sup t'root t'prot : term.
 Implicit Types st : state.
 Implicit Types states_l states_r : gmap term state.
 Implicit Types P : term -> term -> iProp.
@@ -1594,9 +1683,9 @@ have Hm : m !! t = Some st by rewrite Hagree.
 iDestruct (big_sepM_delete _ _ t _ Hm with "Hdeps") as "[Ht Hdeps]".
 have -> : (match st with
            | PublicLink t' => public_deposit_l t t' ∗ prots_token_l t
-           | _ => protected_deposit_l t
-           end)%I = protected_deposit_l t by case: (st) Hnotpub.
-iDestruct "Ht" as "[%Hnonce|(%path & %troot & %Hpath & Hpath & Hroot)]".
+           | _ => protects_deposit_l t
+           end)%I = protects_deposit_l t by case: (st) Hnotpub.
+iDestruct "Ht" as "[%Hnonce|(%path & %troot & (%Hpath & Hpath & Hroot) & _)]".
 { move/is_nonceP: Hnonce => [a ->].
   by case: t' => /= *; iDestruct "Hs" as "[]". }
 have Hagree_lt : ∀ x, tsize x < tsize t → delete t m !! x = states_l !! x.
@@ -1637,9 +1726,9 @@ have Hm : m !! t' = Some st by rewrite Hagree.
 iDestruct (big_sepM_delete _ _ t' _ Hm with "Hdeps") as "[Ht Hdeps]".
 have -> : (match st with
            | PublicLink t => public_deposit_r t t' ∗ prots_token_r t'
-           | _ => protected_deposit_r t'
-           end)%I = protected_deposit_r t' by case: (st) Hnotpub.
-iDestruct "Ht" as "[%Hnonce|(%path & %t'root & %Hpath & Hpath & Hroot)]".
+           | _ => protects_deposit_r t'
+           end)%I = protects_deposit_r t' by case: (st) Hnotpub.
+iDestruct "Ht" as "[%Hnonce|(%path & %t'root & (%Hpath & Hpath & Hroot) & _)]".
 { move/is_nonceP: Hnonce => [a' ->].
   by case: t => /= *; iDestruct "Hs" as "[]". }
 have Hagree_lt : ∀ x, tsize x < tsize t' → delete t' m !! x = states_r !! x.
