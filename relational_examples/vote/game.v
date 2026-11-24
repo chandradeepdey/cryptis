@@ -1,7 +1,6 @@
 (** The privacy game: an attacker that sees two elections with the same
     count per candidate guesses which assignment of votes it watched. *)
 
-From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper Require Import lib.
@@ -29,11 +28,6 @@ Definition election_guess cands votes : val := λ: "sys",
   election_of cands votes "sys";;
   let: "guess" := recv "chan_guess" in
   eq_term (TInt 1) "guess".
-
-Definition election_guess_wrapped cands votes0 votes1 : val := λ: "sys",
-  let: "b" := nondet_bool #() in
-  ("b", if: "b" then election_guess cands votes1 "sys"
-        else election_guess cands votes0 "sys").
 
 Lemma election_guess_refinement cands votes votes' :
   votes ≡ₚ votes' →
@@ -65,35 +59,6 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma election_guess_wrapped_refinement cands votes0 votes1 :
-  votes0 ≡ₚ votes1 →
-  hypercryptis_ctx -∗
-  REL election_guess_wrapped cands votes0 votes1
-   << election_guess_wrapped cands votes0 votes1 : lrel_attacker → LRel (λ p1 p2,
-    ⌜∃ b g b' g' : bool,
-    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝).
-Proof.
-iIntros (Hperm) "#Hctx". rewrite /election_guess_wrapped.
-rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
-rel_apply_l refines_nondet_bool_l. iIntros (choice).
-rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
-case: choice; rel_pures.
-- rel_bind_l (election_guess _ votes1 _). rel_bind_r (election_guess _ votes0 _).
-  iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-    by iApply (election_guess_refinement _ (Permutation_sym Hperm) with "Hctx"). }
-  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures. rel_values.
-  iPureIntro. by exists true, g, false, g.
-- rel_bind_l (election_guess _ votes0 _). rel_bind_r (election_guess _ votes1 _).
-  iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-    by iApply (election_guess_refinement _ Hperm with "Hctx"). }
-  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures. rel_values.
-  iPureIntro. by exists false, g, true, g.
-Qed.
-
 End Game.
 
 (** Vote privacy as a contextual equivalence: two assignments of votes to
@@ -111,13 +76,18 @@ by split;
   iIntros "#Hctx"; iApply (election_of_refinement with "Hctx").
 Qed.
 
-Theorem election_secure cands votes0 votes1 :
+Theorem election_secure cands votes0 votes1 adv adv' σ :
   votes0 ≡ₚ votes1 →
-  hypercryptis_secure (election_guess_wrapped cands votes0 votes1) (λ v v',
-    ∃ b g b' g' : bool,
-      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+  attacker_valid adv adv' →
+  adequate NotStuck (election_guess cands votes0 adv)%E σ
+    (λ v _, ∃ thp' h v',
+       rtc erased_step ([(election_guess cands votes1 adv')%E], σ) (of_val v' :: thp', h) ∧
+       v = v').
 Proof.
-move=> Hperm ? ? ? ?.
-apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
-iIntros "#Hctx". by iApply election_guess_wrapped_refinement.
+move=> Hperm ?; apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
+iIntros "#Hctx". rel_values. iIntros "!> !> %a %a' #Ha".
+iApply (refines_wand with "[]").
+{ iApply (refines_app with "[] []"); last by rel_values.
+  by iApply election_guess_refinement. }
+by iIntros (v v') "(%g & -> & ->) !>".
 Qed.

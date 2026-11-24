@@ -1,6 +1,5 @@
 (** IND-CPA for nondeterministic asymmetric encryption. *)
 
-From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper Require Import lib.
@@ -48,10 +47,6 @@ Definition alice (b : bool) : val := λ: "sys",
   send "c" (nondet_aenc "pkA" (Tag $ N.@"m") "msg");;
   let: "guess" := recv "c" in
   eq_term (TInt 1) "guess".
-
-Definition alice_guess_wrapped : val := λ: "sys",
-  let: "b" := nondet_bool #() in
-  ("b", if: "b" then alice true "sys" else alice false "sys").
 
 Lemma alice_refinement (b b' : bool) :
   hypercryptis_ctx -∗
@@ -146,33 +141,6 @@ iModIntro. iExists (bool_decide (TInt 1 = guess)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
 Qed.
 
-Lemma alice_guess_wrapped_refinement :
-  hypercryptis_ctx -∗
-  REL alice_guess_wrapped << alice_guess_wrapped : lrel_attacker → LRel (λ p1 p2,
-    ⌜∃ b g b' g' : bool,
-    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝).
-Proof.
-iIntros "#Hctx". rewrite /alice_guess_wrapped.
-rel_arrow_val. iIntros (adv adv') "#Hadv". rel_pures.
-rel_apply_l refines_nondet_bool_l. iIntros (choice).
-rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
-case: choice; rel_pures.
-- rel_bind_l (alice _ _). rel_bind_r (alice _ _).
-  iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-    by iApply alice_refinement. }
-  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures. rel_values.
-  iPureIntro. by exists true, g, false, g.
-- rel_bind_l (alice _ _). rel_bind_r (alice _ _).
-  iApply refines_bind.
-  { iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-    by iApply alice_refinement. }
-  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures. rel_values.
-  iPureIntro. by exists false, g, true, g.
-Qed.
-
 End CPA.
 
 (** IND-CPA as a contextual equivalence: no well-typed context can tell
@@ -186,12 +154,17 @@ by split;
   iIntros "#Hctx"; iApply (alice_refinement with "Hctx").
 Qed.
 
-Theorem ind_cpa_secure N :
-  hypercryptis_secure (alice_guess_wrapped N) (λ v v',
-    ∃ b g b' g' : bool,
-      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Theorem ind_cpa_secure N b b' adv adv' σ :
+  attacker_valid adv adv' →
+  adequate NotStuck (alice N b adv)%E σ
+    (λ v _, ∃ thp' h v',
+       rtc erased_step ([(alice N b' adv')%E], σ) (of_val v' :: thp', h) ∧
+       v = v').
 Proof.
-move=> ? ? ? ?.
-apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
-iIntros "#Hctx". by iApply alice_guess_wrapped_refinement.
+move=> ?; apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
+iIntros "#Hctx". rel_values. iIntros "!> !> %a %a' #Ha".
+iApply (refines_wand with "[]").
+{ iApply (refines_app with "[] []"); last by rel_values.
+  by iApply alice_refinement. }
+by iIntros (v v') "(%g & -> & ->) !>".
 Qed.

@@ -2,7 +2,6 @@
     guesses whether the key revealed to it is the session key or a fresh
     one. *)
 
-From iris.heap_lang.lib Require Import nondet_bool.
 From cryptis Require Import cryptis primitives.
 From reloc Require Import reloc.
 From cryptis.hyper Require Import lib.
@@ -20,10 +19,6 @@ Definition guess (test : val) : val := λ: "sys",
   test "sys";;
   let: "guess" := recv "chan_guess" in
   eq_term (TInt 1) "guess".
-
-Definition guess_wrapped (test : bool → val) : val := λ: "sys",
-  let: "b" := nondet_bool #() in
-  ("b", if: "b" then guess (test true) "sys" else guess (test false) "sys").
 
 Section Game.
 
@@ -49,29 +44,6 @@ iMod (public_part_bij' (E:=⊤) (TInt 1) (TInt 1) g g'
 { by rewrite public_TInt. }
 iModIntro. iExists (bool_decide (TInt 1 = g)). iPureIntro.
 split; first done. do 2 f_equal. by apply bool_decide_ext.
-Qed.
-
-Lemma guess_wrapped_refinement (test : bool → val) adv adv' :
-  hypercryptis_ctx -∗
-  lrel_attacker adv adv' -∗
-  (∀ b, REL test b adv << test (negb b) adv' : ()) -∗
-  REL guess_wrapped test adv << guess_wrapped test adv' : λ p1 p2,
-    ⌜∃ b g b' g' : bool,
-    p1 = (#b, #g)%V ∧ p2 = (#b', #g')%V ∧ b' = negb b ∧ g = g'⌝.
-Proof.
-iIntros "#Hctx #Hadv Htest". rewrite /guess_wrapped.
-rel_pures.
-rel_apply_l refines_nondet_bool_l. iIntros (choice).
-rel_apply_r (refines_nondet_bool_r _ _ (negb choice)).
-case: choice; rel_pures.
-- rel_apply (guess_refinement with "Hctx Hadv Htest").
-  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures. rel_values.
-  iPureIntro. by exists true, g, false, g.
-- rel_apply (guess_refinement with "Hctx Hadv Htest").
-  iIntros (v v') "(%g & %e & %e')"; subst v v' => /=.
-  rel_pures. rel_values.
-  iPureIntro. by exists false, g, true, g.
 Qed.
 
 End Game.
@@ -100,28 +72,34 @@ by split;
   [iApply (init_test_refinement true) | iApply (init_test_refinement false)].
 Qed.
 
-Theorem nsl_resp_ror_secure :
-  hypercryptis_secure (guess_wrapped resp_test) (λ v v',
-    ∃ b g b' g' : bool,
-      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Theorem nsl_resp_ror_secure b adv adv' σ :
+  attacker_valid adv adv' →
+  adequate NotStuck (guess (resp_test b) adv)%E σ
+    (λ v _, ∃ thp' h v',
+       rtc erased_step ([(guess (resp_test (negb b)) adv')%E], σ) (of_val v' :: thp', h) ∧
+       v = v').
 Proof.
-move=> ? ? ? ?.
-apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (adv adv') "#Hadv".
-iApply (guess_wrapped_refinement with "Hctx Hadv").
-iIntros (b). iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-by iApply resp_test_refinement.
+move=> ?; apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
+iIntros "#Hctx". rel_values. iIntros "!> !> %a %a' #Ha".
+iApply (refines_wand with "[]").
+{ iApply (guess_refinement with "Hctx Ha").
+  iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
+  by iApply resp_test_refinement. }
+by iIntros (v v') "(%g & -> & ->) !>".
 Qed.
 
-Theorem nsl_init_ror_secure :
-  hypercryptis_secure (guess_wrapped init_test) (λ v v',
-    ∃ b g b' g' : bool,
-      v = (#b, #g)%V ∧ v' = (#b', #g')%V ∧ b' = negb b ∧ g = g').
+Theorem nsl_init_ror_secure b adv adv' σ :
+  attacker_valid adv adv' →
+  adequate NotStuck (guess (init_test b) adv)%E σ
+    (λ v _, ∃ thp' h v',
+       rtc erased_step ([(guess (init_test (negb b)) adv')%E], σ) (of_val v' :: thp', h) ∧
+       v = v').
 Proof.
-move=> ? ? ? ?.
-apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
-iIntros "#Hctx". rel_arrow_val. iIntros (adv adv') "#Hadv".
-iApply (guess_wrapped_refinement with "Hctx Hadv").
-iIntros (b). iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
-by iApply init_test_refinement.
+move=> ?; apply: (hypercryptis_adequacy (Σ:=#[relocΣ; publicΣ])) => // ? ?.
+iIntros "#Hctx". rel_values. iIntros "!> !> %a %a' #Ha".
+iApply (refines_wand with "[]").
+{ iApply (guess_refinement with "Hctx Ha").
+  iApply (refines_app _ _ _ _ lrel_attacker); last by rel_values.
+  by iApply init_test_refinement. }
+by iIntros (v v') "(%g & -> & ->) !>".
 Qed.

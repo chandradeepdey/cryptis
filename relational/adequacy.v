@@ -8,8 +8,6 @@
     left protocol run against [adv] terminates then the right protocol run
     against [adv'] has a terminating execution whose result is related as
     specified.
-    [hypercryptis_secure f P] states this for the same protocol [f] on both
-    sides, against every pair of valid attackers ([attacker_valid]).
     [hypercryptis_ctx_refinement] turns the same refinement into a
     contextual refinement between the two games ([hypercryptis_game]). *)
 
@@ -60,13 +58,6 @@ apply: (refines_adequate Σ (λ _, LRel (λ v v', ⌜P v v'⌝)%I)).
   iApply (refines_app with "[] []"); first by iApply (Hf with "Hctx").
   by rel_values.
 Qed.
-
-Definition hypercryptis_secure (f : val) (P : val → val → Prop) : Prop :=
-  ∀ adv adv' σ, attacker_valid adv adv' →
-  adequate NotStuck (f adv)%E σ
-    (λ v _, ∃ thp' h v',
-       rtc erased_step ([(f adv')%E], σ) (of_val v' :: thp', h) ∧
-       P v v').
 
 Definition hypercryptis_game (f : val) : expr := (attacker_prims, f)%E.
 

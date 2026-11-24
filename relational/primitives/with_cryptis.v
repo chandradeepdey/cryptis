@@ -2,7 +2,16 @@
     the network channel, creating nonces and keys, checking the type of a key,
     and nondeterministic encryption; and the primitives through which a
     protocol asks the attacker for a channel, a thread or its turn, with a
-    lock built on them ([Locks]). *)
+    lock built on them ([Locks]).
+
+    A protocol should start threads and wait only through these primitives,
+    and should not use [Fork] or Iris's nondeterministic choices.  A thread
+    started with [Fork], a coin flipped with Iris's primitives, or a thread
+    that waits in a loop of its own leaves a choice to the scheduler instead
+    of the attacker.  Such a protocol can leak its secret under a real
+    scheduler and still satisfy the security theorems: they only say that
+    each result of one game is a possible result of the other, so the second
+    game may make that choice in whichever way suits it. *)
 
 From reloc Require Import reloc.
 From cryptis Require Import lib cryptis.
