@@ -109,7 +109,7 @@ iAssert (store_sess skI s s') as "#Hs"; first by iFrame "#".
 iModIntro. iSplitL; last done.
 iNext. iRight. iExists (SEncKey s), (SEncKey s').
 iSplitR; first by iExists s, s'; iFrame "Hs".
-by iApply (conn_state_init γ Φs (SEncKey s) (SEncKey s') with "[$ns $ns'] [$log0 $log1]").
+by iApply (conn_state_init γ Φs (SEncKey s) (SEncKey s') with "ns ns' [$log0 $log1]").
 Qed.
 
 Lemma session_keys E skI skI' skR skR' s s' :
@@ -192,19 +192,19 @@ rel_apply (refines_new_channel with "Hadv").
 iIntros (chan_server chan_server') "#Hchan_server". rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_honest_key_refinement with "Hctx").
-iIntros (skI skI') "#HI sealsI tokI" => /=. rel_pures.
+iIntros (skI skI') "#HI sealsI sealsI' tokI" => /=. rel_pures.
 rel_bind_l (mk_aenc_key #()). rel_bind_r (mk_aenc_key #()).
 iApply (mk_honest_key_refinement with "Hctx").
-iIntros (skR skR') "#HR sealsR _" => /=. rel_pures.
+iIntros (skR skR') "#HR sealsR sealsR' _" => /=. rel_pures.
 iMod (inv_alloc sealsIN _ (seals_inv skI skI' (seals_I_info skI skI' skR skR' (store_sess skI)))
-        with "[sealsI]") as "#HinvI".
-{ iNext. iExists ∅, _, _. iFrame "sealsI".
+        with "[sealsI sealsI']") as "#HinvI".
+{ iNext. iExists ∅, _, _. iFrame "sealsI sealsI'".
   iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
   iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
   by rewrite !big_sepS_empty. }
 iMod (inv_alloc sealsRN _ (seals_inv skR skR' (seals_R_info skI skI'))
-        with "[sealsR]") as "#HinvR".
-{ iNext. iExists ∅, _, _. iFrame "sealsR".
+        with "[sealsR sealsR']") as "#HinvR".
+{ iNext. iExists ∅, _, _. iFrame "sealsR sealsR'".
   iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
   iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
   by rewrite !big_sepS_empty. }

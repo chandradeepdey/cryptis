@@ -401,8 +401,8 @@ rewrite (term_token_difference _ (↑seal_namespace p) (↑sealN));
 rewrite (term_token_spec_difference _ (↑seal_namespace p') (↑sealN));
   last by rewrite /seal_namespace; solve_ndisj.
 iDestruct "seals" as "[seal_p seals]". iDestruct "seals'" as "[seal_p' seals']".
-iMod ("upd" $! (⊤ ∖ ↑cellN) with "[] [$seal_p $seal_p'] [holds_a] [holds_a']")
-  as "(_ & #Hsu & #Hct)".
+iMod ("upd" $! (⊤ ∖ ↑cellN) with "[] seal_p seal_p' [holds_a] [holds_a']")
+  as "(_ & _ & #Hsu & #Hct)".
 { iPureIntro. solve_ndisj. }
 { iApply (term_token_drop with "holds_a"). solve_ndisj. }
 { iApply (term_token_spec_drop with "holds_a'"). solve_ndisj. }

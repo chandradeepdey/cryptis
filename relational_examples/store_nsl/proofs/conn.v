@@ -118,7 +118,8 @@ Definition sent_pair k k' rl n t t' : iProp :=
 Definition conn_state k k' : iProp :=
   ∃ L0 L1 Ek Ek',
     ghost_var (conn_log0 γ) (1/2) L0 ∗ ghost_var (conn_log1 γ) (1/2) L1 ∗
-    never_sealed_under k k' Ek Ek' ∗
+    never_sealed_under_l k Ek ∗
+    never_sealed_under_r k' Ek' ∗
     ⌜∀ u, ↑seal_namespace u ⊆ Ek ∨
           ∃ rl n t t', logged L0 L1 rl n t t' ∧ u = conn_body rl n t⌝ ∗
     ⌜∀ u', ↑seal_namespace u' ⊆ Ek' ∨
@@ -173,11 +174,11 @@ Definition conn_handle rl (cs cs' : val) n r : iProp :=
     ghost_var (log_name rl) (1/2) L.
 
 Lemma conn_state_init k k' :
-  never_sealed_under k k'
-    (↑sealN) (↑sealN) -∗
+  never_sealed_under_l k (↑sealN) -∗
+  never_sealed_under_r k' (↑sealN) -∗
   conn_fresh -∗ conn_state k k'.
 Proof.
-iIntros "ns [log0 log1]". iExists [], [], _, _. iFrame.
+iIntros "ns ns' [log0 log1]". iExists [], [], _, _. iFrame.
 iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
 iSplit; first by iPureIntro => ?; left; apply nclose_subseteq.
 iIntros "!>" (rl n t t' [_ Hl]). rewrite /log_of in Hl. by case: decide Hl.
@@ -226,7 +227,7 @@ Lemma conn_seal_send E rl L k k' t t' :
       Spec.enc k' (Tag connN) (Spec.of_list [TInt rl; TInt (length L); t'])⟩.
 Proof.
 iIntros (HN HE Hrl) "#Hctx #Hinv #(Hs & mk & mk' & sk & sk') log #mt #mt' #HΦ".
-iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & ns & %Hcl & %Hcl' & #Hsent))]".
+iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & ns & ns' & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
 iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
 iDestruct (log_acc L0 L1 Hrl with "log0 log1") as "[logi back]".
@@ -240,7 +241,7 @@ assert (Hsub' : ↑seal_namespace (conn_body rl n t') ⊆ Ek').
   subst. by rewrite lookup_ge_None_2 in Hl. }
 iMod (public_seal_senc k k' (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
         (t':=Spec.of_list [TInt rl; TInt n; t']) HE Hsub Hsub'
-        with "Hctx mk mk' [] [] [] [] ns") as "(#Hpub & #Hsu & ns)".
+        with "Hctx mk mk' [] [] [] [] ns ns'") as "(#Hpub & #Hsu & ns & ns')".
 { minted_simpl. rewrite !minted_TInt. by iFrame "#". }
 { minted_simpl. rewrite !minted_spec_TInt. by iFrame "#". }
 { by iApply secret_in_linked. }
@@ -248,7 +249,7 @@ iMod (public_seal_senc k k' (N:=connN) (t:=Spec.of_list [TInt rl; TInt n; t])
 iMod (ghost_var_update_halves (log_of rl L0 L1 ++ [(t, t')]) with "logi log") as "[logi log]".
 iDestruct ("back" with "logi") as "[log0 log1]".
 iModIntro. iSplitR "log"; last by iFrame "log Hpub".
-iNext. iRight. iExists k, k'. iFrame "Hs". iExists _, _, _, _. iFrame "log0 log1 ns".
+iNext. iRight. iExists k, k'. iFrame "Hs". iExists _, _, _, _. iFrame "log0 log1 ns ns'".
 iSplit.
 { iPureIntro => u. case: (decide (u = conn_body rl n t)) => [->|ne].
   { right. exists rl, n, t, t'. split; last done. apply (logged_snoc Hrl). by right. }
@@ -341,7 +342,7 @@ Proof.
 iIntros (HE HE') "#Hctx #Hinv #(Hs & mk & mk' & sk & sk') #Ht".
 iMod (public_open_senc_fupd (E:=E) k k' t t' ltac:(set_solver) with "Hctx sk sk' Ht")
   as "#Hop".
-iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & [tok tok'] & %Hcl & %Hcl' & #Hsent))]".
+iInv "Hinv" as "[>(Hfree & _ & _)|(%k0 & %k0' & >#Hs0 & >(%L0 & %L1 & %Ek & %Ek' & log0 & log1 & tok & tok' & %Hcl & %Hcl' & #Hsent))]".
 { by iDestruct (free_sess with "Hfree Hs") as %[]. }
 iDestruct (sess_agree with "Hs Hs0") as %[<- <-].
 rewrite /Spec.dec.

@@ -120,10 +120,10 @@ rel_apply (refines_nondet_aenc skA skA' (N.@"m")
   with "Hctx mint_skA mint_spec_skA' elem_pkA [] mint_msg mint_spec_msg'").
 { by iApply secret_in_linked. }
 iIntros (p p') "_ _ _ _ upd".
-iMod ("upd" $! ⊤ with "[] [seals_a seals_a'] [holds_a] [holds_a']") as "(_ & _ & #Hcmsg)".
+iMod ("upd" $! ⊤ with "[] [seals_a] [seals_a'] [holds_a] [holds_a']") as "(_ & _ & _ & #Hcmsg)".
 { iPureIntro. solve_ndisj. }
-{ iSplitL "seals_a"; [iApply (term_token_drop with "seals_a") |
-                      iApply (term_token_spec_drop with "seals_a'")]; solve_ndisj. }
+{ iApply (term_token_drop with "seals_a"). solve_ndisj. }
+{ iApply (term_token_spec_drop with "seals_a'"). solve_ndisj. }
 { iApply (term_token_drop with "holds_a"). solve_ndisj. }
 { iApply (term_token_spec_drop with "holds_a'"). solve_ndisj. }
 iModIntro.

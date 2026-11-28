@@ -52,7 +52,8 @@ Definition ballot_inv skV skV' skT skT' v v' : iProp :=
 
 Definition urn_inv skT skT' : iProp :=
   ∃ Ek Ek' Eh Eh',
-    never_sealed_under (Spec.pkey skT) (Spec.pkey skT') Ek Ek' ∗
+    never_sealed_under_l (Spec.pkey skT) Ek ∗
+    never_sealed_under_r (Spec.pkey skT') Ek' ∗
     term_token (Spec.pkey skT) Eh ∗
     term_token_spec (Spec.pkey skT') Eh' ∗
     □ (∀ p, ⌜↑seal_namespace p ⊆ Ek ∧ ↑holdN.@p ⊆ Eh⌝ ∨
@@ -93,24 +94,25 @@ Lemma urn_inv_seal E skT skT' p p' (P : iProp) :
   inv urnN (urn_inv skT skT') -∗
   term_token (TSeal (Spec.pkey skT) p) (↑urnN) -∗
   term_token_spec (TSeal (Spec.pkey skT') p') (↑urnN) -∗
-  (never_sealed_under (Spec.pkey skT) (Spec.pkey skT')
-     (↑seal_namespace p) (↑seal_namespace p') -∗
+  (never_sealed_under_l (Spec.pkey skT) (↑seal_namespace p) -∗
+   never_sealed_under_r (Spec.pkey skT') (↑seal_namespace p') -∗
    holds_key_l p (Spec.pkey skT) -∗
    holds_key_r p' (Spec.pkey skT') ={E ∖ ↑urnN}=∗ P) ={E}=∗ P.
 Proof.
 iIntros (HE) "#Hinv tc tc' upd".
-iInv "Hinv" as "(%Ek & %Ek' & %Eh & %Eh' & >[ns ns'] & >hold & >hold' & >#Hall & >#Hall')".
+iInv "Hinv" as "(%Ek & %Ek' & %Eh & %Eh' & >ns & >ns' & >hold & >hold' & >#Hall & >#Hall')".
 iDestruct ("Hall" $! p) as "[[%sub_s %sub_h]|#Hm]"; last first.
 { by iDestruct (term_meta_token with "tc Hm") as "[]". }
 iDestruct ("Hall'" $! p') as "[[%sub_s' %sub_h']|#Hm']"; last first.
 { by iDestruct (term_meta_spec_token with "tc' Hm'") as "[]". }
+rewrite /never_sealed_under_l /never_sealed_under_r.
 rewrite (term_token_difference _ (↑seal_namespace p) Ek) //.
 rewrite (term_token_spec_difference _ (↑seal_namespace p') Ek') //.
 rewrite (term_token_difference _ (↑holdN.@p) Eh) //.
 rewrite (term_token_spec_difference _ (↑holdN.@p') Eh') //.
 iDestruct "ns" as "[ns_p ns]". iDestruct "ns'" as "[ns_p' ns']".
 iDestruct "hold" as "[hold_p hold]". iDestruct "hold'" as "[hold_p' hold']".
-iMod ("upd" with "[$ns_p $ns_p'] hold_p hold_p'") as "HP".
+iMod ("upd" with "ns_p ns_p' hold_p hold_p'") as "HP".
 iMod (term_meta_set urnN () with "tc") as "#Hm"; first done.
 iMod (term_meta_spec_set urnN () with "tc'") as "#Hm'"; first done.
 iModIntro. iSplitR "HP"; last done.
@@ -142,7 +144,7 @@ iMod (term_meta_set signedN () (↑signedN) (seed_of_sign_key skV) ltac:(done)
         with "token") as "#Hsigned".
 rewrite /ballot_inv /ballot_sig /Spec.enc !(sign_key_TKey skV) !(sign_key_TKey skV').
 iMod (public_seal _ _ HE (nclose_subseteq _ _) (nclose_subseteq _ _)
-        with "Hctx Hwand [] [$tok $tok']") as "(#Hl & #Hpub & tok & tok')".
+        with "Hctx Hwand [] tok tok'") as "(#Hl & #Hpub & tok & tok')".
 { iIntros "_ _". by iSplit. }
 iMod ("Hclose" with "[tok tok']") as "_".
 { iNext. iRight. iExists ct, ct'. by iFrame "#∗". }

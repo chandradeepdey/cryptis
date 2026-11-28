@@ -4,14 +4,10 @@
 equal plaintexts give different ciphertexts.  Callers never see the nonce.
 
 - [Programs]: encryption, decryption, and what they compute on terms.
-- [Receipts]: what encrypting leaves to the caller for each pair of
-  ciphertexts: what hides the nonce, and the release tokens of the
-  ciphertexts.
-- [Specs]: encrypting takes, from whoever owns the public key, the tokens
-  of the fresh ciphertexts, and returns a receipt.  Once the plaintexts are
-  public, the receipt makes the nonces public and gives back the part of
-  the key that the ciphertexts hold, which the owners of the key need to
-  publish the decryption key.
+- [Receipts]: what encrypting leaves to the caller before and after sealing,
+  keeping the nonce hidden and the ciphertext's release token.
+- [Specs]: encrypting, sealing a pair of ciphertexts, and releasing their
+  nonces and key tokens once the plaintexts are public.
 - [Decryption]: decryption is pure. *)
 
 From cryptis Require Import lib cryptis primitives.
@@ -70,48 +66,237 @@ Implicit Types (sk : aenc_key) (k p t : term) (N : namespace).
 
 Section Receipts.
 
-Definition nondet_receipt sk sk' N c c' m m' : iProp :=
-  ∃ n n',
-    ⌜is_nonce n⌝ ∗ ⌜is_nonce n'⌝ ∗
-    ⌜c = Spec.enc (Spec.pkey sk) (Tag N) (TPair n m)⌝ ∗
-    ⌜c' = Spec.enc (Spec.pkey sk') (Tag N) (TPair n' m')⌝ ∗
-    minted n ∗ minted_spec n' ∗
-    protected_via_l (Spec.tag (Tag N) (TPair n m)) [TPair n m] n ∗
-    protected_via_r (Spec.tag (Tag N) (TPair n' m')) [TPair n' m'] n' ∗
-    pending_in_l (Spec.tag (Tag N) (TPair n m)) (Spec.tag (Tag N) (TPair n' m')) ∗
-    pending_in_r (Spec.tag (Tag N) (TPair n m)) (Spec.tag (Tag N) (TPair n' m')) ∗
-    prots_token_l (Spec.tag (Tag N) (TPair n m)) ∗
-    prots_token_r (Spec.tag (Tag N) (TPair n' m')) ∗
-    states_token_l n ∗ states_token_r n' ∗
-    term_token n (↑termN.@"prots" ∖ ↑termN.@"prots".@(Spec.tag (Tag N) (TPair n m))) ∗
-    term_token_spec n' (↑termN.@"prots" ∖ ↑termN.@"prots".@(Spec.tag (Tag N) (TPair n' m'))) ∗
-    seal_release_l c ∗ seal_release_r c' ∗
-    publicly_linked c c'.
+Definition nondet_unsealed_l N p m : iProp :=
+  ∃ n,
+    ⌜is_nonce n⌝ ∗
+    ⌜p = Spec.tag (Tag N) (TPair n m)⌝ ∗
+    minted n ∗
+    protected_by_chain_l p [TPair n m] n ∗
+    states_token_l p ∗
+    prots_token_l p ∗
+    states_token_l n ∗
+    term_token n (↑termN.@"prots" ∖ ↑termN.@"prots".@p).
 
-#[global] Instance nondet_receipt_timeless sk sk' N c c' m m' :
-  Timeless (nondet_receipt sk sk' N c c' m m').
-Proof. rewrite /nondet_receipt. apply _. Qed.
+Definition nondet_unsealed_r N p' m' : iProp :=
+  ∃ n',
+    ⌜is_nonce n'⌝ ∗
+    ⌜p' = Spec.tag (Tag N) (TPair n' m')⌝ ∗
+    minted_spec n' ∗
+    protected_by_chain_r p' [TPair n' m'] n' ∗
+    states_token_r p' ∗
+    prots_token_r p' ∗
+    states_token_r n' ∗
+    term_token_spec n' (↑termN.@"prots" ∖ ↑termN.@"prots".@p').
+
+#[global] Instance nondet_unsealed_l_timeless N p m :
+  Timeless (nondet_unsealed_l N p m).
+Proof. rewrite /nondet_unsealed_l. apply _. Qed.
+
+#[global] Instance nondet_unsealed_r_timeless N p' m' :
+  Timeless (nondet_unsealed_r N p' m').
+Proof. rewrite /nondet_unsealed_r. apply _. Qed.
+
+Definition nondet_receipt_l sk N p p' m : iProp :=
+  ∃ n,
+    ⌜is_nonce n⌝ ∗
+    ⌜p = Spec.tag (Tag N) (TPair n m)⌝ ∗
+    minted n ∗
+    protected_via_l p [TPair n m] n ∗
+    pending_in_l p p' ∗
+    prots_token_l p ∗
+    states_token_l n ∗
+    term_token n (↑termN.@"prots" ∖ ↑termN.@"prots".@p) ∗
+    seal_release_l (TSeal (Spec.pkey sk) p).
+
+Definition nondet_receipt_r sk' N p p' m' : iProp :=
+  ∃ n',
+    ⌜is_nonce n'⌝ ∗
+    ⌜p' = Spec.tag (Tag N) (TPair n' m')⌝ ∗
+    minted_spec n' ∗
+    protected_via_r p' [TPair n' m'] n' ∗
+    pending_in_r p p' ∗
+    prots_token_r p' ∗
+    states_token_r n' ∗
+    term_token_spec n' (↑termN.@"prots" ∖ ↑termN.@"prots".@p') ∗
+    seal_release_r (TSeal (Spec.pkey sk') p').
+
+#[global] Instance nondet_receipt_l_timeless sk N p p' m :
+  Timeless (nondet_receipt_l sk N p p' m).
+Proof. rewrite /nondet_receipt_l. apply _. Qed.
+
+#[global] Instance nondet_receipt_r_timeless sk' N p p' m' :
+  Timeless (nondet_receipt_r sk' N p p' m').
+Proof. rewrite /nondet_receipt_r. apply _. Qed.
 
 End Receipts.
 
 Section Specs.
 
-Lemma nondet_release E sk sk' N c c' m m' :
+Lemma refines_nondet_aenc_l K e sk N m Ψ :
+  hypercryptis_ctx -∗
+  minted sk -∗
+  minted m -∗
+  (∀ p,
+     ⌜nondet_open sk (Tag N) (TSeal (Spec.pkey sk) p) = Some m⌝ -∗
+     nondet_unsealed_l N p m -∗
+     term_token (TSeal (Spec.pkey sk) p) ⊤ -∗
+     REL fill K (TSeal (Spec.pkey sk) p : expr) << e : Ψ) -∗
+  REL fill K (nondet_aenc (Spec.pkey sk) (Tag N) m) << e : Ψ.
+Proof.
+iIntros "#ctx #mint_sk #mint_m post".
+iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
+rewrite /nondet_aenc. rel_pures_l.
+rel_apply_l (refines_mk_nonce_l _ _ (λ n, {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
+  Spec.enc (Spec.pkey sk) (Tag N) (TPair n m)]}) with "ctx").
+{ iIntros (t). rewrite big_sepS_forall. iIntros (t' Ht').
+  set_unfold in Ht'. destruct_or? Ht'; subst t'; solve_minted_iff_elem. }
+iIntros (n) "%Hn #mint_n Htt".
+split_term_tokens.
+iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
+iDestruct (term_token_public_token_l with "tt_n") as "(tt_n & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_l with "tt_pl") as "(tt_pl & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
+iDestruct (public_token_l_split with "tt_n") as "(st_n & prots_n & _)".
+iDestruct (public_token_l_split with "tt_pl") as "(_ & prots_pl & _)".
+iDestruct (public_token_l_split with "tt_tg") as "(st_tg & prots_tg & _)".
+case/is_nonceP: (Hn) => a En. subst n.
+set pl := TPair (TNonce a) m. set tg := Spec.tag (Tag N) pl.
+iAssert (holds_subterm_l tg (TNonce a) ∗
+         term_token (TNonce a) (↑termN.@"prots" ∖ ↑termN.@"prots".@tg))%I
+  with "[prots_n]" as "[hold_n rest_n]".
+{ rewrite /prots_token_l /holds_subterm_l /=.
+  rewrite -(term_token_difference _ (↑termN.@"prots".@tg) (↑termN.@"prots")); [done | solve_ndisj]. }
+iAssert (holds_subterm_l tg pl) with "[prots_pl]" as "hold_pl".
+{ rewrite /pl /prots_token_l /holds_subterm_l /=.
+  iApply (term_token_drop with "prots_pl"). solve_ndisj. }
+rel_apply_l refines_tuple_l. rel_apply_l refines_aenc'_l.
+iApply ("post" $! tg with "[] [-tt_c] tt_c").
+- iPureIntro. exact: nondet_open_enc.
+- iExists (TNonce a). iFrame "mint_n st_tg prots_tg st_n rest_n".
+  iSplitR; first done.
+  rewrite /protected_by_chain_l /=. iSplitR.
+  + iPureIntro. apply: SubtermPathStep;
+      [solve_immediate_subterm | apply: SubtermPathOne; solve_immediate_subterm].
+  + iSplitL "hold_pl"; first by iFrame. iRight. iFrame. by iLeft.
+Qed.
+
+Lemma refines_nondet_aenc_r K e sk' N m' Ψ :
+  hypercryptis_ctx -∗
+  minted_spec sk' -∗
+  minted_spec m' -∗
+  (∀ p',
+     ⌜nondet_open sk' (Tag N) (TSeal (Spec.pkey sk') p') = Some m'⌝ -∗
+     nondet_unsealed_r N p' m' -∗
+     term_token_spec (TSeal (Spec.pkey sk') p') ⊤ -∗
+     REL e << fill K (TSeal (Spec.pkey sk') p' : expr) : Ψ) -∗
+  REL e << fill K (nondet_aenc (Spec.pkey sk') (Tag N) m') : Ψ.
+Proof.
+iIntros "#ctx #mint_sk' #mint_m' post".
+iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'"; first by rewrite minted_spec_pkey.
+rewrite /nondet_aenc. rel_pures_r.
+rel_apply_r (refines_mk_nonce_r _ _ (λ n', {[n'; TPair n' m'; Spec.tag (Tag N) (TPair n' m');
+  Spec.enc (Spec.pkey sk') (Tag N) (TPair n' m')]}) with "ctx").
+{ iIntros (t). rewrite big_sepS_forall. iIntros (t' Ht').
+  set_unfold in Ht'. destruct_or? Ht'; subst t'; solve_minted_iff_elem. }
+iIntros (n') "%Hn' #mint_n' Htts".
+split_term_tokens.
+iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
+iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "tts_pl") as "(tts_pl & _ & _)"; first solve_not_TSeal.
+iDestruct (term_token_public_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
+iDestruct (public_token_r_split with "tts_n") as "(st_n' & prots_n' & _)".
+iDestruct (public_token_r_split with "tts_pl") as "(_ & prots_pl' & _)".
+iDestruct (public_token_r_split with "tts_tg") as "(st_tg' & prots_tg' & _)".
+case/is_nonceP: (Hn') => a' En'. subst n'.
+set pl' := TPair (TNonce a') m'. set tg' := Spec.tag (Tag N) pl'.
+iAssert (holds_subterm_r tg' (TNonce a') ∗
+         term_token_spec (TNonce a') (↑termN.@"prots" ∖ ↑termN.@"prots".@tg'))%I
+  with "[prots_n']" as "[hold_n' rest_n']".
+{ rewrite /prots_token_r /holds_subterm_r /=.
+  rewrite -(term_token_spec_difference _ (↑termN.@"prots".@tg') (↑termN.@"prots"));
+    [done | solve_ndisj]. }
+iAssert (holds_subterm_r tg' pl') with "[prots_pl']" as "hold_pl'".
+{ rewrite /pl' /prots_token_r /holds_subterm_r /=.
+  iApply (term_token_spec_drop with "prots_pl'"). solve_ndisj. }
+rel_apply_r refines_tuple_r. rel_apply_r refines_aenc'_r.
+iApply ("post" $! tg' with "[] [-tts_c] tts_c").
+- iPureIntro. exact: nondet_open_enc.
+- iExists (TNonce a'). iFrame "mint_n' st_tg' prots_tg' st_n' rest_n'".
+  iSplitR; first done.
+  rewrite /protected_by_chain_r /=. iSplitR.
+  + iPureIntro. apply: SubtermPathStep;
+      [solve_immediate_subterm | apply: SubtermPathOne; solve_immediate_subterm].
+  + iSplitL "hold_pl'"; first by iFrame. iRight. iFrame. by iLeft.
+Qed.
+
+Lemma nondet_seal E sk sk' N p p' m m' :
   ↑cryptisN ⊆ E →
   hypercryptis_ctx -∗
-  nondet_receipt sk sk' N c c' m m' -∗
+  minted sk -∗ minted_spec sk' -∗
+  publicly_linked (Spec.pkey sk) (Spec.pkey sk') -∗
+  linked (sk : term) (sk' : term) -∗
+  minted m -∗ minted_spec m' -∗
+  nondet_unsealed_l N p m -∗
+  nondet_unsealed_r N p' m' -∗
+  never_sealed_under_l (Spec.pkey sk) (↑seal_namespace p) -∗
+  never_sealed_under_r (Spec.pkey sk') (↑seal_namespace p') -∗
+  holds_key_l p (Spec.pkey sk) -∗
+  holds_key_r p' (Spec.pkey sk') ={E}=∗
+  nondet_receipt_l sk N p p' m ∗
+  nondet_receipt_r sk' N p p' m' ∗
+  publicly_linked (TSeal (Spec.pkey sk) p) (TSeal (Spec.pkey sk') p') ∗
+  PUB⟨TSeal (Spec.pkey sk) p, TSeal (Spec.pkey sk') p'⟩.
+Proof.
+iIntros (HE) "#ctx #mint_sk #mint_sk' #link_pk #link_sk #mint_m #mint_m'".
+iIntros "(%n & %Hn & -> & #mint_n & prot & st_p & prots_p & st_n & rest_n)".
+iIntros "(%n' & %Hn' & -> & #mint_n' & prot' & st_p' & prots_p' & st_n' & rest_n')".
+iIntros "seal seal' hold_p hold_p'".
+set pl := TPair n m. set tg := Spec.tag (Tag N) pl.
+set pl' := TPair n' m'. set tg' := Spec.tag (Tag N) pl'.
+iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
+iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'"; first by rewrite minted_spec_pkey.
+iAssert (minted tg) as "#mint_tg"; first by rewrite /tg minted_tag /pl minted_TPair; iSplit.
+iAssert (minted_spec tg') as "#mint_tg'";
+  first by rewrite /tg' minted_spec_tag /pl' minted_spec_TPair; iSplit.
+iMod (linked_extend_protected_via (E:=E) tg tg' [pl] n [pl'] n' HE
+        with "ctx prot prot' st_p st_p'")
+  as "(#link_tg & pend & pend' & #rec & #rec')".
+iMod (public_seal_held (t:=tg) (t':=tg') (Ek:=↑seal_namespace tg)
+        (Ek':=↑seal_namespace tg') (Spec.pkey sk) (Spec.pkey sk') HE ltac:(done) ltac:(done)
+        with "ctx [] [hold_p] [hold_p'] seal seal'")
+  as "(#link_c & #pub_c & _ & _ & rel & rel')".
+{ iIntros "!> #Hpl". rewrite public_TSeal. iRight.
+  rewrite minted_TSeal minted_spec_TSeal.
+  iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
+  iLeft. iSplit; first by iApply publicly_linked_linked.
+  rewrite !Spec.aenc_key_pkey. iModIntro. by iRight. }
+{ rewrite !Spec.aenc_key_pkey /public_deposit_l /=. iRight. iFrame.
+  iDestruct "link_sk" as "[Hl _]". rewrite [term_of_aenc_key]unlock.
+  case: (sk) => s /=. by iExists _. }
+{ rewrite !Spec.aenc_key_pkey /public_deposit_r /=. iRight. iFrame.
+  iDestruct "link_sk" as "[_ Hl]". rewrite [term_of_aenc_key]unlock.
+  case: (sk') => s' /=. by iExists _. }
+iModIntro. iFrame "#". iSplitL "pend prots_p st_n rest_n rel"; by iFrame "∗#%".
+Qed.
+
+Lemma nondet_release E sk sk' N p p' m m' :
+  ↑cryptisN ⊆ E →
+  hypercryptis_ctx -∗
+  nondet_receipt_l sk N p p' m -∗
+  nondet_receipt_r sk' N p p' m' -∗
+  publicly_linked (TSeal (Spec.pkey sk) p) (TSeal (Spec.pkey sk') p') -∗
   PUB⟨m, m'⟩ ={E}=∗
   ∃ n n',
-    ⌜c = Spec.enc (Spec.pkey sk) (Tag N) (TPair n m)⌝ ∗
-    ⌜c' = Spec.enc (Spec.pkey sk') (Tag N) (TPair n' m')⌝ ∗
+    ⌜p = Spec.tag (Tag N) (TPair n m)⌝ ∗
+    ⌜p' = Spec.tag (Tag N) (TPair n' m')⌝ ∗
     PUB⟨n, n'⟩ ∗
-    holds_key_l (Spec.tag (Tag N) (TPair n m)) (Spec.pkey sk) ∗
-    holds_key_r (Spec.tag (Tag N) (TPair n' m')) (Spec.pkey sk').
+    holds_key_l p (Spec.pkey sk) ∗
+    holds_key_r p' (Spec.pkey sk').
 Proof.
-iIntros (HE) "#ctx (%n & %n' & %Hn & %Hn' & %Hc & %Hc' & #mint_n & #mint_n' &
-  #rec & #rec' & pend & pend' & prots & prots' & st_n & st_n' & rest_n & rest_n' &
-  rel & rel' & #link_c) #pub_m".
-case/is_nonceP: (Hn) => a En. case/is_nonceP: (Hn') => a' En'. subst n n' c c'.
+iIntros (HE) "#ctx (%n & %Hn & -> & #mint_n & #rec & pend & prots & st_n & rest_n & rel)".
+iIntros "(%n' & %Hn' & -> & #mint_n' & #rec' & pend' & prots' & st_n' & rest_n' & rel')".
+iIntros "#[link_cl link_cr] #pub_m".
+case/is_nonceP: (Hn) => a En. case/is_nonceP: (Hn') => a' En'. subst n n'.
 set pl := TPair (TNonce a) m. set tg := Spec.tag (Tag N) pl.
 set pl' := TPair (TNonce a') m'. set tg' := Spec.tag (Tag N) pl'.
 iAssert (□ (publicly_linked (TNonce a) (TNonce a') -∗ PUB⟨TNonce a, TNonce a'⟩))%I
@@ -139,8 +324,7 @@ iMod (public_lock_PublicLink_protector (t:=tg) (t':=tg') [pl] (TNonce a) [pl'] (
   iFrame. }
 iDestruct ("pub_tg" with "link_n link_tg") as "#Hpub_tg".
 iDestruct ("pub_n" with "link_n") as "#Hpub_n".
-rewrite /Spec.enc !Spec.aenc_key_pkey.
-iDestruct "link_c" as "[link_cl link_cr]".
+rewrite !Spec.aenc_key_pkey.
 iMod (public_TSeal_release_AEnc_hold_l_fupd _ _ _ _ HE with "ctx Hpub_tg rel link_cl") as "hold".
 iMod (public_TSeal_release_AEnc_hold_r_fupd _ _ _ _ HE with "ctx Hpub_tg rel' link_cr") as "hold'".
 iModIntro. iExists (TNonce a), (TNonce a'). by iFrame "∗#".
@@ -158,102 +342,23 @@ Lemma refines_nondet_aenc sk sk' N m m' (Ψ : val → val → iProp) :
      term_token (TSeal (Spec.pkey sk) p) ⊤ -∗
      term_token_spec (TSeal (Spec.pkey sk') p') ⊤ -∗
      (∀ E, ⌜↑cryptisN ⊆ E⌝ -∗
-        never_sealed_under (Spec.pkey sk) (Spec.pkey sk')
-          (↑seal_namespace p) (↑seal_namespace p') -∗
+        never_sealed_under_l (Spec.pkey sk) (↑seal_namespace p) -∗
+        never_sealed_under_r (Spec.pkey sk') (↑seal_namespace p') -∗
         holds_key_l p (Spec.pkey sk) -∗ holds_key_r p' (Spec.pkey sk') ={E}=∗
-        nondet_receipt sk sk' N (TSeal (Spec.pkey sk) p) (TSeal (Spec.pkey sk') p') m m' ∗
+        nondet_receipt_l sk N p p' m ∗
+        nondet_receipt_r sk' N p p' m' ∗
         publicly_linked (TSeal (Spec.pkey sk) p) (TSeal (Spec.pkey sk') p') ∗
         PUB⟨TSeal (Spec.pkey sk) p, TSeal (Spec.pkey sk') p'⟩) ={⊤}=∗
      Ψ (TSeal (Spec.pkey sk) p) (TSeal (Spec.pkey sk') p')) -∗
   REL nondet_aenc (Spec.pkey sk) (Tag N) m << nondet_aenc (Spec.pkey sk') (Tag N) m' : Ψ.
 Proof.
 iIntros "#ctx #mint_sk #mint_sk' #link_pk #link_sk #mint_m #mint_m' post".
-iAssert (minted (Spec.pkey sk)) as "#mint_pk"; first by rewrite minted_pkey.
-iAssert (minted_spec (Spec.pkey sk')) as "#mint_pk'"; first by rewrite minted_spec_pkey.
-rewrite /nondet_aenc. rel_pures.
-rel_apply_l (refines_mk_nonce_l _ _ (λ n, {[n; TPair n m; Spec.tag (Tag N) (TPair n m);
-  Spec.enc (Spec.pkey sk) (Tag N) (TPair n m)]}) with "[//]").
-{ iIntros (t). rewrite big_sepS_forall. iIntros (t' Ht').
-  set_unfold in Ht'. destruct_or? Ht'; subst t'; solve_minted_iff_elem. }
-iIntros (n) "%Hn #mint_n Htt".
-rel_apply_r (refines_mk_nonce_r _ _ (λ n', {[n'; TPair n' m'; Spec.tag (Tag N) (TPair n' m');
-  Spec.enc (Spec.pkey sk') (Tag N) (TPair n' m')]}) with "[//]").
-{ iIntros (t). rewrite big_sepS_forall. iIntros (t' Ht').
-  set_unfold in Ht'. destruct_or? Ht'; subst t'; solve_minted_iff_elem. }
-iIntros (n') "%Hn' #mint_n' Htts".
-split_term_tokens.
-iDestruct "Htt" as "(((tt_n & tt_pl) & tt_tg) & tt_c)".
-iDestruct "Htts" as "(((tts_n & tts_pl) & tts_tg) & tts_c)".
-iDestruct (term_token_public_token_l with "tt_n") as "(tt_n & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_public_token_l with "tt_pl") as "(tt_pl & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_public_token_l with "tt_tg") as "(tt_tg & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_public_token_r with "tts_n") as "(tts_n & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_public_token_r with "tts_pl") as "(tts_pl & _ & _)"; first solve_not_TSeal.
-iDestruct (term_token_public_token_r with "tts_tg") as "(tts_tg & _ & _)"; first solve_not_TSeal.
-iDestruct (public_token_l_split with "tt_n") as "(st_n & prots_n & _)".
-iDestruct (public_token_l_split with "tt_pl") as "(_ & prots_pl & _)".
-iDestruct (public_token_l_split with "tt_tg") as "(st_tg & prots_tg & _)".
-iDestruct (public_token_r_split with "tts_n") as "(st_n' & prots_n' & _)".
-iDestruct (public_token_r_split with "tts_pl") as "(_ & prots_pl' & _)".
-iDestruct (public_token_r_split with "tts_tg") as "(st_tg' & prots_tg' & _)".
-case/is_nonceP: (Hn) => a En. case/is_nonceP: (Hn') => a' En'. subst n n'.
-set pl := TPair (TNonce a) m. set tg := Spec.tag (Tag N) pl.
-set pl' := TPair (TNonce a') m'. set tg' := Spec.tag (Tag N) pl'.
-iAssert (holds_subterm_l tg (TNonce a) ∗
-         term_token (TNonce a) (↑termN.@"prots" ∖ ↑termN.@"prots".@tg))%I
-  with "[prots_n]" as "[hold_n rest_n]".
-{ rewrite /prots_token_l /holds_subterm_l /=.
-  rewrite -(term_token_difference _ (↑termN.@"prots".@tg) (↑termN.@"prots")); [done | solve_ndisj]. }
-iAssert (holds_subterm_r tg' (TNonce a') ∗
-         term_token_spec (TNonce a') (↑termN.@"prots" ∖ ↑termN.@"prots".@tg'))%I
-  with "[prots_n']" as "[hold_n' rest_n']".
-{ rewrite /prots_token_r /holds_subterm_r /=.
-  rewrite -(term_token_spec_difference _ (↑termN.@"prots".@tg') (↑termN.@"prots"));
-    [done | solve_ndisj]. }
-iAssert (holds_subterm_l tg pl) with "[prots_pl]" as "hold_pl".
-{ rewrite /pl /prots_token_l /holds_subterm_l /=.
-  iApply (term_token_drop with "prots_pl"). solve_ndisj. }
-iAssert (holds_subterm_r tg' pl') with "[prots_pl']" as "hold_pl'".
-{ rewrite /pl' /prots_token_r /holds_subterm_r /=.
-  iApply (term_token_spec_drop with "prots_pl'"). solve_ndisj. }
-iMod (linked_extend_protected_via (E:=⊤) tg tg' [pl] (TNonce a) [pl'] (TNonce a') ltac:(solve_ndisj)
-        with "ctx [hold_pl hold_n] [hold_pl' hold_n'] st_tg st_tg'")
-  as "(#link_tg & pend & pend' & #rec & #rec')".
-{ rewrite /protected_by_chain_l /=. iSplit.
-  - iPureIntro. apply: SubtermPathStep;
-      [solve_immediate_subterm | apply: SubtermPathOne; solve_immediate_subterm].
-  - iSplitL "hold_pl"; first by iFrame. iRight. iFrame. by iLeft. }
-{ rewrite /protected_by_chain_r /=. iSplit.
-  - iPureIntro. apply: SubtermPathStep;
-      [solve_immediate_subterm | apply: SubtermPathOne; solve_immediate_subterm].
-  - iSplitL "hold_pl'"; first by iFrame. iRight. iFrame. by iLeft. }
-iAssert (minted tg) as "#mint_tg".
-{ rewrite /tg minted_tag /pl minted_TPair. by iSplit. }
-iAssert (minted_spec tg') as "#mint_tg'".
-{ rewrite /tg' minted_spec_tag /pl' minted_spec_TPair. by iSplit. }
-iMod ("post" $! tg tg' with "[] [] tt_c tts_c [-]") as "post".
-{ iPureIntro. exact: nondet_open_enc. }
-{ iPureIntro. exact: nondet_open_enc. }
-{ iIntros (E HE) "seal hold_tg hold_tg'".
-  iMod (public_seal_held (t:=tg) (t':=tg') (Ek:=↑seal_namespace tg)
-          (Ek':=↑seal_namespace tg') (Spec.pkey sk) (Spec.pkey sk') HE ltac:(done) ltac:(done)
-          with "ctx [] [hold_tg] [hold_tg'] seal")
-    as "(#link_c & #pub_c & _ & rel & rel')".
-  { iIntros "!> #Hpl". rewrite public_TSeal. iRight.
-    rewrite minted_TSeal minted_spec_TSeal.
-    iSplit; first by iSplit. iSplit; first by iSplit. iSplit; first done.
-    iLeft. iSplit; first by iApply publicly_linked_linked.
-    rewrite !Spec.aenc_key_pkey. iModIntro. by iRight. }
-  { rewrite !Spec.aenc_key_pkey /public_deposit_l /=. iRight. iFrame.
-    iDestruct "link_sk" as "[Hl _]". rewrite [term_of_aenc_key]unlock.
-    case: (sk) => s /=. by iExists _. }
-  { rewrite !Spec.aenc_key_pkey /public_deposit_r /=. iRight. iFrame.
-    iDestruct "link_sk" as "[_ Hl]". rewrite [term_of_aenc_key]unlock.
-    case: (sk') => s' /=. by iExists _. }
-  iModIntro. iSplitL; last by iFrame "#".
-  iExists (TNonce a), (TNonce a'). by iFrame "∗#". }
-rel_apply_l refines_tuple_l. rel_apply_l refines_aenc'_l. rel_later.
-rel_apply_r refines_tuple_r. rel_apply_r refines_aenc'_r. by rel_values.
+rel_apply_l (refines_nondet_aenc_l with "ctx mint_sk mint_m"). iIntros (p) "%Ho unsealed tt_c".
+rel_apply_r (refines_nondet_aenc_r with "ctx mint_sk' mint_m'"). iIntros (p') "%Ho' unsealed' tts_c".
+rel_values. iApply ("post" with "[//] [//] tt_c tts_c").
+iIntros (E HE) "seal seal' hold hold'".
+by iApply (nondet_seal sk sk' N p p' m m' HE with "ctx mint_sk mint_sk' link_pk link_sk mint_m mint_m'
+             unsealed unsealed' seal seal' hold hold'").
 Qed.
 
 End Specs.

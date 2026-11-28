@@ -48,8 +48,8 @@ iMod (urn_inv_seal (E:=⊤) skT skT' p p'
         ltac:(solve_ndisj) with "Hurn [tc] [tc'] [upd]") as "#pub_c".
 { iApply (term_token_drop with "tc"). solve_ndisj. }
 { iApply (term_token_spec_drop with "tc'"). solve_ndisj. }
-{ iIntros "ns hold hold'".
-  iMod ("upd" $! (⊤ ∖ ↑urnN) with "[%] ns hold hold'") as "(_ & _ & $)";
+{ iIntros "ns ns' hold hold'".
+  iMod ("upd" $! (⊤ ∖ ↑urnN) with "[%] ns ns' hold hold'") as "(_ & _ & _ & $)";
     [solve_ndisj | done]. }
 iAssert (PUB⟨ballot_body (TSeal (Spec.pkey skT) p),
              ballot_body (TSeal (Spec.pkey skT') p')⟩) as "#pub_tgc".

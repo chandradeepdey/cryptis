@@ -196,14 +196,16 @@ Lemma public_seal E k k' t t' Ek Ek' :
   (seal_release_l (TSeal k t) -∗ seal_release_r (TSeal k' t') -∗
    public_deposit_l (TSeal k t) (TSeal k' t') ∗
    public_deposit_r (TSeal k t) (TSeal k' t')) -∗
-  never_sealed_under k k' Ek Ek' ={E}=∗
+  never_sealed_under_l k Ek -∗
+  never_sealed_under_r k' Ek' ={E}=∗
   publicly_linked (TSeal k t) (TSeal k' t') ∗
   PUB⟨TSeal k t, TSeal k' t'⟩ ∗
-  never_sealed_under k k' (Ek ∖ ↑seal_namespace t) (Ek' ∖ ↑seal_namespace t').
+  never_sealed_under_l k (Ek ∖ ↑seal_namespace t) ∗
+  never_sealed_under_r k' (Ek' ∖ ↑seal_namespace t').
 Proof.
-iIntros (HE sub sub') "#ctx #wand prot ns".
-rewrite (never_sealed_under_public_token k k' sub sub').
-iDestruct "ns" as "(tok & tok' & $)".
+iIntros (HE sub sub') "#ctx #wand prot ns ns'".
+rewrite (never_sealed_under_public_token_l k sub) (never_sealed_under_public_token_r k' sub').
+iDestruct "ns" as "[tok $]". iDestruct "ns'" as "[tok' $]".
 iDestruct (public_token_l_split with "tok") as "(states & prots & rel)".
 iDestruct (public_token_r_split with "tok'") as "(states' & prots' & rel')".
 iDestruct ("prot" with "rel rel'") as "[pl pr]".
@@ -219,15 +221,17 @@ Lemma public_seal_held E k k' t t' Ek Ek' :
   □ (publicly_linked (TSeal k t) (TSeal k' t') -∗ PUB⟨TSeal k t, TSeal k' t'⟩) -∗
   public_deposit_l (TSeal k t) (TSeal k' t') -∗
   public_deposit_r (TSeal k t) (TSeal k' t') -∗
-  never_sealed_under k k' Ek Ek' ={E}=∗
+  never_sealed_under_l k Ek -∗
+  never_sealed_under_r k' Ek' ={E}=∗
   publicly_linked (TSeal k t) (TSeal k' t') ∗
   PUB⟨TSeal k t, TSeal k' t'⟩ ∗
-  never_sealed_under k k' (Ek ∖ ↑seal_namespace t) (Ek' ∖ ↑seal_namespace t') ∗
+  never_sealed_under_l k (Ek ∖ ↑seal_namespace t) ∗
+  never_sealed_under_r k' (Ek' ∖ ↑seal_namespace t') ∗
   seal_release_l (TSeal k t) ∗ seal_release_r (TSeal k' t').
 Proof.
-iIntros (HE sub sub') "#ctx #wand pl pr ns".
-rewrite (never_sealed_under_public_token k k' sub sub').
-iDestruct "ns" as "(tok & tok' & $)".
+iIntros (HE sub sub') "#ctx #wand pl pr ns ns'".
+rewrite (never_sealed_under_public_token_l k sub) (never_sealed_under_public_token_r k' sub').
+iDestruct "ns" as "[tok $]". iDestruct "ns'" as "[tok' $]".
 iDestruct (public_token_l_split with "tok") as "(states & prots & $)".
 iDestruct (public_token_r_split with "tok'") as "(states' & prots' & $)".
 iMod (public_extend _ _ HE with "ctx wand pl pr prots prots' states states'") as "#link".
@@ -242,15 +246,16 @@ Lemma public_seal_senc E (k k' : senc_key) (N : namespace) t t' Ek Ek' :
   minted k -∗ minted_spec k' -∗ minted t -∗ minted_spec t' -∗
   linked (k : term) (k' : term) -∗
   PUB⟨t, t'⟩ ∨ secret_in_l k ∧ secret_in_r k' -∗
-  never_sealed_under k k' Ek Ek' ={E}=∗
+  never_sealed_under_l k Ek -∗
+  never_sealed_under_r k' Ek' ={E}=∗
   PUB⟨Spec.enc k (Tag N) t, Spec.enc k' (Tag N) t'⟩ ∗
   publicly_linked (Spec.enc k (Tag N) t) (Spec.enc k' (Tag N) t') ∗
-  never_sealed_under k k'
-    (Ek ∖ ↑seal_namespace (Spec.tag (Tag N) t)) (Ek' ∖ ↑seal_namespace (Spec.tag (Tag N) t')).
+  never_sealed_under_l k (Ek ∖ ↑seal_namespace (Spec.tag (Tag N) t)) ∗
+  never_sealed_under_r k' (Ek' ∖ ↑seal_namespace (Spec.tag (Tag N) t')).
 Proof.
 move=> HE sub sub'. rewrite /Spec.enc (senc_key_TKey k) (senc_key_TKey k').
-iIntros "#ctx #mk #mk' #mt #mt' #Hl #Hcase ns".
-iMod (public_seal _ _ HE sub sub' with "ctx [] [] ns") as "(#Hpl & #Hpub & $)";
+iIntros "#ctx #mk #mk' #mt #mt' #Hl #Hcase ns ns'".
+iMod (public_seal _ _ HE sub sub' with "ctx [] [] ns ns'") as "(#Hpl & #Hpub & $ & $)";
   last by iFrame "#".
 - iIntros "!> #Hpl". rewrite public_TSeal. iRight.
   rewrite minted_TSeal minted_spec_TSeal minted_tag minted_spec_tag.

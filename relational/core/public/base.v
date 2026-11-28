@@ -99,8 +99,8 @@ Definition home_of_term t : term * namespace :=
 Definition public_token_l t : iProp := term_token (home_of_term t).1 (↑(home_of_term t).2).
 Definition public_token_r t' : iProp := term_token_spec (home_of_term t').1 (↑(home_of_term t').2).
 
-Definition never_sealed_under k k' E E' : iProp :=
-  term_token k E ∗ term_token_spec k' E'.
+Definition never_sealed_under_l k E : iProp := term_token k E.
+Definition never_sealed_under_r k' E' : iProp := term_token_spec k' E'.
 
 Definition states_token_l t : iProp := term_token (home_of_term t).1 (↑(home_of_term t).2.@"states").
 Definition states_token_r t' : iProp := term_token_spec (home_of_term t').1 (↑(home_of_term t').2.@"states").
@@ -253,17 +253,22 @@ rewrite (term_token_spec_difference t' (↑holdN)
 iIntros "[(term & seal & rel & _) rest]". iFrame.
 Qed.
 
-Lemma never_sealed_under_public_token k k' t t' E E' :
+Lemma never_sealed_under_public_token_l k t E :
   ↑seal_namespace t ⊆ E →
-  ↑seal_namespace t' ⊆ E' →
-  never_sealed_under k k' E E' ⊣⊢
-  public_token_l (TSeal k t) ∗ public_token_r (TSeal k' t') ∗
-  never_sealed_under k k' (E ∖ ↑seal_namespace t) (E' ∖ ↑seal_namespace t').
+  never_sealed_under_l k E ⊣⊢
+  public_token_l (TSeal k t) ∗ never_sealed_under_l k (E ∖ ↑seal_namespace t).
 Proof.
-move=> sub sub'.
-rewrite /never_sealed_under /public_token_l /public_token_r /=.
-rewrite (term_token_difference k _ E) // (term_token_spec_difference k' _ E') //.
-iSplit; [iIntros "[[$ ?] [$ ?]]" | iIntros "(? & ? & ? & ?)"]; iFrame.
+move=> sub. rewrite /never_sealed_under_l /public_token_l /=.
+by rewrite (term_token_difference k _ E).
+Qed.
+
+Lemma never_sealed_under_public_token_r k' t' E' :
+  ↑seal_namespace t' ⊆ E' →
+  never_sealed_under_r k' E' ⊣⊢
+  public_token_r (TSeal k' t') ∗ never_sealed_under_r k' (E' ∖ ↑seal_namespace t').
+Proof.
+move=> sub'. rewrite /never_sealed_under_r /public_token_r /=.
+by rewrite (term_token_spec_difference k' _ E').
 Qed.
 
 End Tokens.
