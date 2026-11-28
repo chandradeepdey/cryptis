@@ -194,7 +194,11 @@ relational/lib.v
 relational/core/minted_spec.v
 relational/core/term_meta_spec.v
 relational/core/public/state.v
+relational/core/public/states.v
 relational/core/public/base.v
+relational/core/public/rules.v
+relational/core/public/bijection.v
+relational/core/public/open.v
 relational/core/public/updates.v
 relational/core/public.v
 
