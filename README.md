@@ -6,10 +6,12 @@ The material covered in the paper can be found in the following files:
 
 In the `cryptis` directory you will find:
 
-- `lib/*, lib`: General additions to Iris, MathComp, and stdpp; Diffie–Hellman and HMQV
-  key-exchange and ghost-state helpers; list-manipulation programs and AVL maps
-  (`lib/avl`) for HeapLang.
-- `core/*`, `cryptis`: Core Cryptis components: cryptographic terms, the
+- `lib/*, lib`: General additions to Iris, MathComp, and stdpp; polynomials,
+  fractions and finite maps; Diffie–Hellman and HMQV key-exchange and
+  ghost-state helpers; list-manipulation programs and AVL maps (`lib/avl`) for
+  HeapLang.
+- `core/*`, `cryptis`: Core Cryptis components: cryptographic terms and an
+  equational presentation of their algebra (`core/term/presentation.v`), the
   `public` predicate, encryption predicates, and term metadata.
 - `primitives/*`, `primitives`: HeapLang functions for manipulating
   cryptographic terms.  Definition of the attacker.
@@ -29,13 +31,18 @@ In the `examples` directory you will find our case studies:
 - `rpc`: Remote procedure calls (built on `conn`).
 - `store`: Authenticated key-value store built on `rpc` (game is in its own file);
   `alist` is a supporting association-list module.
-- `opaque`: OPAQUE-style password-authenticated key exchange with HMQV,
-  including game (password leak, theft of the server's file, OPRF
-  precomputation).
+- `opaque`: OPAQUE-style password-authenticated key exchange with HMQV; its
+  games are in `opaque/games`: the counterparts of the `hmqv` games (forward
+  secrecy, key-compromise impersonation, injective agreement, key
+  independence), `oprf_evaluation.v` (the attacker cannot evaluate the
+  server's OPRF on its own), and `offline_guessing.v` (an OPRF oracle on a
+  dictionary containing the password, closed when the file leaks; the
+  envelope key stays unguessable).
 - `hmqv`: standalone HMQV authenticated key exchange (three-message variant
   with authenticators, built on `lib/hmqv.v`); its games (secrecy,
   key-compromise impersonation, injective agreement, key independence) are in
-  `hmqv/games`.
+  `hmqv/games`.  `agreement_lib.v` holds the machinery shared by the agreement
+  games of `hmqv` and `opaque`.
 - `tls13`: TLS 1.3 handshake (partial; `impl.v` + per-component `proofs/`).
 - `challenge_response`, `composite_game`, `permanent`, `counter`: smaller
   single-file examples plus a composite security game.

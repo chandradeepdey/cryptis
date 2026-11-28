@@ -4,6 +4,7 @@
 From elpi.apps Require Import locker.
 From reloc Require Import reloc.
 From cryptis Require Import lib.
+From cryptis.lib Require Import sms frac.
 From cryptis.core Require Import term.
 
 Set Implicit Arguments.
@@ -87,12 +88,11 @@ by rewrite big_sepS_union_list_pers big_sepL_fmap.
 Qed.
 
 Lemma minted_spec_TExp t1 t2 :
-  negb (is_exp t1) -> negb (is_gmul t1) ->
+  negb (is_exp t1) -> negb (is_gmul t1) -> frac_of t2 ≠ Frac.zero ->
   minted_spec (TExp t1 t2) ⊣⊢ minted_spec t1 ∧ minted_spec t2.
 Proof.
-move => nx nm.
-rewrite (minted_spec_factors t2) unlock (nonces_of_term_TExp _ nx nm).
-by rewrite big_sepS_union_pers big_sepS_union_list_pers big_sepL_fmap.
+move => nx nm ne.
+by rewrite unlock (nonces_of_term_TExp nx nm ne) big_sepS_union_pers.
 Qed.
 
 Lemma all_minted_spec_TExp t1 t2 :
@@ -100,11 +100,9 @@ Lemma all_minted_spec_TExp t1 t2 :
 Proof.
 rewrite unlock !big_sepS_forall.
 iIntros "[H1 H2]" (l) "%l_in".
-have sub : nonces_of_term (TExp t1 t2) ⊆
-           nonces_of_term t1 ∪ nonces_of_term t2.
-  rewrite ![nonces_of_term]unlock unfold_TExp.
-  exact: nonces_of_pre_term_exp_sub.
-by move: l_in => /sub /elem_of_union [?|?]; [iApply "H1"|iApply "H2"].
+move: l_in => /nonces_of_term_TExp_subseteq /elem_of_union [?|?].
+- by iApply "H1".
+- by iApply "H2".
 Qed.
 
 Lemma minted_spec_nonces_of_term t :

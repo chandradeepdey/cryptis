@@ -48,7 +48,8 @@ wp_apply (wp_mk_nonce_freshN ∅ (λ _, shot γ 1)%I dh_key_share
   by iIntros "% %contra".
   iIntros "%t"; rewrite big_sepS_singleton; iModIntro; iSplit.
   - iIntros "#?"; by iApply all_minted_TExp; iSplit => //; iApply minted_TInt.
-  - rewrite (minted_TExp t) //; by iIntros "[_ ?]".
+  - rewrite (minted_TExp (t2 := t)) //; last by apply: atom_frac_neq0.
+    by iIntros "[_ ?]".
 iIntros "%x_u _ #Hmintedx_u #Hprivatex_u #Hexpx_u #Hexpx_uV _".
 iAssert (□ (public x_u ↔ ▷ shot γ 1))%I as "#s_xu'".
 { iModIntro; iSplit.
@@ -84,14 +85,17 @@ iAssert (public α) as "#pubα".
   - iRight.
     by iApply "Hexpr".
   - iModIntro; iIntros "#p".
-    iApply (public_THashIS with "HpredH mintedpw"). by iApply "Hprivater". }
+    iApply (public_THashIS with "HpredH mintedpw").
+    iDestruct ("Hprivater" with "p") as "f". iNext.
+    by iDestruct "f" as "#[]". }
 iAssert (public (TExp g x_u)) as "#pubX_u".
 { iApply public_TExp_iff => //.
   do !iSplit => //.
   - by iApply minted_TInt.
   - iRight.
     iApply "Hexpx_u"; iPureIntro.
-    by rewrite exps_TExp_expN // factors_Nmul // SMS.elements_singleton.
+    rewrite (exps_TExp_expN _ _ (mono_num_atom (TNonce x_u) I)) //.
+    by rewrite factors_Nmod // SMS.elements_singleton.
   - by rewrite public_TInt; auto. }
 iAssert (minted (TExp g x_u)) as "#mintedX_u"; first by iApply public_minted.
 wp_apply wp_H'; wp_apply wp_texp; wp_pures.
@@ -120,19 +124,20 @@ wp_apply wp_sdec => //; iSplit; last first.
   by wp_pures; iApply ("Hhl" $! None); iModIntro; iLeft; iSplit; first done;
     iDestruct "hook" as "[$ _]".
 iIntros "%clear #minclear #decr #keyclear".
-(* Either the envelope key, hence the password, is public, or the envelope is
-   the honest registration. *)
-iAssert (▷ public pw ∗ public clear
+(* Either the envelope key is public -- then so is the password, or the
+   attacker got the key from the oracle -- or the envelope is the honest
+   registration. *)
+iAssert (▷ (public pw ∨ impersonable pw) ∗ public clear
          ∨ ∃ (p_u p_s : nonce),
              ⌜clear = Spec.of_list [TNonce p_u; TExp g p_u; TExp g p_s]⌝ ∗
              opaque_keys pw p_u p_s)%I as "#env".
 { iDestruct "decr" as "[#pubkey | #envpred]".
   - iLeft; iSplit; last by iApply "keyclear".
     iEval (rewrite /k public_senc_key) in "pubkey".
-    iDestruct (public_THashE with "HpredH pubkey") as "[p_l | [_ contra]]".
+    iDestruct (public_THashE with "HpredH pubkey") as "[p_l | [_ #pred]]".
     + iEval (rewrite public_of_list /=) in "p_l".
-      iDestruct "p_l" as "[#? _]". by iNext.
-    + by iNext; iDestruct "contra" as "[]".
+      iDestruct "p_l" as "[#? _]". iNext. by iLeft.
+    + iNext. iRight. iRight. by iApply H_pred_oracle_used.
   - iDestruct "envpred" as "(%pw' & %β' & %p_u & %p_s & %ek & %eclear & #keys)".
     move: ek; rewrite /k; case=> /Spec.tag_inj [] _ /Spec.of_list_inj [] epw _.
     subst pw'.
@@ -150,7 +155,8 @@ have eclear : clear = Spec.of_list [p_u'; P_u'; P_s'].
   by rewrite Hclear; congruence.
 iEval (rewrite eclear minted_of_list /=) in "minclear".
 iDestruct "minclear" as "(minp_u & minP_u & minP_s & _)".
-iAssert (▷ public pw ∗ public p_u' ∗ public P_u' ∗ public P_s'
+iAssert (▷ (public pw ∨ impersonable pw) ∗
+         public p_u' ∗ public P_u' ∗ public P_s'
          ∨ ∃ (p_u p_s : nonce),
              ⌜p_u' = TNonce p_u⌝ ∗ ⌜P_u' = TExp g p_u⌝ ∗ ⌜P_s' = TExp g p_s⌝ ∗
              opaque_keys pw p_u p_s)%I as "#env'".
@@ -218,25 +224,26 @@ iAssert (|={⊤}=> ∃ si, ⌜si_key si = SK⌝ ∗ ⌜uid = si_uid si⌝ ∗ �
     { iApply public_THash; iLeft. by iApply public_tag. }
     iAssert (public K) as "#p_K".
     { iEval (rewrite public_of_list /=) in "p_t". by iDestruct "p_t" as "[#? _]". }
-    iAssert (▷ (public pw ∨ stolen pw) ∗ public P_u' ∗ public P_s')%I
+    iAssert (▷ (public pw ∨ impersonable pw) ∗ public P_u' ∗ public P_s')%I
       as "#(p_pw & pubP_u' & pubP_s')".
     { iDestruct "env'"
         as "[(#p & _ & #? & #?) | (%p_u & %p_s & %ep & %eP & %eP_s & #keys)]".
-      { iSplit; last by iSplit. iNext. by iLeft. }
+      { iSplit; last by iSplit. done. }
       iPoseProof "keys" as "(#key_p_u & #key_p_s & #priv_p_u & #priv_p_s)".
       subst p_u' P_u' P_s'.
       iSplit; last by iSplit; iApply hmqv_key_public.
       (* The static-static factor is a group factor of the key, and its two
          exponents are the long-term keys. *)
       iDestruct (public_THashE with "HpredH p_K") as "[p_t' | [_ contra]]";
-        last by iNext; iDestruct "contra" as "[]".
+        last by iNext; iDestruct (H_pred_single with "contra") as "[]".
       iEval (rewrite public_of_list /=) in "p_t'".
       iDestruct "p_t'" as "(p_K' & _)".
       iDestruct (@public_hmqv_K_static _ _ _ opN g "d" "e" p_u x_u p_s
                    (TExp g p_u) (TExp g x_u) X_s I I tags_c
                    with "key_p_u key_p_s p_K'") as "[p|p]".
       - iDestruct ("priv_p_u" with "p") as "#p'". iNext. by iLeft.
-      - iDestruct ("priv_p_s" with "p") as "#p'". iNext. by iRight. }
+      - iDestruct ("priv_p_s" with "p") as "#p'". iNext. iRight.
+        by iLeft. }
     iMod (lc_fupd_elim_later with "cr p_pw") as "#p_pw'".
     set si := client_si uid P_u' P_s' α x_u X_s p_u'.
     iMod (term_meta_set (opN.@"compromised") true with "tok_comp")
@@ -263,10 +270,12 @@ iAssert (|={⊤}=> ∃ si, ⌜si_key si = SK⌝ ∗ ⌜uid = si_uid si⌝ ∗ �
     move=> [] euid eα.
     iDestruct "env'" as "[(#p_pw & #pubp_u' & #pubP_u' & #pubP_s')
                           | (%p_u & %p_s & %ep & %eP & %eP_s & #keys)]".
-    + (* Forged envelope: the password is public, so make the ephemeral public
+    + (* Forged envelope: the password is public, or the server
+         impersonable, so make the ephemeral public
          too, and with it the key: a forged envelope may carry an inconsistent
          key pair, which the agreement argument cannot handle. *)
       iMod (secret_public with "s_xu") as "#p_x_u".
+      iMod (lc_fupd_elim_later with "cr p_pw") as "#p_pw'".
       iAssert (public hK) as "#p_hK"; first by iApply public_hmqv_K.
       iAssert (public K) as "#p_K".
       { iApply public_THash; iLeft; iApply public_tag.
@@ -283,7 +292,8 @@ iAssert (|={⊤}=> ∃ si, ⌜si_key si = SK⌝ ∗ ⌜uid = si_uid si⌝ ∗ �
       iSplit.
       { iSplit; first by rewrite eSK.
         iSplit; first by iIntros "!> _"; rewrite eSK.
-        iLeft. iSplit; first done. iSplit; last by iLeft. by rewrite eSK. }
+        iLeft. iSplit; first done. iSplit; first by rewrite eSK.
+        iDestruct "p_pw'" as "[?|?]"; [by iLeft|by iRight; iSplit]. }
       iSplitL ""; first by iLeft.
       iLeft. iApply public_of_list => /=. by do !iSplit => //.
     + (* Honest envelope: both ephemerals are honest, so the key stays secret
@@ -291,7 +301,8 @@ iAssert (|={⊤}=> ∃ si, ⌜si_key si = SK⌝ ∗ ⌜uid = si_uid si⌝ ∗ �
       subst p_u' P_u' P_s'.
       iPoseProof "keys" as "(#key_p_u & #key_p_s & #priv_p_u & #priv_p_s)".
       have nP (p : nonce) : TExp g p ≠ TGMul ∅.
-        exact: Ngmul_neq_unit (Ngmul_TExp g _ I).
+        exact: Ngmul_neq_unit
+          (Ngmul_TExp (b := g) I (mono_num_atom (TNonce p) I)).
       have [/TExp_g_inj epb [eXs [/TExp_g_inj epa eXu]]] :=
         hmqv_K_inj' (g := g) I I tags_c (nP _) (nP _)
           (hmqv_K_neq_unit (g := g) I I) eKK.

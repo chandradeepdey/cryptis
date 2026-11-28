@@ -34,7 +34,7 @@ Definition dh_publ t : iProp :=
 
 Definition dh_seed t : iProp :=
   minted t ∧
-  ⌜negb (is_mul t)⌝ ∧
+  ⌜negb (is_mod t)⌝ ∧
   □ (public t ↔ ▷ False) ∧
   □ (∀ t', exp_pred t t' ↔ ▷ □ dh_publ t') ∧
   □ (∀ t', exp_pred (TInv t) t' ↔ ▷ False).
@@ -59,12 +59,15 @@ iSpecialize ("dh" with "base"); iModIntro; iNext.
 iDestruct "dh" as "#(%l_t & p_t)"; iFrame "#"; iPureIntro.
 rewrite -[t in LHS]base_expsK; congr TExp.
 have -> : exps t = {[+ a +]}.
-  apply: SMS.car_inj; rewrite SMS.car_singleton.
-  move: l_t a_t; rewrite SMS.elements_pos_neg /SMS.pos /SMS.neg.
-  case: (SMS.car (exps t)) => [[|x [|? ?]] [|y [|? ?]]] //=.
+  move: l_t a_t; rewrite SMS.elements_pos_neg -MSet.elem_of_elements.
+  case EP: (elements (SMS.pos (exps t))) => [|x [|? ?]];
+    case EN: (elements (SMS.neg (exps t))) => [|y ?] //=.
   - by move=> _ /elem_of_nil.
-  - by move=> _ /list_elem_of_singleton ->.
-by rewrite -(factors_Nmul _ Nm_a) factorsK.
+  move=> _ /list_elem_of_singleton ->.
+  apply: SMS.sms_eq; rewrite ?SMS.pos_singleton ?SMS.neg_singleton.
+  - by rewrite -(MSet.of_list_elements (SMS.pos _)) EP.
+  - exact: MSet.elements_empty_inv.
+by rewrite -(factors_Nmod _ Nm_a) factorsK.
 Qed.
 
 Lemma dh_seed_elim1 g a :
@@ -74,18 +77,31 @@ Lemma dh_seed_elim1 g a :
   ▷ P (TExp g a).
 Proof.
 iIntros "%gNX %gNm #aP #p_t".
-iAssert ⌜negb (is_mul a)⌝%I as %Nm_a; first by iDestruct "aP" as "(_ & $ & _)".
+iAssert ⌜negb (is_mod a)⌝%I as %Nm_a; first by iDestruct "aP" as "(_ & $ & _)".
 set t' := TExp g a.
 have a_t' : a ∈ SMS.pos (exps t').
-  rewrite /t' (exps_TExp_expN _ _ gNX gNm) factors_Nmul //.
-  by rewrite SMS.pos_singleton; set_solver.
+  rewrite /t' (exps_TExp_expN gNX gNm (mono_num_atom _ Nm_a)).
+  rewrite factors_Nmod //.
+  by rewrite SMS.pos_singleton MSet.elem_of_singleton.
 iPoseProof (public_exp_inv_same with "p_t") as "[#contra|H]" => //.
   by iDestruct (dh_seed_elim0 with "aP contra") as ">[]".
 iDestruct "H" as "(%t & %e_base & %a_t & H)".
 iDestruct (dh_seed_exp_pred_elim with "aP H")
   as "{H} #[>-> H]" => //; iNext.
 have -> : t' = TExp (base t) a; last by iApply "H".
-by rewrite /t' e_base (base_TExp _ _ gNm) base_expN.
+by rewrite /t' e_base (base_TExp gNm (mono_num_atom _ Nm_a))
+  base_expN.
+Qed.
+
+#[local] Lemma pos_exps_TExp_pair g a b :
+  negb (is_exp g) → negb (is_gmul g) → negb (is_mod a) → negb (is_mod b) →
+  SMS.pos (exps (TExp g (TMul {[+ a; b +]}))) = {[+ a; b +]}.
+Proof.
+move=> gNX gNm Nm_a Nm_b.
+have Nab u : u ∈ ({[+ a; b +]} : tsms) → negb (is_mod u).
+  by case/SMS.elem_of_disj_union => /SMS.elem_of_singleton ->.
+rewrite exps_TExp_TMul // !SMS.singleton_make SMS.disj_union_make.
+by rewrite (left_id ∅ (⊎)) SMS.pos_make_empty_r.
 Qed.
 
 Lemma dh_seed_elim2 g a b :
@@ -96,16 +112,14 @@ Lemma dh_seed_elim2 g a b :
   ▷ False.
 Proof.
 iIntros "%gXN %gNm #aP #bP #p".
-iAssert ⌜negb (is_mul a)⌝%I as %Nm_a; first by iDestruct "aP" as "(_ & $ & _)".
-iAssert ⌜negb (is_mul b)⌝%I as %Nm_b; first by iDestruct "bP" as "(_ & $ & _)".
-have expsE : exps (TExp g (TMul {[+ a; b +]})) = SMS.make [a; b] [].
-  rewrite exps_TExp_TMul // => u.
-  by case/SMS.elem_of_disj_union => /SMS.elem_of_singleton ->.
-have ab_t : [a; b] ⊆+ SMS.pos (exps (TExp g (TMul {[+ a; b +]}))).
-  by apply: Permutation_submseteq; rewrite expsE SMS.pos_make_nil_r.
-have a_ab : a ∈ [a; b] by set_solver.
+iAssert ⌜negb (is_mod a)⌝%I as %Nm_a; first by iDestruct "aP" as "(_ & $ & _)".
+iAssert ⌜negb (is_mod b)⌝%I as %Nm_b; first by iDestruct "bP" as "(_ & $ & _)".
+have ab_t : {[+ a; b +]} ⊆ SMS.pos (exps (TExp g (TMul {[+ a; b +]}))).
+  by rewrite pos_exps_TExp_pair //; reflexivity.
+have a_ab : a ∈ ({[+ a; b +]} : MSet.mset term).
+  by apply/MSet.elem_of_disj_union; left; apply/MSet.elem_of_singleton.
 iPoseProof (public_exp_inv_gen a_ab ab_t with "p") as "(%c & %c_ab & p_c)".
-rewrite elem_of_cons list_elem_of_singleton in c_ab.
+rewrite MSet.elem_of_disj_union !MSet.elem_of_singleton in c_ab.
 iDestruct "p_c" as "[p_c|(%t' & _ & %ab_t' & contra)]".
   case: c_ab => ->.
   - iDestruct (dh_seed_elim0 with "aP p_c") as ">[]".
@@ -114,8 +128,9 @@ iAssert (▷ □ dh_publ t')%I as "[>%len_t' _]".
   iDestruct "aP" as "(_ & _ & _ & #aP & _)".
   iDestruct "bP" as "(_ & _ & _ & #bP & _)".
   by case: c_ab => ->; [iApply "aP"|iApply "bP"].
-move: len_t' (submseteq_length _ _ ab_t').
-by rewrite SMS.elements_pos_neg length_app /=; lia.
+move: len_t' (MSet.subseteq_size _ _ ab_t').
+rewrite SMS.elements_pos_neg length_app -!MSet.size_elements.
+by rewrite MSet.size_disj_union !MSet.size_singleton; lia.
 Qed.
 
 Lemma dh_public_TExp g a :
@@ -129,7 +144,8 @@ iIntros "%gXN %gNm #gP (#m & %Nm_a & #aP1 & #aP2 & _) #P_a".
 rewrite public_TExp_iff //; do !iSplit => //.
 - iRight. iApply "aP2"; do 2!iModIntro; iSplit => //.
   iPureIntro.
-  by rewrite (exps_TExp_expN _ _ gXN gNm) factors_Nmul.
+  rewrite (exps_TExp_expN gXN gNm (mono_num_atom _ Nm_a)).
+  by rewrite factors_Nmod // SMS.elements_singleton.
 - iModIntro; iIntros "#p".
   by iApply False_public; last iApply "aP1".
 Qed.
@@ -156,15 +172,16 @@ iApply (wp_mk_nonce_freshN T (λ _, False%I) dh_publ
   iIntros "%t".
   rewrite big_sepS_forall; iIntros (t').
   rewrite elem_of_union !elem_of_singleton; iIntros "[->|->]"; eauto.
-  rewrite minted_TExp //; iIntros "!>"; iSplit; eauto.
+  rewrite minted_TExp //; last by apply: atom_frac_neq0.
+  iIntros "!>"; iSplit; eauto.
   by iIntros "[??]".
 iIntros (a) "%a_T #m_a #aP #? #? token".
-have Nm_a : negb (is_mul a) by [].
-have a_g : TNonce a ∉ SMS.neg (exps g).
-  rewrite /exps (expo_expN _ gNX) factors_TMul_empty; exact: not_elem_of_nil.
-have [_ a_ga] := tsize_lt_TExp _ _ gNm Nm_a a_g.
-have {}a_ga : TNonce a ≠ TExp g a.
-  move=> contra; rewrite -contra in a_ga; lia.
+have Nm_a : negb (is_mod a) by [].
+have a_ga : TNonce a ≠ TExp g a.
+  move=> contra; have : is_exp (TExp g a); last by rewrite -contra.
+  apply: (@is_exp_of_exps _ (TNonce a)).
+  rewrite (exps_TExp_expN gNX gNm (mono_num_atom _ Nm_a)).
+  by rewrite factors_Nmod // SMS.elem_of_singleton.
 rewrite big_sepS_union ?big_sepS_singleton; last set_solver.
 iDestruct "token" as "[t1 t3]".
 iApply ("post" with "[$] [] [$] [$]") => //.
@@ -173,8 +190,8 @@ iApply ("post" with "[$] [] [$] [$]") => //.
 iPureIntro => t t' t_T t'_t contra.
 rewrite -[t']TInvK -contra in t'_t.
 apply: (a_T _ t_T); apply: subterm_trans t'_t.
-apply: (@subterm_factors _ _ (TNonce a)); last exact: STRefl.
-by rewrite elem_of_factors_TInv (elem_of_factors_Nmul _ Nm_a).
+apply: (@subterm_factors _ _ (TNonce a)) => //.
+by rewrite elem_of_factors_TInv // (elem_of_factors_Nmod _ Nm_a).
 Qed.
 
 End DH.
@@ -201,7 +218,7 @@ Implicit Types t : term.
    generator has to be public -- which it always is. *)
 Lemma public_dh_share g a :
   negb (is_exp g) → negb (is_gmul g) →
-  negb (is_mul a) →
+  negb (is_mod a) →
   public g -∗
   minted a -∗
   □ (∀ t, exp_pred a t ↔ ▷ □ dh_key_share t) -∗
@@ -213,14 +230,15 @@ rewrite public_TExp_iff //.
 do !iSplit => //; last by iIntros "!> _".
 iRight.
 iApply "pred_a". iPureIntro. rewrite /dh_key_share.
-by rewrite (exps_TExp_expN _ _ gNx gNm) factors_Nmul // SMS.elements_singleton.
+rewrite (exps_TExp_expN gNx gNm (mono_num_atom _ Nm)).
+by rewrite factors_Nmod // SMS.elements_singleton.
 Qed.
 
 (* Either seed being public makes the shared secret public. *)
 Lemma public_dh_secret1 g a b :
   negb (is_exp g) → negb (is_gmul g) →
-  negb (is_mul a) →
-  negb (is_mul b) →
+  negb (is_mod a) →
+  negb (is_mod b) →
   public g -∗
   minted a -∗
   minted b -∗
@@ -245,39 +263,41 @@ Qed.
    vacuous there.  Since multiplicities count, [a] may equal [b]: a share has a
    single exponent, so it never contains [a] twice. *)
 Lemma public_dh_secret_gen2 a b t :
-  [a; b] ⊆+ SMS.pos (exps t) →
+  {[+ a; b +]} ⊆ SMS.pos (exps t) →
   □ (∀ u, exp_pred a u ↔ ▷ □ dh_key_share u) -∗
   □ (∀ u, exp_pred b u ↔ ▷ □ dh_key_share u) -∗
   public t -∗
   public a ∨ public b.
 Proof.
 iIntros "%ab_t #pred_a #pred_b #p".
-have a_t : a ∈ SMS.pos (exps t).
-  by apply: (elem_of_submseteq _ _ _ _ ab_t); set_solver.
-have b_t : b ∈ SMS.pos (exps t).
-  by apply: (elem_of_submseteq _ _ _ _ ab_t); set_solver.
+have a_ab : a ∈ ({[+ a; b +]} : MSet.mset term).
+  by apply/MSet.elem_of_disj_union; left; apply/MSet.elem_of_singleton.
+have b_ab : b ∈ ({[+ a; b +]} : MSet.mset term).
+  by apply/MSet.elem_of_disj_union; right; apply/MSet.elem_of_singleton.
+have a_t := MSet.elem_of_subseteq _ _ _ ab_t a_ab.
+have b_t := MSet.elem_of_subseteq _ _ _ ab_t b_ab.
 iPoseProof (public_minted with "p") as "#m".
 iAssert (minted a ∧ minted b)%I as "#[ma mb]".
   iEval (rewrite minted_base_exps) in "m"; iDestruct "m" as "[_ #mes]".
   iEval (rewrite SMS.elements_pos_neg big_sepL_app) in "mes".
   iDestruct "mes" as "[mes _]".
-  by iSplit; iApply (big_sepL_elem_of with "mes").
+  by iSplit; iApply (big_sepL_elem_of with "mes"); apply/MSet.elem_of_elements.
 iAssert (◇ (public a ∨ public b))%I as "[H|H]"; first last.
 - by iRight; iApply except_0_public.
 - by iLeft; iApply except_0_public.
-have a_ab : a ∈ [a; b] by set_solver.
 iPoseProof (public_exp_inv_gen a_ab ab_t with "p") as "(%c & %c_ab & H)".
-rewrite elem_of_cons list_elem_of_singleton in c_ab.
+rewrite MSet.elem_of_disj_union !MSet.elem_of_singleton in c_ab.
 iDestruct "H" as "[H|(%t3 & %e_base & %exps_sub & base)]".
   by case: c_ab => ->; eauto.
 iAssert (▷ □ dh_key_share t3)%I as ">%contra".
   by case: c_ab => ->; [iApply "pred_a"|iApply "pred_b"].
-move: contra (submseteq_length _ _ exps_sub).
-by rewrite SMS.elements_pos_neg length_app /=; lia.
+move: contra (MSet.subseteq_size _ _ exps_sub).
+rewrite SMS.elements_pos_neg length_app -!MSet.size_elements.
+by rewrite MSet.size_disj_union !MSet.size_singleton; lia.
 Qed.
 
 Lemma public_dh_secret_gen a b t (Q : iProp) :
-  [a; b] ⊆+ SMS.pos (exps t) →
+  {[+ a; b +]} ⊆ SMS.pos (exps t) →
   □ (public a ↔ Q) -∗
   □ (∀ u, exp_pred a u ↔ ▷ □ dh_key_share u) -∗
   □ (public b ↔ Q) -∗
@@ -292,26 +312,23 @@ Qed.
 
 Lemma public_dh_secret2 g a b :
   negb (is_exp g) → negb (is_gmul g) →
-  negb (is_mul a) →
-  negb (is_mul b) →
+  negb (is_mod a) →
+  negb (is_mod b) →
   □ (∀ t, exp_pred a t ↔ ▷ □ dh_key_share t) -∗
   □ (∀ t, exp_pred b t ↔ ▷ □ dh_key_share t) -∗
   public (TExp g (TMul {[+ a; b +]})) -∗
   public a ∨ public b.
 Proof.
 move=> gNx gNm Nm_a Nm_b; iIntros "#pred_a #pred_b #p".
-have expsE : exps (TExp g (TMul {[+ a; b +]})) = SMS.make [a; b] [].
-  rewrite exps_TExp_TMul // => u.
-  by case/SMS.elem_of_disj_union => /SMS.elem_of_singleton ->.
-have ab_t : [a; b] ⊆+ SMS.pos (exps (TExp g (TMul {[+ a; b +]}))).
-  by apply: Permutation_submseteq; rewrite expsE SMS.pos_make_nil_r.
+have ab_t : {[+ a; b +]} ⊆ SMS.pos (exps (TExp g (TMul {[+ a; b +]}))).
+  by rewrite pos_exps_TExp_pair //; reflexivity.
 by iApply (public_dh_secret_gen2 ab_t with "pred_a pred_b p").
 Qed.
 
 Lemma public_dh_secret' g a b (Q : iProp) :
   negb (is_exp g) → negb (is_gmul g) →
-  negb (is_mul a) →
-  negb (is_mul b) →
+  negb (is_mod a) →
+  negb (is_mod b) →
   □ (public a ↔ Q) -∗
   □ (∀ t, exp_pred a t ↔ ▷ □ dh_key_share t) -∗
   □ (public b ↔ Q) -∗

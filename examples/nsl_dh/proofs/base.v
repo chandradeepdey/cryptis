@@ -123,15 +123,21 @@ Definition nsl_dh_key_share skI skR t : iProp :=
   (public skI ∨ public skR) ∧ ⌜length (elements (exps t)) = 1⌝.
 
 Lemma exps_TExp1 a :
-  negb (is_mul a) -> exps (TExp (TInt 0) a) = {[+ a +]}.
-Proof. by move=> Nm; rewrite exps_TExp_expN // factors_Nmul. Qed.
+  negb (is_mod a) -> exps (TExp (TInt 0) a) = {[+ a +]}.
+Proof.
+move=> Nm.
+by rewrite (@exps_TExp_expN (TInt 0) a I I (mono_num_atom _ Nm)) factors_Nmod.
+Qed.
 
 Lemma exps_TExp2 a b :
-  negb (is_mul a) -> negb (is_mul b) ->
-  exps (TExp (TInt 0) (TMul {[+ a; b +]})) = SMS.make [a; b] [].
+  negb (is_mod a) -> negb (is_mod b) ->
+  exps (TExp (TInt 0) (TMul {[+ a; b +]})) = SMS.make {[+ a; b +]} ∅.
 Proof.
-move=> Nm_a Nm_b; rewrite exps_TExp_TMul // => u.
-by case/SMS.elem_of_disj_union => /SMS.elem_of_singleton ->.
+move=> Nm_a Nm_b.
+have Nab u : u ∈ ({[+ a; b +]} : tsms) → negb (is_mod u).
+  by case/SMS.elem_of_disj_union => /SMS.elem_of_singleton ->.
+by rewrite exps_TExp_TMul // !SMS.singleton_make SMS.disj_union_make
+  (left_id ∅ (⊎)).
 Qed.
 
 Definition si_seed si : term :=
@@ -267,7 +273,7 @@ wp_apply (wp_mk_nonce_freshN T (λ a, P (TExp (TInt 0) a))
             (nsl_dh_key_share skI skR)
             (λ a, {[TExp (TInt 0) a]})) => //.
 - iIntros "%a".
-  rewrite big_sepS_singleton minted_TExp //.
+  rewrite big_sepS_singleton minted_TExp //; last by apply: atom_frac_neq0.
   rewrite minted_TInt /= bi.True_and.
   iModIntro. by iApply bi.equiv_iff.
 iIntros "%a %fresh_a #m_a #s_a #dh_a _ token_ga".
@@ -286,7 +292,7 @@ Lemma public_dh_share skI skR P (a : nonce) :
   public (TExp (TInt 0) a).
 Proof.
 iIntros "#(m_a & _ & #pred_a) corr".
-have Nm : negb (is_mul a) by [].
+have Nm : negb (is_mod a) by [].
 iAssert (exp_pred a (TExp (TInt 0) a)) with "[corr]" as "#dp".
 { iAssert (▷ □ nsl_dh_key_share skI skR (TExp (TInt 0) a))%I
     with "[corr]" as "#ns".
@@ -309,16 +315,16 @@ Lemma public_dh_secret skI skR P_a P_b (a b : nonce) :
   ▷ □ (P_a ∨ P_b).
 Proof.
 iIntros "#(_ & s_a & pred_a) #(_ & s_b & pred_b) #p".
-have Nm_a : negb (is_mul (TNonce a)) by [].
-have Nm_b : negb (is_mul (TNonce b)) by [].
+have Nm_a : negb (is_mod (TNonce a)) by [].
+have Nm_b : negb (is_mod (TNonce b)) by [].
 rewrite TExpA.
-have ab : [TNonce a; TNonce b] ⊆+
+have ab : {[+ TNonce a; TNonce b +]} ⊆
     SMS.pos (exps (TExp (TInt 0) (TMul {[+ TNonce a; TNonce b +]}))).
-  apply: Permutation_submseteq.
-  by rewrite (exps_TExp2 Nm_a Nm_b) SMS.pos_make_nil_r.
-have a_ab : TNonce a ∈ [TNonce a; TNonce b] by set_solver.
+  by rewrite (exps_TExp2 Nm_a Nm_b) SMS.pos_make_empty_r; reflexivity.
+have a_ab : TNonce a ∈ ({[+ TNonce a; TNonce b +]} : MSet.mset term).
+  by apply/MSet.elem_of_disj_union; left; apply/MSet.elem_of_singleton.
 iPoseProof (public_exp_inv_gen a_ab ab with "p") as "(%c & %c_ab & H)".
-rewrite elem_of_cons list_elem_of_singleton in c_ab.
+rewrite MSet.elem_of_disj_union !MSet.elem_of_singleton in c_ab.
 iDestruct "H" as "[H|(%t3 & _ & %exps_sub & H)]".
 - case: c_ab => ->.
   + iDestruct ("s_a" with "H") as "#P". iNext. iModIntro. by iLeft.
@@ -326,8 +332,9 @@ iDestruct "H" as "[H|(%t3 & _ & %exps_sub & H)]".
 - iAssert (▷ □ nsl_dh_key_share skI skR t3)%I as "#ks".
   { by case: c_ab => ->; [iApply "pred_a"|iApply "pred_b"]. }
   iNext. iDestruct "ks" as "[_ %contra]". iExFalso. iPureIntro.
-  move: contra (submseteq_length _ _ exps_sub).
-  by rewrite SMS.elements_pos_neg length_app /=; lia.
+  move: contra (MSet.subseteq_size _ _ exps_sub).
+  rewrite SMS.elements_pos_neg length_app -!MSet.size_elements.
+  by rewrite MSet.size_disj_union !MSet.size_singleton; lia.
 Qed.
 
 (* Message predicates for aenc *)
